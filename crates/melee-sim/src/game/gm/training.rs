@@ -264,7 +264,7 @@ impl Running<'_> {
         if (s.unk_30.x114[i] as u32) < u32::from(combo) {
             s.unk_30.x114[i] = i32::from(combo);
         }
-        let record = &mut s.x1F2C[i].x7C.x7E;
+        let record = &mut s.x1F2C[i].records.training_combo;
         if *record < combo {
             *record = combo;
             return true;

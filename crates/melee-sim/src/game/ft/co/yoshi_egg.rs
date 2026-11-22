@@ -275,7 +275,7 @@ impl Running<'_> {
         fp.take_dmg_cb = Some(CodeRef(damage_cb));
         fp.grab_immune = 0x1FF;
         fp.invisible = true;
-        let size = fp.co_attrs.xBC.size;
+        let size = fp.co_attrs.egg.size;
         let scale = Vec3::new(size, size, size);
         let model = match layer {
             Layer::Yoshi => self.ys_egg_model(yoshi),
@@ -327,7 +327,11 @@ impl Running<'_> {
         let bone_idx = self.bone_index(fp, TRANS_N);
         let bone = self.bone(f, bone_idx).joint;
         let fp = &mut self.game.fighters[f.0];
-        let (a, b, scale) = (fp.co_attrs.xBC.x4, fp.co_attrs.xBC.x10, fp.co_attrs.xBC.x1C);
+        let (a, b, scale) = (
+            fp.co_attrs.egg.hurt_a_offset,
+            fp.co_attrs.egg.hurt_b_offset,
+            fp.co_attrs.egg.hurt_scale,
+        );
         let h = &mut fp.hurt_capsules[0];
         h.capsule.bone_idx = bone_idx;
         h.height = HURT_HEIGHT_MID;
@@ -383,7 +387,7 @@ impl Running<'_> {
         if self.game.fighters[f.0].grab_timer <= 0.0 {
             self.play_sfx(gobj, 0x44618, 127, 64);
             let joint = self.bone(f, TOP_N).joint;
-            let size = self.game.fighters[f.0].co_attrs.xBC.size;
+            let size = self.game.fighters[f.0].co_attrs.egg.size;
             let args = [ef::Arg::Float(size)];
             self.fighter_effect(gobj, ef::SpawnKind::PosParam, GFX_EGG_BREAK, joint, &args);
             let vel = match layer {

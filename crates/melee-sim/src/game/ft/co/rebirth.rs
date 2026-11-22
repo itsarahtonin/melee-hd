@@ -39,7 +39,10 @@ impl Running<'_> {
     /// the player's offset on it, and the platform's offset toward its facing.
     fn rebirth_point_target(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        let (point, slot) = (i32::from(fp.smash_attrs.x2135), i32::from(fp.player_idx));
+        let (point, slot) = (
+            i32::from(fp.smash_attrs.rebirth_point),
+            i32::from(fp.player_idx),
+        );
         let at = super::super::super::gr::stage::entry_point(self.game, self.data, point)
             .unwrap_or_else(|| panic!("entry point {point} reads a stale vector"));
         let off = self.game.player_some_pos(slot);
@@ -60,7 +63,7 @@ impl Running<'_> {
         self.fighter_spawn(gobj);
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         let point = self.game.player_spawn_point(slot) as i8;
-        self.game.fighter_mut(gobj).smash_attrs.x2135 = point;
+        self.game.fighter_mut(gobj).smash_attrs.rebirth_point = point;
         if point == -1 {
             let at = self.game.player_spawn_platform_pos(slot);
             let o = self.platform_offset(gobj);
@@ -185,7 +188,7 @@ impl Running<'_> {
             fp.self_vel.y = v.y;
             return;
         }
-        if fp.smash_attrs.x2135 != -1 {
+        if fp.smash_attrs.rebirth_point != -1 {
             self.rebirth_point_target(gobj);
         }
         let fp = self.game.fighter_mut(gobj);
@@ -213,7 +216,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Rebirth_Coll")]
     #[doc(alias = "ft_80083DCC")]
     pub fn co_rebirth_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).smash_attrs.x2135 == -1 {
+        if self.game.fighter(gobj).smash_attrs.rebirth_point == -1 {
             self.air_coll_plain(gobj);
         }
     }
@@ -267,7 +270,7 @@ impl Running<'_> {
         } else {
             PLATFORM_FOLLOW
         }));
-        if fp.smash_attrs.x2135 != -1 {
+        if fp.smash_attrs.rebirth_point != -1 {
             let pos = fp.cur_pos;
             fp.coll_data.set_position(pos);
         }

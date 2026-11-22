@@ -1027,19 +1027,19 @@ impl Running<'_> {
         if left == 0 {
             super::one_player::record_target_clear(self.game, sel, frames);
         }
-        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
-        if !x7c.b0 {
+        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
+        if !x7c.target_cleared {
             if left == 0 {
-                x7c.b0 = true;
-                x7c.x94 = frames;
+                x7c.target_cleared = true;
+                x7c.target_record = frames;
                 return;
             }
             let broken = total.wrapping_sub(left) as u32;
-            if x7c.x94 < broken {
-                x7c.x94 = broken;
+            if x7c.target_record < broken {
+                x7c.target_record = broken;
             }
-        } else if left == 0 && x7c.x94 > frames {
-            x7c.x94 = frames;
+        } else if left == 0 && x7c.target_record > frames {
+            x7c.target_record = frames;
         }
     }
 }

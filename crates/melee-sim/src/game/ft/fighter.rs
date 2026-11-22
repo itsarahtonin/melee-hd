@@ -347,9 +347,9 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         if fp.anim_frozen {
             unported_call("ftAnim_8006F0FC");
         }
-        if fp.smash_attrs.x2138_smashSinceHitbox != -1.0 {
-            fp.smash_attrs.x2138_smashSinceHitbox =
-                mem(fp::fadds(reg(fp.smash_attrs.x2138_smashSinceHitbox), 1.0));
+        if fp.smash_attrs.smash_since_hitbox != -1.0 {
+            fp.smash_attrs.smash_since_hitbox =
+                mem(fp::fadds(reg(fp.smash_attrs.smash_since_hitbox), 1.0));
         }
         if fp.dmg.time_since_hit != -1 {
             fp.dmg.time_since_hit = fp.dmg.time_since_hit.wrapping_add(1);

@@ -261,7 +261,7 @@ impl MultiMan {
 /// Master Hand's, by the character select's name entry, is Mario's, docs/melee-bugs.md).
 #[doc(alias = "gmMainLib_8015D780")]
 fn set_15min_cleared(rec: &mut crate::game::structs::FighterData_x7C) {
-    rec.b3 = true;
+    rec.fifteen_min_cleared = true;
 }
 
 impl Running<'_> {
@@ -271,7 +271,7 @@ impl Running<'_> {
 
     fn mm_record_1p(&mut self, ckind: i8) -> &mut crate::game::structs::FighterData_x7C {
         let sel = selkind(ckind as u8);
-        &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C
+        &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records
     }
 
     /// `gm_Mode_10ManVs_OnLoad`, the six modes' load: the confirming port, the count, and
@@ -465,9 +465,9 @@ impl Running<'_> {
         match mode {
             GM_10MAN | GM_100MAN => {
                 let (saved, won) = if mode == GM_10MAN {
-                    (rec.x98, rec.b1)
+                    (rec.ten_man_time, rec.ten_man_cleared)
                 } else {
-                    (rec.x9C, rec.b2)
+                    (rec.hundred_man_time, rec.hundred_man_cleared)
                 };
                 let mut r = mm.record_of(own, m);
                 r.set_won(won);
@@ -484,7 +484,11 @@ impl Running<'_> {
                 }
             }
             GM_3MIN | GM_15MIN => {
-                let saved = if mode == GM_3MIN { rec.xA0 } else { rec.xA2 };
+                let saved = if mode == GM_3MIN {
+                    rec.three_min_kos
+                } else {
+                    rec.fifteen_min_kos
+                };
                 let mut r = mm.record_of(own, m);
                 let won = saved != 0;
                 r.set_won(won);
@@ -494,7 +498,11 @@ impl Running<'_> {
                 mm.set_time(own, m, r.kos);
             }
             _ => {
-                let saved = if mode == GM_ENDLESS { rec.xA4 } else { rec.xA8 };
+                let saved = if mode == GM_ENDLESS {
+                    rec.endless_kos
+                } else {
+                    rec.cruel_kos
+                };
                 let mut r = mm.record_of(own, m);
                 r.kos = saved as u16;
                 mm.result = r;
@@ -536,19 +544,19 @@ impl Running<'_> {
             GM_10MAN | GM_100MAN => {
                 let v = if r.won() { r.score } else { i32::from(r.kos) };
                 if mode == GM_10MAN {
-                    rec.b1 = r.won();
-                    rec.x98 = v;
+                    rec.ten_man_cleared = r.won();
+                    rec.ten_man_time = v;
                 } else {
-                    rec.b2 = r.won();
-                    rec.x9C = v;
+                    rec.hundred_man_cleared = r.won();
+                    rec.hundred_man_time = v;
                 }
             }
             GM_3MIN | GM_15MIN => {
                 let v = if r.won() { r.kos } else { 0 };
                 if mode == GM_3MIN {
-                    rec.xA0 = v;
+                    rec.three_min_kos = v;
                 } else {
-                    rec.xA2 = v;
+                    rec.fifteen_min_kos = v;
                     if r.won() {
                         set_15min_cleared(rec);
                     }
@@ -556,9 +564,9 @@ impl Running<'_> {
             }
             _ => {
                 if mode == GM_ENDLESS {
-                    rec.xA4 = i32::from(r.kos);
+                    rec.endless_kos = i32::from(r.kos);
                 } else {
-                    rec.xA8 = i32::from(r.kos);
+                    rec.cruel_kos = i32::from(r.kos);
                 }
             }
         }
@@ -671,8 +679,12 @@ impl Running<'_> {
         let mm_mode = mode as u8;
         if mm_mode == GM_10MAN || mm_mode == GM_100MAN {
             let sel = usize::from(selkind(idx as u8));
-            let x7c = &self.game.game_data.thing.save_data.x1F2C[sel].x7C;
-            let cleared = if mm_mode == GM_10MAN { x7c.b1 } else { x7c.b2 };
+            let x7c = &self.game.game_data.thing.save_data.x1F2C[sel].records;
+            let cleared = if mm_mode == GM_10MAN {
+                x7c.ten_man_cleared
+            } else {
+                x7c.hundred_man_cleared
+            };
             let blk = &mut self.game.multi_man.blocks[b];
             if r.won != 0 {
                 if (r.frames as u32) < score {

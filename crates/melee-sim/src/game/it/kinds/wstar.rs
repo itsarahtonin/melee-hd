@@ -258,9 +258,9 @@ pub fn set_attack_flags(r: &mut Running, gobj: GObjId, flags: u32) {
         let f = super::super::owner::fighter_of(r.game, owner.expect("an owner"));
         let rec = r.game.fighters[f.0].attack_record.clone();
         let ip = item_mut(r.game, gobj);
-        ip.attack_record_a = rec.x2074_vec;
-        ip.attack_record_b = rec.x207C;
-        ip.attack_record_word = u32::from_be_bytes(rec.x10);
+        ip.attack_record_a = rec.percents;
+        ip.attack_record_b = rec.kb_and_thrower;
+        ip.attack_record_word = u32::from_be_bytes(rec.flags);
         return;
     }
     super::super::lib279c::clear_attack_record(item_mut(r.game, gobj));

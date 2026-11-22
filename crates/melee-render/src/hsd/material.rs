@@ -316,7 +316,7 @@ impl Ctx<'_> {
         let fp = &game.fighters[f.0];
         if fp.refracted {
             let rendermode = game.objs.mobjs[m].rendermode;
-            return self.refract_setup(rendermode, usize::from(fp.smash_attrs.x2134_vibrateFrame));
+            return self.refract_setup(rendermode, usize::from(fp.smash_attrs.vibrate_frame));
         }
         // The flags the fighter's render callback set for this tree, as melee-sim named them.
         let flags = match self.hsd.fighter_flags {

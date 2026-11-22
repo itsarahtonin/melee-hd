@@ -353,6 +353,18 @@ mod label_tests {
             ]
         );
         assert_eq!(
+            labels_after::<Fighter>("fighter", |fp| {
+                fp.dmg.hit_records.spike = true;
+                fp.attack_record.record_id = 1;
+                fp.smash_attrs.hold_frame = 1.0;
+            }),
+            [
+                "fighter.dmg.hit_records (x18d8).spike (x10_b0)",
+                "fighter.attack_record (x2074).record_id (x2088)",
+                "fighter.smash_attrs.hold_frame (x211C_holdFrame)",
+            ]
+        );
+        assert_eq!(
             labels_after::<Item>("item", |ip| ip.hit_flags.bits.silenced = true),
             ["item.hit_flags (xDCD_flag).bits (x0).silenced (b2)"]
         );

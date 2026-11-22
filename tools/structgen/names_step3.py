@@ -715,6 +715,140 @@ FIGHTER_X20B0 = {"x0": "point_0", "xC": "point_1"}
 FIGHTER_X1670 = {"x14": "unused_14", "x18": "center", "x24": "bone"}
 FT_PARTS_VIS = {"xC": "lookups"}
 
+# The fighter's data structs (the continuation's second group): a character's save records
+# (`FighterData`, its 1P records `FighterData_x7C`), a smash attack's charge (`_SmashAttr`), the
+# common attributes (`ftCo_DatAttrs`, Yoshi's egg `ftCo_DatAttrs_xBC_t`), a part's bone
+# (`FighterBone`), the step-on boxes (`lb_80014638_arg0_t`, `arg1_t`), the attack record
+# (`Struct2074`) and a hit's record (`ft_800898B4_t`).
+FIGHTER_DATA_X7C = {
+    # Target Test: cleared, then the best time; before it, the most targets broken.
+    "b0": "target_cleared",
+    "b1": "ten_man_cleared",
+    "b2": "hundred_man_cleared",
+    "b3": "fifteen_min_cleared",
+    "b4": "classic_cleared",
+    "b5": "adventure_cleared",
+    "b6": "all_star_cleared",
+    # Training's best combo.
+    "x7E": "training_combo",
+    # The highest level each 1P mode was cleared on.
+    "x80": "classic_level",
+    "x81": "adventure_level",
+    "x82": "all_star_level",
+    "x83": "unused_83",
+    "x84": "home_run_distance",
+    "x88": "classic_score",
+    "x8C": "adventure_score",
+    "x90": "all_star_score",
+    "x94": "target_record",
+    "x98": "ten_man_time",
+    "x9C": "hundred_man_time",
+    "xA0": "three_min_kos",
+    "xA2": "fifteen_min_kos",
+    "xA4": "endless_kos",
+    "xA8": "cruel_kos",
+}
+FIGHTER_DATA = {
+    # The times played, a big-endian half in two bytes.
+    "x78": "play_count_hi",
+    "x79": "play_count_lo",
+    # `x0.b0`: the character was played.
+    "x7A": "played_flags",
+    "x7B": "unused_7b",
+    "x7C": "records",
+}
+SMASH_ATTR = {
+    "x2118_frames": "frames",
+    "x211C_holdFrame": "hold_frame",
+    "x2120_damageMul": "damage_mul",
+    "x2124_frameSpeedMul": "frame_speed_mul",
+    # The color animation the charge plays (0x7B none).
+    "x2128": "color_anim",
+    # The model's shake, a row of `Fighter_SmashChargeShakeTable` each frame.
+    "x212C": "shake_row",
+    "x212D": "shake_rows",
+    "x212E": "unused_212e",
+    "x212F": "unused_212f",
+    "x2130_sfxBool": "sfx_played",
+    # The cloak's look: 2 while it holds, 1 as it flickers.
+    "x2134_vibrateFrame": "vibrate_frame",
+    # The entry point a respawn goes to (-1 the platform).
+    "x2135": "rebirth_point",
+    "x2136": "unused_2136",
+    "x2137": "unused_2137",
+    "x2138_smashSinceHitbox": "smash_since_hitbox",
+}
+FTCO_DAT_ATTRS = {
+    # Yoshi's egg.
+    "xBC": "egg",
+    # The star Kirby spits a swallowed fighter out in.
+    "xDC": "kirby_star_scale",
+    # The Bunny Hood's bones 4 and 8 moved, its ears scaled by the height.
+    "x114": "hood_shift_4",
+    "x120": "hood_shift_8",
+    "x12C": "hood_ear_scale",
+    # The flower's offset on the head and its petals' scale.
+    "x130": "flower_offset",
+    "x13C": "flower_scale",
+    # The scale of a script's effects 0x438 and 0x439.
+    "x144": "effect_scale",
+    # The freeze's head offset (`ftCo_DamageIce_Init`).
+    "x150_damageice_unk": "ice_offset_z",
+    "x154_damageice_unk": "ice_offset_y",
+    "x168": "unused_168",
+    "x170": "camera_bone_offset",
+    # The feet's height in the step-on box.
+    "x17C": "feet_height",
+}
+FTCO_DAT_ATTRS_XBC = {"x4": "hurt_a_offset", "x10": "hurt_b_offset", "x1C": "hurt_scale"}
+FIGHTER_BONE = {
+    # The joint an animation is read into before it's blended onto `joint`.
+    "x4_jobj2": "interp_joint",
+    "x8": "flags",
+    # Byte 0 the bone's depth in the tree, byte 1 flags.
+    "xC_u": "tree",
+}
+# The fighter's feet for stepping on an item (`lb_80014638`): the left and right edges in x and
+# y, the height in z, last frame's and this one's.
+LB_STEP_FEET = {"x0": "prev_feet", "xC": "feet"}
+# An item's top that can be stepped on: its motion this frame, and its span.
+LB_STEP_TOP = {"unk_x": "motion_x", "unk_y": "motion_y", "x8": "span"}
+# The attack record (`x2074`) an attack's hits take.
+STRUCT_2074 = {
+    # `x` the percent the attacker had at the attack's start, `y` the hit's victim's (0 here).
+    "x2074_vec": "percents",
+    # `x` the knockback (0 here), `y` the player who last hit the attacker with an item (6 none).
+    "x207C": "kb_and_thrower",
+    "x10": "flags",
+    # The record's number (`plAttack_80037B08`).
+    "x2088": "record_id",
+}
+# A hit's record (`dmg.hit_records`), copied from the attack record and filled in at the hit.
+FT_800898B4 = {
+    "x0": "attacker_percent",
+    "x4": "victim_percent",
+    # The player who last hit the attacker with an item (6 none): a hit on oneself is a bonus.
+    "xC": "item_thrower",
+    # A hitbox's angle in the common data's spike range (`pl_80037ECC`).
+    "x10_b0": "spike",
+    "x10_b1": "metal",
+    "x10_b2": "bunny_hood",
+    "x10_b3": "starman",
+    "x10_b4": "cloak",
+    "x10_b5": "giant",
+    "x10_b6": "tiny",
+    "x10_b7": "landed",
+    "x11_b0": "from_behind",
+    # The victim at the magnifier's edge.
+    "x11_b1": "at_edge",
+    # The victim hanging on a ledge (`CliffWait`).
+    "x11_b2": "on_ledge",
+    # A spike on a victim still in a strong hit's knockback from another player.
+    "x11_b3": "spike_after_strong",
+    # A forward tilt or smash from an attacker not holding the victim (`ft_80089914`).
+    "x11_b4": "forward_attack",
+}
+
 # The structs by step 3's commits, in order.
 GROUPS = [
     {"CollData": COLL_DATA, "HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
@@ -754,6 +888,18 @@ GROUPS = [
         "Fighter_x20B0_t": FIGHTER_X20B0,
         "Fighter_x1670_t": FIGHTER_X1670,
         "FtPartsVis": FT_PARTS_VIS,
+    },
+    {
+        "FighterData_x7C": FIGHTER_DATA_X7C,
+        "FighterData": FIGHTER_DATA,
+        "_SmashAttr": SMASH_ATTR,
+        "ftCo_DatAttrs": FTCO_DAT_ATTRS,
+        "ftCo_DatAttrs_xBC_t": FTCO_DAT_ATTRS_XBC,
+        "FighterBone": FIGHTER_BONE,
+        "lb_80014638_arg0_t": LB_STEP_FEET,
+        "lb_80014638_arg1_t": LB_STEP_TOP,
+        "Struct2074": STRUCT_2074,
+        "ft_800898B4_t": FT_800898B4,
     },
 ]
 

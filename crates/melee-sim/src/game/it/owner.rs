@@ -204,7 +204,7 @@ pub fn camera_bone_pos(game: &mut Game, data: &Archives, gobj: GObjId) -> Vec3 {
         .ptr(fp.ft_data.expect("a fighter without data"))
         .expect("a fighter without attributes");
     let bone = data.u32(attrs.at(0x16C)) as usize;
-    let offset = fp.co_attrs.x170;
+    let offset = fp.co_attrs.camera_bone_offset;
     let parts = fp.parts.expect("a fighter without parts");
     let j = game.fighter_parts[parts.0][bone].joint;
     crate::lb::joint::world_position(&mut game.objs, data, j, Some(offset))

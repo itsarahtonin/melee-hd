@@ -147,7 +147,7 @@ impl Running<'_> {
             }
             let j = bone.joint;
             let mut d = jobj::get_dobj(&self.game.objs.jobjs, j);
-            let b2 = bone.x8[1];
+            let b2 = bone.flags[1];
             let mut flags = 0;
             if super::anim::bone_flag(&bone, 7) {
                 flags |= jflag::LIGHTING;
@@ -283,7 +283,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.cloak = false;
         fp.refracted = false;
-        fp.smash_attrs.x2134_vibrateFrame = 0;
+        fp.smash_attrs.vibrate_frame = 0;
         fp.cloak_frames = 0;
         fp.cloak_look = false;
     }
@@ -291,7 +291,7 @@ impl Running<'_> {
     /// The cloak's vibration back to its first frame, `fn_800C8B1C`.
     #[doc(alias = "fn_800C8B1C")]
     pub fn reset_cloak_vibration(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).smash_attrs.x2134_vibrateFrame = 0;
+        self.game.fighter_mut(gobj).smash_attrs.vibrate_frame = 0;
     }
 
     /// Drawn through refraction, `ftCo_800C88D4`'s inline: the vibration reset, the parts'
@@ -408,10 +408,10 @@ impl Running<'_> {
         use gekko_fp as fp;
         let f = self.game.fighter(gobj);
         let hood = f.bunny_hood.expect("no Bunny Hood worn");
-        let (a, b) = (f.co_attrs.x120, f.co_attrs.x114);
+        let (a, b) = (f.co_attrs.hood_shift_8, f.co_attrs.hood_shift_4);
         let scale = crate::fpu::mem(fp::fmuls(
             crate::fpu::reg(f.scale.y),
-            crate::fpu::reg(f.co_attrs.x12C),
+            crate::fpu::reg(f.co_attrs.hood_ear_scale),
         ));
         kinds::rabbitc::shift_parts(self, hood, a, b);
         kinds::rabbitc::scale_ears(self, hood, scale);
@@ -490,8 +490,8 @@ impl Running<'_> {
             y(&mut a.ledge_jump_vertical_velocity, 0x54);
             y(&mut a.item_throw_velocity_multiplier, 0x58);
             y(&mut a.heavy_throw_velocity_multiplier, 0x5C);
-            y(&mut a.xBC.size, 0x60);
-            y(&mut a.xDC, 0x64);
+            y(&mut a.egg.size, 0x60);
+            y(&mut a.kirby_star_scale, 0x64);
             y(&mut a.kirby_b_star_damage, 0x68);
             y(&mut a.normal_landing_lag, 0x6C);
             y(&mut a.landingairn_lag, 0x70);
@@ -503,10 +503,10 @@ impl Running<'_> {
             y(&mut a.screw_attack_launch_velocity, 0x88);
             y(&mut a.damageicejump_vel_y, 0x8C);
             y(&mut a.damageicejump_vel_x_mult, 0x90);
-            y(&mut a.x170.x, 0x94);
-            y(&mut a.x170.y, 0x94);
-            y(&mut a.x170.z, 0x94);
-            y(&mut a.x17C, 0x98);
+            y(&mut a.camera_bone_offset.x, 0x94);
+            y(&mut a.camera_bone_offset.y, 0x94);
+            y(&mut a.camera_bone_offset.z, 0x94);
+            y(&mut a.feet_height, 0x98);
         }
         let s = scale;
         let mul = |v: &mut f32| *v = mem(fp::fmuls(reg(*v), s));

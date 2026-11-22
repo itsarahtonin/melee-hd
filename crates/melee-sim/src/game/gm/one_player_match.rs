@@ -645,11 +645,11 @@ impl Running<'_> {
             // the menu.
             let sel = super::match_exit::selkind(run.player.ckind as u8);
             let mode = self.game.game_mode;
-            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
             let best = match mode {
-                super::one_player::GM_CLASSIC => Some(&mut rec.x88),
-                super::one_player::GM_ADVENTURE => Some(&mut rec.x8C),
-                GM_ALLSTAR => Some(&mut rec.x90),
+                super::one_player::GM_CLASSIC => Some(&mut rec.classic_score),
+                super::one_player::GM_ADVENTURE => Some(&mut rec.adventure_score),
+                GM_ALLSTAR => Some(&mut rec.all_star_score),
                 _ => None,
             };
             if let Some(best) = best
@@ -872,13 +872,13 @@ impl Running<'_> {
             let challenger = self.challenger_by_characters();
             let p = run.player;
             let sel = super::match_exit::selkind(p.ckind as u8);
-            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
             // `fn_80162BFC`, `fn_80162DF8`, `fn_80162FF4`: the mode's high score, a word
             // compared unsigned.
             let best = match self.game.game_mode {
-                super::one_player::GM_CLASSIC => Some(&mut rec.x88),
-                super::one_player::GM_ADVENTURE => Some(&mut rec.x8C),
-                GM_ALLSTAR => Some(&mut rec.x90),
+                super::one_player::GM_CLASSIC => Some(&mut rec.classic_score),
+                super::one_player::GM_ADVENTURE => Some(&mut rec.adventure_score),
+                GM_ALLSTAR => Some(&mut rec.all_star_score),
                 _ => None,
             };
             if let Some(best) = best
@@ -935,16 +935,16 @@ impl Running<'_> {
             super::endings::GM_ADVENTURE_GOVER => {
                 let s = &mut self.game.game_data.thing.save_data;
                 // `gmMainLib_8015D25C`: cleared, and this run's clear in `x14`'s mask.
-                s.x1F2C[usize::from(sel)].x7C.b5 = true;
+                s.x1F2C[usize::from(sel)].records.adventure_cleared = true;
                 s.unk_8.x14 |= 1 << sel;
-                let rec = &mut s.x1F2C[usize::from(sel)].x7C;
+                let rec = &mut s.x1F2C[usize::from(sel)].records;
                 // `fn_80162DF8`: the high score, compared unsigned.
-                if (rec.x8C as u32) < run.score as u32 {
-                    rec.x8C = run.score;
+                if (rec.adventure_score as u32) < run.score as u32 {
+                    rec.adventure_score = run.score;
                 }
                 // `gmMainLib_8015D2BC`: the highest level cleared.
-                if rec.x81 < p.cpu_level {
-                    rec.x81 = p.cpu_level;
+                if rec.adventure_level < p.cpu_level {
+                    rec.adventure_level = p.cpu_level;
                 }
                 // `gmMainLib_8015D2D4`, `gmMainLib_8015D2F0`: Very Hard's fewest stocks.
                 let best = rec.b10_to_12;
@@ -955,16 +955,16 @@ impl Running<'_> {
             super::endings::GM_CLASSIC_GOVER => {
                 let s = &mut self.game.game_data.thing.save_data;
                 // `gmMainLib_8015D134`: cleared, and this run's clear in `x10`'s mask.
-                s.x1F2C[usize::from(sel)].x7C.b4 = true;
+                s.x1F2C[usize::from(sel)].records.classic_cleared = true;
                 s.unk_8.x10 |= 1 << sel;
-                let rec = &mut s.x1F2C[usize::from(sel)].x7C;
+                let rec = &mut s.x1F2C[usize::from(sel)].records;
                 // `fn_80162BFC`: the high score, compared unsigned.
-                if (rec.x88 as u32) < run.score as u32 {
-                    rec.x88 = run.score;
+                if (rec.classic_score as u32) < run.score as u32 {
+                    rec.classic_score = run.score;
                 }
                 // `gmMainLib_8015D194`: the highest level cleared.
-                if rec.x80 < p.cpu_level {
-                    rec.x80 = p.cpu_level;
+                if rec.classic_level < p.cpu_level {
+                    rec.classic_level = p.cpu_level;
                 }
                 // `gmMainLib_8015D1AC`, `gmMainLib_8015D1C8`: Very Hard's fewest stocks.
                 let best = rec.b789;
@@ -992,18 +992,18 @@ impl Running<'_> {
     fn allstar_clear_records(&mut self, run: &OnePlayerRun, sel: u8, stocks: u8) {
         let p = run.player;
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1F2C[usize::from(sel)].x7C.b6 = true;
+        s.x1F2C[usize::from(sel)].records.all_star_cleared = true;
         s.unk_8.x18 |= 1 << sel;
-        let rec = &mut s.x1F2C[usize::from(sel)].x7C;
-        if (rec.x90 as u32) < run.score as u32 {
-            rec.x90 = run.score;
+        let rec = &mut s.x1F2C[usize::from(sel)].records;
+        if (rec.all_star_score as u32) < run.score as u32 {
+            rec.all_star_score = run.score;
         }
         if !self.stage_unlocked(0x1F) {
             self.unlock_stage(0x1F);
         }
-        let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
-        if rec.x82 < p.cpu_level {
-            rec.x82 = p.cpu_level;
+        let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
+        if rec.all_star_level < p.cpu_level {
+            rec.all_star_level = p.cpu_level;
         }
         let best = rec.b13_to_15;
         if p.cpu_level == 4 && (best == 0 || stocks < best) {

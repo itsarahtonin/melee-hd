@@ -93,15 +93,15 @@ impl Running<'_> {
             while let Some(d) = link {
                 if self.game.fighter_dynamics[d.0].desc.jobj == part_j {
                     let b = &mut self.game.fighter_parts[parts.0][part as usize];
-                    if b.x8[0] & 0x80 != 0 {
-                        b.x8[0] &= !0x80;
+                    if b.flags[0] & 0x80 != 0 {
+                        b.flags[0] &= !0x80;
                         self.game.fighters[f.0].dynamic_bone_sets[i].bone_id = BoneSlot::Id(j + 1);
                         if self.game.fighters[f.0].action_tree.is_some() {
                             let speed = self.game.fighters[f.0].frame_speed_mul;
                             self.restart_part_anim(f, part, frame, speed);
                         }
                     } else {
-                        b.x8[0] |= 0x80;
+                        b.flags[0] |= 0x80;
                         self.game.fighters[f.0].dynamic_bone_sets[i].bone_id = BoneSlot::Id(j);
                         let root = super::super::gr::ground::jobj_of(self.game, gobj);
                         let skel = self.game.fighters[f.0].anim_skeleton;
@@ -196,10 +196,10 @@ impl Running<'_> {
             }
             let b = &mut self.game.fighter_parts[parts.0][bone as usize];
             if on {
-                b.x8[0] |= 0x80;
+                b.flags[0] |= 0x80;
                 jobj::clear_flags(&mut self.game.objs.jobjs, j, USE_QUATERNION);
             } else {
-                b.x8[0] &= !0x80;
+                b.flags[0] &= !0x80;
             }
             j = j.and_then(|j| self.game.objs.jobjs[j].child);
             link = self.game.fighter_dynamics[d.0].next;

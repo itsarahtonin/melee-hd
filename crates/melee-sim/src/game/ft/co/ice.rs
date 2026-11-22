@@ -145,10 +145,7 @@ impl Running<'_> {
         fp.can_mash = false;
         let fp = &self.game.fighters[f.0];
         let (xi, yi) = (self.bone_index(fp, XROT_N), self.bone_index(fp, YROT_N));
-        let (y, z) = (
-            fp.co_attrs.x154_damageice_unk,
-            fp.co_attrs.x150_damageice_unk,
-        );
+        let (y, z) = (fp.co_attrs.ice_offset_y, fp.co_attrs.ice_offset_z);
         let xrotn = self
             .bone(f, xi)
             .joint

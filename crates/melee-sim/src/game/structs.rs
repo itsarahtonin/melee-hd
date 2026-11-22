@@ -52,20 +52,23 @@ pub struct ftCo_DatAttrs_xBC_t {
     /// +0x0
     pub size: f32,
     /// +0x4
-    pub x4: Vec3,
+    #[doc(alias("x4"))]
+    pub hurt_a_offset: Vec3,
     /// +0x10
-    pub x10: Vec3,
+    #[doc(alias("x10"))]
+    pub hurt_b_offset: Vec3,
     /// +0x1c
-    pub x1C: f32,
+    #[doc(alias("x1C"))]
+    pub hurt_scale: f32,
 }
 
 impl Default for ftCo_DatAttrs_xBC_t {
     fn default() -> Self {
         ftCo_DatAttrs_xBC_t {
             size: 0.0,
-            x4: Default::default(),
-            x10: Default::default(),
-            x1C: 0.0,
+            hurt_a_offset: Default::default(),
+            hurt_b_offset: Default::default(),
+            hurt_scale: 0.0,
         }
     }
 }
@@ -168,9 +171,11 @@ pub struct ftCo_DatAttrs {
     /// +0xb8
     pub specials_ground_speed_retention: f32,
     /// +0xbc
-    pub xBC: ftCo_DatAttrs_xBC_t,
+    #[doc(alias("xBC"))]
+    pub egg: ftCo_DatAttrs_xBC_t,
     /// +0xdc
-    pub xDC: f32,
+    #[doc(alias("xDC"))]
+    pub kirby_star_scale: f32,
     /// +0xe0
     pub kirby_b_star_damage: f32,
     /// +0xe4
@@ -198,27 +203,35 @@ pub struct ftCo_DatAttrs {
     /// +0x110
     pub trophy_scale: f32,
     /// +0x114
-    pub x114: Vec3,
+    #[doc(alias("x114"))]
+    pub hood_shift_4: Vec3,
     /// +0x120
-    pub x120: Vec3,
+    #[doc(alias("x120"))]
+    pub hood_shift_8: Vec3,
     /// +0x12c
-    pub x12C: f32,
+    #[doc(alias("x12C"))]
+    pub hood_ear_scale: f32,
     /// +0x130
-    pub x130: Vec3,
+    #[doc(alias("x130"))]
+    pub flower_offset: Vec3,
     /// +0x13c
-    pub x13C: f32,
+    #[doc(alias("x13C"))]
+    pub flower_scale: f32,
     /// +0x140
     pub screw_attack_launch_velocity: f32,
     /// +0x144
-    pub x144: f32,
+    #[doc(alias("x144"))]
+    pub effect_scale: f32,
     /// +0x148
     pub wall_jump_min_approach_speed: f32,
     /// +0x14c
     pub damageice_ice_size: f32,
     /// +0x150
-    pub x150_damageice_unk: f32,
+    #[doc(alias("x150_damageice_unk"))]
+    pub ice_offset_z: f32,
     /// +0x154
-    pub x154_damageice_unk: f32,
+    #[doc(alias("x154_damageice_unk"))]
+    pub ice_offset_y: f32,
     /// +0x158
     pub damageicejump_vel_y: f32,
     /// +0x15c
@@ -228,13 +241,16 @@ pub struct ftCo_DatAttrs {
     /// +0x164
     pub warp_star_hitbox_scale: f32,
     /// +0x168
-    pub x168: f32,
+    #[doc(alias("x168"))]
+    pub unused_168: f32,
     /// +0x16c
     pub camera_zoom_target_bone: i32,
     /// +0x170
-    pub x170: Vec3,
+    #[doc(alias("x170"))]
+    pub camera_bone_offset: Vec3,
     /// +0x17c
-    pub x17C: f32,
+    #[doc(alias("x17C"))]
+    pub feet_height: f32,
     /// +0x180
     pub weight_independent_throws_mask: u8,
 }
@@ -289,8 +305,8 @@ impl Default for ftCo_DatAttrs {
             item_throw_velocity_multiplier: 0.0,
             heavy_throw_velocity_multiplier: 0.0,
             specials_ground_speed_retention: 0.0,
-            xBC: Default::default(),
-            xDC: 0.0,
+            egg: Default::default(),
+            kirby_star_scale: 0.0,
             kirby_b_star_damage: 0.0,
             normal_landing_lag: 0.0,
             landingairn_lag: 0.0,
@@ -304,25 +320,25 @@ impl Default for ftCo_DatAttrs {
             wall_jump_vertical_velocity: 0.0,
             passiveceil_vel_x: 0.0,
             trophy_scale: 0.0,
-            x114: Default::default(),
-            x120: Default::default(),
-            x12C: 0.0,
-            x130: Default::default(),
-            x13C: 0.0,
+            hood_shift_4: Default::default(),
+            hood_shift_8: Default::default(),
+            hood_ear_scale: 0.0,
+            flower_offset: Default::default(),
+            flower_scale: 0.0,
             screw_attack_launch_velocity: 0.0,
-            x144: 0.0,
+            effect_scale: 0.0,
             wall_jump_min_approach_speed: 0.0,
             damageice_ice_size: 0.0,
-            x150_damageice_unk: 0.0,
-            x154_damageice_unk: 0.0,
+            ice_offset_z: 0.0,
+            ice_offset_y: 0.0,
             damageicejump_vel_y: 0.0,
             damageicejump_vel_x_mult: 0.0,
             respawn_platform_scale: 0.0,
             warp_star_hitbox_scale: 0.0,
-            x168: 0.0,
+            unused_168: 0.0,
             camera_zoom_target_bone: 0,
-            x170: Default::default(),
-            x17C: 0.0,
+            camera_bone_offset: Default::default(),
+            feet_height: 0.0,
             weight_independent_throws_mask: 0,
         }
     }
@@ -1221,61 +1237,77 @@ impl Default for Fighter_x1670_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct ft_800898B4_t {
     /// +0x0
-    pub x0: i32,
+    #[doc(alias("x0"))]
+    pub attacker_percent: i32,
     /// +0x4
-    pub x4: i32,
+    #[doc(alias("x4"))]
+    pub victim_percent: i32,
     /// +0x8
     pub kb_applied1: f32,
     /// +0xc
-    pub xC: i32,
+    #[doc(alias("xC"))]
+    pub item_thrower: i32,
     /// +0x10 (bits 0..+1)
-    pub x10_b0: bool,
+    #[doc(alias("x10_b0"))]
+    pub spike: bool,
     /// +0x10 (bits 1..+1)
-    pub x10_b1: bool,
+    #[doc(alias("x10_b1"))]
+    pub metal: bool,
     /// +0x10 (bits 2..+1)
-    pub x10_b2: bool,
+    #[doc(alias("x10_b2"))]
+    pub bunny_hood: bool,
     /// +0x10 (bits 3..+1)
-    pub x10_b3: bool,
+    #[doc(alias("x10_b3"))]
+    pub starman: bool,
     /// +0x10 (bits 4..+1)
-    pub x10_b4: bool,
+    #[doc(alias("x10_b4"))]
+    pub cloak: bool,
     /// +0x10 (bits 5..+1)
-    pub x10_b5: bool,
+    #[doc(alias("x10_b5"))]
+    pub giant: bool,
     /// +0x10 (bits 6..+1)
-    pub x10_b6: bool,
+    #[doc(alias("x10_b6"))]
+    pub tiny: bool,
     /// +0x10 (bits 7..+1)
-    pub x10_b7: bool,
+    #[doc(alias("x10_b7"))]
+    pub landed: bool,
     /// +0x11 (bits 0..+1)
-    pub x11_b0: bool,
+    #[doc(alias("x11_b0"))]
+    pub from_behind: bool,
     /// +0x11 (bits 1..+1)
-    pub x11_b1: bool,
+    #[doc(alias("x11_b1"))]
+    pub at_edge: bool,
     /// +0x11 (bits 2..+1)
-    pub x11_b2: bool,
+    #[doc(alias("x11_b2"))]
+    pub on_ledge: bool,
     /// +0x11 (bits 3..+1)
-    pub x11_b3: bool,
+    #[doc(alias("x11_b3"))]
+    pub spike_after_strong: bool,
     /// +0x11 (bits 4..+1)
-    pub x11_b4: bool,
+    #[doc(alias("x11_b4"))]
+    pub forward_attack: bool,
 }
 
 impl Default for ft_800898B4_t {
     fn default() -> Self {
         ft_800898B4_t {
-            x0: 0,
-            x4: 0,
+            attacker_percent: 0,
+            victim_percent: 0,
             kb_applied1: 0.0,
-            xC: 0,
-            x10_b0: false,
-            x10_b1: false,
-            x10_b2: false,
-            x10_b3: false,
-            x10_b4: false,
-            x10_b5: false,
-            x10_b6: false,
-            x10_b7: false,
-            x11_b0: false,
-            x11_b1: false,
-            x11_b2: false,
-            x11_b3: false,
-            x11_b4: false,
+            item_thrower: 0,
+            spike: false,
+            metal: false,
+            bunny_hood: false,
+            starman: false,
+            cloak: false,
+            giant: false,
+            tiny: false,
+            landed: false,
+            from_behind: false,
+            at_edge: false,
+            on_ledge: false,
+            spike_after_strong: false,
+            forward_attack: false,
         }
     }
 }
@@ -1284,16 +1316,18 @@ impl Default for ft_800898B4_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct lb_80014638_arg0_t {
     /// +0x0
-    pub x0: Vec3,
+    #[doc(alias("x0"))]
+    pub prev_feet: Vec3,
     /// +0xc
-    pub xC: Vec3,
+    #[doc(alias("xC"))]
+    pub feet: Vec3,
 }
 
 impl Default for lb_80014638_arg0_t {
     fn default() -> Self {
         lb_80014638_arg0_t {
-            x0: Default::default(),
-            xC: Default::default(),
+            prev_feet: Default::default(),
+            feet: Default::default(),
         }
     }
 }
@@ -2112,22 +2146,26 @@ impl Default for Struct207C {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Struct2074 {
     /// +0x0
-    pub x2074_vec: S32Vec2,
+    #[doc(alias("x2074_vec"))]
+    pub percents: S32Vec2,
     /// +0x8
-    pub x207C: Struct207C,
+    #[doc(alias("x207C"))]
+    pub kb_and_thrower: Struct207C,
     /// +0x10
-    pub x10: [u8; 4],
+    #[doc(alias("x10"))]
+    pub flags: [u8; 4],
     /// +0x14
-    pub x2088: u16,
+    #[doc(alias("x2088"))]
+    pub record_id: u16,
 }
 
 impl Default for Struct2074 {
     fn default() -> Self {
         Struct2074 {
-            x2074_vec: Default::default(),
-            x207C: Default::default(),
-            x10: [0; 4],
-            x2088: 0,
+            percents: Default::default(),
+            kb_and_thrower: Default::default(),
+            flags: [0; 4],
+            record_id: 0,
         }
     }
 }
@@ -2197,56 +2235,71 @@ pub struct _SmashAttr {
     /// +0x0
     pub state: i32,
     /// +0x4
-    pub x2118_frames: f32,
+    #[doc(alias("x2118_frames"))]
+    pub frames: f32,
     /// +0x8
-    pub x211C_holdFrame: f32,
+    #[doc(alias("x211C_holdFrame"))]
+    pub hold_frame: f32,
     /// +0xc
-    pub x2120_damageMul: f32,
+    #[doc(alias("x2120_damageMul"))]
+    pub damage_mul: f32,
     /// +0x10
-    pub x2124_frameSpeedMul: f32,
+    #[doc(alias("x2124_frameSpeedMul"))]
+    pub frame_speed_mul: f32,
     /// +0x14
-    pub x2128: i32,
+    #[doc(alias("x2128"))]
+    pub color_anim: i32,
     /// +0x18
-    pub x212C: u8,
+    #[doc(alias("x212C"))]
+    pub shake_row: u8,
     /// +0x19
-    pub x212D: u8,
+    #[doc(alias("x212D"))]
+    pub shake_rows: u8,
     /// +0x1a
-    pub x212E: i8,
+    #[doc(alias("x212E"))]
+    pub unused_212e: i8,
     /// +0x1b
-    pub x212F: i8,
+    #[doc(alias("x212F"))]
+    pub unused_212f: i8,
     /// +0x1c
-    pub x2130_sfxBool: i32,
+    #[doc(alias("x2130_sfxBool"))]
+    pub sfx_played: i32,
     /// +0x20
-    pub x2134_vibrateFrame: u8,
+    #[doc(alias("x2134_vibrateFrame"))]
+    pub vibrate_frame: u8,
     /// +0x21
-    pub x2135: i8,
+    #[doc(alias("x2135"))]
+    pub rebirth_point: i8,
     /// +0x22
-    pub x2136: i8,
+    #[doc(alias("x2136"))]
+    pub unused_2136: i8,
     /// +0x23
-    pub x2137: i8,
+    #[doc(alias("x2137"))]
+    pub unused_2137: i8,
     /// +0x24
-    pub x2138_smashSinceHitbox: f32,
+    #[doc(alias("x2138_smashSinceHitbox"))]
+    pub smash_since_hitbox: f32,
 }
 
 impl Default for _SmashAttr {
     fn default() -> Self {
         _SmashAttr {
             state: 0,
-            x2118_frames: 0.0,
-            x211C_holdFrame: 0.0,
-            x2120_damageMul: 0.0,
-            x2124_frameSpeedMul: 0.0,
-            x2128: 0,
-            x212C: 0,
-            x212D: 0,
-            x212E: 0,
-            x212F: 0,
-            x2130_sfxBool: 0,
-            x2134_vibrateFrame: 0,
-            x2135: 0,
-            x2136: 0,
-            x2137: 0,
-            x2138_smashSinceHitbox: 0.0,
+            frames: 0.0,
+            hold_frame: 0.0,
+            damage_mul: 0.0,
+            frame_speed_mul: 0.0,
+            color_anim: 0,
+            shake_row: 0,
+            shake_rows: 0,
+            unused_212e: 0,
+            unused_212f: 0,
+            sfx_played: 0,
+            vibrate_frame: 0,
+            rebirth_point: 0,
+            unused_2136: 0,
+            unused_2137: 0,
+            smash_since_hitbox: 0.0,
         }
     }
 }
@@ -3949,19 +4002,22 @@ impl Default for ItemHitbox {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct lb_80014638_arg1_t {
     /// +0x0
-    pub unk_x: f32,
+    #[doc(alias("unk_x"))]
+    pub motion_x: f32,
     /// +0x4
-    pub unk_y: f32,
+    #[doc(alias("unk_y"))]
+    pub motion_y: f32,
     /// +0x8
-    pub x8: Vec3,
+    #[doc(alias("x8"))]
+    pub span: Vec3,
 }
 
 impl Default for lb_80014638_arg1_t {
     fn default() -> Self {
         lb_80014638_arg1_t {
-            unk_x: 0.0,
-            unk_y: 0.0,
-            x8: Default::default(),
+            motion_x: 0.0,
+            motion_y: 0.0,
+            span: Default::default(),
         }
     }
 }
@@ -6920,20 +6976,23 @@ pub struct FighterBone {
     /// +0x0
     pub joint: Option<JObjId>,
     /// +0x4
-    pub x4_jobj2: Option<JObjId>,
+    #[doc(alias("x4_jobj2"))]
+    pub interp_joint: Option<JObjId>,
     /// +0x8
-    pub x8: [u8; 2],
+    #[doc(alias("x8"))]
+    pub flags: [u8; 2],
     /// +0xc
-    pub xC_u: [u8; 4],
+    #[doc(alias("xC_u"))]
+    pub tree: [u8; 4],
 }
 
 impl Default for FighterBone {
     fn default() -> Self {
         FighterBone {
             joint: None,
-            x4_jobj2: None,
-            x8: [0; 2],
-            xC_u: [0; 4],
+            interp_joint: None,
+            flags: [0; 2],
+            tree: [0; 4],
         }
     }
 }
@@ -13802,19 +13861,26 @@ impl Default for GmStats {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct FighterData_x7C {
     /// +0x0 (bits 0..+1)
-    pub b0: bool,
+    #[doc(alias("b0"))]
+    pub target_cleared: bool,
     /// +0x0 (bits 1..+1)
-    pub b1: bool,
+    #[doc(alias("b1"))]
+    pub ten_man_cleared: bool,
     /// +0x0 (bits 2..+1)
-    pub b2: bool,
+    #[doc(alias("b2"))]
+    pub hundred_man_cleared: bool,
     /// +0x0 (bits 3..+1)
-    pub b3: bool,
+    #[doc(alias("b3"))]
+    pub fifteen_min_cleared: bool,
     /// +0x0 (bits 4..+1)
-    pub b4: bool,
+    #[doc(alias("b4"))]
+    pub classic_cleared: bool,
     /// +0x0 (bits 5..+1)
-    pub b5: bool,
+    #[doc(alias("b5"))]
+    pub adventure_cleared: bool,
     /// +0x0 (bits 6..+1)
-    pub b6: bool,
+    #[doc(alias("b6"))]
+    pub all_star_cleared: bool,
     /// +0x0 (bits 7..+3)
     pub b789: u8,
     /// +0x1 (bits 2..+3)
@@ -13822,68 +13888,84 @@ pub struct FighterData_x7C {
     /// +0x1 (bits 5..+3)
     pub b13_to_15: u8,
     /// +0x2
-    pub x7E: u16,
+    #[doc(alias("x7E"))]
+    pub training_combo: u16,
     /// +0x4
-    pub x80: u8,
+    #[doc(alias("x80"))]
+    pub classic_level: u8,
     /// +0x5
-    pub x81: u8,
+    #[doc(alias("x81"))]
+    pub adventure_level: u8,
     /// +0x6
-    pub x82: u8,
+    #[doc(alias("x82"))]
+    pub all_star_level: u8,
     /// +0x7
-    pub x83: i8,
+    #[doc(alias("x83"))]
+    pub unused_83: i8,
     /// +0x8
-    pub x84: i32,
+    #[doc(alias("x84"))]
+    pub home_run_distance: i32,
     /// +0xc
-    pub x88: i32,
+    #[doc(alias("x88"))]
+    pub classic_score: i32,
     /// +0x10
-    pub x8C: i32,
+    #[doc(alias("x8C"))]
+    pub adventure_score: i32,
     /// +0x14
-    pub x90: i32,
+    #[doc(alias("x90"))]
+    pub all_star_score: i32,
     /// +0x18
-    pub x94: u32,
+    #[doc(alias("x94"))]
+    pub target_record: u32,
     /// +0x1c
-    pub x98: i32,
+    #[doc(alias("x98"))]
+    pub ten_man_time: i32,
     /// +0x20
-    pub x9C: i32,
+    #[doc(alias("x9C"))]
+    pub hundred_man_time: i32,
     /// +0x24
-    pub xA0: u16,
+    #[doc(alias("xA0"))]
+    pub three_min_kos: u16,
     /// +0x26
-    pub xA2: u16,
+    #[doc(alias("xA2"))]
+    pub fifteen_min_kos: u16,
     /// +0x28
-    pub xA4: i32,
+    #[doc(alias("xA4"))]
+    pub endless_kos: i32,
     /// +0x2c
-    pub xA8: i32,
+    #[doc(alias("xA8"))]
+    pub cruel_kos: i32,
 }
 
 impl Default for FighterData_x7C {
     fn default() -> Self {
         FighterData_x7C {
-            b0: false,
-            b1: false,
-            b2: false,
-            b3: false,
-            b4: false,
-            b5: false,
-            b6: false,
+            target_cleared: false,
+            ten_man_cleared: false,
+            hundred_man_cleared: false,
+            fifteen_min_cleared: false,
+            classic_cleared: false,
+            adventure_cleared: false,
+            all_star_cleared: false,
             b789: 0,
             b10_to_12: 0,
             b13_to_15: 0,
-            x7E: 0,
-            x80: 0,
-            x81: 0,
-            x82: 0,
-            x83: 0,
-            x84: 0,
-            x88: 0,
-            x8C: 0,
-            x90: 0,
-            x94: 0,
-            x98: 0,
-            x9C: 0,
-            xA0: 0,
-            xA2: 0,
-            xA4: 0,
-            xA8: 0,
+            training_combo: 0,
+            classic_level: 0,
+            adventure_level: 0,
+            all_star_level: 0,
+            unused_83: 0,
+            home_run_distance: 0,
+            classic_score: 0,
+            adventure_score: 0,
+            all_star_score: 0,
+            target_record: 0,
+            ten_man_time: 0,
+            hundred_man_time: 0,
+            three_min_kos: 0,
+            fifteen_min_kos: 0,
+            endless_kos: 0,
+            cruel_kos: 0,
         }
     }
 }
@@ -13898,15 +13980,20 @@ pub struct FighterData {
     /// +0x34
     pub stats: GmStats,
     /// +0x78
-    pub x78: i8,
+    #[doc(alias("x78"))]
+    pub play_count_hi: i8,
     /// +0x79
-    pub x79: i8,
+    #[doc(alias("x79"))]
+    pub play_count_lo: i8,
     /// +0x7a
-    pub x7A: [u8; 1],
+    #[doc(alias("x7A"))]
+    pub played_flags: [u8; 1],
     /// +0x7b
-    pub x7B: i8,
+    #[doc(alias("x7B"))]
+    pub unused_7b: i8,
     /// +0x7c
-    pub x7C: FighterData_x7C,
+    #[doc(alias("x7C"))]
+    pub records: FighterData_x7C,
 }
 
 impl Default for FighterData {
@@ -13915,11 +14002,11 @@ impl Default for FighterData {
             fighter_kos: [0; 25],
             padding_0x32: [0; 2],
             stats: Default::default(),
-            x78: 0,
-            x79: 0,
-            x7A: [0; 1],
-            x7B: 0,
-            x7C: Default::default(),
+            play_count_hi: 0,
+            play_count_lo: 0,
+            played_flags: [0; 1],
+            unused_7b: 0,
+            records: Default::default(),
         }
     }
 }

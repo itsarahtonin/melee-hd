@@ -242,7 +242,7 @@ impl Running<'_> {
             return false;
         }
         // `ft_80087A80`: the cloak's vibrate frame, 2 while it holds and 1 as it flickers.
-        match fp.smash_attrs.x2134_vibrateFrame {
+        match fp.smash_attrs.vibrate_frame {
             2 => true,
             1 => fp.cpu.frame_counter % 240 > 120,
             _ => false,

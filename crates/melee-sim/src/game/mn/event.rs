@@ -134,7 +134,7 @@ impl Running<'_> {
                 // `gm_80162EC8`: any of the first 25 characters' records with `x7C.b5`.
                 let any = self.game.game_data.thing.save_data.x1F2C[..0x19]
                     .iter()
-                    .any(|f| f.x7C.b5);
+                    .any(|f| f.records.adventure_cleared);
                 if any { 0x2A } else { 0x29 }
             }
             _ => {

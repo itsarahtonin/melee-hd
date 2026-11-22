@@ -63,7 +63,7 @@ impl Running<'_> {
         self.set_model_variant(f, 0, 0);
         self.set_hurtbox_state(f, HURT_ENABLED);
         let fp = &self.game.fighters[f.0];
-        let size = fp.co_attrs.xBC.size;
+        let size = fp.co_attrs.egg.size;
         let part = self.bone_index(fp, HIP_N);
         let joint = self.bone(f, part).joint;
         let args = [ef::Arg::Float(size)];

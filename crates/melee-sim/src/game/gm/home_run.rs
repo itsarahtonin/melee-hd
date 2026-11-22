@@ -225,8 +225,8 @@ impl Running<'_> {
             let sel = selkind(i);
             let v = self.game.home_run.records[usize::from(sel)].wrapping_mul(10);
             self.game.game_data.thing.save_data.x1F2C[usize::from(sel)]
-                .x7C
-                .x84 = v;
+                .records
+                .home_run_distance = v;
         }
     }
 

@@ -536,7 +536,7 @@ impl Running<'_> {
         }
         let source = fp.dmg.source;
         let instance = if source == Some(holder) {
-            self.game.fighter(holder).attack_record.x2088
+            self.game.fighter(holder).attack_record.record_id
         } else {
             let Some(src) = source.filter(|&s| crate::game::it::is_item(self.game, Some(s))) else {
                 return false;
@@ -1010,7 +1010,7 @@ impl Running<'_> {
         let (akind, x2070, instance) = (
             hp.kind,
             u32::from_be_bytes(hp.attack_flags),
-            hp.attack_record.x2088,
+            hp.attack_record.record_id,
         );
         self.attack_landed(
             Some(holder),

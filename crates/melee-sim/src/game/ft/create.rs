@@ -401,7 +401,7 @@ impl Running<'_> {
         fp.heavy_down_bound = false;
         fp.jumped_from_ground = false;
         fp.low_models_own_material = false;
-        fp.smash_attrs.x2135 = -1;
+        fp.smash_attrs.rebirth_point = -1;
         fp.mushroom_scale_joint = None;
         fp.no_magnifier = false;
     }

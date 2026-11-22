@@ -147,7 +147,7 @@ impl Running<'_> {
         let part = self.bone_index(&self.game.fighters[f.0], TRANS_N);
         let parts = self.game.fighters[f.0].parts.expect("parts");
         let jobj = self.game.fighter_parts[parts.0][part as usize]
-            .x4_jobj2
+            .interp_joint
             .expect("TransN's second joint");
         let total = self.common().i32(0x648);
         let fp = &mut self.game.fighters[f.0];
@@ -184,9 +184,10 @@ impl Running<'_> {
         let pos = fp.coll_data.cur_pos;
         let lx = reg(fp.coll_data.ecb.left.x);
         let rx = reg(fp.coll_data.ecb.right.x);
-        fp.dmg.item_pickup_bounds.x0.x = mem(fp::fadds(lx, reg(pos.x)));
-        fp.dmg.item_pickup_bounds.x0.y = mem(fp::fadds(rx, reg(pos.x)));
-        fp.dmg.item_pickup_bounds.x0.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
+        fp.dmg.item_pickup_bounds.prev_feet.x = mem(fp::fadds(lx, reg(pos.x)));
+        fp.dmg.item_pickup_bounds.prev_feet.y = mem(fp::fadds(rx, reg(pos.x)));
+        fp.dmg.item_pickup_bounds.prev_feet.z =
+            mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.feet_height)));
     }
 
     /// Whether the magnifier shows the player off screen, `ifMagnify_802FC998`.
@@ -343,27 +344,27 @@ impl Running<'_> {
         if !charging && attr.state != 4 {
             return;
         }
-        attr.x2118_frames = mem(fp::fadds(reg(attr.x2118_frames), 1.0));
-        attr.x212C = attr.x212C.wrapping_add(1);
-        if attr.x212C >= attr.x212D {
-            attr.x212C = 0;
+        attr.frames = mem(fp::fadds(reg(attr.frames), 1.0));
+        attr.shake_row = attr.shake_row.wrapping_add(1);
+        if attr.shake_row >= attr.shake_rows {
+            attr.shake_row = 0;
         }
-        if charging && attr.x2118_frames >= attr.x211C_holdFrame {
-            if attr.x2118_frames > attr.x211C_holdFrame {
-                attr.x2118_frames = attr.x211C_holdFrame;
+        if charging && attr.frames >= attr.hold_frame {
+            if attr.frames > attr.hold_frame {
+                attr.frames = attr.hold_frame;
             }
             attr.state = 3;
-            let (rate, color) = (attr.x2124_frameSpeedMul, attr.x2128);
+            let (rate, color) = (attr.frame_speed_mul, attr.color_anim);
             self.set_anim_rate(gobj, rate);
             self.end_color_anim(gobj, color);
             let f = self.game.fighter_id(gobj);
             self.stop_rumble(f, 0x24);
         }
         let attr = &self.game.fighter(gobj).smash_attrs;
-        if attr.x2130_sfxBool == 0 && attr.x2118_frames >= sfx_frame {
+        if attr.sfx_played == 0 && attr.frames >= sfx_frame {
             let f = self.game.fighter_id(gobj);
             self.fighter_play_sfx(f, 0x7B, 0x7F, 0x40);
-            self.game.fighter_mut(gobj).smash_attrs.x2130_sfxBool = 1;
+            self.game.fighter_mut(gobj).smash_attrs.sfx_played = 1;
         }
     }
 

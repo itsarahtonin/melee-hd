@@ -993,7 +993,7 @@ impl Running<'_> {
     fn target_test_score(&mut self, ckind: u8) {
         let sel = super::match_exit::selkind(ckind);
         let r = self.game.record_1p(sel);
-        let (cleared, best) = (r.b0, r.x94);
+        let (cleared, best) = (r.target_cleared, r.target_record);
         let left = i32::from(self.game.stage_info.targets_left);
         let new = if !cleared {
             left == 0

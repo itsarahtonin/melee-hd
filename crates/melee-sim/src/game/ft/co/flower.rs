@@ -61,7 +61,7 @@ impl Running<'_> {
         let size = self.flower_size(gobj);
         let fp = self.game.fighter(gobj);
         let inv = fp::fdivs(1.0, size);
-        let o = fp.co_attrs.x130;
+        let o = fp.co_attrs.flower_offset;
         let offset = Vec3::new(
             mem(fp::fmuls(reg(o.x), inv)),
             mem(fp::fmuls(reg(o.y), inv)),
@@ -69,7 +69,7 @@ impl Running<'_> {
         );
         let petals = mem(fp::fmuls(
             reg(fp.scale.y),
-            fp::fmuls(size, reg(fp.co_attrs.x13C)),
+            fp::fmuls(size, reg(fp.co_attrs.flower_scale)),
         ));
         // `it_8029A8F4` and `it_8029A89C` do nothing without a flower.
         if let Some(it) = fp.flower {

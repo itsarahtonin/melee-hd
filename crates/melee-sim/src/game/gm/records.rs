@@ -29,9 +29,13 @@ impl Game {
         let k = usize::from(selkind(ckind));
         let s = &mut self.game_data.thing.save_data;
         let f = &mut s.x1F2C[k];
-        let v = bump16(u16::from_be_bytes([f.x78 as u8, f.x79 as u8])).to_be_bytes();
-        f.x78 = v[0] as i8;
-        f.x79 = v[1] as i8;
+        let v = bump16(u16::from_be_bytes([
+            f.play_count_hi as u8,
+            f.play_count_lo as u8,
+        ]))
+        .to_be_bytes();
+        f.play_count_hi = v[0] as i8;
+        f.play_count_lo = v[1] as i8;
         s.unk_30.x18[k] = bump16(s.unk_30.x18[k]);
     }
 

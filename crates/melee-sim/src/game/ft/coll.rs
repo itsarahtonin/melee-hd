@@ -628,9 +628,10 @@ impl Running<'_> {
         fp.stepped_on_item = true;
         let p = fp.coll_data.cur_pos;
         let (lx, rx) = (reg(fp.coll_data.ecb.left.x), reg(fp.coll_data.ecb.right.x));
-        fp.dmg.item_pickup_bounds.xC.x = mem(fp::fadds(lx, reg(p.x)));
-        fp.dmg.item_pickup_bounds.xC.y = mem(fp::fadds(rx, reg(p.x)));
-        fp.dmg.item_pickup_bounds.xC.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
+        fp.dmg.item_pickup_bounds.feet.x = mem(fp::fadds(lx, reg(p.x)));
+        fp.dmg.item_pickup_bounds.feet.y = mem(fp::fadds(rx, reg(p.x)));
+        fp.dmg.item_pickup_bounds.feet.z =
+            mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.feet_height)));
         let mut cur = self.game.world.first_in(ITEM_P_LINK);
         while let Some(item) = cur {
             cur = self.game.world.gobjs[item.0].next;

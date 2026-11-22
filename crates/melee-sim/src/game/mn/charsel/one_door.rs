@@ -303,8 +303,12 @@ impl Running<'_> {
             REG_CLASSIC | REG_ADVENTURE | REG_ALLSTAR => {
                 let mode = (match_type - REG_CLASSIC) as usize;
                 let rec = g.record_1p(hud);
-                let rank = [rec.x80, rec.x81, rec.x82][mode];
-                let cleared = [rec.b4, rec.b5, rec.b6][mode];
+                let rank = [rec.classic_level, rec.adventure_level, rec.all_star_level][mode];
+                let cleared = [
+                    rec.classic_cleared,
+                    rec.adventure_cleared,
+                    rec.all_star_cleared,
+                ][mode];
                 let score = g.high_score_1p(mode, hud);
                 let total = g.high_score_1p_total(mode);
                 let all = g.cleared_1p_all(mode);

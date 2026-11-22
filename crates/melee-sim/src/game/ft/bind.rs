@@ -166,7 +166,7 @@ impl Running<'_> {
                 i += 1;
             }
             let bone = self.bone(f, i);
-            let j = if blend { bone.x4_jobj2 } else { bone.joint };
+            let j = if blend { bone.interp_joint } else { bone.joint };
             let jobjs = &mut self.game.objs.jobjs;
             if i == root_part {
                 if bone_flag(&bone, 0) {
@@ -194,7 +194,7 @@ impl Running<'_> {
     /// The joint of bone `i` an animation binds to: the second joint when blending.
     fn anim_joint(&self, f: FighterId, i: i32, blend: bool) -> Option<JObjId> {
         let bone = self.bone(f, i);
-        if blend { bone.x4_jobj2 } else { bone.joint }
+        if blend { bone.interp_joint } else { bone.joint }
     }
 
     /// Binds the action's figatree to the parts, `ftAnim_8006FE08`: through the parts of the
@@ -321,7 +321,7 @@ impl Running<'_> {
                 i += 1;
             }
             let bone = self.bone(f, i);
-            if j == bone.joint || j == bone.x4_jobj2 {
+            if j == bone.joint || j == bone.interp_joint {
                 return Some(desc);
             }
             i += 1;
@@ -350,7 +350,7 @@ impl Running<'_> {
         let data = self.data;
         let kind = self.game.fighters[f.0].kind;
         let bits = (x594_word(self.game.fighters[f.0].anim_bits) >> 9) & 0x1FFF;
-        let depth = self.bone(f, part).xC_u[0];
+        let depth = self.bone(f, part).tree[0];
         let buf = self.game.fighters[f.0].main_anim_buf;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
@@ -380,7 +380,7 @@ impl Running<'_> {
                 i += 1;
             }
             let bone = self.bone(f, i);
-            if bone.xC_u[0] <= depth && i != part {
+            if bone.tree[0] <= depth && i != part {
                 break;
             }
             if !bone_flag(&bone, 0) && !bone_flag(&bone, 5) {
@@ -403,7 +403,7 @@ impl Running<'_> {
         let word = x594_word(fp.anim_bits);
         let (bits, from) = ((word >> 9) & 0x1FFF, (word & 0x3F) as i32);
         let to = fp.kind;
-        let depth = self.bone(f, part).xC_u[0];
+        let depth = self.bone(f, part).tree[0];
         let buf = fp.main_anim_buf;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
@@ -429,7 +429,7 @@ impl Running<'_> {
                 }
                 i += 1;
             }
-            if self.bone(f, i).xC_u[0] <= depth && i != part {
+            if self.bone(f, i).tree[0] <= depth && i != part {
                 break;
             }
             let p = self.parts_remap(to, from, i as u32);
@@ -488,7 +488,7 @@ impl Running<'_> {
             self.anim_part_tree(f, part);
             return;
         }
-        let j2 = bone.x4_jobj2;
+        let j2 = bone.interp_joint;
         self.reset_parts(f, part, desc, true);
         let buf = self.game.fighters[f.0].main_anim_buf;
         self.in_anim_buf(buf, |r| r.bind_part_figatree(f, part, true));

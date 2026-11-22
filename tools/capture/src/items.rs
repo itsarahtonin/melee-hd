@@ -507,7 +507,7 @@ impl Comparer<'_> {
                 let off = 0x378 + 0x1C + 4 * k;
                 block[off..off + 4].copy_from_slice(&v.to_bits().to_be_bytes());
             }
-            for (k, v) in [item.stomp_box.unk_x, item.stomp_box.unk_y]
+            for (k, v) in [item.stomp_box.motion_x, item.stomp_box.motion_y]
                 .into_iter()
                 .enumerate()
             {

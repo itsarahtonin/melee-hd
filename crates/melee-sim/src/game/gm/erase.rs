@@ -86,7 +86,7 @@ impl Running<'_> {
             .save_data
             .x1F2C
             .iter()
-            .map(|f| &f.x7C)
+            .map(|f| &f.records)
     }
 
     /// The condition of special message `n`'s row of `lbl_803D6300` (the first whose mask
@@ -145,22 +145,22 @@ impl Running<'_> {
         Some(match n {
             0x16 | 0x18 | 0x1B | 0x1C | 0x1D | 0x37..=0x3D => self.message_due(n, 0x100),
             0x17 => self.game.game_data.thing.save_data.unk_1A8.x0 >= 0x1388,
-            0x1E => any(self, &|d| d.b4),
-            0x1F => any(self, &|d| d.b5),
-            0x20 => any(self, &|d| d.b6),
-            0x21 => all(self, &|d| d.b4),
-            0x22 => all(self, &|d| d.b5),
-            0x23 => all(self, &|d| d.b6),
+            0x1E => any(self, &|d| d.classic_cleared),
+            0x1F => any(self, &|d| d.adventure_cleared),
+            0x20 => any(self, &|d| d.all_star_cleared),
+            0x21 => all(self, &|d| d.classic_cleared),
+            0x22 => all(self, &|d| d.adventure_cleared),
+            0x23 => all(self, &|d| d.all_star_cleared),
             0x24 => events(self, 30) == 30,
             0x25 => events(self, 51) == 51,
-            0x26 => all(self, &|d| d.b0),
-            0x27 => any(self, &|d| d.b2),
-            0x28 => any(self, &|d| d.b3),
-            0x29 => any(self, &|d| d.x80 == 4),
+            0x26 => all(self, &|d| d.target_cleared),
+            0x27 => any(self, &|d| d.hundred_man_cleared),
+            0x28 => any(self, &|d| d.fifteen_min_cleared),
+            0x29 => any(self, &|d| d.classic_level == 4),
             0x2A => any(self, &|d| d.b789 == 1),
-            0x2B => any(self, &|d| d.x81 == 4),
+            0x2B => any(self, &|d| d.adventure_level == 4),
             0x2C => any(self, &|d| d.b10_to_12 == 1),
-            0x2D => any(self, &|d| d.x82 == 4),
+            0x2D => any(self, &|d| d.all_star_level == 4),
             0x2E => false,
             0x2F => played >= 100,
             0x30 => played >= 1000,
@@ -253,7 +253,7 @@ impl Running<'_> {
     pub fn erase_records(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;
         for f in s.x1F2C.iter_mut() {
-            f.x7C = FighterData_x7C::default();
+            f.records = FighterData_x7C::default();
         }
         // `memzero` from `x1A68` to `x1B40`.
         let z = GmSaveData::default();

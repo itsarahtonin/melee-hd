@@ -36,10 +36,10 @@ pub fn copy_fighter_attack(game: &mut Game, gobj: GObjId, fighter: GObjId) {
     ip.attack_id = id;
     ip.attack_instance = instance;
     ip.attack_flags = x2070;
-    ip.attack_record_a = x2074.x2074_vec;
-    ip.attack_record_b = x2074.x207C;
-    ip.attack_record_word = u32::from_be_bytes(x2074.x10);
-    ip.attack_record_short = x2074.x2088;
+    ip.attack_record_a = x2074.percents;
+    ip.attack_record_b = x2074.kb_and_thrower;
+    ip.attack_record_word = u32::from_be_bytes(x2074.flags);
+    ip.attack_record_short = x2074.record_id;
     let i = super::item_of(game, gobj);
     carry_record(game, RenderOf::Fighter(f), i);
 }
@@ -113,9 +113,9 @@ pub fn restart_attack(game: &mut Game, gobj: GObjId) {
         let f = super::owner::fighter_of(game, owner.unwrap());
         let rec = game.fighters[f.0].attack_record.clone();
         let ip = item_mut(game, gobj);
-        ip.attack_record_a = rec.x2074_vec;
-        ip.attack_record_b = rec.x207C;
-        ip.attack_record_word = u32::from_be_bytes(rec.x10);
+        ip.attack_record_a = rec.percents;
+        ip.attack_record_b = rec.kb_and_thrower;
+        ip.attack_record_word = u32::from_be_bytes(rec.flags);
         let i = super::item_of(game, gobj);
         carry_record(game, RenderOf::Fighter(f), i);
         return;

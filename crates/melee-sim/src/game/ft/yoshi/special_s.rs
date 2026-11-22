@@ -246,7 +246,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let hips = self.bone(f, HIP_N).joint;
         let v = crate::lb::joint::world_position(&mut self.game.objs, self.data, hips, None);
-        let size = self.game.fighters[f.0].co_attrs.xBC.size;
+        let size = self.game.fighters[f.0].co_attrs.egg.size;
         ef::spawn(self, 0x4CF, Some(gobj), &[Arg::Vec(v), Arg::Float(size)]);
     }
 

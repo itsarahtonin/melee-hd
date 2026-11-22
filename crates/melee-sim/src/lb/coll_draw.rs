@@ -443,9 +443,9 @@ pub fn stomp(objs: &mut Objects, r: &crate::game::structs::lb_80014638_arg1_t, p
     push(
         objs,
         DebugDraw::Stomp {
-            x0: r.x8.x,
-            x1: r.x8.y,
-            y: r.x8.z,
+            x0: r.span.x,
+            x1: r.span.y,
+            y: r.span.z,
         },
     );
     true

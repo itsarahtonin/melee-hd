@@ -64,7 +64,7 @@ impl Running<'_> {
         }
         if rival_bonuses && ko != NO_SLOT {
             let t = &self.game.player(ko).stale_moves;
-            let (rival, bits, spike) = (t.xCB8, t.xCBC, t.xCC0.x10_b0);
+            let (rival, bits, spike) = (t.xCB8, t.xCBC, t.xCC0.spike);
             if !self.no_rival(ko, rival) {
                 if (0x33..=0x3D).contains(&bits[3]) {
                     self.set_point(rival, 0x2A, 1);
@@ -161,8 +161,8 @@ impl Running<'_> {
         }
         match source_type {
             1 | 2 => {
-                if hit.x4 <= self.bonus_param(0x128) as i32
-                    && hit.x0 >= self.bonus_param(0x12C) as i32
+                if hit.victim_percent <= self.bonus_param(0x128) as i32
+                    && hit.attacker_percent >= self.bonus_param(0x12C) as i32
                 {
                     self.count_bonus(slot, 0x85);
                 }
@@ -253,22 +253,22 @@ impl Running<'_> {
                     self.count_bonus(last, 0x72);
                 }
                 for (on, k) in [
-                    (hit.x11_b0, 0x71),
-                    (hit.x10_b0, 6),
+                    (hit.from_behind, 0x71),
+                    (hit.spike, 6),
                     (
                         reg(hit.kb_applied1) >= reg(self.bonus_param_f32(0x11C)),
                         0x74,
                     ),
-                    (hit.x11_b2, 0x75),
-                    (hit.x11_b1, 0x77),
-                    (hit.x10_b1, 0xB0),
-                    (hit.x10_b2, 0xBB),
-                    (hit.x10_b3, 0xBF),
-                    (hit.x10_b4, 0xBA),
-                    (hit.x10_b5, 0xB7),
-                    (hit.x10_b6, 0xB8),
-                    (hit.x11_b3, 0xB),
-                    (hit.x11_b4, 0x7E),
+                    (hit.on_ledge, 0x75),
+                    (hit.at_edge, 0x77),
+                    (hit.metal, 0xB0),
+                    (hit.bunny_hood, 0xBB),
+                    (hit.starman, 0xBF),
+                    (hit.cloak, 0xBA),
+                    (hit.giant, 0xB7),
+                    (hit.tiny, 0xB8),
+                    (hit.spike_after_strong, 0xB),
+                    (hit.forward_attack, 0x7E),
                 ] {
                     if on {
                         self.count_bonus(last, k);

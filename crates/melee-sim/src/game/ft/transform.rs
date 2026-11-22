@@ -262,7 +262,7 @@ impl Running<'_> {
     pub fn scale_worn_items(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if let Some(hood) = fp.bunny_hood {
-            let s = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.x12C)));
+            let s = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.hood_ear_scale)));
             rabbitc::scale_ears(self, hood, s);
         }
         if let Some(flower) = self.game.fighter(gobj).flower {
@@ -270,7 +270,7 @@ impl Running<'_> {
             let fp = self.game.fighter(gobj);
             let petals = mem(fp::fmuls(
                 reg(fp.scale.y),
-                fp::fmuls(size, reg(fp.co_attrs.x13C)),
+                fp::fmuls(size, reg(fp.co_attrs.flower_scale)),
             ));
             flower::set_size(self, flower, petals);
         }

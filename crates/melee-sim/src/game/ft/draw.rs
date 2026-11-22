@@ -125,7 +125,7 @@ impl Running<'_> {
         let o = self.active_overlay(f);
         FighterMaterial {
             refract: fp.refracted.then(|| {
-                let i = usize::from(fp.smash_attrs.x2134_vibrateFrame);
+                let i = usize::from(fp.smash_attrs.vibrate_frame);
                 *self.game.refract.tobjs.get(i).expect("refraction's chain")
             }),
             swapped: if !fp.outline && (!fp.low_models || !fp.low_models_own_material) {
@@ -352,7 +352,10 @@ impl Running<'_> {
             && fp.stepped_on_item
             && coll_draw::damage(
                 objs,
-                [fp.dmg.item_pickup_bounds.x0, fp.dmg.item_pickup_bounds.xC],
+                [
+                    fp.dmg.item_pickup_bounds.prev_feet,
+                    fp.dmg.item_pickup_bounds.feet,
+                ],
                 pass,
             )
         {

@@ -463,14 +463,16 @@ impl Running<'_> {
         let chara = usize::from(self.game.hud.debug.word(0x804D_6DC8) as u8);
         match self.game.debug_mode.records_kind {
             2 => {
-                let v = self.game.game_data.thing.save_data.x1F2C[chara].x7C.x84 as u32;
+                let v = self.game.game_data.thing.save_data.x1F2C[chara]
+                    .records
+                    .home_run_distance as u32;
                 let m = crate::fpu::mem(crate::gekko_fp::frsp(f64::from(v / 100)));
                 self.game.hud.debug.set_word(0x804D_6DD0, m.to_bits());
             }
             3 => {
-                let f = &mut self.game.game_data.thing.save_data.x1F2C[chara].x7C;
-                let r = i32::from(f.b0);
-                f.b0 = r & 1 != 0;
+                let f = &mut self.game.game_data.thing.save_data.x1F2C[chara].records;
+                let r = i32::from(f.target_cleared);
+                f.target_cleared = r & 1 != 0;
                 self.game.hud.debug.set_word(0x804D_6DCC, r as u32);
             }
             _ => {}
@@ -545,9 +547,9 @@ impl Running<'_> {
             0x8030_0DE0 => {
                 use crate::gekko_fp as fp;
                 let v = fp::fmuls(100.0, crate::fpu::reg(count));
-                s.x1F2C[chara].x7C.x84 = crate::ppc::cvt_fp2unsigned(v) as i32;
+                s.x1F2C[chara].records.home_run_distance = crate::ppc::cvt_fp2unsigned(v) as i32;
             }
-            _ => s.x1F2C[chara].x7C.b0 = clear & 1 != 0,
+            _ => s.x1F2C[chara].records.target_cleared = clear & 1 != 0,
         }
         self.game.sync_unlocks();
     }

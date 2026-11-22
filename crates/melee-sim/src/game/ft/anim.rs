@@ -29,7 +29,7 @@ pub fn x594_bit(fp: &Fighter, bit: u32) -> bool {
 
 /// A part's bone flags (`x8.x0`), most significant first.
 pub fn bone_flag(bone: &FighterBone, bit: u32) -> bool {
-    bone.x8[0] & (0x80 >> bit) != 0
+    bone.flags[0] & (0x80 >> bit) != 0
 }
 
 /// Whether a part plays the action's animation: `flags_b1` set, `flags_b0` and `flags_b5`
@@ -127,7 +127,7 @@ impl Running<'_> {
             if x594_bit(&self.game.fighters[f.0], 0) {
                 let fp = &self.game.fighters[f.0];
                 let p35 = self.part_35_joint(f);
-                let trans = self.bone(f, self.bone_index(fp, TRANS_N)).x4_jobj2;
+                let trans = self.bone(f, self.bone_index(fp, TRANS_N)).interp_joint;
                 self.anim_tree_trans(f, skel, trans, p35);
             } else {
                 jobj::anim_all(
@@ -301,14 +301,14 @@ impl Running<'_> {
         let mut i = part;
         let top_bone = self.bone(f, part);
         let top = top_bone.joint;
-        let depth = top_bone.xC_u[0];
+        let depth = top_bone.tree[0];
         let mut jobj = top;
         while let Some(j) = jobj {
             while !bone_flag(&self.bones(f)[i as usize], 1) {
                 i += 1;
             }
             let bone = self.bone(f, i);
-            if bone.xC_u[0] <= depth && i != part {
+            if bone.tree[0] <= depth && i != part {
                 break;
             }
             if !bone_flag(&bone, 0) && !bone_flag(&bone, 5) {
@@ -354,7 +354,7 @@ impl Running<'_> {
         let j = if self.game.fighters[f.0].anim_blend_frames == 0.0 {
             bone.joint
         } else {
-            bone.x4_jobj2
+            bone.interp_joint
         };
         is_animated(&self.game.objs, j.expect("a part without a joint"))
     }
@@ -369,7 +369,7 @@ impl Running<'_> {
             .iter()
             .filter(|b| plays_anim(b))
             .any(|b| {
-                let j = if blending { b.x4_jobj2 } else { b.joint };
+                let j = if blending { b.interp_joint } else { b.joint };
                 is_animated(&self.game.objs, j.expect("a part without a joint"))
             })
     }
@@ -383,7 +383,7 @@ impl Running<'_> {
             if !plays_anim(&b) {
                 continue;
             }
-            let (j2, j) = (b.x4_jobj2.expect("a joint"), b.joint.expect("a joint"));
+            let (j2, j) = (b.interp_joint.expect("a joint"), b.joint.expect("a joint"));
             if bone_flag(&b, 4) {
                 copy_srt(&mut self.game.objs.jobjs, j2, j);
             } else {
@@ -401,7 +401,7 @@ impl Running<'_> {
             if plays_anim(&b) {
                 copy_srt(
                     &mut self.game.objs.jobjs,
-                    b.x4_jobj2.expect("a joint"),
+                    b.interp_joint.expect("a joint"),
                     b.joint.expect("a joint"),
                 );
             }
@@ -454,13 +454,13 @@ impl Running<'_> {
             }
             let b = self.bone(f, i);
             if !bone_flag(&b, 0) && self.data.ptr(a.at(8)).is_some() {
-                let j = b.x4_jobj2;
+                let j = b.interp_joint;
                 let objs = &mut self.game.objs;
                 jobj::add_anim(objs, self.data, j, Some(a), None, None);
                 jobj::clear_flags(&mut objs.jobjs, j, 0x20000);
                 jobj::req_anim_by_flags(objs, j, 1, 0.0);
                 jobj::anim(objs, self.data, &mut crate::game::code::ParticleHooks, j);
-                self.game.fighter_parts[parts.0][i as usize].x8[0] |= 0x04;
+                self.game.fighter_parts[parts.0][i as usize].flags[0] |= 0x04;
             }
             i += 1;
             cur = next_anim_joint(self.data, a, &mut stack);
@@ -510,7 +510,7 @@ impl Running<'_> {
             while self.part_mask(kind, i) != 0 {
                 i += 1;
             }
-            self.game.fighter_parts[parts.0][i as usize].x8[0] &= !0x04;
+            self.game.fighter_parts[parts.0][i as usize].flags[0] &= !0x04;
             i += 1;
             cur = next_anim_joint(self.data, a, &mut stack);
         }
@@ -566,7 +566,7 @@ impl Running<'_> {
                 if !bone_flag(&b, 5) {
                     continue;
                 }
-                let (j2, j1) = (b.x4_jobj2.expect("a joint"), b.joint.expect("a joint"));
+                let (j2, j1) = (b.interp_joint.expect("a joint"), b.joint.expect("a joint"));
                 if t_inv != 0.0 {
                     blend(&mut self.game.objs.jobjs, j2, j1, j1, t, t_inv);
                 } else {

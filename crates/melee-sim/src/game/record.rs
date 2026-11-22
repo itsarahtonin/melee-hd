@@ -591,7 +591,7 @@ impl Recorder {
         w.f32(fp.dmg.hitlag_frames);
         w.u32(fp.anim_id as u32);
         w.u16(fp.dmg.instance_hit_by);
-        w.u16(fp.attack_record.x2088);
+        w.u16(fp.attack_record.record_id);
         self.frame_buf = w.0;
         self.last_frame = Some(self.frame);
         if !follower {

@@ -56,7 +56,7 @@ impl Running<'_> {
         if s.state == SMASH_CHARGING || s.state == SMASH_HELD {
             let table = self.load_common(0x2C);
             let row = self.data.ptr(table).expect("the smash charge shake table");
-            shakes[2] = Some(self.vec2(row, u32::from(s.x212C)));
+            shakes[2] = Some(self.vec2(row, u32::from(s.shake_row)));
         }
         let d = &mut self.game.fighters[f.0].dmg;
         for (x, y) in shakes.into_iter().flatten() {
@@ -160,7 +160,7 @@ impl Running<'_> {
             .expect("ftData::x0");
         let bone = self.data.u32(attrs.at(0x16C));
         let parts = fp.parts.expect("a fighter without parts");
-        let offset = fp.co_attrs.x170;
+        let offset = fp.co_attrs.camera_bone_offset;
         let joint = self.game.fighter_parts[parts.0][bone as usize].joint;
         world_position(&mut self.game.objs, self.data, joint, Some(offset))
     }

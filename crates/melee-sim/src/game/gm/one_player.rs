@@ -1158,18 +1158,18 @@ impl Running<'_> {
             record_target_clear(self.game, sel, frames);
         }
         let mut improved = false;
-        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
-        if !x7c.b0 {
+        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
+        if !x7c.target_cleared {
             if left == 0 {
-                x7c.b0 = true;
+                x7c.target_cleared = true;
                 improved = true;
-                x7c.x94 = frames;
-            } else if x7c.x94 < total.wrapping_sub(left) as u32 {
-                x7c.x94 = total.wrapping_sub(left) as u32;
+                x7c.target_record = frames;
+            } else if x7c.target_record < total.wrapping_sub(left) as u32 {
+                x7c.target_record = total.wrapping_sub(left) as u32;
             }
         } else if left == 0 {
-            if x7c.x94 > frames {
-                x7c.x94 = frames;
+            if x7c.target_record > frames {
+                x7c.target_record = frames;
             }
             improved = true;
         }
@@ -1603,7 +1603,7 @@ pub const ADVENTURE_CSS: u8 = 0x70;
 impl super::super::state::Game {
     /// A character's 1P records (`GetPersistentFighterData(hud)->x7C`).
     pub fn record_1p(&self, hud: u8) -> &crate::game::structs::FighterData_x7C {
-        &self.game_data.thing.save_data.x1F2C[usize::from(hud)].x7C
+        &self.game_data.thing.save_data.x1F2C[usize::from(hud)].records
     }
 
     /// A character's high score in Classic, Adventure or All-Star (`mode` 0 to 2):
@@ -1617,7 +1617,7 @@ impl super::super::state::Game {
     #[doc(alias = "gmMainLib_8015D310")]
     pub fn high_score_1p(&self, mode: usize, hud: u8) -> i32 {
         let r = self.record_1p(hud);
-        [r.x88, r.x8C, r.x90][mode]
+        [r.classic_score, r.adventure_score, r.all_star_score][mode]
     }
 
     /// Every character's high scores summed (`gm_80162C48`, `gm_80162E44`, `gm_80163040`):
@@ -1634,7 +1634,7 @@ impl super::super::state::Game {
     pub fn cleared_1p_all(&self, mode: usize) -> bool {
         (0..25u8).all(|i| {
             let r = self.record_1p(i);
-            [r.b4, r.b5, r.b6][mode]
+            [r.classic_cleared, r.adventure_cleared, r.all_star_cleared][mode]
         })
     }
 
@@ -1647,7 +1647,7 @@ impl super::super::state::Game {
     pub fn cleared_1p_worst(&self, mode: usize) -> u8 {
         (0..25u8).fold(4, |m, i| {
             let r = self.record_1p(i);
-            m.min([r.x80, r.x81, r.x82][mode])
+            m.min([r.classic_level, r.adventure_level, r.all_star_level][mode])
         })
     }
 
@@ -1658,7 +1658,11 @@ impl super::super::state::Game {
     #[doc(alias = "gmMainLib_8015D48C")]
     pub fn target_record(&self, hud: u8) -> i32 {
         let r = self.record_1p(hud);
-        if !r.b0 { r.x94 as i32 } else { -1 }
+        if !r.target_cleared {
+            r.target_record as i32
+        } else {
+            -1
+        }
     }
 
     /// Frames as hours, minutes, seconds and hundredths (`(99 * (frames % 60)) / 59`).
@@ -1682,10 +1686,10 @@ impl super::super::state::Game {
     pub fn target_time(&self, hud: u8) -> [u8; 4] {
         let r = self.record_1p(hud);
         assert!(
-            r.b0,
+            r.target_cleared,
             "gm_80163374 for a stage not cleared leaves its outputs unwritten"
         );
-        Self::frames_to_time(r.x94)
+        Self::frames_to_time(r.target_record)
     }
 
     /// Every character's best times summed, once every stage is cleared (`gm_801634D4`).
@@ -1694,10 +1698,10 @@ impl super::super::state::Game {
         let mut total = 0u32;
         for i in 0..25u8 {
             let r = self.record_1p(i);
-            if !r.b0 {
+            if !r.target_cleared {
                 return None;
             }
-            total = total.wrapping_add(r.x94);
+            total = total.wrapping_add(r.target_record);
         }
         Some(Self::frames_to_time(total))
     }
@@ -1706,7 +1710,7 @@ impl super::super::state::Game {
     #[doc(alias = "gm_801631CC")]
     #[doc(alias = "gmMainLib_8015D06C")]
     pub fn homerun_record(&self, hud: u8) -> u32 {
-        self.record_1p(hud).x84 as u32
+        self.record_1p(hud).home_run_distance as u32
     }
 
     /// Every character's best distances summed, wrapping as the scores' totals do
@@ -1722,7 +1726,11 @@ impl super::super::state::Game {
     #[doc(alias = "gm_801639C0")]
     pub fn multi_man_won(&self, hundred: bool, hud: u8) -> bool {
         let r = self.record_1p(hud);
-        if hundred { r.b2 } else { r.b1 }
+        if hundred {
+            r.hundred_man_cleared
+        } else {
+            r.ten_man_cleared
+        }
     }
 
     /// 10-Man's (or 100-Man's) best KOs without a win, -1 with one (`gm_80163690`,
@@ -1734,9 +1742,9 @@ impl super::super::state::Game {
         if self.multi_man_won(hundred, hud) {
             -1
         } else if hundred {
-            r.x9C
+            r.hundred_man_time
         } else {
-            r.x98
+            r.ten_man_time
         }
     }
 
@@ -1750,7 +1758,11 @@ impl super::super::state::Game {
             "gm_801636D8 without a win leaves its outputs unwritten"
         );
         let r = self.record_1p(hud);
-        Self::frames_to_time(if hundred { r.x9C } else { r.x98 } as u32)
+        Self::frames_to_time(if hundred {
+            r.hundred_man_time
+        } else {
+            r.ten_man_time
+        } as u32)
     }
 
     /// Every character's best 10-Man (or 100-Man) times summed, once every one has won
@@ -1764,7 +1776,11 @@ impl super::super::state::Game {
                 return None;
             }
             let r = self.record_1p(i);
-            total = total.wrapping_add(if hundred { r.x9C } else { r.x98 } as u32);
+            total = total.wrapping_add(if hundred {
+                r.hundred_man_time
+            } else {
+                r.ten_man_time
+            } as u32);
         }
         Some(Self::frames_to_time(total))
     }
@@ -1777,10 +1793,10 @@ impl super::super::state::Game {
     pub fn multi_man_kos(&self, mode: u8, hud: u8) -> i32 {
         let r = self.record_1p(hud);
         match mode {
-            0 => i32::from(r.xA0),
-            1 => i32::from(r.xA2),
-            2 => r.xA4,
-            _ => r.xA8,
+            0 => i32::from(r.three_min_kos),
+            1 => i32::from(r.fifteen_min_kos),
+            2 => r.endless_kos,
+            _ => r.cruel_kos,
         }
     }
 
@@ -1797,6 +1813,6 @@ impl super::super::state::Game {
     #[doc(alias = "gm_80163274")]
     #[doc(alias = "gmMainLib_8015D7EC")]
     pub fn training_record(&self, hud: u8) -> u16 {
-        self.record_1p(hud).x7E
+        self.record_1p(hud).training_combo
     }
 }

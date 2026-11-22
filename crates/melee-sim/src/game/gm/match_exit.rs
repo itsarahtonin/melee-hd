@@ -119,7 +119,7 @@ impl Game {
     #[doc(alias = "gmMainLib_8015D00C")]
     pub fn mark_character_played(&mut self, selkind: u8) {
         let s = &mut self.game_data.thing.save_data;
-        s.x1F2C[usize::from(selkind)].x7A[0] |= 0x80;
+        s.x1F2C[usize::from(selkind)].played_flags[0] |= 0x80;
         s.unk_8.xC |= 1i32 << selkind;
     }
 }

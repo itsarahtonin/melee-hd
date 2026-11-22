@@ -661,10 +661,10 @@ impl Running<'_> {
         } else {
             ip.reflector = fg;
             ip.reflect_attack_flags = x2070;
-            ip.reflect_record_a = rec.x2074_vec;
-            ip.reflect_record_b = rec.x207C;
-            ip.reflect_record_word = i32::from_be_bytes(rec.x10);
-            ip.reflect_record_short = rec.x2088;
+            ip.reflect_record_a = rec.percents;
+            ip.reflect_record_b = rec.kb_and_thrower;
+            ip.reflect_record_word = i32::from_be_bytes(rec.flags);
+            ip.reflect_record_short = rec.record_id;
         }
         if !over {
             // The record's flags keep what the fighter's block held below the read bits.
@@ -2577,7 +2577,7 @@ impl Running<'_> {
                     af.gobj.expect("a fighter without its GObj"),
                     af.kind,
                     u32::from_be_bytes(af.attack_flags),
-                    af.attack_record.x2088,
+                    af.attack_record.record_id,
                 );
                 self.attack_landed(
                     Some(a_gobj),

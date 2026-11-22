@@ -417,7 +417,7 @@ impl Running<'_> {
         fp.mv[thr::FLAGS] = (fp.mv[thr::FLAGS] & 0x3F) | (u8::from(swallowed) << 7);
         let star = self.kb_star_model(kirby);
         self.set_accessory(gobj, star);
-        let s = self.game.fighter(gobj).co_attrs.xDC;
+        let s = self.game.fighter(gobj).co_attrs.kirby_star_scale;
         let scale = Vec3::new(s, s, s);
         let acc = self.game.fighter(gobj).accessory.expect("the star");
         jobj::set_scale(&mut self.game.objs.jobjs, acc, scale);
