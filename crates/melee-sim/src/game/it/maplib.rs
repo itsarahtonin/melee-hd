@@ -134,7 +134,7 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let ip = item_mut(r.game, gobj);
     ip.coll = cd;
     if let Some(k) = coll_kind(ip.kind) {
-        ip.coll.x34_flags.b1234 = k;
+        ip.coll.ecb_flags.b1234 = k;
     }
     let s = reg(ip.scl);
     let b = ip.coll_box.clone();
@@ -148,7 +148,7 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     };
     ip.coll.set_facing_dir(dir);
     let x1c = attr_of(ip).f32(data, super::data::attr::DAMAGE_MUL);
-    ip.coll.x50 = x1c;
+    ip.coll.weight = x1c;
     if spawn.x44_flag[0] & 0x80 != 0 {
         if spawn.x48_ground_or_air == 1 {
             place_air(r, gobj, spawn.pos);

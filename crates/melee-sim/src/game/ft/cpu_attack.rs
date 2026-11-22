@@ -1547,7 +1547,7 @@ impl Running<'_> {
         self.game.fighters[o.0].hitboxes.iter().any(|h| {
             if h.state == hitcapsule::DISABLED
                 || h.state == hitcapsule::ENABLED
-                || h.x43_b2
+                || h.phantom
                 || h.element == ELEMENT_CATCH
                 || hitcapsule::has_victim(h, hitcapsule::Victim::Fighter(f))
             {
@@ -1557,11 +1557,11 @@ impl Running<'_> {
                 mem(fp::fmadds(3.0, fp::fsubs(reg(now), reg(before)), reg(now)))
             };
             let end = Vec3::new(
-                ahead(h.x4C.x, h.x58.x),
-                ahead(h.x4C.y, h.x58.y),
-                ahead(h.x4C.z, h.x58.z),
+                ahead(h.pos.x, h.prev_pos.x),
+                ahead(h.pos.y, h.prev_pos.y),
+                ahead(h.pos.z, h.prev_pos.z),
             );
-            collision::capsules(h.x4C, end, middle, middle, h.scale, radius)
+            collision::capsules(h.pos, end, middle, middle, h.scale, radius)
                 .is_some_and(|c| c.touching)
         })
     }
@@ -1670,7 +1670,7 @@ impl Running<'_> {
             let h = &b.hit;
             if h.state == hitcapsule::DISABLED
                 || h.state == hitcapsule::ENABLED
-                || h.x43_b2
+                || h.phantom
                 || h.element == ELEMENT_INERT
                 || hitcapsule::has_victim(h, hitcapsule::Victim::Fighter(f))
             {
@@ -1681,11 +1681,11 @@ impl Running<'_> {
                 mem(fp::fmadds(fp::fsubs(reg(now), reg(before)), n, reg(now)))
             };
             let end = Vec3::new(
-                ahead(h.x4C.x, h.x58.x),
-                ahead(h.x4C.y, h.x58.y),
-                ahead(h.x4C.z, h.x58.z),
+                ahead(h.pos.x, h.prev_pos.x),
+                ahead(h.pos.y, h.prev_pos.y),
+                ahead(h.pos.z, h.prev_pos.z),
             );
-            collision::capsules(h.x4C, end, middle, dst, h.scale, radius)
+            collision::capsules(h.pos, end, middle, dst, h.scale, radius)
                 .is_some_and(|c| c.touching)
         });
         if hit { 2 } else { 0 }

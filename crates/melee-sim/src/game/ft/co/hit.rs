@@ -874,13 +874,13 @@ impl Running<'_> {
             state: d(0) as i32,
             damage: mem(fp::frsp(f64::from(d(4)))),
             kb_angle: d(8) as i32,
-            x24: d(0xC),
-            x28: d(0x10),
-            x2C: d(0x14),
+            kb_growth: d(0xC),
+            set_kb: d(0x10),
+            base_kb: d(0x14),
             element: d(0x18),
             sfx_severity: d(0x1C) as i32,
             sfx_kind: d(0x20) as i32,
-            unk_count: d(4),
+            whole_damage: d(4),
             ..Default::default()
         };
         self.clear_attacker(gobj);
@@ -892,7 +892,7 @@ impl Running<'_> {
         let kb = self.knockback_of(
             f,
             &hit,
-            hit.unk_count,
+            hit.whole_damage,
             ratio,
             1.0,
             defense,
@@ -983,7 +983,7 @@ impl Running<'_> {
                 fighter: h,
                 index: 1,
             },
-            hit.unk_count,
+            hit.whole_damage,
         );
         let facing = self.game.fighters[h.0].facing_dir;
         let fp = &mut self.game.fighters[f.0];

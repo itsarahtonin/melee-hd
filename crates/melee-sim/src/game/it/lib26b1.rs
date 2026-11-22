@@ -356,7 +356,7 @@ pub fn ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
 #[doc(alias = "it_8026BBCC")]
 pub fn last_ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
     let cd = &item(game, gobj).coll;
-    let e = &cd.xE4_ecb;
+    let e = &cd.loaded_from_ecb;
     let dy = fp::fmuls(0.5, fp::fadds(reg(e.top.y), reg(e.bottom.y)));
     Vec3::new(
         mem(fp::fadds(reg(cd.last_pos.x), 0.0)),
@@ -413,7 +413,7 @@ pub fn clear_effect_queue(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_8026C368")]
 pub fn check_burst(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.coll.x34_flags.b7 {
+    if !ip.coll.ecb_flags.b7 {
         return;
     }
     match ip.item_kind() {

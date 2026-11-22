@@ -611,7 +611,7 @@ pub fn field_touched(
     let Some(g) = field else {
         return;
     };
-    if coll.x34_flags.b1234 == 1 && coll.x0_gobj == sandbag && kind == 1 {
+    if coll.ecb_flags.b1234 == 1 && coll.gobj == sandbag && kind == 1 {
         grounds[g.0].u.homerun().landed = true;
     }
 }

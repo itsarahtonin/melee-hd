@@ -283,7 +283,7 @@ impl Running<'_> {
         fp.dmg.x1830_percent = mem(fp::frsp(f64::from(damage)));
         fp.part_35_rot_x = -1.0;
         fp.throw_flags = [0; 4];
-        fp.thrown_hitbox.x134 = Default::default();
+        fp.thrown_hitbox.owner = Default::default();
         fp.sound_handle_4 = -1;
         fp.sound_handle_5 = -1;
         fp.sound_handle_6 = -1;
@@ -558,10 +558,10 @@ impl Running<'_> {
         };
         let cd = &mut game.fighters[f.0].coll_data;
         coll.init(cd);
-        cd.x34_flags.b1234 = 1;
+        cd.ecb_flags.b1234 = 1;
         cd.set_ecb_source_joints(Some(gobj), root, joints, x124);
         cd.set_ledge_snap(sx, sy, sh);
-        cd.x50 = weight;
+        cd.weight = weight;
         if cd.ecb_source.kind == crate::mp::coll::ECB_SOURCE_JOBJ {
             cd.ecb_source.min_height = x128;
             cd.ecb_source.min_width = x128;
@@ -743,22 +743,22 @@ impl Running<'_> {
         let joint = self.bone(f, bone).joint;
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.thrown_hitbox;
-        h.x4 = 0;
+        h.group = 0;
         h.state = 1;
         // `lbColl_80008440`.
         for v in &mut h.victims_1 {
             v.victim = Default::default();
         }
-        h.x44 = 0;
+        h.victims_1_len = 0;
         for v in &mut h.victims_2 {
             v.victim = Default::default();
         }
-        h.x45 = 0;
+        h.victims_2_len = 0;
         h.jobj.set(joint);
         h.scale = scale;
         h.b_offset = Vec3::new(0.0, 0.0, 0.0);
-        h.x43_b1 = false;
-        h.x43_b2 = false;
+        h.unscaled_offset = false;
+        h.phantom = false;
         fp.thrown_hitbox_live = false;
         self.thrown_hitbox_follow(gobj);
     }

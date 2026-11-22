@@ -1310,7 +1310,7 @@ pub fn platform_touched(
     coll: &super::super::structs::CollData,
     x50: i32,
 ) {
-    let k = coll.x34_flags.b1234;
+    let k = coll.ecb_flags.b1234;
     if k != 1 && k != 3 {
         return;
     }
@@ -3044,7 +3044,7 @@ pub fn car_touched(
     coll: &super::super::structs::CollData,
     kind: i32,
 ) {
-    if coll.x34_flags.b1234 != 1 {
+    if coll.ecb_flags.b1234 != 1 {
         return;
     }
     if kind != 1 {
@@ -3058,7 +3058,7 @@ pub fn car_touched(
     let v = gp.u.bigblue_cars();
     for c in v.cars.iter_mut() {
         if c.slot() == car_num {
-            c.gravity = mem(fp::fmuls(fp::fneg(reg(coll.x50)), push));
+            c.gravity = mem(fp::fmuls(fp::fneg(reg(coll.weight)), push));
         }
     }
 }

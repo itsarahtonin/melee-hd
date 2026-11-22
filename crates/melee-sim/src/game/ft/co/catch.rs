@@ -150,8 +150,8 @@ impl Running<'_> {
                 let h = &mf.hitboxes[i];
                 if h.state == hitcapsule::DISABLED
                     || h.element != ELEMENT_CATCH
-                    || !((h.x40_b2 && vf.ground_or_air == super::super::common::GA_AIR)
-                        || (h.x40_b3 && vf.ground_or_air == super::super::common::GA_GROUND))
+                    || !((h.hits_air && vf.ground_or_air == super::super::common::GA_AIR)
+                        || (h.hits_ground && vf.ground_or_air == super::super::common::GA_GROUND))
                 {
                     continue;
                 }
@@ -285,8 +285,8 @@ impl Running<'_> {
                 if h.state == hitcapsule::DISABLED || h.element != ELEMENT_CATCH {
                     continue;
                 }
-                if !((h.x40_b2 && ip.ground_or_air == super::super::common::GA_AIR)
-                    || (h.x40_b3 && ip.ground_or_air == super::super::common::GA_GROUND))
+                if !((h.hits_air && ip.ground_or_air == super::super::common::GA_AIR)
+                    || (h.hits_ground && ip.ground_or_air == super::super::common::GA_GROUND))
                 {
                     continue;
                 }

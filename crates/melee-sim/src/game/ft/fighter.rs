@@ -641,7 +641,7 @@ pub fn proc_map(g: &mut Running, gobj: GObjId) {
 #[doc(alias = "ftCommon_UnlockECB")]
 pub fn unlock_ecb(fp: &mut super::super::structs::Fighter) {
     fp.ecb_lock = 0;
-    fp.coll_data.x130_flags &= !(1 << 4);
+    fp.coll_data.ecb_lock &= !(1 << 4);
 }
 
 /// `Fighter_procAccessory`: the action's accessory callbacks (held items and effects that

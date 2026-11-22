@@ -20,7 +20,7 @@ impl Running<'_> {
     /// telling the item it hit), and the item counts for its player.
     pub(super) fn take_touch_item(&mut self, g: GObjId, j: usize, me: FighterId) {
         let h = &it::item(self.game, g).hitboxes[j].hit;
-        let mode = if h.x41_b5 { 5 } else { 0 };
+        let mode = if h.fighter_hit_alt { 5 } else { 0 };
         self.item_add_victim(g, j, mode, victim(me), false);
         if self.game.fighters[me.0].stamina_dead {
             return;

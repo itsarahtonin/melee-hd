@@ -618,7 +618,7 @@ pub fn balloon_touched(
     coll: &super::super::structs::CollData,
     x50: i32,
 ) {
-    let kind = u32::from(coll.x34_flags.b1234);
+    let kind = u32::from(coll.ecb_flags.b1234);
     if kind == 1 || kind == 2 || kind == 3 {
         let v = gp.u.greatbay4();
         v.ledge_hang =
@@ -801,7 +801,7 @@ pub fn platform_touched(
     x50: i32,
     ground_kind: i32,
 ) {
-    let kind = u32::from(coll.x34_flags.b1234);
+    let kind = u32::from(coll.ecb_flags.b1234);
     if kind != 1 && kind != 3 {
         return;
     }

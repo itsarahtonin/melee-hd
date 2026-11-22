@@ -1582,17 +1582,17 @@ pub fn track_touched(
     if track_live != 1 {
         return;
     }
-    let k = coll.x34_flags.b1234;
+    let k = coll.ecb_flags.b1234;
     if !(2..=3).contains(&k) && k != 5 {
         return;
     }
     if kind != 2 {
         return;
     }
-    if coll.x0_gobj.is_none() || !item {
+    if coll.gobj.is_none() || !item {
         return;
     }
-    coll.x34_flags.b7 = true;
+    coll.ecb_flags.b7 = true;
 }
 
 /// The stage's lines' hazards, `grMuteCity_801F2BBC`: while the track hurts, its ends' and its

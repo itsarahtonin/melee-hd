@@ -521,7 +521,7 @@ impl Kicks {
     /// the bridge's end vertices (29 and 26) in fifteen equal parts.
     #[doc(alias = "fn_801D7700")]
     pub fn landed(&mut self, g: &super::Geometry, coll: &CollData, ground_kind: i32) {
-        let ty = coll.x34_flags.b1234;
+        let ty = coll.ecb_flags.b1234;
         if !(ty == 1 || ty == 3) || ground_kind != 1 {
             return;
         }
@@ -1240,13 +1240,13 @@ pub(super) fn shot_hit(w: [u32; 6]) -> super::super::structs::HitCapsule {
         state: 1,
         damage: mem(fp::frsp(f64::from(w[0]))),
         kb_angle: w[1] as i32,
-        x24: w[2],
-        x28: w[3],
-        x2C: w[4],
+        kb_growth: w[2],
+        set_kb: w[3],
+        base_kb: w[4],
         element: w[5],
         sfx_severity: 0,
         sfx_kind: 0,
-        unk_count: w[0],
+        whole_damage: w[0],
         ..Default::default()
     }
 }

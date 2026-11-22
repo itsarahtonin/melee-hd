@@ -170,8 +170,8 @@ pub fn hitbox_off(r: &mut Running, gobj: GObjId) {
 pub fn hitbox_at(r: &mut Running, gobj: GObjId, a: Vec3, b: Vec3, idx: usize) {
     let hit = &mut item_mut(r.game, gobj).hitboxes[idx].hit;
     if hit.state != crate::lb::hitcapsule::DISABLED {
-        hit.x58 = b;
-        hit.x4C = a;
+        hit.prev_pos = b;
+        hit.pos = a;
     }
 }
 

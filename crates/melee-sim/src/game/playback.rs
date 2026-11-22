@@ -704,7 +704,7 @@ impl Running<'_> {
         fp.coll_data.cur_pos = pos;
         fp.coll_data.last_pos = pos;
         fp.mv[4..8].copy_from_slice(&pos.y.to_bits().to_be_bytes());
-        fp.coll_data.x38 = generation;
+        fp.coll_data.map_generation = generation;
         let (slot, which) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
         self.game.set_player_entity_pos(slot, which, pos);
         self.update_camera_box(gobj);

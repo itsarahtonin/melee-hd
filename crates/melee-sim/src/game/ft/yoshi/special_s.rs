@@ -517,7 +517,7 @@ impl Running<'_> {
         self.ys_set_mvi(gobj, mv::XC, xc);
         let fp = &mut self.game.fighters[f.0];
         if xc >= xdc && fp.hitboxes[0].state != 0 {
-            fp.hitboxes[0].x4 = fp.hitboxes[0].x4.wrapping_add(1) & 1;
+            fp.hitboxes[0].group = fp.hitboxes[0].group.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::XC, 0);
         }
         if self.game.fighters[f.0].hitboxes[0].state == 0 {

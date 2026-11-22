@@ -626,7 +626,7 @@ impl Running<'_> {
         self.knockback_of(
             me,
             hit,
-            hit.unk_count,
+            hit.whole_damage,
             ratio,
             attack,
             defense,

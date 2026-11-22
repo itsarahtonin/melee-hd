@@ -77,7 +77,7 @@ pub fn spawn(
     v.set_jobj(jobj);
     v.set_idx(-1);
     v.set_word(2, 0);
-    item_mut(r.game, gobj).coll.x34_flags.b1234 = 3;
+    item_mut(r.game, gobj).coll.ecb_flags.b1234 = 3;
     Some(gobj)
 }
 

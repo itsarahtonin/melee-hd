@@ -75,7 +75,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
     ) -> Option<i32> {
         let (ax, ay, bx, by) = (mem(a.0), mem(a.1), mem(b.0), mem(b.1));
         let (skip, only) = (cd.joint_id_skip, cd.joint_id_only);
-        let remap = cd.x38 != self.g.generation;
+        let remap = cd.map_generation != self.g.generation;
         let hit = match (side, remap) {
             (Side::Right, true) => self.g.check_right_wall_remap(ax, ay, bx, by, skip, only),
             (Side::Right, false) => self.g.check_right_wall(ax, ay, bx, by, skip, only),

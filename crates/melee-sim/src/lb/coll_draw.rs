@@ -136,7 +136,7 @@ fn joint_mtx(objs: &mut Objects, data: &Archives, j: Option<JObjId>) -> Mtx34 {
 /// coloured by its element, its size scaled by `scale_y` unless it keeps its own (`x43_b1`).
 #[doc(alias = "lbColl_80009F54")]
 pub fn hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> bool {
-    if hit.state == 0 || hit.x43_b2 {
+    if hit.state == 0 || hit.phantom {
         return false;
     }
     let color = match hit.element {
@@ -150,7 +150,7 @@ pub fn hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> boo
 /// A thrown fighter's hit's bubble, `lbColl_8000A044`.
 #[doc(alias = "lbColl_8000A044")]
 pub fn thrown_hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> bool {
-    if hit.state == 0 || hit.x43_b2 {
+    if hit.state == 0 || hit.phantom {
         return false;
     }
     hit_capsule(objs, hit, pass, scale_y, THROWN)
@@ -166,7 +166,7 @@ fn hit_capsule(
     if pass_of(color) != pass {
         return false;
     }
-    let size = if hit.x43_b1 {
+    let size = if hit.unscaled_offset {
         hit.scale
     } else {
         crate::fpu::mem(gekko_fp::fmuls(
@@ -177,8 +177,8 @@ fn hit_capsule(
     push(
         objs,
         DebugDraw::Capsule {
-            a: hit.x58,
-            b: hit.x4C,
+            a: hit.prev_pos,
+            b: hit.pos,
             color,
             amb,
             size,

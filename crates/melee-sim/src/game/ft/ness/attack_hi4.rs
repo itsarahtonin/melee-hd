@@ -127,7 +127,7 @@ impl Running<'_> {
             cd.cur_pos = from;
             cd.last_pos = cd.cur_pos;
             cd.cur_pos = to;
-            cd.x34_flags.b1234 = 5;
+            cd.ecb_flags.b1234 = 5;
             c.air_frame_box(&mut cd, &ecb, 0);
             cd.env_flags
         });

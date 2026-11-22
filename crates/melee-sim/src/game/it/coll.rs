@@ -64,8 +64,8 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
             let h = &ip.hitboxes[hi].hit;
             let can = h.state != hitcapsule::DISABLED
                 && h.element == ELEMENT_CATCH
-                && ((h.x40_b2 && fp.ground_or_air == GA_AIR)
-                    || (h.x40_b3 && fp.ground_or_air == GA_GROUND))
+                && ((h.hits_air && fp.ground_or_air == GA_AIR)
+                    || (h.hits_ground && fp.ground_or_air == GA_GROUND))
                 && !hitcapsule::has_victim(h, Victim::Fighter(f));
             if !can {
                 continue;
@@ -165,7 +165,7 @@ fn abs(v: f64) -> f64 {
 fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
     use hitcapsule::Victim;
     let me_id = super::item_of(r.game, me);
-    let kind = if item(r.game, g).hitboxes[hi].hit.x41_b4 {
+    let kind = if item(r.game, g).hitboxes[hi].hit.item_hit_alt {
         8
     } else {
         0
@@ -218,7 +218,7 @@ fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
 pub fn share_group_victims(game: &mut Game, gobj: GObjId, idx: usize) {
     let id = item(game, gobj).ignore_id;
     if id.is_set() {
-        let group = item(game, gobj).hitboxes[idx].hit.x4;
+        let group = item(game, gobj).hitboxes[idx].hit.group;
         let mut cur = game.world.first_in(super::P_LINK_ITEM);
         while let Some(g) = cur {
             let same = id.same(item(game, g).ignore_id, g == gobj);
@@ -226,7 +226,7 @@ pub fn share_group_victims(game: &mut Game, gobj: GObjId, idx: usize) {
             if same {
                 let src = (0..4).find(|&i| {
                     let h = &other.hitboxes[i].hit;
-                    !(g == gobj && i == idx) && h.state != hitcapsule::DISABLED && h.x4 == group
+                    !(g == gobj && i == idx) && h.state != hitcapsule::DISABLED && h.group == group
                 });
                 if let Some(i) = src {
                     let h = other.hitboxes[i].hit.clone();
@@ -275,7 +275,7 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
             continue;
         }
         let f = game.fighter_id(fg);
-        let x134 = game.fighters[f.0].thrown_hitbox.x134;
+        let x134 = game.fighters[f.0].thrown_hitbox.owner;
         if x134.is_set() && x134.thrower().is_none() {
             code::unported_call("a thrown fighter's hitbox word that isn't a thrower");
         }
@@ -299,9 +299,9 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
             let h = &r.game.fighters[f.0].hitboxes[hi];
             if h.state == hitcapsule::DISABLED
                 || h.element == ELEMENT_CATCH
-                || !h.x42_b7
-                || ((!h.x40_b2 || me.ground_or_air != GA_AIR)
-                    && (!h.x40_b3 || me.ground_or_air != GA_GROUND))
+                || !h.hits_items
+                || ((!h.hits_air || me.ground_or_air != GA_AIR)
+                    && (!h.hits_ground || me.ground_or_air != GA_GROUND))
                 || hitcapsule::has_victim(h, Victim::Item(me_id))
                 || me.invincibility == 2
             {
@@ -504,8 +504,8 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                 let h = &me.hitboxes[k].hit;
                 let can = h.state != hitcapsule::DISABLED
                     && h.element != ELEMENT_CATCH
-                    && ((h.x40_b2 && other.ground_or_air == GA_AIR)
-                        || (h.x40_b3 && other.ground_or_air == GA_GROUND))
+                    && ((h.hits_air && other.ground_or_air == GA_AIR)
+                        || (h.hits_ground && other.ground_or_air == GA_GROUND))
                     && !hitcapsule::has_victim(h, Victim::Item(other_id));
                 r.game.it.clank_boxes[k] = u8::from(can);
                 if can {
@@ -517,9 +517,9 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
             let (me, other) = (item(r.game, gobj), item(r.game, g));
             let h = &other.hitboxes[hi].hit;
             if h.state == hitcapsule::DISABLED
-                || !h.x42_b7
-                || (!(h.x40_b2 && me.ground_or_air == GA_AIR)
-                    && !(h.x40_b3 && me.ground_or_air == GA_GROUND))
+                || !h.hits_items
+                || (!(h.hits_air && me.ground_or_air == GA_AIR)
+                    && !(h.hits_ground && me.ground_or_air == GA_GROUND))
                 || hitcapsule::has_victim(h, Victim::Item(me_id))
             {
                 continue;
@@ -548,7 +548,7 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                             clanked = true;
                             break;
                         }
-                    } else if theirs.x40_b0 && mine.x40_b0 && boxes_touch(r.game, g, hi, gobj, i) {
+                    } else if theirs.clanks && mine.clanks && boxes_touch(r.game, g, hi, gobj, i) {
                         clank(r, g, hi, gobj, i);
                         clanked = true;
                         break;
@@ -658,7 +658,7 @@ fn clank(r: &mut Running, a: GObjId, i: usize, b: GObjId, j: usize) {
             continue;
         }
         let dmg = fp::fctiwz(mine);
-        let kind = if item(r.game, me).hitboxes[mi].hit.x41_b5 {
+        let kind = if item(r.game, me).hitboxes[mi].hit.fighter_hit_alt {
             4
         } else {
             3
@@ -704,12 +704,16 @@ pub fn knockback_of(r: &Running, gobj: GObjId, hit: &crate::game::structs::HitCa
     let k = |o: u32| reg(c.f32(r.data, 0x80 + 4 * o));
     let damage_mul = reg(super::item::attr_of(item(r.game, gobj)).f32(r.data, 0x1C));
     let u = |v: u32| fp::frsp(f64::from(v));
-    let kb = if hit.x28 != 0 {
-        let t = fp::fmuls(k(9), fp::fmuls(k(10), u(hit.x28)));
+    let kb = if hit.set_kb != 0 {
+        let t = fp::fmuls(k(9), fp::fmuls(k(10), u(hit.set_kb)));
         let t = fp::fmadds(k(10), k(8), t);
         let t = fp::fmuls(damage_mul, t);
         let t = fp::fmadds(k(11), t, k(12));
-        fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
+        fp::fmadds(
+            fp::fmuls(f64::from(0.01_f32), u(hit.kb_growth)),
+            t,
+            u(hit.base_kb),
+        )
     } else {
         let me = item(r.game, gobj);
         let sum = fp::fadds(
@@ -720,7 +724,11 @@ pub fn knockback_of(r: &Running, gobj: GObjId, hit: &crate::game::structs::HitCa
         let t = fp::fmadds(k(8), sum, t);
         let t = fp::fmuls(damage_mul, t);
         let t = fp::fmadds(k(11), t, k(12));
-        fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
+        fp::fmadds(
+            fp::fmuls(f64::from(0.01_f32), u(hit.kb_growth)),
+            t,
+            u(hit.base_kb),
+        )
     };
     let cap = reg(c.f32(r.data, 0x9C));
     mem(if kb >= cap { cap } else { kb })
@@ -750,12 +758,16 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
     let entries = &log[..r.game.it.damage_log.len()];
     for (index, e) in entries.iter().flatten().enumerate() {
         let hit = logged_hit(r.game, e);
-        let kb = if hit.x28 != 0 {
-            let t = fp::fmuls(k(9), fp::fmuls(k(10), u(hit.x28)));
+        let kb = if hit.set_kb != 0 {
+            let t = fp::fmuls(k(9), fp::fmuls(k(10), u(hit.set_kb)));
             let t = fp::fmadds(k(10), k(8), t);
             let t = fp::fmuls(damage_mul, t);
             let t = fp::fmadds(k(11), t, k(12));
-            fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
+            fp::fmadds(
+                fp::fmuls(f64::from(0.01_f32), u(hit.kb_growth)),
+                t,
+                u(hit.base_kb),
+            )
         } else {
             let me = item(r.game, gobj);
             let sum = fp::fadds(
@@ -766,7 +778,11 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
             let t = fp::fmadds(k(8), sum, t);
             let t = fp::fmuls(damage_mul, t);
             let t = fp::fmadds(k(11), t, k(12));
-            fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
+            fp::fmadds(
+                fp::fmuls(f64::from(0.01_f32), u(hit.kb_growth)),
+                t,
+                u(hit.base_kb),
+            )
         };
         let kb = if kb >= cap { cap } else { kb };
         let me = item(r.game, gobj);
@@ -860,7 +876,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
     ip.kb_angle = hit.kb_angle;
     ip.knockback = mem(max);
     ip.hit_element = hit.element as i32;
-    set_flag(&mut ip.draw_flags, 6, hit.x43_b0);
+    set_flag(&mut ip.draw_flags, 6, hit.item_hit_interaction);
 }
 
 /// Brings a hitbox's position up to date, `it_8027129C`: a new one starts where its joint
@@ -874,8 +890,8 @@ pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize)
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
             let ip = item_mut(game, gobj);
             let hit = &mut ip.hitboxes[idx].hit;
-            hit.x4C = p;
-            hit.x58 = p;
+            hit.pos = p;
+            hit.prev_pos = p;
             hit.state = hitcapsule::PLACED;
             set_flag(&mut ip.debug_flags, 2, true);
         }
@@ -886,9 +902,9 @@ pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize)
             if hit.state == hitcapsule::PLACED {
                 hit.state = hitcapsule::MOVING;
             }
-            hit.x58 = hit.x4C;
+            hit.prev_pos = hit.pos;
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
-            item_mut(game, gobj).hitboxes[idx].hit.x4C = p;
+            item_mut(game, gobj).hitboxes[idx].hit.pos = p;
         }
         _ => {}
     }
@@ -1225,12 +1241,12 @@ pub fn set_hit_damage(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize
         let (attack, count) = (ip.attack_id, dmg);
         let d = super::owner::stale_damage(game, data, f, attack, fp::frsp(f64::from(count)));
         let hit = &mut item_mut(game, gobj).hitboxes[idx].hit;
-        hit.unk_count = count;
+        hit.whole_damage = count;
         hit.damage = mem(d);
         return;
     }
     let hit = &mut item_mut(game, gobj).hitboxes[idx].hit;
-    hit.unk_count = dmg;
+    hit.whole_damage = dmg;
     hit.damage = mem(fp::frsp(f64::from(dmg)));
 }
 

@@ -276,7 +276,7 @@ pub fn spawn(
     change_state(r, gobj, state, super::super::item::change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
     ip.touched = Some(CodeRef(TOUCHED));
-    ip.coll.x34_flags.b1234 = 5;
+    ip.coll.ecb_flags.b1234 = 5;
     Some(gobj)
 }
 

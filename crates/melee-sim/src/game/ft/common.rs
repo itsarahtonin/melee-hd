@@ -768,7 +768,7 @@ impl Running<'_> {
         if !(1..=3).contains(&state) {
             return;
         }
-        let offset = if h.x43_b1 {
+        let offset = if h.unscaled_offset {
             let inv = fp::fdivs(1.0, reg(fp.scale.y));
             let b = h.b_offset;
             Vec3::new(
@@ -783,8 +783,8 @@ impl Running<'_> {
         if state == 1 {
             let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
             let h = &mut self.game.fighter_mut(gobj).hitboxes[i];
-            h.x4C = p;
-            h.x58 = p;
+            h.pos = p;
+            h.prev_pos = p;
             h.state = 2;
             return;
         }
@@ -792,9 +792,9 @@ impl Running<'_> {
         if state == 2 {
             h.state = 3;
         }
-        h.x58 = h.x4C;
+        h.prev_pos = h.pos;
         let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
-        self.game.fighter_mut(gobj).hitboxes[i].x4C = p;
+        self.game.fighter_mut(gobj).hitboxes[i].pos = p;
     }
 
     /// `ft_8007C224`: the thrown fighter's hitbox follows its bone, as `ftColl_8007AD18`
@@ -807,8 +807,8 @@ impl Running<'_> {
             1 => {
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
                 let h = &mut self.game.fighter_mut(gobj).thrown_hitbox;
-                h.x4C = p;
-                h.x58 = p;
+                h.pos = p;
+                h.prev_pos = p;
                 h.state = 2;
             }
             2 | 3 => {
@@ -816,9 +816,9 @@ impl Running<'_> {
                 if state == 2 {
                     h.state = 3;
                 }
-                h.x58 = h.x4C;
+                h.prev_pos = h.pos;
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
-                self.game.fighter_mut(gobj).thrown_hitbox.x4C = p;
+                self.game.fighter_mut(gobj).thrown_hitbox.pos = p;
             }
             _ => {}
         }

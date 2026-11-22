@@ -571,7 +571,7 @@ impl Running<'_> {
         let tf = self.game.fighter(thrower);
         let (team, slot) = (tf.team, tf.player_idx);
         let fp = &mut self.game.fighters[f.0];
-        fp.thrown_hitbox.x134 = crate::lb::hitcapsule::HitOwner::Thrower(thrower);
+        fp.thrown_hitbox.owner = crate::lb::hitcapsule::HitOwner::Thrower(thrower);
         fp.thrown_team = team;
         fp.thrower_slot = slot;
     }
@@ -623,7 +623,7 @@ impl Running<'_> {
             }
         }
         if flags & SKIP_THROW_EXCEPTION == 0 {
-            self.game.fighters[f.0].thrown_hitbox.x134 = Default::default();
+            self.game.fighters[f.0].thrown_hitbox.owner = Default::default();
         }
         if flags & KEEP_COL_ANIM_HIT_STATUS == 0 {
             if self.game.fighters[f.0].hit_status != 0 {

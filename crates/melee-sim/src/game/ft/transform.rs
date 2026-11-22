@@ -296,7 +296,7 @@ impl Running<'_> {
             cd.ecb_source.side_lift = x124;
             cd.set_ledge_snap(sx, sy, sh);
         }
-        cd.x50 = weight;
+        cd.weight = weight;
         if joints {
             cd.ecb_source.min_height = ten;
             cd.ecb_source.min_width = ten;

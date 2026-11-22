@@ -1624,11 +1624,16 @@ fn playback_counters(g: &mut melee_sim::game::state::Game, play: &melee_sim::gam
             }
         };
     }
-    each_slot!(g.fighters, play.fighters, |a, b| a.coll_data.x38 =
-        b.coll_data.x38);
-    each_slot!(g.items, play.items, |a, b| a.coll.x38 = b.coll.x38);
-    each_slot!(g.it.links, play.it.links, |a, b| a.coll_data.x38 =
-        b.coll_data.x38);
+    each_slot!(g.fighters, play.fighters, |a, b| a
+        .coll_data
+        .map_generation =
+        b.coll_data.map_generation);
+    each_slot!(g.items, play.items, |a, b| a.coll.map_generation =
+        b.coll.map_generation);
+    each_slot!(g.it.links, play.it.links, |a, b| a
+        .coll_data
+        .map_generation =
+        b.coll_data.map_generation);
     let o = &mut g.objs;
     o.generators.idnum = play.objs.generators.idnum;
     o.psdisp.clone_from(&play.objs.psdisp);

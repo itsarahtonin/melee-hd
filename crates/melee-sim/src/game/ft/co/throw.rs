@@ -284,7 +284,7 @@ impl Running<'_> {
                 fighter: me,
                 index: 0,
             },
-            hit.unk_count,
+            hit.whole_damage,
             ratio,
             attack,
             defense,

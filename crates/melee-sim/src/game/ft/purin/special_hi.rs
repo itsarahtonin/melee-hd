@@ -51,10 +51,10 @@ impl Running<'_> {
     fn purin_sing_sleep(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.mv_i32(mv::HI_SLEEP) != 0
-            && !fp.hitboxes[0].x43_b2
+            && !fp.hitboxes[0].phantom
             && fp.hitboxes[0].state != hitcapsule::DISABLED
         {
-            fp.hitboxes[0].x43_b2 = true;
+            fp.hitboxes[0].phantom = true;
             fp.hitboxes[0].element = ELEMENT_SLEEP;
         }
     }

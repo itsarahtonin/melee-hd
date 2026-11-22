@@ -1162,7 +1162,7 @@ pub fn ice_touched(
     let slot = usize::from(cb == ICE_B_TOUCHED);
     let map = grounds[g.0].map_id as u8;
     let s = &mut grounds[g.0].u.icemt_field(map).slots[slot].0;
-    if i32::from(coll.x34_flags.b1234) == 1 && s[0] == 0 {
+    if i32::from(coll.ecb_flags.b1234) == 1 && s[0] == 0 {
         s[0] = 1;
         s[1] = 0;
         let parts = [s[2], s[3]];

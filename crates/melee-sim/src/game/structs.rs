@@ -659,7 +659,8 @@ impl Default for SurfaceData {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct CollData {
     /// +0x0
-    pub x0_gobj: Option<GObjId>,
+    #[doc(alias("x0_gobj"))]
+    pub gobj: Option<GObjId>,
     /// +0x4
     pub cur_pos: Vec3,
     /// +0x10
@@ -667,15 +668,19 @@ pub struct CollData {
     /// +0x1c
     pub last_pos: Vec3,
     /// +0x28
-    pub x28_vec: Vec3,
+    #[doc(alias("x28_vec"))]
+    pub frame_start_pos: Vec3,
     /// +0x34
-    pub x34_flags: X34Flags,
+    #[doc(alias("x34_flags"))]
+    pub ecb_flags: X34Flags,
     /// +0x35
-    pub x35_flags: X35Flags,
+    #[doc(alias("x35_flags"))]
+    pub map_flags: X35Flags,
     /// +0x36
     pub facing_dir: i16,
     /// +0x38
-    pub x38: i32,
+    #[doc(alias("x38"))]
+    pub map_generation: i32,
     /// +0x3c
     pub floor_skip: i32,
     /// +0x40
@@ -687,7 +692,8 @@ pub struct CollData {
     /// +0x4c
     pub joint_id_only: i32,
     /// +0x50
-    pub x50: f32,
+    #[doc(alias("x50"))]
+    pub weight: f32,
     /// +0x54
     pub ledge_snap_x: f32,
     /// +0x58
@@ -697,7 +703,8 @@ pub struct CollData {
     /// +0x60
     pub lstick_x: f32,
     /// +0x64
-    pub x64_ecb: _ftECB,
+    #[doc(alias("x64_ecb"))]
+    pub unsqueezed_ecb: _ftECB,
     /// +0x84
     pub desired_ecb: _ftECB,
     /// +0xa4
@@ -705,17 +712,20 @@ pub struct CollData {
     /// +0xc4
     pub prev_ecb: _ftECB,
     /// +0xe4
-    pub xE4_ecb: _ftECB,
+    #[doc(alias("xE4_ecb"))]
+    pub loaded_from_ecb: _ftECB,
     /// +0x104
     pub ecb_source: EcbSource,
     /// +0x130
-    pub x130_flags: u32,
+    #[doc(alias("x130_flags"))]
+    pub ecb_lock: u32,
     /// +0x134
     pub env_flags: i32,
     /// +0x138
     pub prev_env_flags: i32,
     /// +0x13c
-    pub x13C: i32,
+    #[doc(alias("x13C"))]
+    pub unread_13c: i32,
     /// +0x140
     pub contact: Vec3,
     /// +0x14c
@@ -731,35 +741,35 @@ pub struct CollData {
 impl Default for CollData {
     fn default() -> Self {
         CollData {
-            x0_gobj: None,
+            gobj: None,
             cur_pos: Default::default(),
             prev_pos: Default::default(),
             last_pos: Default::default(),
-            x28_vec: Default::default(),
-            x34_flags: Default::default(),
-            x35_flags: Default::default(),
+            frame_start_pos: Default::default(),
+            ecb_flags: Default::default(),
+            map_flags: Default::default(),
             facing_dir: 0,
-            x38: 0,
+            map_generation: 0,
             floor_skip: 0,
             ledge_id_right: 0,
             ledge_id_left: 0,
             joint_id_skip: 0,
             joint_id_only: 0,
-            x50: 0.0,
+            weight: 0.0,
             ledge_snap_x: 0.0,
             ledge_snap_y: 0.0,
             ledge_snap_height: 0.0,
             lstick_x: 0.0,
-            x64_ecb: Default::default(),
+            unsqueezed_ecb: Default::default(),
             desired_ecb: Default::default(),
             ecb: Default::default(),
             prev_ecb: Default::default(),
-            xE4_ecb: Default::default(),
+            loaded_from_ecb: Default::default(),
             ecb_source: Default::default(),
-            x130_flags: 0,
+            ecb_lock: 0,
             env_flags: 0,
             prev_env_flags: 0,
-            x13C: 0,
+            unread_13c: 0,
             contact: Default::default(),
             floor: Default::default(),
             left_facing_wall: Default::default(),
@@ -805,14 +815,15 @@ pub struct HitVictim {
     /// +0x0
     pub victim: Victim,
     /// +0x4
-    pub x4: u32,
+    #[doc(alias("x4"))]
+    pub rehit_timer: u32,
 }
 
 impl Default for HitVictim {
     fn default() -> Self {
         HitVictim {
             victim: Default::default(),
-            x4: 0,
+            rehit_timer: 0,
         }
     }
 }
@@ -823,9 +834,11 @@ pub struct HitCapsule {
     /// +0x0
     pub state: i32,
     /// +0x4
-    pub x4: u32,
+    #[doc(alias("x4"))]
+    pub group: u32,
     /// +0x8
-    pub unk_count: u32,
+    #[doc(alias("unk_count"))]
+    pub whole_damage: u32,
     /// +0xc
     pub damage: f32,
     /// +0x10
@@ -835,81 +848,115 @@ pub struct HitCapsule {
     /// +0x20
     pub kb_angle: i32,
     /// +0x24
-    pub x24: u32,
+    #[doc(alias("x24"))]
+    pub kb_growth: u32,
     /// +0x28
-    pub x28: u32,
+    #[doc(alias("x28"))]
+    pub set_kb: u32,
     /// +0x2c
-    pub x2C: u32,
+    #[doc(alias("x2C"))]
+    pub base_kb: u32,
     /// +0x30
     pub element: u32,
     /// +0x34
-    pub x34: i32,
+    #[doc(alias("x34"))]
+    pub shield_damage: i32,
     /// +0x38
     pub sfx_severity: i32,
     /// +0x3c
     pub sfx_kind: i32,
     /// +0x40 (bits 0..+1)
-    pub x40_b0: bool,
+    #[doc(alias("x40_b0"))]
+    pub clanks: bool,
     /// +0x40 (bits 1..+1)
-    pub x40_b1: bool,
+    #[doc(alias("x40_b1"))]
+    pub rebounds: bool,
     /// +0x40 (bits 2..+1)
-    pub x40_b2: bool,
+    #[doc(alias("x40_b2"))]
+    pub hits_air: bool,
     /// +0x40 (bits 3..+1)
-    pub x40_b3: bool,
+    #[doc(alias("x40_b3"))]
+    pub hits_ground: bool,
     /// +0x40 (bits 4..+8)
-    pub x40_b4: u8,
+    #[doc(alias("x40_b4"))]
+    pub rehit_rate: u8,
     /// +0x41 (bits 4..+1)
-    pub x41_b4: bool,
+    #[doc(alias("x41_b4"))]
+    pub item_hit_alt: bool,
     /// +0x41 (bits 5..+1)
-    pub x41_b5: bool,
+    #[doc(alias("x41_b5"))]
+    pub fighter_hit_alt: bool,
     /// +0x41 (bits 6..+1)
-    pub x41_b6: bool,
+    #[doc(alias("x41_b6"))]
+    pub shield_hit_alt: bool,
     /// +0x41 (bits 7..+1)
-    pub x41_b7: bool,
+    #[doc(alias("x41_b7"))]
+    pub reflectable: bool,
     /// +0x42 (bits 0..+1)
-    pub x42_b0: bool,
+    #[doc(alias("x42_b0"))]
+    pub absorbable: bool,
     /// +0x42 (bits 1..+1)
-    pub x42_b1: bool,
+    #[doc(alias("x42_b1"))]
+    pub meets_bubble: bool,
     /// +0x42 (bits 2..+1)
-    pub x42_b2: bool,
+    #[doc(alias("x42_b2"))]
+    pub misses_same_facing: bool,
     /// +0x42 (bits 3..+1)
-    pub x42_b3: bool,
+    #[doc(alias("x42_b3"))]
+    pub bounces_off_shield: bool,
     /// +0x42 (bits 4..+1)
-    pub x42_b4: bool,
+    #[doc(alias("x42_b4"))]
+    pub meets_reflector: bool,
     /// +0x42 (bits 5..+1)
-    pub x42_b5: bool,
+    #[doc(alias("x42_b5"))]
+    pub hits_fighters: bool,
     /// +0x42 (bits 6..+1)
-    pub x42_b6: bool,
+    #[doc(alias("x42_b6"))]
+    pub grabbable_hurtboxes_only: bool,
     /// +0x42 (bits 7..+1)
-    pub x42_b7: bool,
+    #[doc(alias("x42_b7"))]
+    pub hits_items: bool,
     /// +0x43 (bits 0..+1)
-    pub x43_b0: bool,
+    #[doc(alias("x43_b0"))]
+    pub item_hit_interaction: bool,
     /// +0x43 (bits 1..+1)
-    pub x43_b1: bool,
+    #[doc(alias("x43_b1"))]
+    pub unscaled_offset: bool,
     /// +0x43 (bits 2..+1)
-    pub x43_b2: bool,
+    #[doc(alias("x43_b2"))]
+    pub phantom: bool,
     /// +0x43 (bits 3..+1)
-    pub x43_b3: bool,
+    #[doc(alias("x43_b3"))]
+    pub unused_43_b3: bool,
     /// +0x43 (bits 4..+1)
-    pub x43_b4: bool,
+    #[doc(alias("x43_b4"))]
+    pub unused_43_b4: bool,
     /// +0x43 (bits 5..+1)
-    pub x43_b5: bool,
+    #[doc(alias("x43_b5"))]
+    pub unused_43_b5: bool,
     /// +0x43 (bits 6..+1)
-    pub x43_b6: bool,
+    #[doc(alias("x43_b6"))]
+    pub unused_43_b6: bool,
     /// +0x43 (bits 7..+1)
-    pub x43_b7: bool,
+    #[doc(alias("x43_b7"))]
+    pub unused_43_b7: bool,
     /// +0x44
-    pub x44: u8,
+    #[doc(alias("x44"))]
+    pub victims_1_len: u8,
     /// +0x45
-    pub x45: u8,
+    #[doc(alias("x45"))]
+    pub victims_2_len: u8,
     /// +0x46
-    pub x46: [u8; 2],
+    #[doc(alias("x46"))]
+    pub pad_46: [u8; 2],
     /// +0x48
     pub jobj: HitJObj,
     /// +0x4c
-    pub x4C: Vec3,
+    #[doc(alias("x4C"))]
+    pub pos: Vec3,
     /// +0x58
-    pub x58: Vec3,
+    #[doc(alias("x58"))]
+    pub prev_pos: Vec3,
     /// +0x64
     pub hurt_coll_pos: Vec3,
     /// +0x70
@@ -919,62 +966,63 @@ pub struct HitCapsule {
     /// +0xd4
     pub victims_2: [HitVictim; 12],
     /// +0x134
-    pub x134: HitOwner,
+    #[doc(alias("x134"))]
+    pub owner: HitOwner,
 }
 
 impl Default for HitCapsule {
     fn default() -> Self {
         HitCapsule {
             state: 0,
-            x4: 0,
-            unk_count: 0,
+            group: 0,
+            whole_damage: 0,
             damage: 0.0,
             b_offset: Default::default(),
             scale: 0.0,
             kb_angle: 0,
-            x24: 0,
-            x28: 0,
-            x2C: 0,
+            kb_growth: 0,
+            set_kb: 0,
+            base_kb: 0,
             element: 0,
-            x34: 0,
+            shield_damage: 0,
             sfx_severity: 0,
             sfx_kind: 0,
-            x40_b0: false,
-            x40_b1: false,
-            x40_b2: false,
-            x40_b3: false,
-            x40_b4: 0,
-            x41_b4: false,
-            x41_b5: false,
-            x41_b6: false,
-            x41_b7: false,
-            x42_b0: false,
-            x42_b1: false,
-            x42_b2: false,
-            x42_b3: false,
-            x42_b4: false,
-            x42_b5: false,
-            x42_b6: false,
-            x42_b7: false,
-            x43_b0: false,
-            x43_b1: false,
-            x43_b2: false,
-            x43_b3: false,
-            x43_b4: false,
-            x43_b5: false,
-            x43_b6: false,
-            x43_b7: false,
-            x44: 0,
-            x45: 0,
-            x46: [0; 2],
+            clanks: false,
+            rebounds: false,
+            hits_air: false,
+            hits_ground: false,
+            rehit_rate: 0,
+            item_hit_alt: false,
+            fighter_hit_alt: false,
+            shield_hit_alt: false,
+            reflectable: false,
+            absorbable: false,
+            meets_bubble: false,
+            misses_same_facing: false,
+            bounces_off_shield: false,
+            meets_reflector: false,
+            hits_fighters: false,
+            grabbable_hurtboxes_only: false,
+            hits_items: false,
+            item_hit_interaction: false,
+            unscaled_offset: false,
+            phantom: false,
+            unused_43_b3: false,
+            unused_43_b4: false,
+            unused_43_b5: false,
+            unused_43_b6: false,
+            unused_43_b7: false,
+            victims_1_len: 0,
+            victims_2_len: 0,
+            pad_46: [0; 2],
             jobj: Default::default(),
-            x4C: Default::default(),
-            x58: Default::default(),
+            pos: Default::default(),
+            prev_pos: Default::default(),
             hurt_coll_pos: Default::default(),
             coll_distance: 0.0,
             victims_1: core::array::from_fn(|_| Default::default()),
             victims_2: core::array::from_fn(|_| Default::default()),
-            x134: Default::default(),
+            owner: Default::default(),
         }
     }
 }
@@ -995,19 +1043,26 @@ pub struct HurtCapsule {
     /// +0x24 (bits 0..+1)
     pub skip_update_pos: bool,
     /// +0x24 (bits 1..+1)
-    pub x24_b1: bool,
+    #[doc(alias("x24_b1"))]
+    pub unused_24_b1: bool,
     /// +0x24 (bits 2..+1)
-    pub x24_b2: bool,
+    #[doc(alias("x24_b2"))]
+    pub unused_24_b2: bool,
     /// +0x24 (bits 3..+1)
-    pub x24_b3: bool,
+    #[doc(alias("x24_b3"))]
+    pub unused_24_b3: bool,
     /// +0x24 (bits 4..+1)
-    pub x24_b4: bool,
+    #[doc(alias("x24_b4"))]
+    pub unused_24_b4: bool,
     /// +0x24 (bits 5..+1)
-    pub x24_b5: bool,
+    #[doc(alias("x24_b5"))]
+    pub unused_24_b5: bool,
     /// +0x24 (bits 6..+1)
-    pub x24_b6: bool,
+    #[doc(alias("x24_b6"))]
+    pub unused_24_b6: bool,
     /// +0x24 (bits 7..+1)
-    pub x24_b7: bool,
+    #[doc(alias("x24_b7"))]
+    pub unused_24_b7: bool,
     /// +0x28
     pub a_pos: Vec3,
     /// +0x34
@@ -1025,13 +1080,13 @@ impl Default for HurtCapsule {
             scale: 0.0,
             bone: None,
             skip_update_pos: false,
-            x24_b1: false,
-            x24_b2: false,
-            x24_b3: false,
-            x24_b4: false,
-            x24_b5: false,
-            x24_b6: false,
-            x24_b7: false,
+            unused_24_b1: false,
+            unused_24_b2: false,
+            unused_24_b3: false,
+            unused_24_b4: false,
+            unused_24_b5: false,
+            unused_24_b6: false,
+            unused_24_b7: false,
             a_pos: Default::default(),
             b_pos: Default::default(),
             bone_idx: 0,

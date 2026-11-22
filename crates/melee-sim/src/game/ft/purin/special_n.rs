@@ -280,7 +280,7 @@ impl Running<'_> {
         let n = fp.mv_i32(mv::N_HIT_TOGGLE).wrapping_add(1);
         fp.set_mv_i32(mv::N_HIT_TOGGLE, n);
         if n >= every && fp.hitboxes[0].state != hitcapsule::DISABLED {
-            fp.hitboxes[0].x4 = fp.hitboxes[0].x4.wrapping_add(1) & 1;
+            fp.hitboxes[0].group = fp.hitboxes[0].group.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::N_HIT_TOGGLE, 0);
         }
     }

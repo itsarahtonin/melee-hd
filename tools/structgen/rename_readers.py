@@ -39,14 +39,18 @@ MESSAGES = [
 ]
 
 
+C_NAMES = {rust: c for c, rust in config.RENAME_TYPES.items()}
+
+
 def struct_of(ty):
-    """The struct a type names, past references, `Box` and the path: `&mut structs::Fighter`
-    is `Fighter`."""
+    """The struct a type names, by its C name (the map's key), past references, `Box` and the
+    path: `&mut structs::Fighter` is `Fighter`, `ControllerMap` is `controller_map`."""
     ty = re.sub(r"^(&(mut )?|\*(mut|const) )+", "", ty.strip())
     m = re.fullmatch(r"(?:\w+::)*Box<(.+)>", ty)
     if m:
         return struct_of(m.group(1))
-    return re.sub(r"<.*$", "", ty).split("::")[-1]
+    name = re.sub(r"<.*$", "", ty).split("::")[-1]
+    return C_NAMES.get(name, name)
 
 
 def regenerate(types):

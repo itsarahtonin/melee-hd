@@ -299,11 +299,11 @@ pub fn clear_victims(hit: &mut HitCapsule) {
     for v in &mut hit.victims_1 {
         v.victim = Victim::None;
     }
-    hit.x44 = 0;
+    hit.victims_1_len = 0;
     for v in &mut hit.victims_2 {
         v.victim = Victim::None;
     }
-    hit.x45 = 0;
+    hit.victims_2_len = 0;
 }
 
 /// Copies another hitbox's victims (an item's boxes of one group share them),
@@ -311,8 +311,8 @@ pub fn clear_victims(hit: &mut HitCapsule) {
 pub fn copy_victims(src: &HitCapsule, dst: &mut HitCapsule) {
     dst.victims_1.clone_from(&src.victims_1);
     dst.victims_2.clone_from(&src.victims_2);
-    dst.x44 = src.x44;
-    dst.x45 = src.x45;
+    dst.victims_1_len = src.victims_1_len;
+    dst.victims_2_len = src.victims_2_len;
 }
 
 /// Counts down how long each victim stays remembered, forgetting it at zero,
@@ -323,9 +323,9 @@ pub fn age_victims(hit: &mut HitCapsule) {
         return;
     }
     for v in hit.victims_1.iter_mut().chain(hit.victims_2.iter_mut()) {
-        if v.victim != Victim::None && v.x4 != 0 {
-            v.x4 -= 1;
-            if v.x4 == 0 {
+        if v.victim != Victim::None && v.rehit_timer != 0 {
+            v.rehit_timer -= 1;
+            if v.rehit_timer == 0 {
                 v.victim = Victim::None;
             }
         }
@@ -356,23 +356,23 @@ pub fn has_victim2(hit: &HitCapsule, victim: Victim) -> bool {
 /// timed kinds and nothing is added; a new one takes the first free entry, or else the one at
 /// the ring index, which moves on. Returns whether the victim was new.
 fn add_to(hit: &mut HitCapsule, kind: i32, victim: Victim, list2: bool) -> bool {
-    let rehit = u32::from(hit.x40_b4);
+    let rehit = u32::from(hit.rehit_rate);
     let timed = timed(kind, list2);
     let (list, ring) = if list2 {
-        (&mut hit.victims_2, &mut hit.x45)
+        (&mut hit.victims_2, &mut hit.victims_2_len)
     } else {
-        (&mut hit.victims_1, &mut hit.x44)
+        (&mut hit.victims_1, &mut hit.victims_1_len)
     };
     if let Some(v) = list.iter_mut().find(|v| v.victim == victim) {
         if timed {
-            v.x4 = rehit;
+            v.rehit_timer = rehit;
         }
         return false;
     }
     let free = list.iter().position(|v| v.victim == Victim::None);
     let at = free.unwrap_or(usize::from(*ring));
     list[at].victim = victim;
-    list[at].x4 = if timed { rehit } else { 0 };
+    list[at].rehit_timer = if timed { rehit } else { 0 };
     if free.is_none() {
         *ring = ring.wrapping_add(1);
         if usize::from(*ring) >= VICTIMS {
@@ -411,7 +411,7 @@ pub const HURT_ENABLED: i32 = 0;
 
 /// The radius a hitbox tests with: its own, or scaled by its owner's size unless fixed.
 fn hit_radius(hit: &HitCapsule, owner_scale: f32) -> f32 {
-    if hit.x43_b1 {
+    if hit.unscaled_offset {
         hit.scale
     } else {
         mem(fp::fmuls(reg(hit.scale), reg(owner_scale)))
@@ -518,8 +518,8 @@ pub fn touches_hurtbox(
     update_hurt_ends(objs, data, hurt, mtx, z);
     let m = bone_mtx(objs, data, hurt.bone, mtx);
     let met = hit_hurt(
-        hit.x58,
-        hit.x4C,
+        hit.prev_pos,
+        hit.pos,
         hurt.a_pos,
         hurt.b_pos,
         &m,
@@ -594,8 +594,8 @@ pub fn hits_bubble(
     }
     let m = bone_mtx(objs, data, bubble.bone, mtx);
     let met = hit_hurt(
-        hit.x58,
-        hit.x4C,
+        hit.prev_pos,
+        hit.pos,
         bubble.pos,
         bubble.pos,
         &m,
@@ -626,8 +626,8 @@ pub fn bubble_entry(
     sphere_entry(
         bubble.pos,
         &m,
-        hit.x58,
-        hit.x4C,
+        hit.prev_pos,
+        hit.pos,
         bubble.size,
         hit_radius(hit, hit_owner_scale),
     )
@@ -637,9 +637,9 @@ pub fn bubble_entry(
 pub fn shape(hit: &HitCapsule) -> HitShape {
     HitShape {
         radius: hit.scale,
-        fixed_radius: hit.x43_b1,
-        pos: hit.x4C,
-        prev_pos: hit.x58,
+        fixed_radius: hit.unscaled_offset,
+        pos: hit.pos,
+        prev_pos: hit.prev_pos,
         contact: hit.hurt_coll_pos,
     }
 }

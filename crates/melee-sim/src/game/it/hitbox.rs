@@ -117,7 +117,7 @@ pub fn scale_damage(game: &mut Game, data: &Archives, gobj: GObjId, mult: f64) {
 #[doc(alias = "it_8027572C")]
 #[doc(alias = "it_8027570C")]
 pub fn set_hit_flag0(game: &mut Game, gobj: GObjId, idx: usize, on: bool) {
-    item_mut(game, gobj).hitboxes[idx].hit.x40_b0 = on;
+    item_mut(game, gobj).hitboxes[idx].hit.clanks = on;
 }
 
 /// Lets ownerless and the same player's items hit it, `it_80275414`.

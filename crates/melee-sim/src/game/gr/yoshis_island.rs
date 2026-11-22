@@ -305,11 +305,11 @@ pub fn block_landed(
     landing: &mut Landing,
     delta_y: f32,
 ) {
-    let env = i32::from(coll.x34_flags.b1234);
+    let env = i32::from(coll.ecb_flags.b1234);
     if env != 1 && env != 2 && env != 3 {
         return;
     }
-    let (entering, moved) = landing.fighter(coll.x0_gobj);
+    let (entering, moved) = landing.fighter(coll.gobj);
     if env == 1 && entering {
         return;
     }
@@ -317,7 +317,7 @@ pub fn block_landed(
     let dy = if env == 1 { moved } else { delta_y };
     if reg(dy) >= reg(p.f(data, LAND_MIN)) {
         let lag = fp::frsp(f64::from(p.i(data, LAND_HITLAG))) as f32;
-        landing.hitlag = Some((coll.x0_gobj, lag));
+        landing.hitlag = Some((coll.gobj, lag));
     }
     let map = gp.map_id;
     let blocks = &mut gp.u.yorster().blocks;
