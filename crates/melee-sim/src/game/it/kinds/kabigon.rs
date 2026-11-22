@@ -103,7 +103,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     v.set_i32(DUST_FRAMES, dust);
     v.set_i32(SPREAD, fp::fctiwz(reg(spread)));
     let ip = item_mut(r.game, gobj);
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
     ip.cmd_var0 = 0;
     ip.cmd_var1 = 0;
     ip.cmd_var2 = 1;

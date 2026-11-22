@@ -681,9 +681,9 @@ impl Running<'_> {
         if !over {
             ip.reflect_damage_mul = dmg_mul;
             ip.reflect_speed_mul = speed_mul;
-            ip.state_flags.b2 = b5;
+            ip.state_flags.keeps_pokeball_reflected = b5;
             if b4 {
-                ip.state_flags.b1 = true;
+                ip.state_flags.keeps_owner_reflected = true;
             }
         }
         let (vx, ix) = (reg(ip.vel.x), ip.pos.x);
@@ -1232,7 +1232,12 @@ impl Running<'_> {
             if ip.kind == ItKind::VsCoin {
                 continue;
             }
-            let (owner, b5, b6, team) = (ip.owner, ip.hit_flags.x0.b5, ip.hit_flags.x0.b6, ip.team);
+            let (owner, b5, b6, team) = (
+                ip.owner,
+                ip.hit_flags.bits.hits_own_player,
+                ip.hit_flags.bits.hits_own_team,
+                ip.team,
+            );
             if self.is_same_player(Some(gobj), owner) && !b5 {
                 continue;
             }

@@ -125,7 +125,7 @@ pub fn draw_landings(r: &mut Running, gobj: GObjId, s: &Shell) {
 pub fn count_hit_delay(r: &mut Running, gobj: GObjId, s: &Shell) {
     let v = vars(r, gobj, s);
     if reg(v.hit_delay.get()) <= 0.0 {
-        if !item(r.game, gobj).hit_flags.x0.b5 {
+        if !item(r.game, gobj).hit_flags.bits.hits_own_player {
             hitbox::set_hit_ids(r.game, gobj);
         }
     } else {

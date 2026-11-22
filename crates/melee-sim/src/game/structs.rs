@@ -4056,13 +4056,17 @@ impl Default for flag32 {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Item_xDCC_flag {
     /// +0x0 (bits 0..+1)
-    pub b0: bool,
+    #[doc(alias("b0"))]
+    pub keeps_reflected_damage: bool,
     /// +0x0 (bits 1..+1)
-    pub b1: bool,
+    #[doc(alias("b1"))]
+    pub keeps_owner_reflected: bool,
     /// +0x0 (bits 2..+1)
-    pub b2: bool,
+    #[doc(alias("b2"))]
+    pub keeps_pokeball_reflected: bool,
     /// +0x0 (bits 3..+1)
-    pub b3: bool,
+    #[doc(alias("b3"))]
+    pub checks_blast_zones: bool,
     /// +0x0 (bits 4..+4)
     pub b4567: u8,
 }
@@ -4070,10 +4074,10 @@ pub struct Item_xDCC_flag {
 impl Default for Item_xDCC_flag {
     fn default() -> Self {
         Item_xDCC_flag {
-            b0: false,
-            b1: false,
-            b2: false,
-            b3: false,
+            keeps_reflected_damage: false,
+            keeps_owner_reflected: false,
+            keeps_pokeball_reflected: false,
+            checks_blast_zones: false,
             b4567: 0,
         }
     }
@@ -4085,29 +4089,35 @@ pub struct CameraBoxFlags_x0 {
     /// +0x0 (bits 0..+2)
     pub b01: u8,
     /// +0x0 (bits 2..+1)
-    pub b2: bool,
+    #[doc(alias("b2"))]
+    pub silenced: bool,
     /// +0x0 (bits 3..+1)
-    pub b3: bool,
+    #[doc(alias("b3"))]
+    pub no_slide: bool,
     /// +0x0 (bits 4..+1)
-    pub b4: bool,
+    #[doc(alias("b4"))]
+    pub stops_on_land: bool,
     /// +0x0 (bits 5..+1)
-    pub b5: bool,
+    #[doc(alias("b5"))]
+    pub hits_own_player: bool,
     /// +0x0 (bits 6..+1)
-    pub b6: bool,
+    #[doc(alias("b6"))]
+    pub hits_own_team: bool,
     /// +0x0 (bits 7..+1)
-    pub b7: bool,
+    #[doc(alias("b7"))]
+    pub hit_by_own_items: bool,
 }
 
 impl Default for CameraBoxFlags_x0 {
     fn default() -> Self {
         CameraBoxFlags_x0 {
             b01: 0,
-            b2: false,
-            b3: false,
-            b4: false,
-            b5: false,
-            b6: false,
-            b7: false,
+            silenced: false,
+            no_slide: false,
+            stops_on_land: false,
+            hits_own_player: false,
+            hits_own_team: false,
+            hit_by_own_items: false,
         }
     }
 }
@@ -4116,13 +4126,14 @@ impl Default for CameraBoxFlags_x0 {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct CameraBoxFlags {
     /// +0x0
-    pub x0: CameraBoxFlags_x0,
+    #[doc(alias("x0"))]
+    pub bits: CameraBoxFlags_x0,
 }
 
 impl Default for CameraBoxFlags {
     fn default() -> Self {
         CameraBoxFlags {
-            x0: Default::default(),
+            bits: Default::default(),
         }
     }
 }
@@ -4955,9 +4966,11 @@ pub struct StageCameraInfo {
     /// +0x1c
     pub cam_pan_degrees: f32,
     /// +0x20
-    pub x20: f32,
+    #[doc(alias("x20"))]
+    pub cam_pan_rate: f32,
     /// +0x24
-    pub x24: f32,
+    #[doc(alias("x24"))]
+    pub cam_tilt_rate: f32,
     /// +0x28
     pub cam_track_ratio: f32,
     /// +0x2c
@@ -4969,7 +4982,8 @@ pub struct StageCameraInfo {
     /// +0x38
     pub cam_max_depth: f32,
     /// +0x3c
-    pub x3C: f32,
+    #[doc(alias("x3C"))]
+    pub unread_3c: f32,
     /// +0x40
     pub pausecam_zpos_min: f32,
     /// +0x44
@@ -5002,14 +5016,14 @@ impl Default for StageCameraInfo {
             cam_y_offset: 0.0,
             cam_vertical_tilt: 0.0,
             cam_pan_degrees: 0.0,
-            x20: 0.0,
-            x24: 0.0,
+            cam_pan_rate: 0.0,
+            cam_tilt_rate: 0.0,
             cam_track_ratio: 0.0,
             cam_fixed_zoom: 0.0,
             cam_track_smooth: 0.0,
             cam_zoom_rate: 0.0,
             cam_max_depth: 0.0,
-            x3C: 0.0,
+            unread_3c: 0.0,
             pausecam_zpos_min: 0.0,
             pausecam_zpos_init: 0.0,
             pausecam_zpos_max: 0.0,
@@ -5457,9 +5471,11 @@ pub struct Camera_x2D0 {
     /// +0x24
     pub angle_left: f32,
     /// +0x28
-    pub unk28: f32,
+    #[doc(alias("unk28"))]
+    pub min_distance: f32,
     /// +0x2c
-    pub unk2C: f32,
+    #[doc(alias("unk2C"))]
+    pub max_distance: f32,
     /// +0x30
     pub callback: Option<CodeRef>,
 }
@@ -5477,8 +5493,8 @@ impl Default for Camera_x2D0 {
             angle_down: 0.0,
             angle_right: 0.0,
             angle_left: 0.0,
-            unk28: 0.0,
-            unk2C: 0.0,
+            min_distance: 0.0,
+            max_distance: 0.0,
             callback: None,
         }
     }
@@ -5514,21 +5530,29 @@ pub struct Camera {
     /// +0xb0
     pub quakes: [[CameraQuake; 16]; 2],
     /// +0x2b0
-    pub x2B0: f32,
+    #[doc(alias("x2B0"))]
+    pub average_width: f32,
     /// +0x2b4
-    pub x2B4: f32,
+    #[doc(alias("x2B4"))]
+    pub width_sum: f32,
     /// +0x2b8
-    pub x2B8: i16,
+    #[doc(alias("x2B8"))]
+    pub width_samples: i16,
     /// +0x2ba
-    pub x2BA: i16,
+    #[doc(alias("x2BA"))]
+    pub zoom_step: i16,
     /// +0x2bc
-    pub x2BC: f32,
+    #[doc(alias("x2BC"))]
+    pub zoom: f32,
     /// +0x2c0
-    pub x2C0: f32,
+    #[doc(alias("x2C0"))]
+    pub zoom_distance: f32,
     /// +0x2c4
-    pub x2C4: i8,
+    #[doc(alias("x2C4"))]
+    pub pauser_slot: i8,
     /// +0x2c5
-    pub x2C5: i8,
+    #[doc(alias("x2C5"))]
+    pub pauser_id: i8,
     /// +0x2c6
     pub pad_2C6: [i8; 2],
     /// +0x2c8
@@ -5536,101 +5560,146 @@ pub struct Camera {
     /// +0x2cc
     pub yaw_offset: f32,
     /// +0x2d0
-    pub x2D0: Camera_x2D0,
+    #[doc(alias("x2D0"))]
+    pub orbit_limits: Camera_x2D0,
     /// +0x304
-    pub x304: i8,
+    #[doc(alias("x304"))]
+    pub free_slot: i8,
     /// +0x305
-    pub x305: i8,
+    #[doc(alias("x305"))]
+    pub free_port: i8,
     /// +0x306
-    pub x306: i8,
+    #[doc(alias("x306"))]
+    pub unread_306: i8,
     /// +0x307
-    pub x307: i8,
+    #[doc(alias("x307"))]
+    pub unread_307: i8,
     /// +0x308
-    pub x308: Vec3,
+    #[doc(alias("x308"))]
+    pub free_target: Vec3,
     /// +0x314
-    pub x314: Vec3,
+    #[doc(alias("x314"))]
+    pub free_pan: Vec3,
     /// +0x320
     pub pause_eye_offset: Vec3,
     /// +0x32c
-    pub x32C: f32,
+    #[doc(alias("x32C"))]
+    pub free_fov: f32,
     /// +0x330
     pub pause_eye_distance: f32,
     /// +0x334
     pub pause_up: Vec3,
     /// +0x340
-    pub x340: u8,
+    #[doc(alias("x340"))]
+    pub unused_340: u8,
     /// +0x341 (bits 0..+1)
-    pub x341_b0: bool,
+    #[doc(alias("x341_b0"))]
+    pub unused_341_b0: bool,
     /// +0x341 (bits 1..+2)
-    pub x341_b1_b2: u8,
+    #[doc(alias("x341_b1_b2"))]
+    pub script_interest_kind: u8,
     /// +0x341 (bits 3..+2)
-    pub x341_b3_b4: u8,
+    #[doc(alias("x341_b3_b4"))]
+    pub script_eye_kind: u8,
     /// +0x341 (bits 5..+2)
-    pub x341_b5_b6: u8,
+    #[doc(alias("x341_b5_b6"))]
+    pub script_progress_kind: u8,
     /// +0x341 (bits 7..+1)
-    pub x341_b7: bool,
+    #[doc(alias("x341_b7"))]
+    pub script_done: bool,
     /// +0x342
-    pub x342_pad: [i8; 2],
+    #[doc(alias("x342_pad"))]
+    pub pad_342: [i8; 2],
     /// +0x344
-    pub x344: [u8; 12],
+    #[doc(alias("x344"))]
+    pub script_interest: [u8; 12],
     /// +0x350
-    pub x350: Vec3,
+    #[doc(alias("x350"))]
+    pub script_interest_start: Vec3,
     /// +0x35c
-    pub x35C: [u8; 12],
+    #[doc(alias("x35C"))]
+    pub script_eye: [u8; 12],
     /// +0x368
-    pub x368: [u8; 12],
+    #[doc(alias("x368"))]
+    pub script_eye_start: [u8; 12],
     /// +0x374
-    pub x374: f32,
+    #[doc(alias("x374"))]
+    pub script_fov_start: f32,
     /// +0x378
-    pub x378: [u8; 4],
+    #[doc(alias("x378"))]
+    pub script_frame: [u8; 4],
     /// +0x37c
-    pub x37C: [u8; 4],
+    #[doc(alias("x37C"))]
+    pub script_length: [u8; 4],
     /// +0x380
-    pub x380: [u8; 24],
+    #[doc(alias("x380"))]
+    pub unread_380: [u8; 24],
     /// +0x398 (bits 0..+1)
-    pub x398_b0: bool,
+    #[doc(alias("x398_b0"))]
+    pub hide_layer_0: bool,
     /// +0x398 (bits 1..+1)
-    pub x398_b1: bool,
+    #[doc(alias("x398_b1"))]
+    pub hide_layer_1: bool,
     /// +0x398 (bits 2..+1)
-    pub x398_b2: bool,
+    #[doc(alias("x398_b2"))]
+    pub hide_layer_2: bool,
     /// +0x398 (bits 3..+1)
-    pub x398_b3: bool,
+    #[doc(alias("x398_b3"))]
+    pub hide_layer_3: bool,
     /// +0x398 (bits 4..+1)
-    pub x398_b4: bool,
+    #[doc(alias("x398_b4"))]
+    pub hide_layer_4: bool,
     /// +0x398 (bits 5..+1)
-    pub x398_b5: bool,
+    #[doc(alias("x398_b5"))]
+    pub hide_layer_5: bool,
     /// +0x398 (bits 6..+2)
-    pub x398_b6_b7: u8,
+    #[doc(alias("x398_b6_b7"))]
+    pub pass: u8,
     /// +0x399 (bits 0..+2)
-    pub x399_b0_b1: u8,
+    #[doc(alias("x399_b0_b1"))]
+    pub layer: u8,
     /// +0x399 (bits 2..+1)
-    pub x399_b2: bool,
+    #[doc(alias("x399_b2"))]
+    pub hold_off_plane: bool,
     /// +0x399 (bits 3..+1)
-    pub x399_b3: bool,
+    #[doc(alias("x399_b3"))]
+    pub draw_collisions: bool,
     /// +0x399 (bits 4..+1)
-    pub x399_b4: bool,
+    #[doc(alias("x399_b4"))]
+    pub draw_zones: bool,
     /// +0x399 (bits 5..+1)
-    pub x399_b5: bool,
+    #[doc(alias("x399_b5"))]
+    pub stage_hidden: bool,
     /// +0x399 (bits 6..+1)
-    pub x399_b6: bool,
+    #[doc(alias("x399_b6"))]
+    pub unread_399_b6: bool,
     /// +0x399 (bits 7..+1)
-    pub x399_b7: bool,
+    #[doc(alias("x399_b7"))]
+    pub shadows: bool,
     /// +0x39a (bits 0..+1)
-    pub x39A_b0: bool,
+    #[doc(alias("x39A_b0"))]
+    pub debug_switch_0: bool,
     /// +0x39a (bits 1..+1)
-    pub x39A_b1: bool,
+    #[doc(alias("x39A_b1"))]
+    pub debug_switch_1: bool,
     /// +0x39a (bits 2..+1)
-    pub x39A_b2: bool,
+    #[doc(alias("x39A_b2"))]
+    pub draw_special_points: bool,
     /// +0x39a (bits 3..+1)
-    pub x39A_b3: bool,
+    #[doc(alias("x39A_b3"))]
+    pub unused_39a_b3: bool,
     /// +0x39a (bits 4..+1)
-    pub x39A_b4: bool,
+    #[doc(alias("x39A_b4"))]
+    pub unused_39a_b4: bool,
     /// +0x39a (bits 5..+1)
-    pub x39A_b5: bool,
+    #[doc(alias("x39A_b5"))]
+    pub unused_39a_b5: bool,
     /// +0x39a (bits 6..+1)
-    pub x39A_b6: bool,
+    #[doc(alias("x39A_b6"))]
+    pub unused_39a_b6: bool,
     /// +0x39a (bits 7..+1)
-    pub x39A_b7: bool,
+    #[doc(alias("x39A_b7"))]
+    pub unused_39a_b7: bool,
     /// +0x39b
     pub pad_39B: i8,
 }
@@ -5651,65 +5720,65 @@ impl Default for Camera {
             quake_offset: Default::default(),
             quake_scale: 0.0,
             quakes: core::array::from_fn(|_| core::array::from_fn(|_| Default::default())),
-            x2B0: 0.0,
-            x2B4: 0.0,
-            x2B8: 0,
-            x2BA: 0,
-            x2BC: 0.0,
-            x2C0: 0.0,
-            x2C4: 0,
-            x2C5: 0,
+            average_width: 0.0,
+            width_sum: 0.0,
+            width_samples: 0,
+            zoom_step: 0,
+            zoom: 0.0,
+            zoom_distance: 0.0,
+            pauser_slot: 0,
+            pauser_id: 0,
             pad_2C6: [0; 2],
             pitch_offset: 0.0,
             yaw_offset: 0.0,
-            x2D0: Default::default(),
-            x304: 0,
-            x305: 0,
-            x306: 0,
-            x307: 0,
-            x308: Default::default(),
-            x314: Default::default(),
+            orbit_limits: Default::default(),
+            free_slot: 0,
+            free_port: 0,
+            unread_306: 0,
+            unread_307: 0,
+            free_target: Default::default(),
+            free_pan: Default::default(),
             pause_eye_offset: Default::default(),
-            x32C: 0.0,
+            free_fov: 0.0,
             pause_eye_distance: 0.0,
             pause_up: Default::default(),
-            x340: 0,
-            x341_b0: false,
-            x341_b1_b2: 0,
-            x341_b3_b4: 0,
-            x341_b5_b6: 0,
-            x341_b7: false,
-            x342_pad: [0; 2],
-            x344: [0; 12],
-            x350: Default::default(),
-            x35C: [0; 12],
-            x368: [0; 12],
-            x374: 0.0,
-            x378: [0; 4],
-            x37C: [0; 4],
-            x380: [0; 24],
-            x398_b0: false,
-            x398_b1: false,
-            x398_b2: false,
-            x398_b3: false,
-            x398_b4: false,
-            x398_b5: false,
-            x398_b6_b7: 0,
-            x399_b0_b1: 0,
-            x399_b2: false,
-            x399_b3: false,
-            x399_b4: false,
-            x399_b5: false,
-            x399_b6: false,
-            x399_b7: false,
-            x39A_b0: false,
-            x39A_b1: false,
-            x39A_b2: false,
-            x39A_b3: false,
-            x39A_b4: false,
-            x39A_b5: false,
-            x39A_b6: false,
-            x39A_b7: false,
+            unused_340: 0,
+            unused_341_b0: false,
+            script_interest_kind: 0,
+            script_eye_kind: 0,
+            script_progress_kind: 0,
+            script_done: false,
+            pad_342: [0; 2],
+            script_interest: [0; 12],
+            script_interest_start: Default::default(),
+            script_eye: [0; 12],
+            script_eye_start: [0; 12],
+            script_fov_start: 0.0,
+            script_frame: [0; 4],
+            script_length: [0; 4],
+            unread_380: [0; 24],
+            hide_layer_0: false,
+            hide_layer_1: false,
+            hide_layer_2: false,
+            hide_layer_3: false,
+            hide_layer_4: false,
+            hide_layer_5: false,
+            pass: 0,
+            layer: 0,
+            hold_off_plane: false,
+            draw_collisions: false,
+            draw_zones: false,
+            stage_hidden: false,
+            unread_399_b6: false,
+            shadows: false,
+            debug_switch_0: false,
+            debug_switch_1: false,
+            draw_special_points: false,
+            unused_39a_b3: false,
+            unused_39a_b4: false,
+            unused_39a_b5: false,
+            unused_39a_b6: false,
+            unused_39a_b7: false,
             pad_39B: 0,
         }
     }
@@ -5761,9 +5830,11 @@ pub struct CmSubject {
     /// +0x40
     pub target_ext: CmSubjectExtents,
     /// +0x54
-    pub x54: Vec3,
+    #[doc(alias("x54"))]
+    pub unread_54: Vec3,
     /// +0x60
-    pub x60: Vec3,
+    #[doc(alias("x60"))]
+    pub unread_60: Vec3,
 }
 
 impl Default for CmSubject {
@@ -5781,8 +5852,8 @@ impl Default for CmSubject {
             facing_dir: 0.0,
             ext: Default::default(),
             target_ext: Default::default(),
-            x54: Default::default(),
-            x60: Default::default(),
+            unread_54: Default::default(),
+            unread_60: Default::default(),
         }
     }
 }
@@ -5811,7 +5882,8 @@ pub struct CameraDebugMode {
     /// +0x54
     pub free_fov: f32,
     /// +0x58
-    pub _58: [u8; 4],
+    #[doc(alias("_58"))]
+    pub unused_58: [u8; 4],
 }
 
 impl Default for CameraDebugMode {
@@ -5827,7 +5899,7 @@ impl Default for CameraDebugMode {
             free_int_pos: Default::default(),
             free_eye_pos: Default::default(),
             free_fov: 0.0,
-            _58: [0; 4],
+            unused_58: [0; 4],
         }
     }
 }

@@ -364,7 +364,7 @@ fn slide(r: &mut Running, gobj: GObjId) -> bool {
     let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if speed < stop_speed {
         // `it_8026BD84`.
-        item_mut(r.game, gobj).hit_flags.x0.b4 = true;
+        item_mut(r.game, gobj).hit_flags.bits.stops_on_land = true;
         lib26b1::set_quiet(r.game, gobj);
         stop(r, gobj);
         crate::game::ef::eflib::destroy_all(r, gobj);

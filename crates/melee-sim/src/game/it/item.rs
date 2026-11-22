@@ -380,13 +380,13 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.throw_coll_box = ip.kind_coll_box.clone();
     ip.flags.flags.hits_counted = a.hits_counted(data);
     ip.flags.flags.shield_hitlag = true;
-    ip.hit_flags.x0.b01 = a.cam_kind(data);
+    ip.hit_flags.bits.b01 = a.cam_kind(data);
     set_flag(&mut ip.hurt_flags, 3, false);
     ip.throw_count = 0;
     ip.land_count = 0;
     ip.slide_frames = 0;
     ip.skid = 2;
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
     ip.state_flags.b4567 = 15;
     ip.ignore_id = super::IgnoreId(Some(spawn.x40 as u32));
     ip.destroy_type = 4;
@@ -411,10 +411,10 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.min_hitlag = 0.0;
     ip.flags.flags.hitlag_counting = false;
     ip.flags.flags.damage_hitlag = false;
-    ip.state_flags.b1 = false;
+    ip.state_flags.keeps_owner_reflected = false;
     ip.reflect_speed_mul = 1.0;
     ip.reflect_damage_mul = 1.0;
-    ip.state_flags.b2 = false;
+    ip.state_flags.keeps_pokeball_reflected = false;
     set_flag(&mut ip.status_flags, 0, false);
     set_flag(&mut ip.hurt_flags, 6, false);
     set_flag(&mut ip.draw_flags, 0, false);
@@ -424,12 +424,12 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     set_flag(&mut ip.hurt_flags, 7, true);
     ip.scl = a.f32(data, attr::SCALE);
     ip.hitbox_scale = 0.0;
-    ip.hit_flags.x0.b3 = false;
-    ip.hit_flags.x0.b4 = false;
+    ip.hit_flags.bits.no_slide = false;
+    ip.hit_flags.bits.stops_on_land = false;
     set_flag(&mut ip.status_flags, 7, false);
     ip.effect_queue = Default::default();
     set_flag(&mut ip.phys_flags, 1, false);
-    ip.hit_flags.x0.b2 = false;
+    ip.hit_flags.bits.silenced = false;
     ip.sfx = NO_SFX;
     ip.sfx_loop_2 = NO_SFX;
     ip.sfx_loop_1 = NO_SFX;
@@ -704,7 +704,7 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         super::owner::inc_fighter_refs(r.game, fkind);
     }
     // `foobar3`: the camera follows some items.
-    let cam = super::item(r.game, gobj).hit_flags.x0.b01;
+    let cam = super::item(r.game, gobj).hit_flags.bits.b01;
     if cam != 0 {
         let b = r.game.camera.alloc_box(if cam == 1 { 0 } else { 2 });
         item_mut(r.game, gobj).camera_box = Some(b);
@@ -750,7 +750,7 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     {
         let ip = item_mut(r.game, gobj);
         ip.reflector = None;
-        ip.state_flags.b0 = false;
+        ip.state_flags.keeps_reflected_damage = false;
         ip.absorber = None;
         ip.invincibility = 0;
     }
@@ -1237,14 +1237,17 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     if !ip.flags.flags.held {
         if !ip.flags.flags.in_hitlag {
             let mut v = vec_add(ip.vel, ip.nudge);
-            if ip.ground_or_air == 0 && !ip.hit_flags.x0.b3 {
+            if ip.ground_or_air == 0 && !ip.hit_flags.bits.no_slide {
                 super::maplib::slide(r.game, r.data, gobj, &mut v);
             }
             let ip = item_mut(r.game, gobj);
             ip.pos = vec_add(ip.pos, v);
         }
         let ip = super::item(r.game, gobj);
-        if ip.state_flags.b3 && ip.state_flags.b4567 & 0xF != 0 && check_blast_zones(r, gobj) {
+        if ip.state_flags.checks_blast_zones
+            && ip.state_flags.b4567 & 0xF != 0
+            && check_blast_zones(r, gobj)
+        {
             return;
         }
         let ip = super::item(r.game, gobj);
@@ -1308,7 +1311,7 @@ pub fn proc_accessory(r: &mut Running, gobj: GObjId) {
         call(r, gobj, cb);
     }
     let ip = super::item(r.game, gobj);
-    if ip.hit_flags.x0.b01 != 0
+    if ip.hit_flags.bits.b01 != 0
         && let Some(b) = ip.camera_box
     {
         let pos = ip.pos;
@@ -1415,10 +1418,10 @@ pub fn clear_hit_record(ip: &mut Item) {
     ip.hit_item_pos = Vec3::new(0.0, 0.0, 0.0);
     set_flag(&mut ip.hurt_flags, 5, false);
     set_flag(&mut ip.hurt_flags, 4, false);
-    ip.state_flags.b1 = false;
+    ip.state_flags.keeps_owner_reflected = false;
     ip.reflect_speed_mul = 1.0;
     ip.reflect_damage_mul = 1.0;
-    ip.state_flags.b2 = false;
+    ip.state_flags.keeps_pokeball_reflected = false;
     ip.flags.flags.damage_hitlag = false;
     ip.hitlag_damage = 0;
     ip.flags.flags.hit_hitlag_asked = false;
@@ -1480,7 +1483,9 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "Item_80269F14")]
 pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
     let ip = super::item(r.game, gobj);
-    if !ip.state_flags.b1 && (ip.kind != ItKind::PokeBall || !ip.state_flags.b2) {
+    if !ip.state_flags.keeps_owner_reflected
+        && (ip.kind != ItKind::PokeBall || !ip.state_flags.keeps_pokeball_reflected)
+    {
         let reflector = ip.reflector;
         let team = super::owner::team(r.game, reflector);
         let ip = item_mut(r.game, gobj);
@@ -1510,7 +1515,7 @@ pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
     if react_with(r, gobj, cb) {
         return true;
     }
-    if !super::item(r.game, gobj).state_flags.b0 {
+    if !super::item(r.game, gobj).state_flags.keeps_reflected_damage {
         let max = common_data(r.game).u32(r.data, common::XD8);
         for i in 0..4 {
             let ip = super::item(r.game, gobj);
@@ -1802,11 +1807,11 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_80267454")]
 pub fn remove_camera_box(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    if ip.hit_flags.x0.b01 != 0
+    if ip.hit_flags.bits.b01 != 0
         && let Some(b) = ip.camera_box
     {
         ip.camera_box = None;
-        ip.hit_flags.x0.b01 = 0;
+        ip.hit_flags.bits.b01 = 0;
         game.camera.free_box(b);
     }
 }

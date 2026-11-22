@@ -188,7 +188,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     set_coll_facing(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.skid = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.flags.flags.pickup = false;
     hitbox::clear_dcd_b7(r.game, gobj);
     zako::set_dd0_b4(r.game, gobj);
@@ -532,18 +532,18 @@ pub fn watch(r: &mut Running, gobj: GObjId) -> bool {
     let pos = item(r.game, gobj).pos;
     let (x, y) = (reg(pos.x), reg(pos.y));
     if x > reg(stage::blast_right(r.game)) {
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     }
     if x < reg(stage::blast_left(r.game)) {
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     }
     if y > reg(stage::blast_top(r.game)) {
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     }
     if y < reg(stage::blast_bottom(r.game)) {
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     }
-    if item(r.game, gobj).state_flags.b3 {
+    if item(r.game, gobj).state_flags.checks_blast_zones {
         if let Some(f) = freezie(r, gobj) {
             super::freeze::let_go(r, f);
         }

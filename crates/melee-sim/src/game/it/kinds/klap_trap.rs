@@ -274,7 +274,7 @@ pub fn fall(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.vel.y = 0.0;
     ip.vel.x = 0.0;
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
     let child = r.game.objs.jobjs[model].child;
     let p = crate::lb::joint::world_position(&mut r.game.objs, r.data, child, None);
     item_mut(r.game, gobj).pos = p;
@@ -302,7 +302,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
 /// A hit taken, `it_2725_Logic10_DmgReceived`: knocked away spinning.
 #[doc(alias = "it_2725_Logic10_DmgReceived")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
-    item_mut(r.game, gobj).state_flags.b3 = true;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     knocked(r, gobj);
     false
 }

@@ -111,7 +111,7 @@ pub fn spawn(r: &mut Running, fighter: GObjId, pos: Vec3, facing_dir: f32) -> Op
     start(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
     item::debug_owner_bubbles(r.game, gobj, Some(fighter));
-    item_mut(r.game, gobj).state_flags.b3 = true;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     Some(gobj)
 }
 

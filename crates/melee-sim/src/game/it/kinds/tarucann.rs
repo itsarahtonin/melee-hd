@@ -358,7 +358,7 @@ fn turn(r: &mut Running, gobj: GObjId) {
 /// Marks it catchable when empty (`xDCC_flag.b3`), the states' common start.
 fn mark_catchable(r: &mut Running, gobj: GObjId) {
     let empty = rider(r.game, gobj).is_none();
-    item_mut(r.game, gobj).state_flags.b3 = empty;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = empty;
 }
 
 /// `itTarucann_UnkMotion0_Anim` (and 1, 6, 7, 8): marked, then its life.

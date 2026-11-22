@@ -217,7 +217,7 @@ pub fn spawn(
     v.spawned.set(0);
     v.gfx.set(gfx);
     v.direction.set(Vec3::new(facing, 0.0, 0.0));
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     setup(r, gobj, parent);
     Some(gobj)
 }

@@ -26,10 +26,10 @@ pub fn clear_dealt(game: &mut Game, gobj: GObjId) {
 /// Clears `xDCD`'s hit flags, `it_80275474`.
 #[doc(alias = "it_80275474")]
 pub fn clear_hit_ids(game: &mut Game, gobj: GObjId) {
-    let f = &mut item_mut(game, gobj).hit_flags.x0;
-    f.b5 = false;
-    f.b7 = false;
-    f.b6 = false;
+    let f = &mut item_mut(game, gobj).hit_flags.bits;
+    f.hits_own_player = false;
+    f.hit_by_own_items = false;
+    f.hits_own_team = false;
 }
 
 /// Clears `xDCE`'s hit flags, `it_80275504`.
@@ -61,7 +61,7 @@ pub fn scale_hitboxes(game: &mut Game, gobj: GObjId, mult: f64) {
 /// Clears the item's `xDCD` bit 7, `it_8027542C`.
 #[doc(alias = "it_8027542C")]
 pub fn clear_dcd_b7(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).hit_flags.x0.b7 = false;
+    item_mut(game, gobj).hit_flags.bits.hit_by_own_items = false;
 }
 
 /// The most damage of the item's enabled hitboxes, 0 with none, `it_802758D4`.
@@ -123,7 +123,7 @@ pub fn set_hit_flag0(game: &mut Game, gobj: GObjId, idx: usize, on: bool) {
 /// Lets ownerless and the same player's items hit it, `it_80275414`.
 #[doc(alias = "it_80275414")]
 pub fn let_own_items_hit(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).hit_flags.x0.b7 = true;
+    item_mut(game, gobj).hit_flags.bits.hit_by_own_items = true;
 }
 
 /// Lets ownerless and its own player's items hit it (`xDCE`'s third flag), `it_802754A4`.
@@ -162,14 +162,14 @@ pub fn set_hit_scale(game: &mut Game, gobj: GObjId, scale: f32) {
 /// Clears the item's `xDCD` bit 7, `it_8027542C`.
 #[doc(alias = "it_8027542C")]
 pub fn clear_hit_ids_b7(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).hit_flags.x0.b7 = false;
+    item_mut(game, gobj).hit_flags.bits.hit_by_own_items = false;
 }
 
 /// Sets `xDCD`'s hit flags, `it_80275444`.
 #[doc(alias = "it_80275444")]
 pub fn set_hit_ids(game: &mut Game, gobj: GObjId) {
-    let f = &mut item_mut(game, gobj).hit_flags.x0;
-    f.b5 = true;
-    f.b7 = true;
-    f.b6 = true;
+    let f = &mut item_mut(game, gobj).hit_flags.bits;
+    f.hits_own_player = true;
+    f.hit_by_own_items = true;
+    f.hits_own_team = true;
 }

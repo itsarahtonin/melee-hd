@@ -47,8 +47,8 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
         let fp = &r.game.fighters[f.0];
         let teams = r.game.vs_is_teams();
         let friendly = r.game.vs_friendly_fire();
-        let may = (!same_player || ip.hit_flags.x0.b5)
-            && (!teams || friendly || ip.hit_flags.x0.b6 || ip.team != fp.team)
+        let may = (!same_player || ip.hit_flags.bits.hits_own_player)
+            && (!teams || friendly || ip.hit_flags.bits.hits_own_team || ip.team != fp.team)
             && !fp.out_of_play
             && !fp.ungrabbable
             && fp.hit_status == 0
@@ -480,16 +480,16 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
         let other = item(game, g);
         let skip = (me.owner.is_none()
             && other.owner.is_none()
-            && !other.hit_flags.x0.b7
+            && !other.hit_flags.bits.hit_by_own_items
             && !flag(me.hurt_flags, 2))
             || (is_fighter(game, other.owner)
                 && is_fighter(game, me.owner)
                 && r.is_same_player(me.owner, other.owner)
-                && !other.hit_flags.x0.b7
+                && !other.hit_flags.bits.hit_by_own_items
                 && !flag(me.hurt_flags, 2))
             || (game.vs_is_teams()
                 && !game.vs_friendly_fire()
-                && !other.hit_flags.x0.b6
+                && !other.hit_flags.bits.hits_own_team
                 && !flag(me.hurt_flags, 1)
                 && other.team == me.team);
         if skip {

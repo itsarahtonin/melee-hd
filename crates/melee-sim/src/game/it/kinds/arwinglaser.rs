@@ -479,7 +479,7 @@ pub fn spawn_aimed(
     lib2725::set_rotation_z(r.game, j, 0.0);
     enter(r, gobj);
     lib2725::first_frame(r, gobj);
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
 }
 
 /// A lead's destroy callback, `it_802E79C8`: it lets go of its beams, which let go of it.
@@ -709,7 +709,7 @@ pub fn ends(_r: &mut Running, _gobj: GObjId) -> bool {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     let ip = item(r.game, gobj);
-    let by = if !ip.state_flags.b1 {
+    let by = if !ip.state_flags.keeps_owner_reflected {
         ip.owner
     } else {
         ip.reflector

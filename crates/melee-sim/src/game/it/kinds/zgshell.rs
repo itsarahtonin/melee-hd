@@ -644,7 +644,7 @@ pub fn slide(r: &mut Running, gobj: GObjId) {
 pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
     let d = get_f32(r, gobj, off::HIT_DELAY);
     if reg(d) <= 0.0 {
-        if !item(r.game, gobj).hit_flags.x0.b5 {
+        if !item(r.game, gobj).hit_flags.bits.hits_own_player {
             hitbox::set_hit_ids(r.game, gobj);
         }
     } else {

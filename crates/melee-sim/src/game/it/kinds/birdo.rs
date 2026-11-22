@@ -316,7 +316,7 @@ pub fn spawn(r: &mut Running, platform: GObjId, pos: Vec3, facing: f32) -> Optio
         let j = jobj_of(r.game, gobj).expect("Birdo without a model");
         jobj::set_rotation_y(&mut r.game.objs.jobjs, j, mem(rot));
     }
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
     lib26b1::disable_pickup(r.game, gobj);
     walk_in(r, gobj);
     Some(gobj)
@@ -518,7 +518,7 @@ fn turn_around(r: &mut Running, gobj: GObjId) {
     let speed = attr(r, gobj, a::SPEED).f(r);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = mem(fp::fneg(reg(from)));
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
     let v = fp::fmuls(speed, reg(ip.facing_dir));
     ip.vel.x = mem(fp::fmuls(reg(ip.anim_speed), v));
     ip.vel.z = 0.0;
@@ -666,7 +666,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         if let Some(platform) = vars(r.game, gobj).platform.get() {
             crate::game::gr::mushroom_kingdom_2::birdo_down(r, platform);
         }
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
         let zako = r.game.it.zako.expect("no enemies' common data");
         let chance = reg(r.data.f32(zako.at(8)));
         if reg(r.game.objs.rng.draw_f32()) < chance {

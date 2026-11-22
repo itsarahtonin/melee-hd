@@ -205,9 +205,9 @@ impl Course {
             transform_copy: c.transform_copy.clone(),
             translation: c.translation.clone(),
             quake_offset: c.quake_offset.clone(),
-            zoom_step: c.x2BA,
-            zoom: c.x2BC,
-            zoom_distance: c.x2C0,
+            zoom_step: c.zoom_step,
+            zoom: c.zoom,
+            zoom_distance: c.zoom_distance,
         }
     }
 
@@ -217,9 +217,9 @@ impl Course {
         std::mem::swap(&mut self.transform_copy, &mut c.transform_copy);
         std::mem::swap(&mut self.translation, &mut c.translation);
         std::mem::swap(&mut self.quake_offset, &mut c.quake_offset);
-        std::mem::swap(&mut self.zoom_step, &mut c.x2BA);
-        std::mem::swap(&mut self.zoom, &mut c.x2BC);
-        std::mem::swap(&mut self.zoom_distance, &mut c.x2C0);
+        std::mem::swap(&mut self.zoom_step, &mut c.zoom_step);
+        std::mem::swap(&mut self.zoom, &mut c.zoom);
+        std::mem::swap(&mut self.zoom_distance, &mut c.zoom_distance);
     }
 
     /// Whether camera `c` holds the same, bit for bit.
@@ -229,9 +229,9 @@ impl Course {
             && self.transform_copy.state_diff(&c.transform_copy).is_none()
             && self.translation.state_diff(&c.translation).is_none()
             && self.quake_offset.state_diff(&c.quake_offset).is_none()
-            && self.zoom_step == c.x2BA
-            && self.zoom.to_bits() == c.x2BC.to_bits()
-            && self.zoom_distance.to_bits() == c.x2C0.to_bits()
+            && self.zoom_step == c.zoom_step
+            && self.zoom.to_bits() == c.zoom.to_bits()
+            && self.zoom_distance.to_bits() == c.zoom_distance.to_bits()
     }
 }
 
@@ -323,14 +323,19 @@ impl CameraState {
     pub fn hidden_layers(&self) -> [bool; 6] {
         let c = &self.cam;
         [
-            c.x398_b0, c.x398_b1, c.x398_b2, c.x398_b3, c.x398_b4, c.x398_b5,
+            c.hide_layer_0,
+            c.hide_layer_1,
+            c.hide_layer_2,
+            c.hide_layer_3,
+            c.hide_layer_4,
+            c.hide_layer_5,
         ]
     }
 
     /// Whether the display pass draws the stage's zones (`x399_b4`, which
     /// [`CameraState::set_draw_zones`] sets).
     pub fn draw_zones(&self) -> bool {
-        self.cam.x399_b4
+        self.cam.draw_zones
     }
 
     /// The default field of view (`cm_803BCCA0.x40`), which [`CameraState::set_default_fov`]
@@ -353,7 +358,11 @@ impl CameraState {
     /// The bounds' width average, its sum and count (`x2B0`, `x2B4`, `x2B8`), which
     /// [`CameraState::average_width`] reads.
     pub fn width_average(&self) -> (f32, f32, i16) {
-        (self.cam.x2B0, self.cam.x2B4, self.cam.x2B8)
+        (
+            self.cam.average_width,
+            self.cam.width_sum,
+            self.cam.width_samples,
+        )
     }
 
     /// The quakes' frames left, by kind (`quake_frames_left`).
@@ -488,12 +497,16 @@ impl CameraState {
     /// and the pause camera's eye, target, player and limits.
     pub fn take_carried(&mut self, at: &Carried) {
         let (c, k) = (&mut self.cam, &at.0);
-        (c.x2B0, c.x2B4, c.x2B8) = (k.x2B0, k.x2B4, k.x2B8);
-        (c.x2C4, c.x2C5) = (k.x2C4, k.x2C5);
-        c.x2D0.clone_from(&k.x2D0);
-        (c.x304, c.x305, c.x306, c.x307) = (k.x304, k.x305, k.x306, k.x307);
-        (c.x308, c.x314, c.pause_eye_offset) = (k.x308, k.x314, k.pause_eye_offset);
-        (c.x32C, c.pause_eye_distance, c.pause_up) = (k.x32C, k.pause_eye_distance, k.pause_up);
+        (c.average_width, c.width_sum, c.width_samples) =
+            (k.average_width, k.width_sum, k.width_samples);
+        (c.pauser_slot, c.pauser_id) = (k.pauser_slot, k.pauser_id);
+        c.orbit_limits.clone_from(&k.orbit_limits);
+        (c.free_slot, c.free_port, c.unread_306, c.unread_307) =
+            (k.free_slot, k.free_port, k.unread_306, k.unread_307);
+        (c.free_target, c.free_pan, c.pause_eye_offset) =
+            (k.free_target, k.free_pan, k.pause_eye_offset);
+        (c.free_fov, c.pause_eye_distance, c.pause_up) =
+            (k.free_fov, k.pause_eye_distance, k.pause_up);
     }
 
     /// The menus' session, taking back a live match's scene, takes its game camera but its
@@ -646,26 +659,26 @@ impl CameraState {
         c.quake_scale = 0.0;
         c.quakes = Default::default();
         c.quake_scale = 1.0;
-        c.x2BC = 1.0;
-        c.x2C0 = -1.0;
-        c.x398_b0 = false;
-        c.x398_b1 = false;
-        c.x398_b2 = false;
-        c.x398_b3 = false;
-        c.x398_b4 = false;
-        c.x398_b5 = false;
-        c.x399_b0_b1 = 0;
-        c.x399_b2 = false;
+        c.zoom = 1.0;
+        c.zoom_distance = -1.0;
+        c.hide_layer_0 = false;
+        c.hide_layer_1 = false;
+        c.hide_layer_2 = false;
+        c.hide_layer_3 = false;
+        c.hide_layer_4 = false;
+        c.hide_layer_5 = false;
+        c.layer = 0;
+        c.hold_off_plane = false;
         self.debug.last_mode = c.mode;
-        c.x399_b3 = false;
-        c.x399_b4 = false;
-        c.x399_b5 = false;
-        c.x399_b6 = false;
-        c.x380 = [0; 24];
-        c.x399_b7 = false;
-        c.x39A_b0 = false;
-        c.x39A_b1 = false;
-        c.x39A_b2 = false;
+        c.draw_collisions = false;
+        c.draw_zones = false;
+        c.stage_hidden = false;
+        c.unread_399_b6 = false;
+        c.unread_380 = [0; 24];
+        c.shadows = false;
+        c.debug_switch_0 = false;
+        c.debug_switch_1 = false;
+        c.draw_special_points = false;
         c.gobj = None;
         let n = n.max(0) as u32;
         // The boxes' array, a block of the scene's heap.
@@ -761,8 +774,8 @@ impl CameraState {
         s.ext.v.y = -1.0;
         s.ext.v.z = 1.0;
         s.target_ext = s.ext.clone();
-        s.x54 = Vec3::ZERO;
-        s.x60 = Vec3::ZERO;
+        s.unread_54 = Vec3::ZERO;
+        s.unread_60 = Vec3::ZERO;
         let reset = Eased::of(s);
         if let Some(f) = boxes.followed.get_mut(b.0 as usize) {
             *f = reset;
@@ -1143,7 +1156,7 @@ pub fn frame(b: &Bounds, s: &StageInfo, t: &mut CameraTransformState) {
     let (y_min, y_max) = (reg(b.y_min), reg(b.y_max));
     let y_sum = fp::fadds(fp::fsubs(y_min, reg(o.y)), fp::fsubs(y_max, reg(o.y)));
     let base = fp::fmadds(y_sum, fp::fsubs(0.5, bias), reg(o.y));
-    let tilt = reg(s.cam_info.x24);
+    let tilt = reg(s.cam_info.cam_tilt_rate);
     let mut angle = fp::fneg(fp::fmuls(deg, fp::fmuls(fp::fadds(base, param(0x8)), tilt)));
     if angle > fp::fmuls(deg, param(0xC)) {
         angle = fp::fmuls(deg, param(0xC));
@@ -1166,7 +1179,7 @@ pub fn frame(b: &Bounds, s: &StageInfo, t: &mut CameraTransformState) {
     let o = cam_offset(s);
     let (x_min, x_max) = (reg(b.x_min), reg(b.x_max));
     let x_center = fp::fmuls(0.5, fp::fadds(x_min, x_max));
-    let pan = reg(s.cam_info.x20);
+    let pan = reg(s.cam_info.cam_pan_rate);
     let mut angle = fp::fneg(fp::fmuls(
         deg,
         fp::fmuls(fp::fsubs(x_center, reg(o.x)), pan),
@@ -1371,8 +1384,8 @@ pub fn apply_quake(game: &mut Game, b: &Bounds, which: Which) {
         x = fp::fmuls(x, param(0xE8));
         y = fp::fmuls(y, param(0xE8));
     }
-    x = fp::fmuls(x, reg(c.x2BC));
-    y = fp::fmuls(y, reg(c.x2BC));
+    x = fp::fmuls(x, reg(c.zoom));
+    y = fp::fmuls(y, reg(c.zoom));
     let half_fov = fp::fmuls(0.5, fp::fmuls(reg(DEG_TO_RAD), reg(fov)));
     let half_height = fp::fmuls(reg(b.z_pos), reg(math::tan(mem(half_fov))));
     let width = fp::frsp(f64::from(DESC_VIEWPORT_WIDTH));
@@ -1583,7 +1596,7 @@ pub fn stop_quake(game: &mut Game, kind: i32) {
 /// `Camera_8002B0E0`.
 #[doc(alias = "Camera_8002B0E0")]
 pub fn update_zoom(game: &mut Game) {
-    if !(super::gm::is_1p_mode_for_c_stick(game) && reg(game.camera.cam.x2C0) > 0.0) {
+    if !(super::gm::is_1p_mode_for_c_stick(game) && reg(game.camera.cam.zoom_distance) > 0.0) {
         return;
     }
     // HSD_PadGetNmlSubStickY(Player_GetPadPort(0)), the port as a u8.
@@ -1597,21 +1610,21 @@ pub fn update_zoom(game: &mut Game) {
     let c = &mut game.camera.cam;
     if stick < f64::from(0.85_f32) {
         step = 0.0;
-        if i32::from(c.x2BA) > 0 {
-            c.x2BA = c.x2BA.wrapping_sub(1);
+        if i32::from(c.zoom_step) > 0 {
+            c.zoom_step = c.zoom_step.wrapping_sub(1);
         } else {
             step = param(0xE4);
         }
     } else {
-        c.x2BA = fp::fctiwz(param(0xE0)) as i16;
+        c.zoom_step = fp::fctiwz(param(0xE0)) as i16;
     }
-    c.x2BC = mem(fp::fnmsubs(step, param(0xD4), reg(c.x2BC)));
-    if reg(c.x2BC) < param(0xDC) {
-        c.x2BC = mem(param(0xDC));
+    c.zoom = mem(fp::fnmsubs(step, param(0xD4), reg(c.zoom)));
+    if reg(c.zoom) < param(0xDC) {
+        c.zoom = mem(param(0xDC));
         return;
     }
-    if reg(c.x2BC) > param(0xD8) {
-        c.x2BC = mem(param(0xD8));
+    if reg(c.zoom) > param(0xD8) {
+        c.zoom = mem(param(0xD8));
     }
 }
 
@@ -1622,7 +1635,7 @@ const CH_SANDBAG: i32 = 0x1F;
 /// Contest sandbag's) by the zoom, `Camera_8002B1F8`.
 #[doc(alias = "Camera_8002B1F8")]
 pub fn zoom_on_player(game: &mut Game, which: Which) {
-    if 1.0 == reg(game.camera.cam.x2BC) {
+    if 1.0 == reg(game.camera.cam.zoom) {
         return;
     }
     let framed = |game: &mut Game, slot: i32, alive: bool| -> Option<CameraBoxId> {
@@ -1646,7 +1659,7 @@ pub fn zoom_on_player(game: &mut Game, which: Which) {
     let Some(b) = b else { return };
     let bone = game.camera.boxes[b].bone_pos;
     let c = &mut game.camera.cam;
-    let (zoom, dist) = (c.x2BC, c.x2C0);
+    let (zoom, dist) = (c.zoom, c.zoom_distance);
     let t = match which {
         Which::Main => &mut c.transform,
         Which::Copy => &mut c.transform_copy,
@@ -1670,7 +1683,7 @@ pub fn zoom_on_player(game: &mut Game, which: Which) {
 /// Whether the first player stands more than 30 units off the stage plane while the stage
 /// asks the camera to stop following then (`Camera_80030AF8`); the camera then holds its aim.
 fn player_off_plane(game: &Game) -> bool {
-    if !game.camera.cam.x399_b2 {
+    if !game.camera.cam.hold_off_plane {
         return false;
     }
     let Some(g) = player_entity(game, 0) else {
@@ -1707,7 +1720,7 @@ fn update_transform(game: &mut Game, which: Which) -> Bounds {
 
 /// The eye's distance from the interest, kept while the 1P zoom is off.
 fn update_zoom_distance(c: &mut Camera) {
-    if reg(c.x2BC) == 1.0 {
+    if reg(c.zoom) == 1.0 {
         let t = &c.transform;
         let dx = fp::fsubs(reg(t.target_position.x), reg(t.target_interest.x));
         let dy = fp::fsubs(reg(t.target_position.y), reg(t.target_interest.y));
@@ -1716,7 +1729,7 @@ fn update_zoom_distance(c: &mut Camera) {
             fp::fmuls(dz, dz),
             fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy)),
         );
-        c.x2C0 = math::sqrt(mem(sq));
+        c.zoom_distance = math::sqrt(mem(sq));
     }
 }
 
@@ -1726,7 +1739,7 @@ fn update_eases(r: &mut Running, b: &Bounds, b_copy: &Bounds, ours: bool) {
     zoom_on_player(r.game, Which::Main);
     let speed = reg(r.game.stage_info.cam_info.cam_track_smooth);
     let c = &mut r.game.camera.cam;
-    let zoom = c.x2BC;
+    let zoom = c.zoom;
     ease_interest(b, &mut c.transform, speed, zoom);
     ease_eye(&mut c.transform, speed);
     ease_interest(b_copy, &mut c.transform_copy, speed, zoom);
@@ -1757,7 +1770,12 @@ fn update_average_width(game: &mut Game) {
         p.settles_width = 0;
     }
     let c = &mut game.camera.cam;
-    add_width(&mut c.x2B0, &mut c.x2B4, &mut c.x2B8, width);
+    add_width(
+        &mut c.average_width,
+        &mut c.width_sum,
+        &mut c.width_samples,
+        width,
+    );
 }
 
 /// One update of the width average `avg`, its sum and count by `width`.
@@ -2130,10 +2148,10 @@ impl CameraState {
     /// The average width of the camera bounds, or 10000 before the first frame, `Camera_80030E10`.
     #[doc(alias = "Camera_80030E10")]
     pub fn average_width(&self) -> f32 {
-        if self.cam.x2B8 < 1 {
+        if self.cam.width_samples < 1 {
             return 10000.0;
         }
-        self.cam.x2B0
+        self.cam.average_width
     }
 
     /// `Camera_SetQuakeScale`.
@@ -2196,7 +2214,7 @@ impl CameraState {
     /// The 1P camera's zoom, `Camera_80031144`.
     #[doc(alias = "Camera_80031144")]
     pub fn zoom(&self) -> f32 {
-        self.cam.x2BC
+        self.cam.zoom
     }
 
     /// `Camera_SetModeToStandard`.
@@ -2246,112 +2264,112 @@ impl CameraState {
     /// first player leaves the stage plane.
     #[doc(alias = "Camera_80030A60")]
     pub fn set_draw_collisions(&mut self, on: bool) {
-        self.cam.x399_b3 = on;
+        self.cam.draw_collisions = on;
     }
 
     #[doc(alias = "Camera_80030A78")]
     pub fn draw_collisions(&self) -> bool {
-        self.cam.x399_b3
+        self.cam.draw_collisions
     }
 
     #[doc(alias = "Camera_80030A8C")]
     pub fn set_draw_zones(&mut self, on: bool) {
-        self.cam.x399_b4 = on;
+        self.cam.draw_zones = on;
     }
 
     /// `Camera_SetStageVisible`: the flag holds whether the stage is hidden.
     #[doc(alias = "Camera_SetStageVisible")]
     pub fn set_stage_visible(&mut self, visible: i32) {
-        self.cam.x399_b5 = 0 == visible;
+        self.cam.stage_hidden = 0 == visible;
     }
 
     #[doc(alias = "Camera_80030AC4")]
     pub fn stage_visible(&self) -> bool {
-        !self.cam.x399_b5
+        !self.cam.stage_hidden
     }
 
     #[doc(alias = "Camera_80030AE0")]
     pub fn set_hold_off_plane(&mut self, on: bool) {
-        self.cam.x399_b2 = on;
+        self.cam.hold_off_plane = on;
     }
 
     #[doc(alias = "Camera_80030AF8")]
     pub fn hold_off_plane(&self) -> bool {
-        self.cam.x399_b2
+        self.cam.hold_off_plane
     }
 
     #[doc(alias = "Camera_80030B0C")]
     pub fn set_shadows(&mut self, on: bool) {
-        self.cam.x399_b7 = on;
+        self.cam.shadows = on;
     }
 
     #[doc(alias = "Camera_80030B24")]
     pub fn shadows(&self) -> bool {
-        self.cam.x399_b7
+        self.cam.shadows
     }
 
     #[doc(alias = "Camera_80030B38")]
     pub fn set_x39a_b0(&mut self, on: bool) {
-        self.cam.x39A_b0 = on;
+        self.cam.debug_switch_0 = on;
     }
 
     #[doc(alias = "Camera_80030B50")]
     pub fn x39a_b0(&self) -> bool {
-        self.cam.x39A_b0
+        self.cam.debug_switch_0
     }
 
     #[doc(alias = "Camera_80030B64")]
     pub fn set_x39a_b1(&mut self, on: bool) {
-        self.cam.x39A_b1 = on;
+        self.cam.debug_switch_1 = on;
     }
 
     #[doc(alias = "Camera_80030B7C")]
     pub fn x39a_b1(&self) -> bool {
-        self.cam.x39A_b1
+        self.cam.debug_switch_1
     }
 
     #[doc(alias = "Camera_80030B90")]
     pub fn set_draw_special_points(&mut self, on: bool) {
-        self.cam.x39A_b2 = on;
+        self.cam.draw_special_points = on;
     }
 
     #[doc(alias = "Camera_80030BA8")]
     pub fn draw_special_points(&self) -> bool {
-        self.cam.x39A_b2
+        self.cam.draw_special_points
     }
 
     /// The display pass's current pass (`x398_b6_b7`, `Camera_80031060`/`Camera_80031074`) and
     /// render layer (`x399_b0_b1`, `Camera_8003108C`/`Camera_800310A0`).
     #[doc(alias = "Camera_80031060")]
     pub fn pass(&self) -> u8 {
-        self.cam.x398_b6_b7
+        self.cam.pass
     }
 
     #[doc(alias = "Camera_80031074")]
     pub fn set_pass(&mut self, pass: u8) {
-        self.cam.x398_b6_b7 = pass & 3;
+        self.cam.pass = pass & 3;
     }
 
     #[doc(alias = "Camera_8003108C")]
     pub fn layer(&self) -> u8 {
-        self.cam.x399_b0_b1
+        self.cam.layer
     }
 
     #[doc(alias = "Camera_800310A0")]
     pub fn set_layer(&mut self, layer: u8) {
-        self.cam.x399_b0_b1 = layer & 3;
+        self.cam.layer = layer & 3;
     }
 
     /// Shows every render layer again, `Camera_800310E8`.
     #[doc(alias = "Camera_800310E8")]
     pub fn show_all_layers(&mut self) {
         let c = &mut self.cam;
-        c.x398_b0 = false;
-        c.x398_b1 = false;
-        c.x398_b2 = false;
-        c.x398_b3 = false;
-        c.x398_b4 = false;
-        c.x398_b5 = false;
+        c.hide_layer_0 = false;
+        c.hide_layer_1 = false;
+        c.hide_layer_2 = false;
+        c.hide_layer_3 = false;
+        c.hide_layer_4 = false;
+        c.hide_layer_5 = false;
     }
 }
 
@@ -2715,10 +2733,10 @@ pub fn orbit_zoom(c: &mut Camera, amount: f64) {
         fp::fmadds(len, param(0x9C), param(0xA0)),
         reg(c.pause_eye_distance),
     ));
-    if reg(c.pause_eye_distance) < reg(c.x2D0.unk28) {
-        c.pause_eye_distance = c.x2D0.unk28;
-    } else if reg(c.pause_eye_distance) > reg(c.x2D0.unk2C) {
-        c.pause_eye_distance = c.x2D0.unk2C;
+    if reg(c.pause_eye_distance) < reg(c.orbit_limits.min_distance) {
+        c.pause_eye_distance = c.orbit_limits.min_distance;
+    } else if reg(c.pause_eye_distance) > reg(c.orbit_limits.max_distance) {
+        c.pause_eye_distance = c.orbit_limits.max_distance;
     }
     let dist = reg(c.pause_eye_distance);
     offset.normalize();
@@ -2806,11 +2824,11 @@ pub fn orbit_pan(c: &mut Camera, x: f64, y: f64) {
     orbit_basis(c, &mut forward, &mut up, &mut right);
     if y != 0.0 {
         let s = fp::fmuls(y, fp::fmadds(dist, param(0xB4), param(0xB8)));
-        c.x314 = c.x314 + scaled(up, s);
+        c.free_pan = c.free_pan + scaled(up, s);
     }
     if x != 0.0 {
         let s = fp::fmuls(x, fp::fmadds(dist, param(0xB4), param(0xB8)));
-        c.x314 = c.x314 + scaled(right, fp::fneg(s));
+        c.free_pan = c.free_pan + scaled(right, fp::fneg(s));
     }
 }
 
@@ -2853,24 +2871,29 @@ fn clamp_to(v: &mut f32, max: f32, min: f32) {
 pub fn orbit_limit(game: &mut Game) {
     let s = &game.stage_info;
     let c = &mut game.camera.cam;
-    if let Some(cb) = c.x2D0.callback {
+    if let Some(cb) = c.orbit_limits.callback {
         // The callback gets x2D0 itself, so what it writes lands on y_max, y_min, x_min, x_max.
         let [y_max, y_min, x_min, x_max] = match cb.0 {
             SET_BOUNDS => stage_bounds(s),
             FREE_BOUNDS | FREE_BOUNDS_2 => free_bounds(s),
             other => unported(&format!("camera bounds callback {other:#010x}")),
         };
-        (c.x2D0.y_max, c.x2D0.y_min, c.x2D0.x_min, c.x2D0.x_max) = (y_max, y_min, x_min, x_max);
+        (
+            c.orbit_limits.y_max,
+            c.orbit_limits.y_min,
+            c.orbit_limits.x_min,
+            c.orbit_limits.x_max,
+        ) = (y_max, y_min, x_min, x_max);
     }
-    let l = c.x2D0.clone();
-    clamp_to(&mut c.x308.x, l.x_max, l.x_min);
-    clamp_to(&mut c.x308.y, l.y_max, l.y_min);
-    clamp_to(&mut c.x308.z, l.z_max, l.z_min);
-    let mut t = c.x314 + c.x308;
+    let l = c.orbit_limits.clone();
+    clamp_to(&mut c.free_target.x, l.x_max, l.x_min);
+    clamp_to(&mut c.free_target.y, l.y_max, l.y_min);
+    clamp_to(&mut c.free_target.z, l.z_max, l.z_min);
+    let mut t = c.free_pan + c.free_target;
     clamp_to(&mut t.x, l.x_max, l.x_min);
     clamp_to(&mut t.y, l.y_max, l.y_min);
     clamp_to(&mut t.z, l.z_max, l.z_min);
-    c.x314 = t - c.x308;
+    c.free_pan = t - c.free_target;
     let e = c.pause_eye_offset;
     let xz = reg(mem(math::sqrt_reg(fp::fadds(
         fp::fmuls(reg(e.x), reg(e.x)),
@@ -2903,8 +2926,8 @@ pub fn orbit_limit(game: &mut Game) {
 /// eases the transform toward it (`track_subject`).
 fn track_orbit(c: &mut Camera) {
     let t = &mut c.transform;
-    t.target_interest = c.x308;
-    t.target_interest = t.target_interest + c.x314;
+    t.target_interest = c.free_target;
+    t.target_interest = t.target_interest + c.free_pan;
     t.target_position = t.target_interest;
     t.target_position = t.target_position + c.pause_eye_offset;
     let k = param(0x84);
@@ -2917,7 +2940,7 @@ fn track_orbit(c: &mut Camera) {
 /// Points the orbit's eye back at its default offset, at `distance` (three times that for the
 /// stage), and zooms it into its limits.
 fn reset_orbit(c: &mut Camera, slot: i32, distance: f64) {
-    c.x314 = Vec3::ZERO;
+    c.free_pan = Vec3::ZERO;
     c.pause_eye_offset = Vec3::new(0.0, 5.0, 20.0);
     c.pause_up = Vec3::new(0.0, 1.0, 0.0);
     c.pause_eye_distance = if slot == SLOT_STAGE {
@@ -2930,8 +2953,8 @@ fn reset_orbit(c: &mut Camera, slot: i32, distance: f64) {
 /// The targets straight at the orbit's target and eye.
 fn aim_orbit(c: &mut Camera) {
     let t = &mut c.transform;
-    t.target_interest = c.x308;
-    t.target_interest = t.target_interest + c.x314;
+    t.target_interest = c.free_target;
+    t.target_interest = t.target_interest + c.free_pan;
     t.target_position = t.target_interest;
     t.target_position = t.target_position + c.pause_eye_offset;
 }
@@ -2940,16 +2963,16 @@ fn aim_orbit(c: &mut Camera) {
 /// to look at, the target into `x308`.
 fn seek_pause_target(game: &mut Game, dir: i32) {
     loop {
-        let s = i32::from(game.camera.cam.x2C4);
+        let s = i32::from(game.camera.cam.pauser_slot);
         if s != SLOT_STAGE
             && let Some(p) = slot_target(game, s)
         {
-            game.camera.cam.x308 = p;
+            game.camera.cam.free_target = p;
             if player_entity(game, s).is_some() && !slot_asleep(game, s) {
                 return;
             }
         }
-        game.camera.cam.x2C4 = next_slot(game, s, dir) as i8;
+        game.camera.cam.pauser_slot = next_slot(game, s, dir) as i8;
     }
 }
 
@@ -2957,7 +2980,7 @@ fn seek_pause_target(game: &mut Game, dir: i32) {
 /// zoom, the stick turns, `Camera_8002CB0C`.
 #[doc(alias = "Camera_8002CB0C")]
 pub fn pause_input(game: &mut Game) {
-    let pauser = i32::from(game.camera.cam.x2C5);
+    let pauser = i32::from(game.camera.cam.pauser_id);
     if pauser == 5 {
         return;
     }
@@ -2982,9 +3005,10 @@ pub fn pause_input(game: &mut Game) {
         y = sy;
     }
     if dir != 0 {
-        game.camera.cam.x2C4 = next_slot(game, i32::from(game.camera.cam.x2C4), dir) as i8;
+        game.camera.cam.pauser_slot =
+            next_slot(game, i32::from(game.camera.cam.pauser_slot), dir) as i8;
         seek_pause_target(game, dir);
-        let slot = game.camera.cam.x2C4;
+        let slot = game.camera.cam.pauser_slot;
         let init = reg(game.stage_info.cam_info.pausecam_zpos_init);
         let c = &mut game.camera.cam;
         reset_orbit(c, i32::from(slot), init);
@@ -3013,11 +3037,11 @@ pub fn update_pause(r: &mut Running) {
     ease_extents(&mut game.camera.boxes, &game.stage_info);
     let t = game.camera.cam.transform.clone();
     track_bounds(&mut game.camera.boxes, &game.stage_info, &t);
-    if i32::from(game.camera.cam.x2C4) != SLOT_NONE {
+    if i32::from(game.camera.cam.pauser_slot) != SLOT_NONE {
         seek_pause_target(game, 1);
     }
     pause_input(game);
-    let s = i32::from(game.camera.cam.x2C4);
+    let s = i32::from(game.camera.cam.pauser_slot);
     let followed = (s != SLOT_STAGE && s != SLOT_NONE)
         .then(|| player_box(game, s))
         .flatten()
@@ -3060,29 +3084,29 @@ pub fn set_up_pause(game: &mut Game, mut slot: i8, mut pauser: i8, zoom_preset: 
     let s = &game.stage_info;
     let c = &mut game.camera.cam;
     c.mode = PAUSE;
-    c.x2C4 = slot;
-    c.x2C5 = pauser;
-    c.x2D0.x_min = mem(cam_left(s));
-    c.x2D0.x_max = mem(cam_right(s));
-    c.x2D0.y_max = mem(cam_top(s));
-    c.x2D0.y_min = mem(cam_bottom(s));
-    c.x2D0.z_max = 2000.0;
-    c.x2D0.z_min = -2000.0;
+    c.pauser_slot = slot;
+    c.pauser_id = pauser;
+    c.orbit_limits.x_min = mem(cam_left(s));
+    c.orbit_limits.x_max = mem(cam_right(s));
+    c.orbit_limits.y_max = mem(cam_top(s));
+    c.orbit_limits.y_min = mem(cam_bottom(s));
+    c.orbit_limits.z_max = 2000.0;
+    c.orbit_limits.z_min = -2000.0;
     let angles = stage::cam_angles_of(s).map(reg);
     let ci = &s.cam_info;
-    c.x2D0.angle_up = mem(angles[0]);
-    c.x2D0.angle_down = mem(angles[1]);
-    c.x2D0.angle_right = mem(angles[3]);
-    c.x2D0.angle_left = mem(angles[2]);
-    c.x2D0.unk28 = copy(ci.pausecam_zpos_min);
-    c.x2D0.unk2C = copy(ci.pausecam_zpos_max);
-    c.x2D0.callback = Some(CodeRef(SET_BOUNDS));
+    c.orbit_limits.angle_up = mem(angles[0]);
+    c.orbit_limits.angle_down = mem(angles[1]);
+    c.orbit_limits.angle_right = mem(angles[3]);
+    c.orbit_limits.angle_left = mem(angles[2]);
+    c.orbit_limits.min_distance = copy(ci.pausecam_zpos_min);
+    c.orbit_limits.max_distance = copy(ci.pausecam_zpos_max);
+    c.orbit_limits.callback = Some(CodeRef(SET_BOUNDS));
     let distance = match zoom_preset {
         0 => reg(ci.pausecam_zpos_init),
-        1 => reg(c.x2D0.unk28),
+        1 => reg(c.orbit_limits.min_distance),
         _ => panic!("camera.c:3807: a pause zoom preset of {zoom_preset}"),
     };
-    reset_orbit(c, i32::from(c.x2C4), distance);
+    reset_orbit(c, i32::from(c.pauser_slot), distance);
     orbit_zoom(c, 0.0);
     orbit_rotate(c, 0.0, 0.0);
     orbit_pan(c, 0.0, 0.0);
@@ -3100,7 +3124,7 @@ pub fn set_up_pause_zoomed(game: &mut Game, slot: i8, pauser: i8, nearest: bool)
 /// X, Y and the stick zoom, the C-stick turns, `Camera_8002C1A8`.
 #[doc(alias = "Camera_8002C1A8")]
 pub fn free_input(game: &mut Game) {
-    let port = i32::from(game.camera.cam.x305);
+    let port = i32::from(game.camera.cam.free_port);
     if port == 5 {
         return;
     }
@@ -3150,10 +3174,10 @@ pub fn free_input(game: &mut Game) {
     }
     if dir != 0 {
         let c = &game.camera.cam;
-        let scale = fp::fmadds(reg(c.x32C), param(0x8C), param(0x90));
-        let slot = next_slot(game, i32::from(c.x304), dir) as i8;
+        let scale = fp::fmadds(reg(c.free_fov), param(0x8C), param(0x90));
+        let slot = next_slot(game, i32::from(c.free_slot), dir) as i8;
         let c = &mut game.camera.cam;
-        c.x304 = slot;
+        c.free_slot = slot;
         reset_orbit(c, i32::from(slot), scale);
         orbit_zoom(c, 0.0);
     }
@@ -3162,15 +3186,15 @@ pub fn free_input(game: &mut Game) {
         orbit_zoom(c, zoom);
     }
     if x != 0.0 || y != 0.0 {
-        if i32::from(c.x304) == SLOT_STAGE {
+        if i32::from(c.free_slot) == SLOT_STAGE {
             if reg(c.pause_eye_offset.length()) < 1.0 {
                 c.pause_eye_distance = 1.0;
             }
             if y != 0.0 {
-                c.x314.y = mem(fp::fadds(reg(c.x314.y), y));
+                c.free_pan.y = mem(fp::fadds(reg(c.free_pan.y), y));
             }
             if x != 0.0 {
-                c.x314.x = mem(fp::fadds(reg(c.x314.x), x));
+                c.free_pan.x = mem(fp::fadds(reg(c.free_pan.x), x));
             }
         } else {
             orbit_pan(c, x, y);
@@ -3191,17 +3215,17 @@ pub fn update_free(r: &mut Running) {
     let b = track_bounds(&mut game.camera.boxes, &game.stage_info, &t);
     free_input(game);
     loop {
-        let s = i32::from(game.camera.cam.x304);
+        let s = i32::from(game.camera.cam.free_slot);
         if let Some(p) = slot_target(game, s) {
-            game.camera.cam.x308 = p;
+            game.camera.cam.free_target = p;
             break;
         }
-        game.camera.cam.x304 = next_slot(game, s, 1) as i8;
+        game.camera.cam.free_slot = next_slot(game, s, 1) as i8;
     }
     orbit_limit(game);
     let c = &mut game.camera.cam;
     track_orbit(c);
-    ease_fov(&mut c.transform, reg(c.x32C), param(0x88));
+    ease_fov(&mut c.transform, reg(c.free_fov), param(0x88));
     update_quakes(r);
     apply_quake(r.game, &b, Which::Main);
 }
@@ -3225,25 +3249,25 @@ fn set_up_free_with(game: &mut Game, slot: i8, port: i8, bounds: u32) {
     let fov = game.camera.fov;
     let s = &game.stage_info;
     let c = &mut game.camera.cam;
-    c.x304 = first;
-    c.x305 = port;
-    c.x32C = copy(fov);
-    c.x2D0.x_min = mem(cam_left(s));
-    c.x2D0.x_max = mem(cam_right(s));
-    c.x2D0.y_max = mem(cam_top(s));
-    c.x2D0.y_min = mem(cam_bottom(s));
-    c.x2D0.z_max = mem(param(0xA8));
-    c.x2D0.z_min = mem(param(0xA4));
+    c.free_slot = first;
+    c.free_port = port;
+    c.free_fov = copy(fov);
+    c.orbit_limits.x_min = mem(cam_left(s));
+    c.orbit_limits.x_max = mem(cam_right(s));
+    c.orbit_limits.y_max = mem(cam_top(s));
+    c.orbit_limits.y_min = mem(cam_bottom(s));
+    c.orbit_limits.z_max = mem(param(0xA8));
+    c.orbit_limits.z_min = mem(param(0xA4));
     let angles = stage::cam_angles_of(s).map(reg);
-    c.x2D0.angle_up = mem(angles[0]);
-    c.x2D0.angle_down = mem(angles[1]);
-    c.x2D0.angle_right = mem(angles[3]);
-    c.x2D0.angle_left = mem(angles[2]);
-    let scale = fp::fmadds(reg(c.x32C), param(0x8C), param(0x90));
-    c.x2D0.unk28 = mem(fp::fmuls(scale, param(0x94)));
-    c.x2D0.unk2C = mem(fp::fmuls(scale, param(0x98)));
-    c.x2D0.callback = Some(CodeRef(bounds));
-    reset_orbit(c, i32::from(c.x304), scale);
+    c.orbit_limits.angle_up = mem(angles[0]);
+    c.orbit_limits.angle_down = mem(angles[1]);
+    c.orbit_limits.angle_right = mem(angles[3]);
+    c.orbit_limits.angle_left = mem(angles[2]);
+    let scale = fp::fmadds(reg(c.free_fov), param(0x8C), param(0x90));
+    c.orbit_limits.min_distance = mem(fp::fmuls(scale, param(0x94)));
+    c.orbit_limits.max_distance = mem(fp::fmuls(scale, param(0x98)));
+    c.orbit_limits.callback = Some(CodeRef(bounds));
+    reset_orbit(c, i32::from(c.free_slot), scale);
     orbit_zoom(c, 0.0);
     orbit_rotate(c, 0.0, 0.0);
     orbit_pan(c, 0.0, 0.0);
@@ -3309,7 +3333,7 @@ fn orbit_eye(c: &mut Camera, distance: f64) {
 #[doc(alias = "Camera_8002D318")]
 pub fn update_training(r: &mut Running) {
     let game = &mut *r.game;
-    let slot = i32::from(game.camera.cam.x2C4);
+    let slot = i32::from(game.camera.cam.pauser_slot);
     let ok = player_entity(game, slot)
         .filter(|_| !slot_asleep(game, slot))
         .and_then(|_| player_box(game, slot))
@@ -3336,7 +3360,7 @@ pub fn update_training(r: &mut Running) {
         ease_toward(&mut t.interest, target, param(0x64));
     }
     ease_fov(&mut game.camera.cam.transform, param(0x6C), param(0x70));
-    let d = orbit_distance(game, i32::from(game.camera.cam.x2C4));
+    let d = orbit_distance(game, i32::from(game.camera.cam.pauser_slot));
     orbit_eye(&mut game.camera.cam, d);
 }
 
@@ -3345,7 +3369,7 @@ pub fn update_training(r: &mut Running) {
 #[doc(alias = "Camera_8002D85C")]
 pub fn update_clear(r: &mut Running) {
     let game = &mut *r.game;
-    let slot = i32::from(game.camera.cam.x2C4);
+    let slot = i32::from(game.camera.cam.pauser_slot);
     let ok = player_box(game, slot).is_some_and(|b| {
         outside_bounds(&game.stage_info, game.camera.boxes[b].bone_pos, 0) == 0
             && abs(reg(game.camera.boxes[b].bone_pos.z)) < reg(30.0)
@@ -3363,7 +3387,7 @@ pub fn update_clear(r: &mut Running) {
         ease_toward(&mut t.interest, target, param(0x64));
     }
     ease_fov(&mut game.camera.cam.transform, param(0x6C), param(0x70));
-    let d = orbit_distance(game, i32::from(game.camera.cam.x2C4));
+    let d = orbit_distance(game, i32::from(game.camera.cam.pauser_slot));
     let angles = stage::cam_angles_of(&game.stage_info).map(reg);
     let c = &mut game.camera.cam;
     if reg(c.pitch_offset) > angles[0] {
@@ -3385,8 +3409,8 @@ impl CameraState {
     pub fn set_up_training(&mut self, slot: i8, port: i8) {
         let c = &mut self.cam;
         c.mode = TRAINING_MENU;
-        c.x2C4 = slot;
-        c.x2C5 = port;
+        c.pauser_slot = slot;
+        c.pauser_id = port;
         c.pitch_offset = 0.0;
         c.yaw_offset = 0.0;
     }
@@ -3397,7 +3421,7 @@ impl CameraState {
 #[doc(alias = "Camera_8002F7AC")]
 pub fn set_up_clear(game: &mut Game, slot: i8) {
     game.camera.cam.mode = CLEAR;
-    game.camera.cam.x2C4 = slot;
+    game.camera.cam.pauser_slot = slot;
     let angles = stage::cam_angles_of(&game.stage_info).map(reg);
     let facing = player_box(game, i32::from(slot)).map(|b| game.camera.boxes[b].facing_dir);
     let rng = &mut game.objs.rng;
@@ -3539,16 +3563,16 @@ fn script_eye_point(cb: u32) -> Option<Vec3> {
 fn script_interest(r: &mut Running) -> bool {
     let game = &mut *r.game;
     let c = &game.camera.cam;
-    match c.x341_b1_b2 {
+    match c.script_interest_kind {
         1 => {
-            let slot = union_word(&c.x344) as i32;
+            let slot = union_word(&c.script_interest) as i32;
             if let Some(b) = player_box(game, slot) {
                 game.camera.cam.transform.target_interest = game.camera.boxes[b].bone_pos;
             }
         }
-        2 => game.camera.cam.transform.target_interest = union_vec(&c.x344),
+        2 => game.camera.cam.transform.target_interest = union_vec(&c.script_interest),
         3 => {
-            let cb = union_word(&c.x344);
+            let cb = union_word(&c.script_interest);
             if let Some(p) = script_point(r, cb) {
                 r.game.camera.cam.transform.target_interest = p;
             }
@@ -3561,10 +3585,10 @@ fn script_interest(r: &mut Running) -> bool {
 
 /// The cutscene eye's target, by its kind (`x341_b3_b4`): a point or a callback's.
 fn script_eye(c: &mut Camera) {
-    match c.x341_b3_b4 {
-        1 => c.transform.target_position = union_vec(&c.x35C),
+    match c.script_eye_kind {
+        1 => c.transform.target_position = union_vec(&c.script_eye),
         3 => {
-            if let Some(p) = script_eye_point(union_word(&c.x35C)) {
+            if let Some(p) = script_eye_point(union_word(&c.script_eye)) {
                 c.transform.target_position = p;
             }
         }
@@ -3578,14 +3602,17 @@ fn script_eye(c: &mut Camera) {
 /// The original leaves the ratio unset for the fourth kind (a register its caller left), which
 /// no code sets; the port panics there.
 fn script_progress(c: &Camera) -> Option<f64> {
-    match c.x341_b5_b6 {
+    match c.script_progress_kind {
         0 => None,
         1 => {
-            let (n, of) = (union_word(&c.x378) as i32, union_word(&c.x37C) as i32);
+            let (n, of) = (
+                union_word(&c.script_frame) as i32,
+                union_word(&c.script_length) as i32,
+            );
             (n != of).then(|| fp::fdivs(fp::frsp(f64::from(n)), fp::frsp(f64::from(of))))
         }
         2 => {
-            let r = reg(union_f32(&c.x378, 0));
+            let r = reg(union_f32(&c.script_frame, 0));
             (!(r >= 1.0)).then_some(r)
         }
         _ => panic!("the cutscene camera's fourth transition kind reads a register it never set"),
@@ -3726,29 +3753,35 @@ fn orbit_leftover(caller: OrbitCaller, word: OrbitWord) -> f32 {
 /// that way.
 #[doc(alias = "Camera_8002E234")]
 pub fn script_eye_step(c: &mut Camera, caller: OrbitCaller) -> bool {
-    match c.x341_b3_b4 {
+    match c.script_eye_kind {
         0 | 1 | 3 => {
-            let (start, end) = (union_vec(&c.x368), c.transform.target_position);
+            let (start, end) = (union_vec(&c.script_eye_start), c.transform.target_position);
             let mut out = c.transform.position;
             let done = script_lerp(c, start, end, &mut out);
             c.transform.position = out;
             done
         }
         2 => {
-            let flags = c.x35C[0];
+            let flags = c.script_eye[0];
             let (b0, b1, b2) = (flags & 0x80 != 0, flags & 0x40 != 0, flags & 0x20 != 0);
             let mut done = true;
             let pitch = if b1 {
-                let (v, d) =
-                    script_lerp_value(c, reg(union_f32(&c.x368, 4)), reg(union_f32(&c.x35C, 4)));
+                let (v, d) = script_lerp_value(
+                    c,
+                    reg(union_f32(&c.script_eye_start, 4)),
+                    reg(union_f32(&c.script_eye, 4)),
+                );
                 done &= d;
                 v
             } else {
                 orbit_leftover(caller, OrbitWord::Pitch)
             };
             let yaw = if b2 {
-                let (v, d) =
-                    script_lerp_value(c, reg(union_f32(&c.x368, 8)), reg(union_f32(&c.x35C, 8)));
+                let (v, d) = script_lerp_value(
+                    c,
+                    reg(union_f32(&c.script_eye_start, 8)),
+                    reg(union_f32(&c.script_eye, 8)),
+                );
                 done &= d;
                 v
             } else {
@@ -3757,8 +3790,8 @@ pub fn script_eye_step(c: &mut Camera, caller: OrbitCaller) -> bool {
             let dist = if b0 {
                 let (v, d) = script_lerp_value(
                     c,
-                    fp::frsp(f64::from(union_s16(&c.x368, 0))),
-                    fp::frsp(f64::from(union_s16(&c.x35C, 2))),
+                    fp::frsp(f64::from(union_s16(&c.script_eye_start, 0))),
+                    fp::frsp(f64::from(union_s16(&c.script_eye, 2))),
                 );
                 done &= d;
                 v
@@ -3766,9 +3799,13 @@ pub fn script_eye_step(c: &mut Camera, caller: OrbitCaller) -> bool {
                 orbit_leftover(caller, OrbitWord::Distance)
             };
             let interest = c.transform.interest;
-            let full = fp::frsp(f64::from(union_s16(&c.x35C, 2)));
-            c.transform.target_position =
-                orbit_point(interest, union_f32(&c.x35C, 4), union_f32(&c.x35C, 8), full);
+            let full = fp::frsp(f64::from(union_s16(&c.script_eye, 2)));
+            c.transform.target_position = orbit_point(
+                interest,
+                union_f32(&c.script_eye, 4),
+                union_f32(&c.script_eye, 8),
+                full,
+            );
             c.transform.position = orbit_point(interest, pitch, yaw, reg(dist));
             done
         }
@@ -3784,52 +3821,55 @@ pub fn update_script(r: &mut Running) {
     let c = &mut r.game.camera.cam;
     script_eye(c);
     let mut done = false;
-    if c.x341_b1_b2 <= 3 {
-        let (start, end) = (c.x350, c.transform.target_interest);
+    if c.script_interest_kind <= 3 {
+        let (start, end) = (c.script_interest_start, c.transform.target_interest);
         let mut out = c.transform.interest;
         done = script_lerp(c, start, end, &mut out);
         c.transform.interest = out;
     }
     done &= script_eye_step(c, OrbitCaller::Frame { callback });
-    let (fov, d) = script_lerp_value(c, reg(c.x374), reg(c.transform.target_fov));
+    let (fov, d) = script_lerp_value(c, reg(c.script_fov_start), reg(c.transform.target_fov));
     c.transform.fov = fov;
     done &= d;
-    match c.x341_b5_b6 {
+    match c.script_progress_kind {
         1 => {
-            let (n, of) = (union_word(&c.x378) as i32, union_word(&c.x37C) as i32);
+            let (n, of) = (
+                union_word(&c.script_frame) as i32,
+                union_word(&c.script_length) as i32,
+            );
             if n < of {
-                c.x378 = (n + 1).to_be_bytes();
+                c.script_frame = (n + 1).to_be_bytes();
             }
         }
         2 => {
-            let x = reg(union_f32(&c.x378, 0));
-            let rate = reg(union_f32(&c.x37C, 0));
+            let x = reg(union_f32(&c.script_frame, 0));
+            let rate = reg(union_f32(&c.script_length, 0));
             let mut v = mem(fp::fmadds(fp::fsubs(1.0, x), rate, x));
             if reg(v) > f64::from(0.999_f32) {
                 v = 1.0;
             }
-            c.x378 = v.to_be_bytes();
+            c.script_frame = v.to_be_bytes();
         }
         _ => {}
     }
-    c.x341_b7 = done;
+    c.script_done = done;
 }
 
 /// Switches to the cutscene camera holding where the camera looks now, `Camera_8002FE38`.
 #[doc(alias = "Camera_8002FE38")]
 pub fn set_up_script(c: &mut Camera) {
     c.mode = BOSS_INTRO;
-    c.x341_b1_b2 = 0;
-    c.x341_b3_b4 = 0;
-    c.x341_b5_b6 = 0;
-    c.x341_b7 = false;
-    c.x350 = c.transform.interest;
-    c.transform.target_interest = c.x350;
+    c.script_interest_kind = 0;
+    c.script_eye_kind = 0;
+    c.script_progress_kind = 0;
+    c.script_done = false;
+    c.script_interest_start = c.transform.interest;
+    c.transform.target_interest = c.script_interest_start;
     let p = c.transform.position;
-    set_union_vec(&mut c.x368, p);
-    c.transform.target_position = union_vec(&c.x368);
-    c.x374 = copy(c.transform.fov);
-    c.transform.target_fov = c.x374;
+    set_union_vec(&mut c.script_eye_start, p);
+    c.transform.target_position = union_vec(&c.script_eye_start);
+    c.script_fov_start = copy(c.transform.fov);
+    c.transform.target_fov = c.script_fov_start;
 }
 
 fn enter_script(c: &mut Camera) {
@@ -3843,8 +3883,8 @@ fn enter_script(c: &mut Camera) {
 pub fn script_look_at_player(r: &mut Running, slot: i32) {
     let c = &mut r.game.camera.cam;
     enter_script(c);
-    c.x341_b1_b2 = 1;
-    c.x344[0..4].copy_from_slice(&slot.to_be_bytes());
+    c.script_interest_kind = 1;
+    c.script_interest[0..4].copy_from_slice(&slot.to_be_bytes());
     script_interest(r);
 }
 
@@ -3853,8 +3893,8 @@ pub fn script_look_at_player(r: &mut Running, slot: i32) {
 pub fn script_look_at(r: &mut Running, pos: Vec3) {
     let c = &mut r.game.camera.cam;
     enter_script(c);
-    c.x341_b1_b2 = 2;
-    set_union_vec(&mut c.x344, pos);
+    c.script_interest_kind = 2;
+    set_union_vec(&mut c.script_interest, pos);
     script_interest(r);
 }
 
@@ -3863,8 +3903,8 @@ pub fn script_look_at(r: &mut Running, pos: Vec3) {
 pub fn script_look_at_callback(r: &mut Running, cb: CodeRef) {
     let c = &mut r.game.camera.cam;
     enter_script(c);
-    c.x341_b1_b2 = 3;
-    c.x344[0..4].copy_from_slice(&cb.0.to_be_bytes());
+    c.script_interest_kind = 3;
+    c.script_interest[0..4].copy_from_slice(&cb.0.to_be_bytes());
     script_interest(r);
 }
 
@@ -3874,8 +3914,8 @@ impl CameraState {
     pub fn script_eye_at(&mut self, pos: Vec3) {
         let c = &mut self.cam;
         enter_script(c);
-        c.x341_b3_b4 = 1;
-        set_union_vec(&mut c.x35C, pos);
+        c.script_eye_kind = 1;
+        set_union_vec(&mut c.script_eye, pos);
         script_eye(c);
     }
 
@@ -3884,7 +3924,9 @@ impl CameraState {
     pub fn script_orbit_pitch(&mut self, pitch: f32) {
         let c = &mut self.cam;
         let v = copy(pitch);
-        script_orbit_with(c, 0x40, |c| c.x35C[4..8].copy_from_slice(&v.to_be_bytes()));
+        script_orbit_with(c, 0x40, |c| {
+            c.script_eye[4..8].copy_from_slice(&v.to_be_bytes())
+        });
     }
 
     /// The orbiting cutscene eye's yaw, `Camera_8002EC7C`.
@@ -3892,7 +3934,9 @@ impl CameraState {
     pub fn script_orbit_yaw(&mut self, yaw: f32) {
         let c = &mut self.cam;
         let v = copy(yaw);
-        script_orbit_with(c, 0x20, |c| c.x35C[8..12].copy_from_slice(&v.to_be_bytes()));
+        script_orbit_with(c, 0x20, |c| {
+            c.script_eye[8..12].copy_from_slice(&v.to_be_bytes())
+        });
     }
 
     /// The orbiting cutscene eye's distance (whole units), `Camera_8002ED9C`.
@@ -3900,7 +3944,9 @@ impl CameraState {
     pub fn script_orbit_distance(&mut self, distance: f32) {
         let c = &mut self.cam;
         let d = fp::fctiwz(reg(distance)) as i16;
-        script_orbit_with(c, 0x80, |c| c.x35C[2..4].copy_from_slice(&d.to_be_bytes()));
+        script_orbit_with(c, 0x80, |c| {
+            c.script_eye[2..4].copy_from_slice(&d.to_be_bytes())
+        });
     }
 }
 
@@ -3908,12 +3954,12 @@ impl CameraState {
 /// stores one part, and marks it set.
 fn script_orbit_with(c: &mut Camera, bit: u8, store: impl FnOnce(&mut Camera)) {
     enter_script(c);
-    if c.x341_b3_b4 != 2 {
-        c.x341_b3_b4 = 2;
-        c.x35C[0] &= !(0xE0 & !bit);
+    if c.script_eye_kind != 2 {
+        c.script_eye_kind = 2;
+        c.script_eye[0] &= !(0xE0 & !bit);
     }
     store(c);
-    c.x35C[0] |= bit;
+    c.script_eye[0] |= bit;
     script_eye(c);
 }
 
@@ -3931,11 +3977,11 @@ impl CameraState {
 #[doc(alias = "Camera_8002EF14")]
 pub fn script_jump(r: &mut Running) {
     enter_script(&mut r.game.camera.cam);
-    r.game.camera.cam.x341_b5_b6 = 0;
+    r.game.camera.cam.script_progress_kind = 0;
     let callback = script_interest(r);
     let c = &mut r.game.camera.cam;
-    if c.x341_b1_b2 <= 3 {
-        let (start, end) = (c.x350, c.transform.target_interest);
+    if c.script_interest_kind <= 3 {
+        let (start, end) = (c.script_interest_start, c.transform.target_interest);
         let mut out = c.transform.interest;
         script_lerp(c, start, end, &mut out);
         c.transform.interest = out;
@@ -3953,16 +3999,16 @@ impl CameraState {
     pub fn script_transition(&mut self, frames: i32) {
         let c = &mut self.cam;
         enter_script(c);
-        c.x341_b5_b6 = 1;
-        c.x378 = 0i32.to_be_bytes();
-        c.x37C = frames.to_be_bytes();
-        if c.x341_b1_b2 <= 3 {
-            c.x350 = c.transform.interest;
+        c.script_progress_kind = 1;
+        c.script_frame = 0i32.to_be_bytes();
+        c.script_length = frames.to_be_bytes();
+        if c.script_interest_kind <= 3 {
+            c.script_interest_start = c.transform.interest;
         }
-        match c.x341_b3_b4 {
+        match c.script_eye_kind {
             0 | 1 | 3 => {
                 let p = c.transform.position;
-                set_union_vec(&mut c.x368, p);
+                set_union_vec(&mut c.script_eye_start, p);
             }
             2 => {
                 let d = c.transform.position - c.transform.interest;
@@ -3972,19 +4018,19 @@ impl CameraState {
                 let yaw = math::atan2(d.x, d.z);
                 let len = fp::fadds(fp::fmuls(z, z), fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)));
                 let dist = fp::fctiwz(reg(math::sqrt(mem(len)))) as i16;
-                c.x368[0..2].copy_from_slice(&dist.to_be_bytes());
-                c.x368[4..8].copy_from_slice(&pitch.to_be_bytes());
-                c.x368[8..12].copy_from_slice(&yaw.to_be_bytes());
+                c.script_eye_start[0..2].copy_from_slice(&dist.to_be_bytes());
+                c.script_eye_start[4..8].copy_from_slice(&pitch.to_be_bytes());
+                c.script_eye_start[8..12].copy_from_slice(&yaw.to_be_bytes());
             }
             _ => {}
         }
-        c.x374 = copy(c.transform.fov);
+        c.script_fov_start = copy(c.transform.fov);
     }
 
     /// Whether the cutscene camera reached its targets, `Camera_8002F260`.
     #[doc(alias = "Camera_8002F260")]
     pub fn script_done(&self) -> bool {
-        self.cam.x341_b7
+        self.cam.script_done
     }
 
     /// The cutscene eye stays where it is, `Camera_8002F274`.
@@ -4039,7 +4085,11 @@ mod playback_camera_tests {
                 for i in 0..updates {
                     g.display_phase.playback.settles_width = if i == 0 { settles } else { 0 };
                     update_average_width(&mut g);
-                    live.push((g.camera.cam.x2B0, g.camera.cam.x2B4, g.camera.cam.x2B8));
+                    live.push((
+                        g.camera.cam.average_width,
+                        g.camera.cam.width_sum,
+                        g.camera.cam.width_samples,
+                    ));
                 }
             }
             (live, g.display_phase.playback)

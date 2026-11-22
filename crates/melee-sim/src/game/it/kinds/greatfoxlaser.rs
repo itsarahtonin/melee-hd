@@ -230,7 +230,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let face = item(r.game, gobj).facing_dir;
     zako::face(r, gobj, face);
     let ip = item_mut(r.game, gobj);
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.skid = 0;
     ip.flags.flags.pickup = false;
     super::super::hitbox::clear_hit_ids_b7(r.game, gobj);

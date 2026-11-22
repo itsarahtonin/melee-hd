@@ -121,7 +121,7 @@ fn the_c_stick_rule_off_zooms() {
         return;
     };
     assert!(
-        out.contains("1230 ticks compared; tick 1229 differs") && out.contains("camera.x2BA"),
+        out.contains("1230 ticks compared; tick 1229 differs") && out.contains("camera.zoom_step (x2BA)"),
         "{out}"
     );
 }

@@ -185,7 +185,7 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     v.ness.set(Some(owner));
     v.unread_f08.set(None);
     start(r, ball);
-    item_mut(r.game, ball).state_flags.b3 = false;
+    item_mut(r.game, ball).state_flags.checks_blast_zones = false;
     if crate::game::gr::stage::stkind(r.game) == crate::game::gr::StKind::HomeRun {
         super::super::item::remove_camera_box(r.game, ball);
     }

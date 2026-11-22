@@ -786,7 +786,14 @@ fn camera_boxes(game: &Game, img: &mut Image) {
         l.f32s(at + 0x40, &e(&s.target_ext));
         l.f32s(
             at + 0x54,
-            &[s.x54.x, s.x54.y, s.x54.z, s.x60.x, s.x60.y, s.x60.z],
+            &[
+                s.unread_54.x,
+                s.unread_54.y,
+                s.unread_54.z,
+                s.unread_60.x,
+                s.unread_60.y,
+                s.unread_60.z,
+            ],
         );
     }
     l.put(img);

@@ -112,7 +112,7 @@ pub fn spawn(
     ip.cmd_var2 = 0;
     ip.cmd_var1 = 0;
     ip.cmd_var0 = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.vars.seak_needle_held().owner.set(Some(parent));
     pick_up(r, gobj, parent, part);
     Some(gobj)

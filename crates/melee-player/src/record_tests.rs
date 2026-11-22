@@ -1066,9 +1066,9 @@ fn a_paused_live_match_follows_playbacks_camera_readers() {
             let c = g.camera.raw_parts().cam;
             let model = c.quake_gobj.is_some();
             (
-                c.x2B0.to_bits(),
-                c.x2B4.to_bits(),
-                c.x2B8,
+                c.average_width.to_bits(),
+                c.width_sum.to_bits(),
+                c.width_samples,
                 c.quake_frames_left,
                 model,
             )
@@ -1089,7 +1089,7 @@ fn a_paused_live_match_follows_playbacks_camera_readers() {
                 let g = &mut m.game;
                 if g.camera.mode() == melee_sim::game::camera::PAUSE {
                     // The pause camera looking at no one: the standard camera's update.
-                    g.camera.raw_parts_mut().cam.x2C4 = 11;
+                    g.camera.raw_parts_mut().cam.pauser_slot = 11;
                 }
                 let Some(f) = frame(m) else { return };
                 let g = &m.game;

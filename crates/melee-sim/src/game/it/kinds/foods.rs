@@ -75,7 +75,7 @@ fn attrs(r: &Running, gobj: GObjId) -> DataRef {
 /// in the air at its position.
 #[doc(alias = "it_8028F8E4")]
 pub fn let_fall(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).state_flags.b3 = true;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     lib26b1::enable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.coll.cur_pos = ip.pos;
@@ -88,7 +88,7 @@ pub fn let_fall(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8028F968")]
 pub fn carried(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
     lib26b1::disable_pickup(r.game, gobj);
 }
 

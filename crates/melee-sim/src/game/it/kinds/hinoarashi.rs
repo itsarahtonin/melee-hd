@@ -377,7 +377,7 @@ pub fn spawn_flame(r: &mut Running, gobj: GObjId, pos: Vec3, attack_id: u32, fac
     ip.vel.x = mem(fp::fmuls(speed, reg(crate::math::cos(angle))));
     ip.vel.y = mem(fp::fmuls(speed, reg(crate::math::sin(angle))));
     ip.vel.z = 0.0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     let which = r.game.objs.rng.below(4);
     flame_start(r, flame, which);
 }

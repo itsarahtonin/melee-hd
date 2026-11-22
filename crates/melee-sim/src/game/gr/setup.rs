@@ -66,8 +66,8 @@ pub fn reset(game: &mut Game) {
     c.cam_y_offset = 0.0;
     c.cam_vertical_tilt = 30.0;
     c.cam_pan_degrees = -10.0;
-    c.x20 = mem(fp::frsp(0.2));
-    c.x24 = mem(fp::frsp(0.2));
+    c.cam_pan_rate = mem(fp::frsp(0.2));
+    c.cam_tilt_rate = mem(fp::frsp(0.2));
     c.cam_zoom_rate = 82.0;
     c.cam_max_depth = 1000.0;
     i.blast_zone.left = -99999.0;
@@ -106,8 +106,8 @@ pub fn set_cam_angles(game: &mut Game, tilt: f32, pan: f32, a: f32, b: f32) {
     let c = &mut game.stage_info.cam_info;
     c.cam_vertical_tilt = tilt;
     c.cam_pan_degrees = pan;
-    c.x20 = a;
-    c.x24 = b;
+    c.cam_pan_rate = a;
+    c.cam_tilt_rate = b;
 }
 
 /// `Ground_801C38EC`.
@@ -133,7 +133,7 @@ pub fn set_pause_cam(
     right: f32,
 ) {
     let c = &mut game.stage_info.cam_info;
-    c.x3C = x3c;
+    c.unread_3c = x3c;
     c.pausecam_zpos_min = min;
     c.pausecam_zpos_init = init;
     c.pausecam_zpos_max = max;

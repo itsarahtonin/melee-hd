@@ -84,7 +84,7 @@ pub fn spawn(
     ip.cmd_var2 = 0;
     ip.cmd_var1 = 0;
     ip.cmd_var0 = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.vars.ness_bat().ness.set(Some(ness));
     lib2725::set_lifetime(r.game, r.data, bat, 1200.0);
     pick_up(r, bat, ness, part);
@@ -117,7 +117,7 @@ pub fn spawn_demo(r: &mut Running, ness: GObjId, part: i32) -> Option<GObjId> {
     ip.cmd_var2 = 1;
     ip.cmd_var1 = 1;
     ip.cmd_var0 = 1;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.vars.ness_bat().ness.set(Some(ness));
     pick_up(r, bat, ness, part);
     Some(bat)

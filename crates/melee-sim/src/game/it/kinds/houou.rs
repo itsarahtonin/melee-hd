@@ -135,7 +135,7 @@ pub fn call_fire(r: &mut Running, gobj: GObjId) {
     lg::enter(r, gobj, 5);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(FIRE_ACCESSORY));
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
 }
 
 /// Its `on_accessory`, `it_802D2B4C`: on its script's first word an effect on each of its

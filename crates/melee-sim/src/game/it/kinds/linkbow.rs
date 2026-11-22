@@ -97,7 +97,7 @@ pub fn spawn(
     ip.cmd_var2 = 0;
     ip.cmd_var1 = 0;
     ip.cmd_var0 = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     let o = item(r.game, gobj).owner.expect("a bow without its owner");
     let s = mem(crate::game::state::Running::model_scale(r.game.fighter(o)));
     let v = vars(r.game, gobj);

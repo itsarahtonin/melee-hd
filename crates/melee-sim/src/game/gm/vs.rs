@@ -2179,8 +2179,8 @@ mod c_stick_rule_tests {
             p.pkind = crate::game::pl::player::PKIND_NONE;
         }
         let c = g.camera.raw_parts_mut().cam;
-        c.x2C0 = 1.0;
-        c.x2BC = 1.0;
+        c.zoom_distance = 1.0;
+        c.zoom = 1.0;
         c.quake_offset.x = 1.5;
         c.quake_offset.y = -2.0;
         c.quake_scale = 1.0;

@@ -1191,7 +1191,7 @@ pub fn fling_away(r: &mut Running, gobj: GObjId, e: &Enemy) {
 #[doc(alias = "it_802EA2A0")]
 pub fn fling(r: &mut Running, gobj: GObjId, e: &Enemy) {
     if e.flung_checks_blast_zones {
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     }
     maplib::enter_air(item_mut(r.game, gobj));
     launch(r, gobj, false);

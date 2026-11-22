@@ -596,7 +596,7 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     let n = get(r, gobj, off::X20);
     if n == 0 {
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
         return true;
     }
     set(r, gobj, off::X20, n.wrapping_sub(1));

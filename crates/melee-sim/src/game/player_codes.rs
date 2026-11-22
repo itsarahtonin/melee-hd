@@ -609,8 +609,8 @@ impl Game {
         let [tilt, pan, x20, x24, ratio, zoom, smooth, rate, depth] = CAMERA.map(f32::from_bits);
         c.cam_vertical_tilt = tilt;
         c.cam_pan_degrees = pan;
-        c.x20 = x20;
-        c.x24 = x24;
+        c.cam_pan_rate = x20;
+        c.cam_tilt_rate = x24;
         c.cam_track_ratio = ratio;
         c.cam_fixed_zoom = zoom;
         c.cam_track_smooth = smooth;

@@ -127,13 +127,13 @@ pub fn grab_range(game: &Game, gobj: GObjId) -> (f32, f32) {
 /// Lets the item make its throw and drop sounds, `it_8026BCF4`.
 #[doc(alias = "it_8026BCF4")]
 pub fn unsilence(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).hit_flags.x0.b2 = false;
+    item_mut(game, gobj).hit_flags.bits.silenced = false;
 }
 
 /// Silences the item's throw and drop sounds, `it_8026BD0C`.
 #[doc(alias = "it_8026BD0C")]
 pub fn silence(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).hit_flags.x0.b2 = true;
+    item_mut(game, gobj).hit_flags.bits.silenced = true;
 }
 
 /// Scales the item to `mul` times its attributes' scale, `it_8026BAE8`.
@@ -387,7 +387,7 @@ pub fn attack_id(game: &Game, gobj: GObjId) -> i32 {
 #[doc(alias = "it_8026BD6C")]
 #[doc(alias("set_xdcd_b3"))]
 pub fn set_quiet(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).hit_flags.x0.b3 = true;
+    item_mut(game, gobj).hit_flags.bits.no_slide = true;
 }
 
 /// Spawns the effects the item queued (`efAsync_QueueFlush` on `xBC0`).
@@ -441,9 +441,9 @@ pub fn freeze_lifetime(game: &mut Game, gobj: GObjId) {
 pub fn hold_flags_off(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     super::set_flag(&mut ip.status_flags, 3, false);
-    ip.state_flags.b3 = true;
-    ip.hit_flags.x0.b3 = false;
-    ip.hit_flags.x0.b4 = false;
+    ip.state_flags.checks_blast_zones = true;
+    ip.hit_flags.bits.no_slide = false;
+    ip.hit_flags.bits.stops_on_land = false;
     ip.flags.flags.keeps_clear = true;
 }
 
@@ -452,9 +452,9 @@ pub fn hold_flags_off(game: &mut Game, gobj: GObjId) {
 pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     super::set_flag(&mut ip.status_flags, 3, true);
-    ip.state_flags.b3 = false;
-    ip.hit_flags.x0.b3 = true;
-    ip.hit_flags.x0.b4 = true;
+    ip.state_flags.checks_blast_zones = false;
+    ip.hit_flags.bits.no_slide = true;
+    ip.hit_flags.bits.stops_on_land = true;
     ip.flags.flags.keeps_clear = false;
 }
 
@@ -624,11 +624,11 @@ pub fn nearest_target_item(game: &Game, pos: Vec3, facing_dir: f32) -> Option<GO
 /// Sets `xDCC_flag.b3`, `it_8026BD3C`.
 #[doc(alias = "it_8026BD3C")]
 pub fn set_dcc_b3(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).state_flags.b3 = true;
+    item_mut(game, gobj).state_flags.checks_blast_zones = true;
 }
 
 /// Clears `xDCC_flag.b3`, `it_8026BD54`.
 #[doc(alias = "it_8026BD54")]
 pub fn clear_dcc_b3(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).state_flags.b3 = false;
+    item_mut(game, gobj).state_flags.checks_blast_zones = false;
 }

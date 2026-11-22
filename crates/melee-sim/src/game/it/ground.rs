@@ -89,7 +89,7 @@ pub fn ground_or_fall(r: &mut Running, gobj: GObjId, fell: Event) {
         fell(r, gobj);
         return;
     }
-    if start_skid(r.game, r.data, gobj) && !item(r.game, gobj).hit_flags.x0.b3 {
+    if start_skid(r.game, r.data, gobj) && !item(r.game, gobj).hit_flags.bits.no_slide {
         super::item::enter_air_state(r, gobj);
     }
 }
@@ -234,7 +234,7 @@ pub fn settles(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
         ip.vel.y = 0.0;
     }
     let slow = abs(ip.vel.x) <= reg(stop) && abs(ip.vel.y) <= reg(stop);
-    if slow || ip.hit_flags.x0.b4 || reg(keep) == 0.0 {
+    if slow || ip.hit_flags.bits.stops_on_land || reg(keep) == 0.0 {
         // `itResetVelocity`.
         ip.vel = Vec3::new(0.0, 0.0, 0.0);
         return true;
@@ -249,7 +249,7 @@ pub fn land(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.land_count = 0;
     enter_ground(ip);
-    if !slides(r.game, r.data, gobj) || item(r.game, gobj).hit_flags.x0.b3 {
+    if !slides(r.game, r.data, gobj) || item(r.game, gobj).hit_flags.bits.no_slide {
         super::lib2725::stop_spin(r.game, r.data, gobj);
         remember_surface(r.game, gobj);
     } else {

@@ -128,7 +128,7 @@ pub fn spawn(
             debug_owner_bubbles(r.game, gobj, Some(owner));
             start(r, gobj);
             let ip = item_mut(r.game, gobj);
-            ip.state_flags.b3 = false;
+            ip.state_flags.checks_blast_zones = false;
             ip.state_flags.b4567 = 14;
             let v = ip.vars.pikachu_thunder();
             v.index.set(i);
@@ -214,7 +214,7 @@ fn fall(r: &mut Running, gobj: GObjId) {
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
     let ip = item_mut(r.game, gobj);
     ip.vel = ip.vars.pikachu_thunder().vel.get();
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
     lib26b1::show(r.game, gobj);
 }
 

@@ -802,7 +802,7 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
         return false;
     }
     let ip = item(r.game, gobj);
-    let by = if !ip.state_flags.b1 {
+    let by = if !ip.state_flags.keeps_owner_reflected {
         ip.owner
     } else {
         ip.reflector

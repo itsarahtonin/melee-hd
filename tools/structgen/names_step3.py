@@ -210,7 +210,7 @@ ITEM_XDCC_FLAG = {
 # The stage's state (`StageInfo`, `game.stage_info`): the names wave 2 gave its readers
 # (`watch_points`, `route_event`, `cars_state`, `bgm`, `trophy_coin_wait`, `acid_level`).
 STAGE_INFO = {
-    "unk8C": "flags",
+    "unk8C": "bits",
     # The stage's checks of a watched point (the race's), each a callback, the point's box
     # (half its width and height) and the point found.
     "x90": "watch_callback",
@@ -531,6 +531,121 @@ START_MELEE_RULES = {
     "pad_x5C": "pad_5c",
 }
 
+# A player's line of a match's results (`MatchPlayerData`, `player_standings`), as
+# `fn_80165418`'s standings fill it from the player's stats; the stats' names are the records'
+# (`gmMainLib`'s `add_stats`) where they add to one.
+MATCH_PLAYER_DATA = {
+    # The costume (the top six bits), the rumble and the stamina flags (bits 1 and 0).
+    "x3_u": "flags",
+    # The name tag (0x78: none).
+    "x4": "nametag",
+    "x9": "remaining_hp",
+    "xE": "coins",
+    # KOs of the players past the four `kills` count.
+    "x18": "kills_rest",
+    "x1C": "coins_held",
+    "x20": "kos",
+    "x24": "falls",
+    "x28": "match_frames",
+    "x30": "sub_rank",
+    # Hits over attacks, in percent.
+    "x34": "hit_percent",
+    "x35_pad": "pad_35",
+    "x38": "attacks_hit",
+    "x3C": "attacks_total",
+    "x40": "damage_dealt",
+    "x44": "damage_taken",
+    "x48": "damage_recovered",
+    "x4C": "peak_damage",
+    "x50": "walk_distance",
+    "x54": "run_distance",
+    "x58": "fall_distance",
+    "x5C": "peak_height",
+    "x60": "coins_collected",
+    "x64": "coins_swiped",
+    "x68": "coins_lost",
+    # Seconds from the player's stats' timers (`pl_80040CB4`, `pl_80040CD8`).
+    "x6C": "air_time",
+    "x70": "ground_time",
+    "x74": "ground_attacks",
+    "x78": "air_attacks",
+    "x7C": "items_thrown",
+    "x80": "specials",
+    "x84": "grabs",
+    "x88": "down_attacks",
+    # The action stats' word past the high attacks (`pl_800386D8(stats, 112)`).
+    "x8C": "action_stat_112",
+    # Items picked up, every kind's.
+    "x90": "items_picked_up",
+    # Two more of the stats' timers, in tenths of frames (`pl_80040D44`, `pl_80040D68`), and two
+    # in seconds (`pl_80040CFC`, `pl_80040D20`).
+    "x94": "timed_stat_1",
+    "x98": "timed_stat_2",
+    "x9C": "timed_stat_3",
+    "xA0": "timed_stat_4",
+    # The stale-move table's `last_attack_stat` (`pl_80040DB8`).
+    "xA4": "last_attack_stat",
+}
+
+# A player's static block (`_StaticPlayer`, `game.players`), with its flag bytes: the names
+# of the getters and setters wave 5 ported (`player_entry_delay`, `player_coins_knocked`).
+STATIC_PLAYER = {
+    "unk0E": "unused_0e",
+    "unk45": "effect_color",
+    "unk4C": "entry_delay",
+    "unk4D": "kirby_copy_kind",
+    "unk4E": "spawn_point",
+    "unk4F": "unused_4f",
+    # Master Hand's defense ratio (`Player_GetUnk50`, which no setter sets).
+    "unk50": "unset_ratio",
+    "unk8F": "unused_8f",
+    "unk98": "coins_knocked",
+    "unk9C": "coins_lost",
+    "unkAF": "unused_af",
+    # The player's stats past the stale moves (`pl::ext_u32` and the rest).
+    "xDB0": "stats_ext",
+}
+STATIC_PLAYER_FLAGS = {
+    "b0": "rumbles",
+    # A joiner of a setup that has several (drawn as a wireframe), `Player_SetFlagsBit1`.
+    "b1": "joiner",
+    # The player has a second fighter (the Ice Climbers' Nana).
+    "b2": "two_fighters",
+    # Its fighter comes in through the entry state.
+    "b3": "enters",
+    # The entry waits `ftCommonData` x6C8 frames more.
+    "b4": "entry_waits",
+    # The fighter's `takes_damage_cloaked` and `no_color_anims`.
+    "b6": "damage_cloaked",
+    "b7": "no_color_anims",
+}
+STATIC_PLAYER_MORE_FLAGS = {
+    # The fighter's `x2034` setup runs its rule set (`ftCo_800C8FC4`).
+    "b0": "init_rule_set",
+    # The fighter's `rules_voice_muted`, `is_stamina` and `sfx_size`.
+    "b1": "voice_muted",
+    "b2": "stamina",
+    # Offscreen damage applies to it (`Fighter_procAnim`).
+    "b3": "offscreen_damage",
+    # No magnifier bubble shows it.
+    "b4": "no_magnifier",
+    # It's KO'd upward (`enter_dead_up`).
+    "b5": "dies_up",
+    "b6": "sfx_size",
+}
+STATIC_PLAYER_FLAGS_AE = {
+    # The fighter's `attrs_scaled`.
+    "b0": "attrs_scaled",
+    # Read by Kirby's setup (`ftKb_Init`), set by nothing a match reaches.
+    "b1": "kirby_init_flag",
+    "b2": "unused_b2",
+    "b3": "unused_b3",
+    "b4": "unused_b4",
+    "b5": "unused_b5",
+    "b6": "unused_b6",
+    "b7": "unused_b7",
+}
+
 # The structs by step 3's commits, in order.
 GROUPS = [
     {"CollData": COLL_DATA, "HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
@@ -552,9 +667,15 @@ GROUPS = [
         "Ground_x10_flags": GROUND_FLAGS,
     },
     {"dmg": DMG},
-    {"StartMeleeRules": START_MELEE_RULES},
+    {"StartMeleeRules": START_MELEE_RULES, "MatchPlayerData": MATCH_PLAYER_DATA},
+    {
+        "_StaticPlayer": STATIC_PLAYER,
+        "_StaticPlayer_flags": STATIC_PLAYER_FLAGS,
+        "_StaticPlayer_more_flags": STATIC_PLAYER_MORE_FLAGS,
+        "_StaticPlayer_flagsAE": STATIC_PLAYER_FLAGS_AE,
+    },
 ]
 
 STEP_3 = {}
-for _group in GROUPS[:1]:
+for _group in GROUPS[:2]:
     STEP_3.update(_group)

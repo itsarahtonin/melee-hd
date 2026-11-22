@@ -80,7 +80,7 @@ fn catch_in(r: &mut Running, gobj: GObjId, owner: GObjId, states: u32) {
     item_mut(r.game, gobj).no_catch = 1;
     lib2725::clear_stomp(r.game, gobj);
     // `it_8026BD54`.
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
     lib2725::stop_all(r.game, gobj);
 }
 

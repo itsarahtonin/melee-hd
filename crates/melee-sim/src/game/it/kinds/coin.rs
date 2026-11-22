@@ -340,7 +340,7 @@ fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
     v.wait_a.set(w4);
     v.wait_b.set(w8);
     v.pickable.set(s.pickable);
-    ip.hit_flags.x0.b6 = true;
+    ip.hit_flags.bits.hits_own_team = true;
     ip.bounce_sfx = xd84;
     ip.scl = scale;
     set_model(r, gobj, joint);
@@ -398,7 +398,7 @@ pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
     }
     let w = reg(v.wait_b.get());
     if w <= 0.0 {
-        if !ip.hit_flags.x0.b5 {
+        if !ip.hit_flags.bits.hits_own_player {
             hitbox::set_hit_ids(r.game, gobj);
             item_mut(r.game, gobj)
                 .vars
@@ -509,7 +509,7 @@ pub fn lands(r: &mut Running, gobj: GObjId, bounce: bool) -> bool {
         ip.vel.y = 0.0;
     }
     let slow = abs(ip.vel.x) <= stop && abs(ip.vel.y) <= stop;
-    if slow || ip.hit_flags.x0.b4 || keep == 0.0 {
+    if slow || ip.hit_flags.bits.stops_on_land || keep == 0.0 {
         ip.vel = Vec3::new(0.0, 0.0, 0.0);
         ip.land_count = 0;
         return landed;

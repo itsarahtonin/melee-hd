@@ -102,7 +102,7 @@ pub fn spawn(
     lib2725::show(r.game, trail);
     let ip = item_mut(r.game, trail);
     ip.vel = Vec3::new(0.0, 0.0, 0.0);
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     if owner.is_some() {
         debug_owner_bubbles(r.game, trail, owner);
     }

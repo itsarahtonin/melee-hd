@@ -174,7 +174,7 @@ pub fn fire(r: &mut Running, gobj: GObjId) {
     v.set_i32(ANGLE, 0);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(FIRE_ACCESSORY));
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
 }
 
 /// One count towards an Aeroblast, up by `step`.

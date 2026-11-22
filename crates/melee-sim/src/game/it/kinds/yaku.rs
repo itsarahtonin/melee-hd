@@ -271,7 +271,7 @@ pub fn spawn(
     v.touched.set(touched);
     let model = jobj_of(r.game, gobj).expect("a stage item without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, model, SCALE);
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
     super::super::hitbox::start_blink(r.game, gobj);
     change_state(r, gobj, state, super::super::item::change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);

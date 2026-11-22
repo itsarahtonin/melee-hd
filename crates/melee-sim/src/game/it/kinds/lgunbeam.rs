@@ -191,7 +191,7 @@ pub fn spawn(
         mem(a)
     });
     v.unread_e04.set(0);
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     let look = r.game.objs.rng.below(4);
     setup(r, gobj, parent, look);
     Some(gobj)

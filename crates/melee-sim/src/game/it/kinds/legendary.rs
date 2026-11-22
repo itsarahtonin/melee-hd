@@ -71,7 +71,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId, b: &Legendary) {
         ip.cmd_var1 = 0;
     }
     pokemon::vars(r.game, gobj).set_i32(COME_FRAMES, frames);
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
     enter_air(r, gobj);
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);

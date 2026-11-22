@@ -357,7 +357,7 @@ pub fn set_command_vars(ip: &mut Item, value: u32) {
 pub fn reset(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     set_command_vars(ip, 0);
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     let v = ip.vars.fox_blaster();
     v.recoil_frame.set(0);
     v.pulse.set(0);
