@@ -451,7 +451,7 @@ impl Running<'_> {
                     Arg::Int(i32::from(p.cpu_level)),
                     Arg::Int(i32::from(p.cpu_type)),
                     Arg::Int(i32::from(p.handicap)),
-                    Arg::Float(reg(p.unk50)),
+                    Arg::Float(reg(p.unset_ratio)),
                     Arg::Float(reg(p.attack_ratio)),
                     Arg::Float(reg(p.defense_ratio)),
                 ]

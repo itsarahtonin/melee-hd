@@ -14,12 +14,12 @@ impl _StaticPlayer {
     /// A word of `pl_StaleMoveTableExt_t` past the stale-move table, by its offset there.
     pub fn ext_u32(&self, off: usize) -> u32 {
         let i = off - EXT;
-        u32::from_be_bytes(self.xDB0[i..i + 4].try_into().unwrap())
+        u32::from_be_bytes(self.stats_ext[i..i + 4].try_into().unwrap())
     }
 
     pub fn set_ext_u32(&mut self, off: usize, v: u32) {
         let i = off - EXT;
-        self.xDB0[i..i + 4].copy_from_slice(&v.to_be_bytes());
+        self.stats_ext[i..i + 4].copy_from_slice(&v.to_be_bytes());
     }
 
     pub fn ext_f32(&self, off: usize) -> f32 {
@@ -31,11 +31,11 @@ impl _StaticPlayer {
     }
 
     pub fn ext_u8(&self, off: usize) -> u8 {
-        self.xDB0[off - EXT]
+        self.stats_ext[off - EXT]
     }
 
     pub fn set_ext_u8(&mut self, off: usize, v: u8) {
-        self.xDB0[off - EXT] = v;
+        self.stats_ext[off - EXT] = v;
     }
 }
 

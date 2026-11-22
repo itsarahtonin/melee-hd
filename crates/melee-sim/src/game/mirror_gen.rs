@@ -11659,51 +11659,51 @@ impl Mirror for _StaticPlayer_flags {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         _StaticPlayer_flags {
-            b0: m.bits(at, 0, 1) != 0,
-            b1: m.bits(at, 1, 1) != 0,
-            b2: m.bits(at, 2, 1) != 0,
-            b3: m.bits(at, 3, 1) != 0,
-            b4: m.bits(at, 4, 1) != 0,
+            rumbles: m.bits(at, 0, 1) != 0,
+            joiner: m.bits(at, 1, 1) != 0,
+            two_fighters: m.bits(at, 2, 1) != 0,
+            enters: m.bits(at, 3, 1) != 0,
+            entry_waits: m.bits(at, 4, 1) != 0,
             is_metal: m.bits(at, 5, 1) != 0,
-            b6: m.bits(at, 6, 1) != 0,
-            b7: m.bits(at, 7, 1) != 0,
+            damage_cloaked: m.bits(at, 6, 1) != 0,
+            no_color_anims: m.bits(at, 7, 1) != 0,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if (self.b0 as u32) != m.bits(at, 0, 1) {
+        if (self.rumbles as u32) != m.bits(at, 0, 1) {
             cx.mismatch(
-                &format!("{path}.b0"),
-                format!("{:?}", self.b0),
+                &format!("{path}.rumbles (b0)"),
+                format!("{:?}", self.rumbles),
                 format!("{:?}", m.bits(at, 0, 1)),
             );
         }
-        if (self.b1 as u32) != m.bits(at, 1, 1) {
+        if (self.joiner as u32) != m.bits(at, 1, 1) {
             cx.mismatch(
-                &format!("{path}.b1"),
-                format!("{:?}", self.b1),
+                &format!("{path}.joiner (b1)"),
+                format!("{:?}", self.joiner),
                 format!("{:?}", m.bits(at, 1, 1)),
             );
         }
-        if (self.b2 as u32) != m.bits(at, 2, 1) {
+        if (self.two_fighters as u32) != m.bits(at, 2, 1) {
             cx.mismatch(
-                &format!("{path}.b2"),
-                format!("{:?}", self.b2),
+                &format!("{path}.two_fighters (b2)"),
+                format!("{:?}", self.two_fighters),
                 format!("{:?}", m.bits(at, 2, 1)),
             );
         }
-        if (self.b3 as u32) != m.bits(at, 3, 1) {
+        if (self.enters as u32) != m.bits(at, 3, 1) {
             cx.mismatch(
-                &format!("{path}.b3"),
-                format!("{:?}", self.b3),
+                &format!("{path}.enters (b3)"),
+                format!("{:?}", self.enters),
                 format!("{:?}", m.bits(at, 3, 1)),
             );
         }
-        if (self.b4 as u32) != m.bits(at, 4, 1) {
+        if (self.entry_waits as u32) != m.bits(at, 4, 1) {
             cx.mismatch(
-                &format!("{path}.b4"),
-                format!("{:?}", self.b4),
+                &format!("{path}.entry_waits (b4)"),
+                format!("{:?}", self.entry_waits),
                 format!("{:?}", m.bits(at, 4, 1)),
             );
         }
@@ -11714,17 +11714,17 @@ impl Mirror for _StaticPlayer_flags {
                 format!("{:?}", m.bits(at, 5, 1)),
             );
         }
-        if (self.b6 as u32) != m.bits(at, 6, 1) {
+        if (self.damage_cloaked as u32) != m.bits(at, 6, 1) {
             cx.mismatch(
-                &format!("{path}.b6"),
-                format!("{:?}", self.b6),
+                &format!("{path}.damage_cloaked (b6)"),
+                format!("{:?}", self.damage_cloaked),
                 format!("{:?}", m.bits(at, 6, 1)),
             );
         }
-        if (self.b7 as u32) != m.bits(at, 7, 1) {
+        if (self.no_color_anims as u32) != m.bits(at, 7, 1) {
             cx.mismatch(
-                &format!("{path}.b7"),
-                format!("{:?}", self.b7),
+                &format!("{path}.no_color_anims (b7)"),
+                format!("{:?}", self.no_color_anims),
                 format!("{:?}", m.bits(at, 7, 1)),
             );
         }
@@ -11737,64 +11737,64 @@ impl Mirror for _StaticPlayer_more_flags {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         _StaticPlayer_more_flags {
-            b0: m.bits(at, 0, 1) != 0,
-            b1: m.bits(at, 1, 1) != 0,
-            b2: m.bits(at, 2, 1) != 0,
-            b3: m.bits(at, 3, 1) != 0,
-            b4: m.bits(at, 4, 1) != 0,
-            b5: m.bits(at, 5, 1) != 0,
-            b6: m.bits(at, 6, 2) as u8,
+            init_rule_set: m.bits(at, 0, 1) != 0,
+            voice_muted: m.bits(at, 1, 1) != 0,
+            stamina: m.bits(at, 2, 1) != 0,
+            offscreen_damage: m.bits(at, 3, 1) != 0,
+            no_magnifier: m.bits(at, 4, 1) != 0,
+            dies_up: m.bits(at, 5, 1) != 0,
+            sfx_size: m.bits(at, 6, 2) as u8,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if (self.b0 as u32) != m.bits(at, 0, 1) {
+        if (self.init_rule_set as u32) != m.bits(at, 0, 1) {
             cx.mismatch(
-                &format!("{path}.b0"),
-                format!("{:?}", self.b0),
+                &format!("{path}.init_rule_set (b0)"),
+                format!("{:?}", self.init_rule_set),
                 format!("{:?}", m.bits(at, 0, 1)),
             );
         }
-        if (self.b1 as u32) != m.bits(at, 1, 1) {
+        if (self.voice_muted as u32) != m.bits(at, 1, 1) {
             cx.mismatch(
-                &format!("{path}.b1"),
-                format!("{:?}", self.b1),
+                &format!("{path}.voice_muted (b1)"),
+                format!("{:?}", self.voice_muted),
                 format!("{:?}", m.bits(at, 1, 1)),
             );
         }
-        if (self.b2 as u32) != m.bits(at, 2, 1) {
+        if (self.stamina as u32) != m.bits(at, 2, 1) {
             cx.mismatch(
-                &format!("{path}.b2"),
-                format!("{:?}", self.b2),
+                &format!("{path}.stamina (b2)"),
+                format!("{:?}", self.stamina),
                 format!("{:?}", m.bits(at, 2, 1)),
             );
         }
-        if (self.b3 as u32) != m.bits(at, 3, 1) {
+        if (self.offscreen_damage as u32) != m.bits(at, 3, 1) {
             cx.mismatch(
-                &format!("{path}.b3"),
-                format!("{:?}", self.b3),
+                &format!("{path}.offscreen_damage (b3)"),
+                format!("{:?}", self.offscreen_damage),
                 format!("{:?}", m.bits(at, 3, 1)),
             );
         }
-        if (self.b4 as u32) != m.bits(at, 4, 1) {
+        if (self.no_magnifier as u32) != m.bits(at, 4, 1) {
             cx.mismatch(
-                &format!("{path}.b4"),
-                format!("{:?}", self.b4),
+                &format!("{path}.no_magnifier (b4)"),
+                format!("{:?}", self.no_magnifier),
                 format!("{:?}", m.bits(at, 4, 1)),
             );
         }
-        if (self.b5 as u32) != m.bits(at, 5, 1) {
+        if (self.dies_up as u32) != m.bits(at, 5, 1) {
             cx.mismatch(
-                &format!("{path}.b5"),
-                format!("{:?}", self.b5),
+                &format!("{path}.dies_up (b5)"),
+                format!("{:?}", self.dies_up),
                 format!("{:?}", m.bits(at, 5, 1)),
             );
         }
-        if (self.b6 as u32) != m.bits(at, 6, 2) {
+        if (self.sfx_size as u32) != m.bits(at, 6, 2) {
             cx.mismatch(
-                &format!("{path}.b6"),
-                format!("{:?}", self.b6),
+                &format!("{path}.sfx_size (b6)"),
+                format!("{:?}", self.sfx_size),
                 format!("{:?}", m.bits(at, 6, 2)),
             );
         }
@@ -11807,72 +11807,72 @@ impl Mirror for _StaticPlayer_flagsAE {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         _StaticPlayer_flagsAE {
-            b0: m.bits(at, 0, 1) != 0,
-            b1: m.bits(at, 1, 1) != 0,
-            b2: m.bits(at, 2, 1) != 0,
-            b3: m.bits(at, 3, 1) != 0,
-            b4: m.bits(at, 4, 1) != 0,
-            b5: m.bits(at, 5, 1) != 0,
-            b6: m.bits(at, 6, 1) != 0,
-            b7: m.bits(at, 7, 1) != 0,
+            attrs_scaled: m.bits(at, 0, 1) != 0,
+            kirby_init_flag: m.bits(at, 1, 1) != 0,
+            unused_b2: m.bits(at, 2, 1) != 0,
+            unused_b3: m.bits(at, 3, 1) != 0,
+            unused_b4: m.bits(at, 4, 1) != 0,
+            unused_b5: m.bits(at, 5, 1) != 0,
+            unused_b6: m.bits(at, 6, 1) != 0,
+            unused_b7: m.bits(at, 7, 1) != 0,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if (self.b0 as u32) != m.bits(at, 0, 1) {
+        if (self.attrs_scaled as u32) != m.bits(at, 0, 1) {
             cx.mismatch(
-                &format!("{path}.b0"),
-                format!("{:?}", self.b0),
+                &format!("{path}.attrs_scaled (b0)"),
+                format!("{:?}", self.attrs_scaled),
                 format!("{:?}", m.bits(at, 0, 1)),
             );
         }
-        if (self.b1 as u32) != m.bits(at, 1, 1) {
+        if (self.kirby_init_flag as u32) != m.bits(at, 1, 1) {
             cx.mismatch(
-                &format!("{path}.b1"),
-                format!("{:?}", self.b1),
+                &format!("{path}.kirby_init_flag (b1)"),
+                format!("{:?}", self.kirby_init_flag),
                 format!("{:?}", m.bits(at, 1, 1)),
             );
         }
-        if (self.b2 as u32) != m.bits(at, 2, 1) {
+        if (self.unused_b2 as u32) != m.bits(at, 2, 1) {
             cx.mismatch(
-                &format!("{path}.b2"),
-                format!("{:?}", self.b2),
+                &format!("{path}.unused_b2 (b2)"),
+                format!("{:?}", self.unused_b2),
                 format!("{:?}", m.bits(at, 2, 1)),
             );
         }
-        if (self.b3 as u32) != m.bits(at, 3, 1) {
+        if (self.unused_b3 as u32) != m.bits(at, 3, 1) {
             cx.mismatch(
-                &format!("{path}.b3"),
-                format!("{:?}", self.b3),
+                &format!("{path}.unused_b3 (b3)"),
+                format!("{:?}", self.unused_b3),
                 format!("{:?}", m.bits(at, 3, 1)),
             );
         }
-        if (self.b4 as u32) != m.bits(at, 4, 1) {
+        if (self.unused_b4 as u32) != m.bits(at, 4, 1) {
             cx.mismatch(
-                &format!("{path}.b4"),
-                format!("{:?}", self.b4),
+                &format!("{path}.unused_b4 (b4)"),
+                format!("{:?}", self.unused_b4),
                 format!("{:?}", m.bits(at, 4, 1)),
             );
         }
-        if (self.b5 as u32) != m.bits(at, 5, 1) {
+        if (self.unused_b5 as u32) != m.bits(at, 5, 1) {
             cx.mismatch(
-                &format!("{path}.b5"),
-                format!("{:?}", self.b5),
+                &format!("{path}.unused_b5 (b5)"),
+                format!("{:?}", self.unused_b5),
                 format!("{:?}", m.bits(at, 5, 1)),
             );
         }
-        if (self.b6 as u32) != m.bits(at, 6, 1) {
+        if (self.unused_b6 as u32) != m.bits(at, 6, 1) {
             cx.mismatch(
-                &format!("{path}.b6"),
-                format!("{:?}", self.b6),
+                &format!("{path}.unused_b6 (b6)"),
+                format!("{:?}", self.unused_b6),
                 format!("{:?}", m.bits(at, 6, 1)),
             );
         }
-        if (self.b7 as u32) != m.bits(at, 7, 1) {
+        if (self.unused_b7 as u32) != m.bits(at, 7, 1) {
             cx.mismatch(
-                &format!("{path}.b7"),
-                format!("{:?}", self.b7),
+                &format!("{path}.unused_b7 (b7)"),
+                format!("{:?}", self.unused_b7),
                 format!("{:?}", m.bits(at, 7, 1)),
             );
         }
@@ -12770,22 +12770,22 @@ impl Mirror for _StaticPlayer {
             ckind: m.u32(at + 0x4) as i32,
             pkind: m.u32(at + 0x8) as i32,
             transformed: core::array::from_fn(|i0| m.u8(at + 0xc + i0 as u32 * 0x1)),
-            unk0E: m.u16(at + 0xe) as i16,
+            unused_0e: m.u16(at + 0xe) as i16,
             player_poses: m.bytes(at + 0x10),
             facing_direction: f32::from_bits(m.u32(at + 0x40)),
             costume_id: m.u8(at + 0x44),
-            unk45: m.u8(at + 0x45),
+            effect_color: m.u8(at + 0x45),
             sub_color: m.u8(at + 0x46) as i8,
             team: m.u8(at + 0x47),
             pad_port: m.u8(at + 0x48),
             cpu_level: m.u8(at + 0x49),
             cpu_type: m.u8(at + 0x4a),
             handicap: m.u8(at + 0x4b),
-            unk4C: m.u8(at + 0x4c) as i8,
-            unk4D: m.u8(at + 0x4d) as i8,
-            unk4E: m.u8(at + 0x4e) as i8,
-            unk4F: m.u8(at + 0x4f) as i8,
-            unk50: f32::from_bits(m.u32(at + 0x50)),
+            entry_delay: m.u8(at + 0x4c) as i8,
+            kirby_copy_kind: m.u8(at + 0x4d) as i8,
+            spawn_point: m.u8(at + 0x4e) as i8,
+            unused_4f: m.u8(at + 0x4f) as i8,
+            unset_ratio: f32::from_bits(m.u32(at + 0x50)),
             attack_ratio: f32::from_bits(m.u32(at + 0x54)),
             defense_ratio: f32::from_bits(m.u32(at + 0x58)),
             model_scale: f32::from_bits(m.u32(at + 0x5c)),
@@ -12795,11 +12795,11 @@ impl Mirror for _StaticPlayer {
             match_frame_count: m.u32(at + 0x88),
             self_destructs: m.u16(at + 0x8c),
             stocks: m.u8(at + 0x8e) as i8,
-            unk8F: m.u8(at + 0x8f) as i8,
+            unused_8f: m.u8(at + 0x8f) as i8,
             current_coins: m.u32(at + 0x90) as i32,
             total_coins: m.u32(at + 0x94) as i32,
-            unk98: m.u32(at + 0x98) as i32,
-            unk9C: m.u32(at + 0x9c) as i32,
+            coins_knocked: m.u32(at + 0x98) as i32,
+            coins_lost: m.u32(at + 0x9c) as i32,
             joystick_direction_input_count: core::array::from_fn(|i0| {
                 m.u32(at + 0xa0 + i0 as u32 * 0x4) as i32
             }),
@@ -12807,14 +12807,14 @@ impl Mirror for _StaticPlayer {
             flags: _StaticPlayer_flags::import(m, at + 0xac, cx),
             more_flags: _StaticPlayer_more_flags::import(m, at + 0xad, cx),
             flagsAE: _StaticPlayer_flagsAE::import(m, at + 0xae, cx),
-            unkAF: m.u8(at + 0xaf) as i8,
+            unused_af: m.u8(at + 0xaf) as i8,
             player_entity: core::array::from_fn(|i0| {
                 cx.import_handle("GObjId", m.u32(at + 0xb0 + i0 as u32 * 0x4))
                     .map(GObjId)
             }),
             struct_func: code(m.u32(at + 0xb8)),
             stale_moves: StaleMoveTable::import(m, at + 0xbc, cx),
-            xDB0: core::array::from_fn(|i0| m.u8(at + 0xdb0 + i0 as u32 * 0x1)),
+            stats_ext: core::array::from_fn(|i0| m.u8(at + 0xdb0 + i0 as u32 * 0x1)),
         }
     }
 
@@ -12850,10 +12850,10 @@ impl Mirror for _StaticPlayer {
                 );
             }
         }
-        if self.unk0E != m.u16(at + 0xe) as i16 {
+        if self.unused_0e != m.u16(at + 0xe) as i16 {
             cx.mismatch(
-                &format!("{path}.unk0E"),
-                format!("{:?}", self.unk0E),
+                &format!("{path}.unused_0e (unk0E)"),
+                format!("{:?}", self.unused_0e),
                 format!("{:?}", m.u16(at + 0xe) as i16),
             );
         }
@@ -12878,10 +12878,10 @@ impl Mirror for _StaticPlayer {
                 format!("{:?}", m.u8(at + 0x44)),
             );
         }
-        if self.unk45 != m.u8(at + 0x45) {
+        if self.effect_color != m.u8(at + 0x45) {
             cx.mismatch(
-                &format!("{path}.unk45"),
-                format!("{:?}", self.unk45),
+                &format!("{path}.effect_color (unk45)"),
+                format!("{:?}", self.effect_color),
                 format!("{:?}", m.u8(at + 0x45)),
             );
         }
@@ -12927,38 +12927,38 @@ impl Mirror for _StaticPlayer {
                 format!("{:?}", m.u8(at + 0x4b)),
             );
         }
-        if self.unk4C != m.u8(at + 0x4c) as i8 {
+        if self.entry_delay != m.u8(at + 0x4c) as i8 {
             cx.mismatch(
-                &format!("{path}.unk4C"),
-                format!("{:?}", self.unk4C),
+                &format!("{path}.entry_delay (unk4C)"),
+                format!("{:?}", self.entry_delay),
                 format!("{:?}", m.u8(at + 0x4c) as i8),
             );
         }
-        if self.unk4D != m.u8(at + 0x4d) as i8 {
+        if self.kirby_copy_kind != m.u8(at + 0x4d) as i8 {
             cx.mismatch(
-                &format!("{path}.unk4D"),
-                format!("{:?}", self.unk4D),
+                &format!("{path}.kirby_copy_kind (unk4D)"),
+                format!("{:?}", self.kirby_copy_kind),
                 format!("{:?}", m.u8(at + 0x4d) as i8),
             );
         }
-        if self.unk4E != m.u8(at + 0x4e) as i8 {
+        if self.spawn_point != m.u8(at + 0x4e) as i8 {
             cx.mismatch(
-                &format!("{path}.unk4E"),
-                format!("{:?}", self.unk4E),
+                &format!("{path}.spawn_point (unk4E)"),
+                format!("{:?}", self.spawn_point),
                 format!("{:?}", m.u8(at + 0x4e) as i8),
             );
         }
-        if self.unk4F != m.u8(at + 0x4f) as i8 {
+        if self.unused_4f != m.u8(at + 0x4f) as i8 {
             cx.mismatch(
-                &format!("{path}.unk4F"),
-                format!("{:?}", self.unk4F),
+                &format!("{path}.unused_4f (unk4F)"),
+                format!("{:?}", self.unused_4f),
                 format!("{:?}", m.u8(at + 0x4f) as i8),
             );
         }
-        if self.unk50.to_bits() != m.u32(at + 0x50) {
+        if self.unset_ratio.to_bits() != m.u32(at + 0x50) {
             cx.mismatch(
-                &format!("{path}.unk50"),
-                format!("{:?}", self.unk50),
+                &format!("{path}.unset_ratio (unk50)"),
+                format!("{:?}", self.unset_ratio),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x50))),
             );
         }
@@ -13029,10 +13029,10 @@ impl Mirror for _StaticPlayer {
                 format!("{:?}", m.u8(at + 0x8e) as i8),
             );
         }
-        if self.unk8F != m.u8(at + 0x8f) as i8 {
+        if self.unused_8f != m.u8(at + 0x8f) as i8 {
             cx.mismatch(
-                &format!("{path}.unk8F"),
-                format!("{:?}", self.unk8F),
+                &format!("{path}.unused_8f (unk8F)"),
+                format!("{:?}", self.unused_8f),
                 format!("{:?}", m.u8(at + 0x8f) as i8),
             );
         }
@@ -13050,17 +13050,17 @@ impl Mirror for _StaticPlayer {
                 format!("{:?}", m.u32(at + 0x94) as i32),
             );
         }
-        if self.unk98 != m.u32(at + 0x98) as i32 {
+        if self.coins_knocked != m.u32(at + 0x98) as i32 {
             cx.mismatch(
-                &format!("{path}.unk98"),
-                format!("{:?}", self.unk98),
+                &format!("{path}.coins_knocked (unk98)"),
+                format!("{:?}", self.coins_knocked),
                 format!("{:?}", m.u32(at + 0x98) as i32),
             );
         }
-        if self.unk9C != m.u32(at + 0x9c) as i32 {
+        if self.coins_lost != m.u32(at + 0x9c) as i32 {
             cx.mismatch(
-                &format!("{path}.unk9C"),
-                format!("{:?}", self.unk9C),
+                &format!("{path}.coins_lost (unk9C)"),
+                format!("{:?}", self.coins_lost),
                 format!("{:?}", m.u32(at + 0x9c) as i32),
             );
         }
@@ -13091,10 +13091,10 @@ impl Mirror for _StaticPlayer {
             .compare(m, at + 0xad, &format!("{path}.more_flags"), cx);
         self.flagsAE
             .compare(m, at + 0xae, &format!("{path}.flagsAE"), cx);
-        if self.unkAF != m.u8(at + 0xaf) as i8 {
+        if self.unused_af != m.u8(at + 0xaf) as i8 {
             cx.mismatch(
-                &format!("{path}.unkAF"),
-                format!("{:?}", self.unkAF),
+                &format!("{path}.unused_af (unkAF)"),
+                format!("{:?}", self.unused_af),
                 format!("{:?}", m.u8(at + 0xaf) as i8),
             );
         }
@@ -13116,10 +13116,10 @@ impl Mirror for _StaticPlayer {
         self.stale_moves
             .compare(m, at + 0xbc, &format!("{path}.stale_moves"), cx);
         for i0 in 0..224 {
-            if self.xDB0[i0] != m.u8(at + 0xdb0 + i0 as u32 * 0x1) {
+            if self.stats_ext[i0] != m.u8(at + 0xdb0 + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.xDB0"), i0),
-                    format!("{:?}", self.xDB0[i0]),
+                    &format!("{}[{}]", format!("{path}.stats_ext (xDB0)"), i0),
+                    format!("{:?}", self.stats_ext[i0]),
                     format!("{:?}", m.u8(at + 0xdb0 + i0 as u32 * 0x1)),
                 );
             }

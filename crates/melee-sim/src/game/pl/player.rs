@@ -140,7 +140,7 @@ impl Game {
         let p = self.player_mut(slot);
         let e = p.entity_index(entity_index as usize);
         p.player_entity[e] = None;
-        let two = p.flags.b2;
+        let two = p.flags.two_fighters;
         if !two || self.player_fighters_all(slot, false) {
             self.player_mut(slot).player_state = 0;
         }
@@ -242,14 +242,14 @@ impl Game {
     #[doc(alias("player_unk4e"))]
     #[doc(alias = "Player_80032F30")]
     pub fn player_spawn_point(&self, slot: i32) -> i32 {
-        i32::from(self.player(slot).unk4E)
+        i32::from(self.player(slot).spawn_point)
     }
 
     /// Sets the slot's respawn point (`unk4E`).
     #[doc(alias("set_player_unk4e"))]
     #[doc(alias = "Player_80032FA4")]
     pub fn set_player_spawn_point(&mut self, slot: i32, v: i32) {
-        self.player_mut(slot).unk4E = v as i8;
+        self.player_mut(slot).spawn_point = v as i8;
     }
 
     #[doc(alias = "Player_GetFacingDirection")]
@@ -336,7 +336,7 @@ impl Game {
     #[doc(alias("player_unk50"))]
     #[doc(alias = "Player_GetUnk50")]
     pub fn player_unset_ratio(&self, slot: i32) -> f32 {
-        self.player(slot).unk50
+        self.player(slot).unset_ratio
     }
 
     #[doc(alias = "Player_GetAttackRatio")]
@@ -416,28 +416,28 @@ impl Game {
     #[doc(alias("player_unk98"))]
     #[doc(alias = "Player_GetUnk98")]
     pub fn player_coins_knocked(&self, slot: i32) -> i32 {
-        self.player(slot).unk98
+        self.player(slot).coins_knocked
     }
 
     /// Sets the coins the slot knocked out (`unk98`).
     #[doc(alias("set_player_unk98"))]
     #[doc(alias = "Player_SetUnk98")]
     pub fn set_player_coins_knocked(&mut self, slot: i32, v: i32) {
-        self.player_mut(slot).unk98 = v;
+        self.player_mut(slot).coins_knocked = v;
     }
 
     /// The coins the slot lost falling (`unk9C`).
     #[doc(alias("player_unk9c"))]
     #[doc(alias = "Player_GetUnk9C")]
     pub fn player_coins_lost(&self, slot: i32) -> i32 {
-        self.player(slot).unk9C
+        self.player(slot).coins_lost
     }
 
     /// Sets the coins the slot lost (`unk9C`).
     #[doc(alias("set_player_unk9c"))]
     #[doc(alias = "Player_SetUnk9C")]
     pub fn set_player_coins_lost(&mut self, slot: i32, v: i32) {
-        self.player_mut(slot).unk9C = v;
+        self.player_mut(slot).coins_lost = v;
     }
 
     /// The slot's current fighter, `Player_GetEntity`.
@@ -500,88 +500,88 @@ impl Game {
 
     #[doc(alias = "Player_GetMoreFlagsBit0")]
     pub fn player_more_flags_bit0(&self, slot: i32) -> bool {
-        self.player(slot).more_flags.b0
+        self.player(slot).more_flags.init_rule_set
     }
 
     #[doc(alias = "Player_GetMoreFlagsBit1")]
     pub fn player_more_flags_bit1(&self, slot: i32) -> bool {
-        self.player(slot).more_flags.b1
+        self.player(slot).more_flags.voice_muted
     }
 
     #[doc(alias = "Player_SetMoreFlagsBit1")]
     pub fn set_player_more_flags_bit1(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).more_flags.b1 = v & 1 != 0;
+        self.player_mut(slot).more_flags.voice_muted = v & 1 != 0;
     }
 
     #[doc(alias = "Player_GetMoreFlagsBit2")]
     pub fn player_more_flags_bit2(&self, slot: i32) -> bool {
-        self.player(slot).more_flags.b2
+        self.player(slot).more_flags.stamina
     }
 
     #[doc(alias = "Player_SetMoreFlagsBit2")]
     pub fn set_player_more_flags_bit2(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).more_flags.b2 = v & 1 != 0;
+        self.player_mut(slot).more_flags.stamina = v & 1 != 0;
     }
 
     #[doc(alias = "Player_GetMoreFlagsBit3")]
     pub fn player_more_flags_bit3(&self, slot: i32) -> bool {
-        self.player(slot).more_flags.b3
+        self.player(slot).more_flags.offscreen_damage
     }
 
     #[doc(alias = "Player_SetMoreFlagsBit3")]
     pub fn set_player_more_flags_bit3(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).more_flags.b3 = v & 1 != 0;
+        self.player_mut(slot).more_flags.offscreen_damage = v & 1 != 0;
     }
 
     #[doc(alias = "Player_GetMoreFlagsBit4")]
     pub fn player_more_flags_bit4(&self, slot: i32) -> bool {
-        self.player(slot).more_flags.b4
+        self.player(slot).more_flags.no_magnifier
     }
 
     #[doc(alias = "Player_SetMoreFlagsBit4")]
     pub fn set_player_more_flags_bit4(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).more_flags.b4 = v & 1 != 0;
+        self.player_mut(slot).more_flags.no_magnifier = v & 1 != 0;
     }
 
     #[doc(alias = "Player_GetMoreFlagsBit5")]
     pub fn player_more_flags_bit5(&self, slot: i32) -> bool {
-        self.player(slot).more_flags.b5
+        self.player(slot).more_flags.dies_up
     }
 
     #[doc(alias = "Player_SetMoreFlagsBit5")]
     pub fn set_player_more_flags_bit5(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).more_flags.b5 = v & 1 != 0;
+        self.player_mut(slot).more_flags.dies_up = v & 1 != 0;
     }
 
     /// The two-bit field `more_flags.b6`, `Player_GetMoreFlagsBit6`.
     #[doc(alias = "Player_GetMoreFlagsBit6")]
     pub fn player_more_flags_bit6(&self, slot: i32) -> u8 {
-        self.player(slot).more_flags.b6
+        self.player(slot).more_flags.sfx_size
     }
 
     #[doc(alias = "Player_SetMoreFlagsBit6")]
     pub fn set_player_more_flags_bit6(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).more_flags.b6 = v & 3;
+        self.player_mut(slot).more_flags.sfx_size = v & 3;
     }
 
     #[doc(alias = "Player_GetFlagsAEBit0")]
     pub fn player_flags_ae_bit0(&self, slot: i32) -> bool {
-        self.player(slot).flagsAE.b0
+        self.player(slot).flagsAE.attrs_scaled
     }
 
     #[doc(alias = "Player_SetFlagsAEBit0")]
     pub fn set_player_flags_ae_bit0(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).flagsAE.b0 = v & 1 != 0;
+        self.player_mut(slot).flagsAE.attrs_scaled = v & 1 != 0;
     }
 
     #[doc(alias = "Player_GetFlagsAEBit1")]
     pub fn player_flags_ae_bit1(&self, slot: i32) -> bool {
-        self.player(slot).flagsAE.b1
+        self.player(slot).flagsAE.kirby_init_flag
     }
 
     #[doc(alias = "Player_SetFlagsAEBit1")]
     pub fn set_player_flags_ae_bit1(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).flagsAE.b1 = v & 1 != 0;
+        self.player_mut(slot).flagsAE.kirby_init_flag = v & 1 != 0;
     }
 
     /// The slot's falls: both entities' for a character that transforms, `Player_GetFalls`.
@@ -655,7 +655,7 @@ impl Game {
     #[doc(alias = "Player_800353BC")]
     pub fn player_rumbles(&self, slot: i32) -> bool {
         let p = self.player(slot);
-        p.player_state == 2 && p.flags.b0
+        p.player_state == 2 && p.flags.rumbles
     }
 
     /// Whether an entity's controller rumbles, `Player_8003544C`: never a partner's.
@@ -667,7 +667,7 @@ impl Game {
     /// Whether the slot's controller rumbles, `Player_SetFlagsBit0`.
     #[doc(alias = "Player_SetFlagsBit0")]
     pub fn set_player_rumble(&mut self, slot: i32, v: bool) {
-        self.player_mut(slot).flags.b0 = v;
+        self.player_mut(slot).flags.rumbles = v;
     }
 
     #[doc(alias = "Player_GetNametagSlotID")]
@@ -682,32 +682,32 @@ impl Game {
 
     #[doc(alias = "Player_GetFlagsBit1")]
     pub fn player_flags_bit1(&self, slot: i32) -> bool {
-        self.player(slot).flags.b1
+        self.player(slot).flags.joiner
     }
 
     #[doc(alias = "Player_SetFlagsBit1")]
     pub fn set_player_flags_bit1(&mut self, slot: i32) {
-        self.player_mut(slot).flags.b1 = true;
+        self.player_mut(slot).flags.joiner = true;
     }
 
     #[doc(alias = "Player_UnsetFlagsBit1")]
     pub fn unset_player_flags_bit1(&mut self, slot: i32) {
-        self.player_mut(slot).flags.b1 = false;
+        self.player_mut(slot).flags.joiner = false;
     }
 
     #[doc(alias = "Player_GetFlagsBit3")]
     pub fn player_flags_bit3(&self, slot: i32) -> bool {
-        self.player(slot).flags.b3
+        self.player(slot).flags.enters
     }
 
     #[doc(alias = "Player_SetFlagsBit3")]
     pub fn set_player_flags_bit3(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).flags.b3 = v & 1 != 0;
+        self.player_mut(slot).flags.enters = v & 1 != 0;
     }
 
     #[doc(alias = "Player_GetFlagsBit4")]
     pub fn player_flags_bit4(&self, slot: i32) -> bool {
-        self.player(slot).flags.b4
+        self.player(slot).flags.entry_waits
     }
 
     /// Whether the slot plays metal, `Player_GetFlagsBit5`.
@@ -723,50 +723,50 @@ impl Game {
 
     #[doc(alias = "Player_GetFlagsBit6")]
     pub fn player_flags_bit6(&self, slot: i32) -> bool {
-        self.player(slot).flags.b6
+        self.player(slot).flags.damage_cloaked
     }
 
     #[doc(alias = "Player_SetFlagsBit6")]
     pub fn set_player_flags_bit6(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).flags.b6 = v & 1 != 0;
+        self.player_mut(slot).flags.damage_cloaked = v & 1 != 0;
     }
 
     #[doc(alias = "Player_GetFlagsBit7")]
     pub fn player_flags_bit7(&self, slot: i32) -> bool {
-        self.player(slot).flags.b7
+        self.player(slot).flags.no_color_anims
     }
 
     #[doc(alias = "Player_SetFlagsBit7")]
     pub fn set_player_flags_bit7(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).flags.b7 = v & 1 != 0;
+        self.player_mut(slot).flags.no_color_anims = v & 1 != 0;
     }
 
     /// The fighter kind Kirby's copy starts as (`unk4D`; Kirby's own kind for none).
     #[doc(alias("player_unk4d"))]
     #[doc(alias = "Player_GetUnk4D")]
     pub fn player_kirby_copy_kind(&self, slot: i32) -> i32 {
-        i32::from(self.player(slot).unk4D as u8)
+        i32::from(self.player(slot).kirby_copy_kind as u8)
     }
 
     /// Sets the kind Kirby's copy starts as (`unk4D`).
     #[doc(alias("set_player_unk4d"))]
     #[doc(alias = "Player_SetUnk4D")]
     pub fn set_player_kirby_copy_kind(&mut self, slot: i32, v: i8) {
-        self.player_mut(slot).unk4D = v;
+        self.player_mut(slot).kirby_copy_kind = v;
     }
 
     /// The frames the slot's entry waits (`unk4C`).
     #[doc(alias("player_unk4c"))]
     #[doc(alias = "Player_GetUnk4C")]
     pub fn player_entry_delay(&self, slot: i32) -> i32 {
-        i32::from(self.player(slot).unk4C as u8)
+        i32::from(self.player(slot).entry_delay as u8)
     }
 
     /// Sets the frames the slot's entry waits (`unk4C`).
     #[doc(alias("set_player_unk4c"))]
     #[doc(alias = "Player_SetUnk4C")]
     pub fn set_player_entry_delay(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).unk4C = v as i8;
+        self.player_mut(slot).entry_delay = v as i8;
     }
 
     #[doc(alias = "Player_SetStructFunc")]
@@ -820,7 +820,7 @@ impl Game {
     #[doc(alias("set_player_unk45"))]
     #[doc(alias = "Player_SetUnk45")]
     pub fn set_player_effect_color(&mut self, slot: i32, v: i32) {
-        self.player_mut(slot).unk45 = v as u8;
+        self.player_mut(slot).effect_color = v as u8;
     }
 
     /// The color the slot's shield and KO effects take (`unk45`), `Player_GetUnk45`: 4 for
@@ -830,7 +830,7 @@ impl Game {
     pub fn player_effect_color(&self, slot: i32) -> u32 {
         let p = self.player(slot);
         if p.pkind == PKIND_HUMAN {
-            u32::from(p.unk45)
+            u32::from(p.effect_color)
         } else {
             4
         }
@@ -886,17 +886,17 @@ impl Game {
         p.costume_id = 0;
         p.pkind = PKIND_NONE;
         p.transformed = [0, 1];
-        p.unk45 = 0;
+        p.effect_color = 0;
         p.sub_color = 0;
         p.team = 0;
         p.pad_port = 0;
         p.cpu_level = 0;
         p.cpu_type = 4;
         p.handicap = 0;
-        p.unk4C = 0;
-        p.unk4D = 4;
-        p.unk4E = -1;
-        p.unk50 = 1.0;
+        p.entry_delay = 0;
+        p.kirby_copy_kind = 4;
+        p.spawn_point = -1;
+        p.unset_ratio = 1.0;
         p.attack_ratio = 1.0;
         p.defense_ratio = 1.0;
         p.model_scale = 1.0;
@@ -911,27 +911,27 @@ impl Game {
         p.stocks = 0;
         p.current_coins = 0;
         p.total_coins = 0;
-        p.unk98 = 0;
-        p.unk9C = 0;
+        p.coins_knocked = 0;
+        p.coins_lost = 0;
         p.joystick_direction_input_count = [0, 0];
-        p.flags.b0 = false;
+        p.flags.rumbles = false;
         p.nametag_slot_id = 0;
-        p.flags.b1 = false;
-        p.flags.b2 = false;
-        p.flags.b3 = false;
-        p.flags.b4 = false;
+        p.flags.joiner = false;
+        p.flags.two_fighters = false;
+        p.flags.enters = false;
+        p.flags.entry_waits = false;
         p.flags.is_metal = false;
-        p.flags.b6 = false;
-        p.flags.b7 = false;
-        p.more_flags.b0 = false;
-        p.more_flags.b1 = false;
-        p.more_flags.b2 = false;
-        p.more_flags.b3 = false;
-        p.more_flags.b4 = false;
-        p.more_flags.b5 = false;
-        p.more_flags.b6 = 0;
-        p.flagsAE.b0 = false;
-        p.flagsAE.b1 = false;
+        p.flags.damage_cloaked = false;
+        p.flags.no_color_anims = false;
+        p.more_flags.init_rule_set = false;
+        p.more_flags.voice_muted = false;
+        p.more_flags.stamina = false;
+        p.more_flags.offscreen_damage = false;
+        p.more_flags.no_magnifier = false;
+        p.more_flags.dies_up = false;
+        p.more_flags.sfx_size = 0;
+        p.flagsAE.attrs_scaled = false;
+        p.flagsAE.kirby_init_flag = false;
         p.player_entity = [None, None];
         p.struct_func = None;
     }
@@ -1005,7 +1005,7 @@ impl Running<'_> {
         let ckind = self.game.player(slot).ckind;
         let m = mapping(ckind);
         if m.extra_internal_id != -1 {
-            self.game.player_mut(slot).flags.b2 = true;
+            self.game.player_mut(slot).flags.two_fighters = true;
         }
         // `plAllocInfo`: fighter kind, slot, `x5` -1, and whether it's the second fighter
         // and a transformation. The original's stack holds the info's other bits, which
@@ -1112,7 +1112,7 @@ impl Running<'_> {
     pub fn player_next_stock(&mut self, slot: i32, sub: bool) {
         let p = self.game.player(slot);
         let (first, second) = (p.entity(0), p.entity(1));
-        let partner = p.flags.b2 && mapping(p.ckind).has_transformation == 0;
+        let partner = p.flags.two_fighters && mapping(p.ckind).has_transformation == 0;
         if !sub {
             self.enter_rebirth(first.expect("a fighter"));
             if partner && self.game.ft_is_sleeping(second.expect("a second fighter")) {

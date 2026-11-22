@@ -309,4 +309,85 @@ mod label_tests {
         v.compare(&m, 0x8000_0000, "gshell", &mut l);
         assert_eq!(l.0, ["gshell.life (xDD4)", "gshell.popped (xDEC_b3)"]);
     }
+
+    /// A struct's labels after `f` changes it from a zeroed block.
+    fn labels_after<T: Mirror>(path: &str, f: impl FnOnce(&mut T)) -> Vec<String> {
+        let block = vec![0u8; T::SIZE as usize];
+        let m = Mem {
+            bytes: &block,
+            base: 0x8000_0000,
+        };
+        let mut v = T::import(&m, 0x8000_0000, &mut Labels::default());
+        f(&mut v);
+        let mut l = Labels::default();
+        v.compare(&m, 0x8000_0000, path, &mut l);
+        l.0
+    }
+
+    /// The same for step 3's structs (task 23): one field of each, as the comparer prints it.
+    #[test]
+    fn step_3s_renamed_fields_label_gives_the_originals_name() {
+        use crate::game::structs::{
+            _StaticPlayer, Camera, Ground, GroundParam, MatchPlayerData, StageInfo, StartMeleeRules,
+        };
+        assert_eq!(
+            labels_after::<Fighter>("fighter", |fp| {
+                fp.coll_data.map_generation = 1;
+                fp.hitboxes[0].kb_growth = 1;
+                fp.dmg.percent = 1.0;
+            }),
+            [
+                "fighter.coll_data.map_generation (x38)",
+                "fighter.hitboxes (x914)[0].kb_growth (x24)",
+                "fighter.dmg.percent (x1830_percent)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<Item>("item", |ip| ip.hit_flags.bits.silenced = true),
+            ["item.hit_flags (xDCD_flag).bits (x0).silenced (b2)"]
+        );
+        assert_eq!(
+            labels_after::<Camera>("camera", |c| {
+                c.zoom_step = 1;
+                c.orbit_limits.min_distance = 1.0;
+            }),
+            [
+                "camera.zoom_step (x2BA)",
+                "camera.orbit_limits (x2D0).min_distance (unk28)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<StageInfo>("stage_info", |s| {
+                s.bits.fog_enabled = true;
+                s.acid_level = 1.0;
+            }),
+            [
+                "stage_info.bits (unk8C).fog_enabled (b2)",
+                "stage_info.acid_level (x724)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<GroundParam>("param", |p| p.cam_pan_rate = 1.0),
+            ["param.cam_pan_rate (x1C)"]
+        );
+        assert_eq!(
+            labels_after::<Ground>("ground", |g| g.flags.shadowed = true),
+            ["ground.flags (x10_flags).shadowed (b5)"]
+        );
+        assert_eq!(
+            labels_after::<StartMeleeRules>("rules", |r| r.item_switch = 1),
+            ["rules.item_switch (x20)"]
+        );
+        assert_eq!(
+            labels_after::<MatchPlayerData>("standing", |p| p.kos = 1),
+            ["standing.kos (x20)"]
+        );
+        assert_eq!(
+            labels_after::<_StaticPlayer>("player", |p| {
+                p.coins_lost = 1;
+                p.flags.rumbles = true;
+            }),
+            ["player.coins_lost (unk9C)", "player.flags.rumbles (b0)"]
+        );
+    }
 }

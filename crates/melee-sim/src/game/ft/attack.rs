@@ -1095,7 +1095,7 @@ impl Running<'_> {
             self.count_damage_dealt(slot, sub, vslot, vsub, kind, dmg);
         }
         // `pl_StaleMoveTableExt_t::xD08`, past the stale-move table.
-        self.game.player_mut(slot).xDB0[0x14..0x18].copy_from_slice(&[0; 4]);
+        self.game.player_mut(slot).stats_ext[0x14..0x18].copy_from_slice(&[0; 4]);
     }
 
     /// Counts a hit between two players, `pl_80040ED4`: unless the victim is a sub-fighter,

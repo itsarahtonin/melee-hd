@@ -180,7 +180,7 @@ CAMERA_DEBUG_MODE = {"_58": "unused_58"}
 # The stage's camera settings (`StageCameraInfo`).
 STAGE_CAMERA_INFO = {"x20": "cam_pan_rate", "x24": "cam_tilt_rate", "x3C": "unread_3c"}
 
-# An item's flag bytes the decomp types as other structs': `xDCE` (`CameraBoxFlags`, the item's
+# An item's flag bytes the decomp types as other structs': `xDCD` (`CameraBoxFlags`, the item's
 # `hit_flags`) and `xDCC` (`Item_xDCC_flag`, its `state_flags`).
 CAMERA_BOX_FLAGS = {"x0": "bits"}
 CAMERA_BOX_FLAGS_X0 = {
@@ -677,5 +677,5 @@ GROUPS = [
 ]
 
 STEP_3 = {}
-for _group in GROUPS[:5]:
+for _group in GROUPS:
     STEP_3.update(_group)

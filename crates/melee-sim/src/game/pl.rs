@@ -119,7 +119,7 @@ impl Running<'_> {
             return;
         }
         assert!((0..6).contains(&slot), "player slot {slot}");
-        let bytes = &mut self.game.players[slot as usize].xDB0[4..8];
+        let bytes = &mut self.game.players[slot as usize].stats_ext[4..8];
         let cur = f32::from_be_bytes(bytes.try_into().unwrap());
         if v < cur {
             bytes.copy_from_slice(&v.to_be_bytes());

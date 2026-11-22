@@ -6075,34 +6075,41 @@ impl Default for CameraDebugMode {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct _StaticPlayer_flags {
     /// +0x0 (bits 0..+1)
-    pub b0: bool,
+    #[doc(alias("b0"))]
+    pub rumbles: bool,
     /// +0x0 (bits 1..+1)
-    pub b1: bool,
+    #[doc(alias("b1"))]
+    pub joiner: bool,
     /// +0x0 (bits 2..+1)
-    pub b2: bool,
+    #[doc(alias("b2"))]
+    pub two_fighters: bool,
     /// +0x0 (bits 3..+1)
-    pub b3: bool,
+    #[doc(alias("b3"))]
+    pub enters: bool,
     /// +0x0 (bits 4..+1)
-    pub b4: bool,
+    #[doc(alias("b4"))]
+    pub entry_waits: bool,
     /// +0x0 (bits 5..+1)
     pub is_metal: bool,
     /// +0x0 (bits 6..+1)
-    pub b6: bool,
+    #[doc(alias("b6"))]
+    pub damage_cloaked: bool,
     /// +0x0 (bits 7..+1)
-    pub b7: bool,
+    #[doc(alias("b7"))]
+    pub no_color_anims: bool,
 }
 
 impl Default for _StaticPlayer_flags {
     fn default() -> Self {
         _StaticPlayer_flags {
-            b0: false,
-            b1: false,
-            b2: false,
-            b3: false,
-            b4: false,
+            rumbles: false,
+            joiner: false,
+            two_fighters: false,
+            enters: false,
+            entry_waits: false,
             is_metal: false,
-            b6: false,
-            b7: false,
+            damage_cloaked: false,
+            no_color_anims: false,
         }
     }
 }
@@ -6111,31 +6118,38 @@ impl Default for _StaticPlayer_flags {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct _StaticPlayer_more_flags {
     /// +0x0 (bits 0..+1)
-    pub b0: bool,
+    #[doc(alias("b0"))]
+    pub init_rule_set: bool,
     /// +0x0 (bits 1..+1)
-    pub b1: bool,
+    #[doc(alias("b1"))]
+    pub voice_muted: bool,
     /// +0x0 (bits 2..+1)
-    pub b2: bool,
+    #[doc(alias("b2"))]
+    pub stamina: bool,
     /// +0x0 (bits 3..+1)
-    pub b3: bool,
+    #[doc(alias("b3"))]
+    pub offscreen_damage: bool,
     /// +0x0 (bits 4..+1)
-    pub b4: bool,
+    #[doc(alias("b4"))]
+    pub no_magnifier: bool,
     /// +0x0 (bits 5..+1)
-    pub b5: bool,
+    #[doc(alias("b5"))]
+    pub dies_up: bool,
     /// +0x0 (bits 6..+2)
-    pub b6: u8,
+    #[doc(alias("b6"))]
+    pub sfx_size: u8,
 }
 
 impl Default for _StaticPlayer_more_flags {
     fn default() -> Self {
         _StaticPlayer_more_flags {
-            b0: false,
-            b1: false,
-            b2: false,
-            b3: false,
-            b4: false,
-            b5: false,
-            b6: 0,
+            init_rule_set: false,
+            voice_muted: false,
+            stamina: false,
+            offscreen_damage: false,
+            no_magnifier: false,
+            dies_up: false,
+            sfx_size: 0,
         }
     }
 }
@@ -6144,34 +6158,42 @@ impl Default for _StaticPlayer_more_flags {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct _StaticPlayer_flagsAE {
     /// +0x0 (bits 0..+1)
-    pub b0: bool,
+    #[doc(alias("b0"))]
+    pub attrs_scaled: bool,
     /// +0x0 (bits 1..+1)
-    pub b1: bool,
+    #[doc(alias("b1"))]
+    pub kirby_init_flag: bool,
     /// +0x0 (bits 2..+1)
-    pub b2: bool,
+    #[doc(alias("b2"))]
+    pub unused_b2: bool,
     /// +0x0 (bits 3..+1)
-    pub b3: bool,
+    #[doc(alias("b3"))]
+    pub unused_b3: bool,
     /// +0x0 (bits 4..+1)
-    pub b4: bool,
+    #[doc(alias("b4"))]
+    pub unused_b4: bool,
     /// +0x0 (bits 5..+1)
-    pub b5: bool,
+    #[doc(alias("b5"))]
+    pub unused_b5: bool,
     /// +0x0 (bits 6..+1)
-    pub b6: bool,
+    #[doc(alias("b6"))]
+    pub unused_b6: bool,
     /// +0x0 (bits 7..+1)
-    pub b7: bool,
+    #[doc(alias("b7"))]
+    pub unused_b7: bool,
 }
 
 impl Default for _StaticPlayer_flagsAE {
     fn default() -> Self {
         _StaticPlayer_flagsAE {
-            b0: false,
-            b1: false,
-            b2: false,
-            b3: false,
-            b4: false,
-            b5: false,
-            b6: false,
-            b7: false,
+            attrs_scaled: false,
+            kirby_init_flag: false,
+            unused_b2: false,
+            unused_b3: false,
+            unused_b4: false,
+            unused_b5: false,
+            unused_b6: false,
+            unused_b7: false,
         }
     }
 }
@@ -6587,7 +6609,8 @@ pub struct _StaticPlayer {
     /// +0xc
     pub transformed: [u8; 2],
     /// +0xe
-    pub unk0E: i16,
+    #[doc(alias("unk0E"))]
+    pub unused_0e: i16,
     /// +0x10
     pub player_poses: [u8; 48],
     /// +0x40
@@ -6595,7 +6618,8 @@ pub struct _StaticPlayer {
     /// +0x44
     pub costume_id: u8,
     /// +0x45
-    pub unk45: u8,
+    #[doc(alias("unk45"))]
+    pub effect_color: u8,
     /// +0x46
     pub sub_color: i8,
     /// +0x47
@@ -6609,15 +6633,20 @@ pub struct _StaticPlayer {
     /// +0x4b
     pub handicap: u8,
     /// +0x4c
-    pub unk4C: i8,
+    #[doc(alias("unk4C"))]
+    pub entry_delay: i8,
     /// +0x4d
-    pub unk4D: i8,
+    #[doc(alias("unk4D"))]
+    pub kirby_copy_kind: i8,
     /// +0x4e
-    pub unk4E: i8,
+    #[doc(alias("unk4E"))]
+    pub spawn_point: i8,
     /// +0x4f
-    pub unk4F: i8,
+    #[doc(alias("unk4F"))]
+    pub unused_4f: i8,
     /// +0x50
-    pub unk50: f32,
+    #[doc(alias("unk50"))]
+    pub unset_ratio: f32,
     /// +0x54
     pub attack_ratio: f32,
     /// +0x58
@@ -6637,15 +6666,18 @@ pub struct _StaticPlayer {
     /// +0x8e
     pub stocks: i8,
     /// +0x8f
-    pub unk8F: i8,
+    #[doc(alias("unk8F"))]
+    pub unused_8f: i8,
     /// +0x90
     pub current_coins: i32,
     /// +0x94
     pub total_coins: i32,
     /// +0x98
-    pub unk98: i32,
+    #[doc(alias("unk98"))]
+    pub coins_knocked: i32,
     /// +0x9c
-    pub unk9C: i32,
+    #[doc(alias("unk9C"))]
+    pub coins_lost: i32,
     /// +0xa0
     pub joystick_direction_input_count: [i32; 2],
     /// +0xa8
@@ -6657,7 +6689,8 @@ pub struct _StaticPlayer {
     /// +0xae
     pub flagsAE: _StaticPlayer_flagsAE,
     /// +0xaf
-    pub unkAF: i8,
+    #[doc(alias("unkAF"))]
+    pub unused_af: i8,
     /// +0xb0
     pub player_entity: [Option<GObjId>; 2],
     /// +0xb8
@@ -6665,7 +6698,8 @@ pub struct _StaticPlayer {
     /// +0xbc
     pub stale_moves: StaleMoveTable,
     /// +0xdb0
-    pub xDB0: [u8; 224],
+    #[doc(alias("xDB0"))]
+    pub stats_ext: [u8; 224],
 }
 
 impl Default for _StaticPlayer {
@@ -6675,22 +6709,22 @@ impl Default for _StaticPlayer {
             ckind: 0,
             pkind: 0,
             transformed: [0; 2],
-            unk0E: 0,
+            unused_0e: 0,
             player_poses: [0; 48],
             facing_direction: 0.0,
             costume_id: 0,
-            unk45: 0,
+            effect_color: 0,
             sub_color: 0,
             team: 0,
             pad_port: 0,
             cpu_level: 0,
             cpu_type: 0,
             handicap: 0,
-            unk4C: 0,
-            unk4D: 0,
-            unk4E: 0,
-            unk4F: 0,
-            unk50: 0.0,
+            entry_delay: 0,
+            kirby_copy_kind: 0,
+            spawn_point: 0,
+            unused_4f: 0,
+            unset_ratio: 0.0,
             attack_ratio: 0.0,
             defense_ratio: 0.0,
             model_scale: 0.0,
@@ -6700,21 +6734,21 @@ impl Default for _StaticPlayer {
             match_frame_count: 0,
             self_destructs: 0,
             stocks: 0,
-            unk8F: 0,
+            unused_8f: 0,
             current_coins: 0,
             total_coins: 0,
-            unk98: 0,
-            unk9C: 0,
+            coins_knocked: 0,
+            coins_lost: 0,
             joystick_direction_input_count: [0; 2],
             nametag_slot_id: 0,
             flags: Default::default(),
             more_flags: Default::default(),
             flagsAE: Default::default(),
-            unkAF: 0,
+            unused_af: 0,
             player_entity: [None; 2],
             struct_func: None,
             stale_moves: Default::default(),
-            xDB0: [0; 224],
+            stats_ext: [0; 224],
         }
     }
 }
