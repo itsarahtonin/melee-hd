@@ -802,7 +802,11 @@ Names come from the decompilation's half-names (`xDD4_flightTimer` `flight_timer
 
 **Checks.**
 
-Being run (2026-11-21).
+- **The whole state, tick by tick**, on the verify list's 330 replay diffs, which hold task 4's 82 item replays (step 1's goldens and scripts). The base's oracle (`71653b16`) checked the goldens: all 330, **3,552,272 ticks, every tick's state hash the same**, no stale read. The branch's oracle checked them with the coverage line set to the branch's (its comparer's sources changed only by the renames and the two session filters; `golden.rs`, `diff.rs`, `state_eq.rs` and `melee-derive` are unchanged, `mirror.rs` only by its test, and the hash reads fields in order, not by name): all 330, 3,552,272 ticks, the same (323 on Windows, the 7 whose traces the worker holds there, while Sarah used the PC).
+- **Item sessions**, each comparing every tick against its trace: task 4's 15 item-heavy `--test session` sessions (the brick, the two Celebi, the item switch, the extra rules, the switches, the coin match, the trophy lottery, the Home-Run Contest, Multi-Man Melee, All-Star, Adventure's game over, the target test, Master Hand and Crazy Hand in debug VS) and its 15 `--test single_player` runs (the modes' first stops, the events' rounds, the eggs, the wire frames, Adventure's Giga Bowser path and shells, Like Like, the polar bear, the red shell): all 30 pass.
+- **The labels:** `game::mirror::label_tests::a_renamed_item_fields_label_gives_the_originals_name` (an `Item` field, a bit of its flag word, a green shell's variables). **Mutation:** every new item's `alpha` 254 in `Item_80267AA8` (reverted) makes `items-box-kongo-jungle` differ in tick 549, the first item's, printed as `p_link 9 #0 item.alpha (x5C9): ours 254, theirs 255`.
+- The sorted `#[doc(alias = "...")]` list is the same 18,078 lines before and after; the list-form aliases went from 2,235 to 2,922, the 687 added being every old name, and none removed. The ledger's `--check`: 19,827 of 19,827; `docs/port-ledger.csv` changed only by line numbers.
+- melee-sim's unit tests (184 passed, 2 ignored), `ticks_and_restores_dont_allocate` at one thread, leaf-check's `items` (three shards of 195), `items_shoot` (1), `items_pokemon` (3), `items_monsters` (2), `items_on` (5), `melee-oracle --test ruleset` at one thread (all 12 pass), `sync-test --rollback 7 --fp hardware` on `items-ported-fd` and `items-pokeball1-fd` (7,318 ticks each, on the worker): no difference, `fmt` and `clippy -D warnings`.
 
 ### Task 5, the ruleset interface
 
