@@ -247,6 +247,65 @@ const CHUNK_SHIFT: u32 = 10;
 /// A page's chunks.
 const CHUNKS: usize = 1 << (PAGE_SHIFT - CHUNK_SHIFT);
 
+/// A chunk's runs by start, sorted: a few dozen at most, so a copy (a write to a chunk a snapshot
+/// shares) is one allocation and a copy of its entries, and a lookup a binary search.
+#[derive(Clone, Debug, Default, PartialEq)]
+struct Chunk(Vec<(u32, Span)>);
+
+impl Chunk {
+    /// Where the first run starting at or after `k` is.
+    fn at(&self, k: u32) -> usize {
+        self.0.partition_point(|e| e.0 < k)
+    }
+
+    fn range(&self, lo: u32, hi: u32) -> impl Iterator<Item = (&u32, &Span)> + '_ {
+        let (a, b) = (self.at(lo), self.at(hi));
+        self.0[a..b.max(a)].iter().map(|(k, s)| (k, s))
+    }
+
+    fn last_before(&self, lo: u32) -> Option<(&u32, &Span)> {
+        let i = self.at(lo).checked_sub(1)?;
+        let (k, s) = &self.0[i];
+        Some((k, s))
+    }
+
+    fn find(&self, k: u32) -> Option<usize> {
+        self.0.binary_search_by_key(&k, |e| e.0).ok()
+    }
+
+    fn get(&self, k: u32) -> Option<&Span> {
+        self.find(k).map(|i| &self.0[i].1)
+    }
+
+    fn get_mut(&mut self, k: u32) -> Option<&mut Span> {
+        self.find(k).map(|i| &mut self.0[i].1)
+    }
+
+    /// A run at `k`, in place of one there.
+    fn insert(&mut self, k: u32, s: Span) {
+        match self.0.binary_search_by_key(&k, |e| e.0) {
+            Ok(i) => self.0[i].1 = s,
+            Err(i) => self.0.insert(i, (k, s)),
+        }
+    }
+
+    fn remove(&mut self, k: u32) -> Option<Span> {
+        self.find(k).map(|i| self.0.remove(i).1)
+    }
+
+    fn iter(&self) -> impl Iterator<Item = (&u32, &Span)> + '_ {
+        self.0.iter().map(|(k, s)| (k, s))
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 /// Runs by start within one page of main memory, none overlapping, kept by the chunk each
 /// starts in: the same runs, by the same keys, a `BTreeMap` of the page would hold, with the
 /// lookups the image makes of one.
@@ -254,7 +313,7 @@ const CHUNKS: usize = 1 << (PAGE_SHIFT - CHUNK_SHIFT);
 struct Page {
     /// The page's first address.
     base: u32,
-    chunks: [Option<Arc<BTreeMap<u32, Span>>>; CHUNKS],
+    chunks: [Option<Arc<Chunk>>; CHUNKS],
 }
 
 impl PartialEq for Page {
@@ -302,7 +361,7 @@ impl Page {
         first..last + 1
     }
 
-    fn chunk_mut(&mut self, i: usize) -> &mut BTreeMap<u32, Span> {
+    fn chunk_mut(&mut self, i: usize) -> &mut Chunk {
         Arc::make_mut(self.chunks[i].get_or_insert_with(Default::default))
     }
 
@@ -310,7 +369,7 @@ impl Page {
     fn range(&self, lo: u32, hi: u32) -> impl Iterator<Item = (&u32, &Span)> + '_ {
         self.chunks_in(lo, hi)
             .filter_map(move |i| self.chunks[i].as_deref())
-            .flat_map(move |c| c.range(lo..hi))
+            .flat_map(move |c| c.range(lo, hi))
     }
 
     /// The last run starting before `lo`.
@@ -322,18 +381,18 @@ impl Page {
         (0..last)
             .rev()
             .filter_map(|i| self.chunks[i].as_deref())
-            .find_map(|c| c.range(..lo).next_back())
+            .find_map(|c| c.last_before(lo))
     }
 
     fn get(&self, k: u32) -> Option<&Span> {
         // A key at the page's end (a write's end there) is no run of the page.
-        self.chunks.get(self.chunk_of(k))?.as_deref()?.get(&k)
+        self.chunks.get(self.chunk_of(k))?.as_deref()?.get(k)
     }
 
     fn get_mut(&mut self, k: u32) -> Option<&mut Span> {
         let i = self.chunk_of(k);
         self.chunks.get(i)?.as_ref()?;
-        self.chunk_mut(i).get_mut(&k)
+        self.chunk_mut(i).get_mut(k)
     }
 
     fn insert(&mut self, k: u32, s: Span) {
@@ -344,7 +403,7 @@ impl Page {
     fn remove(&mut self, k: u32) -> Option<Span> {
         let i = self.chunk_of(k);
         self.chunks[i].as_ref()?;
-        self.chunk_mut(i).remove(&k)
+        self.chunk_mut(i).remove(k)
     }
 
     fn iter(&self) -> impl Iterator<Item = (&u32, &Span)> + '_ {
