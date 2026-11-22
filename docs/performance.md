@@ -487,6 +487,67 @@ Sarah's answer to the trial (2026-11-21): "i want our releases to be as performa
 
 **Vanilla's console is slow.** The training's Vanilla run (menus and a match from power-on, Extrapolate) ran its simulation at 11.3 to 11.6 ms a tick and its prediction at 12.6 to 13.3 more on this PC, against the Slippi ruleset's 2.3 and 2.2 for the same script: worth a look by the speed tasks, as Vanilla is still the player's default ruleset.
 
+## The joints' matrices (2026-11-21, the worker)
+
+[The refactor's](refactor.md#proposed-tasks) task 19, from `b32a5ae3`. The second survey found the joints' matrices (`HSD_JObjSetupMatrixSub`) and the fighters' swing chains (`swing_chains`) about a fifth of a tick each; the rule is the exactness bar's: less of the original's math, never different math.
+
+**What repeats.** A scratch count (not committed) of every matrix `HSD_JObjMakeMatrix` made in four whole matches, with its inputs (the SRT, the quaternion flag, the parent's scale and matrix, the float mode) compared with the last ones that joint's matrix was made from, and of every chain `lb_8001044C` swung, with all its inputs (the parent's matrix, each link's joint and state, the colliders, the wind, the floor's height) compared with that chain's last swing:
+
+| Match | Matrices made a tick | Inputs as the joint's last | of them in the same tick | Chains swung | Inputs as the last swing | Dynamics fix: joints visited a tick, dirty |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 262 | 39.8% | 27.3% | 22,055 | 0 | 136, 89% |
+| `fox-marth-ps` | 243 | 33.3% | 21.3% | 42,082 | 0 | 153, 78% |
+| `ics-peach-ps` | 297 | 29.3% | 19.2% | 100,593 | 0 | 200, 49% |
+| Sarah's 3.19 replay | 221 | 38.9% | 24.8% | 13,653 | 0 | 127, 75% |
+
+The repeats come from the dynamics fix's pass over a model some reader (a joint's world position for the ECB or a hitbox) already set up that tick, from a chain's parent made anew (each of Fox's tail swings: 100%), and from the display pass over joints that didn't move since the last frame. No chain ever swung with the inputs of its last swing, so skipping a chain's work is out: a chain's own physics is the original's work each frame.
+
+**The memo.** `hsd::jobj::made_matrix` keeps each joint's last made matrix by its slot (`memo`, as `HSD_MtxSRT`'s is kept): the key is every input, so a hit gives the bits the concatenation would. The scale block's allocation and a bound path joint's translation still run every time. `made_matrix_matches_uncached` and `made_matrix_keys_every_input` compare it with the uncached routine; dropping any key word (the mode, the quaternion flag, either presence bit, the w, a parent matrix word, a scale or parent scale word) fails the second. A swing chain also takes its stiffness angle and floor angle once (the original's `fabsf` macro takes each again) and reuses the parent-and-translation product it made for the link, all pure functions of the same inputs.
+
+**Results.** `release` (Sarah's design call 10: the deciding build), with line tables, on the worker in exclusive reservations, base and branch alternating, three rounds of `melee-bench native --runs 5`; median frames per second of the 15 runs (range):
+
+| Match | Base `b32a5ae3` | Branch | Gain | Second job: base / branch |
+| --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 2,574 (2,511 to 2,645) | 2,745 (2,705 to 2,767) | 6.6% | 2,606 / 2,755 (5.7%) |
+| `fox-marth-bf` | 2,534 (2,466 to 2,553) | 2,653 (2,620 to 2,682) | 4.7% | 2,541 / 2,669 (5.0%) |
+| `fox-marth-fd` | 2,404 (2,375 to 2,423) | 2,509 (2,476 to 2,539) | 4.4% | 2,401 / 2,525 (5.2%) |
+| `fox-marth-ps` | 2,151 (2,094 to 2,186) | 2,262 (2,227 to 2,287) | 5.2% | 2,162 / 2,273 (5.1%) |
+| `ganon-captain-fd` | 2,407 (2,382 to 2,423) | 2,535 (2,508 to 2,563) | 5.3% | 2,428 / 2,558 (5.4%) |
+| `ics-peach-ps` | 1,668 (1,661 to 1,689) | 1,754 (1,731 to 1,768) | 5.2% | 1,686 / 1,767 (4.8%) |
+| Sarah's 3.19 replay | 2,736 (2,698 to 2,771) | 2,913 (2,874 to 2,950) | 6.5% | 2,817 / 2,918 (3.6%) |
+
+The chain's three dedupes alone (a third job, the base with only them): 0.0 to 0.6% on every match, within the noise. A memo of `lbVector_CreateEulerMatrix` (a chain's rest pose and its joint's last rotation come again each frame) was tried and left out: 1.9 to 2.5% slower than the branch without it, in the second job, its lookups costing more than the polynomial.
+
+**Rollback.** `rollback-split --every 2500` (100 runs a state, 200 for `ics-peach-ps`), restore and 8 ticks by state, two rounds each, base / branch:
+
+| Match | 2,500 | 5,000 | 7,500 | 10,000 | 12,500 | 15,000 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 3.02 / 2.78 ms | 3.91 / 3.63 | 3.01 / 2.78 | 2.98 / 2.78 | 2.88 / 2.66 | 3.04 / 2.80 |
+| `fox-marth-ps` | 3.66 to 3.75 / 3.51 to 3.53 | 3.87 to 3.96 / 3.64 to 3.65 | 3.73 to 3.81 / 3.51 to 3.52 | 3.28 to 3.36 / 3.16 to 3.17 | 4.04 to 4.12 / 3.88 to 3.89 | |
+| `ganon-captain-fd` | 3.21 to 3.27 / 3.05 | 3.09 to 3.14 / 2.91 to 2.92 | 3.32 to 3.38 / 3.16 | 3.14 to 3.43 / 2.93 | | |
+| `ics-peach-ps` | 4.26 to 4.28 / 4.14 to 4.15 | 5.01 / 4.90 | 4.13 to 4.15 / 4.06 to 4.07 | 3.82 / 3.75 | 5.77 to 5.82 / 5.66 to 5.67 | |
+| Sarah's 3.19 replay | 2.48 to 2.54 / 2.43 to 2.44 | 2.93 to 3.00 / 2.81 to 2.82 | 3.80 to 3.89 / 3.71 to 3.72 | 3.31 to 3.39 / 3.21 to 3.22 | 2.75 to 2.82 / 2.72 to 2.73 | |
+
+`fox-marth-ps` at 12,500, the one bench state over 4 ms but Ice Climbers', is now under it. `ics-peach-ps` gains only 2 to 3%: its worst windows are Peach's dress chains, whose own physics and floor probes (`check_floor` through `mp`'s search) the memo doesn't touch.
+
+**Where the time went** (call-graph profiles at 2 kHz, frame pointers, the timed loops only; inclusive shares of the simulation thread, base → branch):
+
+| Inclusive share | Vanilla `fox-fox-fd` | `fox-marth-ps` | `ics-peach-ps` | Slippi `fox-fox-fd` | `fox-marth-ps` | `ics-peach-ps` | Sarah's replay |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `setup_matrix_sub` | 23.4 → 19.7% | 20.2 → 17.6% | 19.8 → 17.8% | 22.6 → 20.4% | 21.0 → 17.2% | 21.1 → 18.2% | 20.1 → 17.2% |
+| of which `world_position` | 9.6 → 7.5% | 7.9 → 6.4% | 9.6 → 7.7% | 8.8 → 7.9% | 8.3 → 6.3% | 9.4 → 7.9% | 9.2 → 7.4% |
+| `swing_chains` | 19.9 → 19.2% | 26.9 → 26.4% | 28.8 → 29.1% | 20.1 → 18.6% | 25.6 → 25.3% | 28.0 → 27.3% | 15.8 → 15.2% |
+| of which `lb_8001044C` | 8.7 → 8.9% | 15.7 → 15.6% | 21.2 → 21.1% | 8.4 → 8.2% | 13.8 → 14.7% | 20.0 → 19.2% | 6.1 → 5.9% |
+| of which the dynamics fix | 11.0 → 10.1% | 11.0 → 10.5% | 7.4 → 7.8% | 11.5 → 10.2% | 11.7 → 10.5% | 7.9 → 7.9% | 9.7 → 9.1% |
+
+So the target (both shares down by a third) isn't met. What's left in the matrices is first makes: 14 to 16% of the thread in `made_matrix`, nearly all of it `HSD_MtxSRT` on new angles (about 6%) and the concatenation, each the original's math on inputs that changed. In the chains it is the links' own physics, which never repeats, and the floor probes through `mp`'s search (task 21's and `perf/stadium-allocs`' ground). The dynamics fix's pass is mostly first makes too: 49 to 89% of the joints it visits are dirty, and most of those have new inputs.
+
+```sh
+melee-bench native --runs 5 fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ganon-captain-fd ics-peach-ps
+MELEE_BENCH_FP=slippi melee-bench native --runs 5 --dir "$SLIPPI_REPLAYS/2026-01" Game_20260129T130802
+melee-bench rollback-split --every 2500 --runs 100 MATCH   # perf/stadium-allocs' tool; 200 runs for ics-peach-ps
+```
+
 ## Benchmark matches
 
 | Match | Stage | Fighters (costume) | Seed | Frames | Length | Ends |

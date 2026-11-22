@@ -249,12 +249,10 @@ impl Game {
             // Stiffness: toward where the animation points it.
             let stiff = fp::fmuls(reg(l.unk_4C), reg(desc.pos.x));
             if !(stiff >= 1.0) {
+                // The original's `fabsf` macro takes the angle up to three times; it's a pure
+                // function of the same two vectors, so once gives the same bits.
                 let a = reg(dir.angle(current));
-                let a = if !(a >= 0.0) {
-                    fp::fneg(reg(dir.angle(current)))
-                } else {
-                    reg(dir.angle(current))
-                };
+                let a = if !(a >= 0.0) { fp::fneg(a) } else { a };
                 if 0.0 != a {
                     let mut axis = dir.sdk_cross(current);
                     axis.normalize();
@@ -375,10 +373,8 @@ impl Game {
             }
             let o = &self.objs.jobjs[j];
             let euler = Vec3::new(o.rotate.x, o.rotate.y, o.rotate.z);
-            parent_mtx = parent_mtx
-                .concat(&trans)
-                .concat(&Mtx34::from_euler_approx(euler))
-                .concat(&scale);
+            // `parent_mtx · trans` is `base`, made above from the same two matrices.
+            parent_mtx = base.concat(&Mtx34::from_euler_approx(euler)).concat(&scale);
             j = child;
             index += 1;
             cur = next;
@@ -493,12 +489,9 @@ impl Game {
         let h = abs(fp::fsubs(reg(y), reg(at.y)));
         let len = reg(l.unk_48);
         let w = sqrt_inline(fp::fnmsubs(h, h, fp::fmuls(len, len)));
+        // `fabsf` of the angle, which the original computes again in the branch taken.
         let a = reg(math::atan2(mem(w), mem(h)));
-        let a = if !(a >= 0.0) {
-            fp::fneg(reg(math::atan2(mem(w), mem(h))))
-        } else {
-            reg(math::atan2(mem(w), mem(h)))
-        };
+        let a = if !(a >= 0.0) { fp::fneg(a) } else { a };
         lie(dir, mem(a));
         true
     }
