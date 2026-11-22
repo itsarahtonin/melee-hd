@@ -406,6 +406,12 @@ TRACKED = {r for r in ROOTS if r.endswith("_ItemVars")}
 DEFAULT_POINTER = "RawPtr"
 
 RENAME_TYPES = {"controller_map": "ControllerMap", "gm_controller_map": "GmControllerMap"}
+# Step 3's type names (`names_step3.TYPE_NAMES`): the address-named structs of the save, the
+# modes and the HUD. A renamed type keeps its C name as an alias, and `rename_readers.py`
+# renames its uses as it does a field's.
+from names_step3 import TYPE_NAMES  # noqa: E402
+
+RENAME_TYPES.update(TYPE_NAMES)
 RENAME_FIELDS = {}
 
 # The port's names for the fields the decomp names by offset, by struct (C name to Rust name):

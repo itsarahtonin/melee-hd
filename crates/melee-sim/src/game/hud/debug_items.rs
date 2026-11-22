@@ -463,14 +463,14 @@ impl Running<'_> {
         let chara = usize::from(self.game.hud.debug.word(0x804D_6DC8) as u8);
         match self.game.debug_mode.records_kind {
             2 => {
-                let v = self.game.game_data.thing.save_data.x1F2C[chara]
+                let v = self.game.game_data.thing.save_data.fighters[chara]
                     .records
                     .home_run_distance as u32;
                 let m = crate::fpu::mem(crate::gekko_fp::frsp(f64::from(v / 100)));
                 self.game.hud.debug.set_word(0x804D_6DD0, m.to_bits());
             }
             3 => {
-                let f = &mut self.game.game_data.thing.save_data.x1F2C[chara].records;
+                let f = &mut self.game.game_data.thing.save_data.fighters[chara].records;
                 let r = i32::from(f.target_cleared);
                 f.target_cleared = r & 1 != 0;
                 self.game.hud.debug.set_word(0x804D_6DCC, r as u32);
@@ -502,14 +502,14 @@ impl Running<'_> {
             }
             0x8030_0C80 => {
                 let n = self.game.hud.debug.word(0x804D_6DDC);
-                self.game.game_data.thing.save_data.x1A48 = n.wrapping_mul(10);
+                self.game.game_data.thing.save_data.coins = n.wrapping_mul(10);
                 self.mark_class_two_trophies();
                 GM_MENU
             }
             _ => {
                 let n = self.game.hud.debug.word(0x804D_6DF4);
                 self.sfx_forward();
-                self.game.game_data.thing.save_data.x1A5C = n as i32;
+                self.game.game_data.thing.save_data.total_kos = n as i32;
                 GM_MENU
             }
         };
@@ -547,9 +547,9 @@ impl Running<'_> {
             0x8030_0DE0 => {
                 use crate::gekko_fp as fp;
                 let v = fp::fmuls(100.0, crate::fpu::reg(count));
-                s.x1F2C[chara].records.home_run_distance = crate::ppc::cvt_fp2unsigned(v) as i32;
+                s.fighters[chara].records.home_run_distance = crate::ppc::cvt_fp2unsigned(v) as i32;
             }
-            _ => s.x1F2C[chara].records.target_cleared = clear & 1 != 0,
+            _ => s.fighters[chara].records.target_cleared = clear & 1 != 0,
         }
         self.game.sync_unlocks();
     }

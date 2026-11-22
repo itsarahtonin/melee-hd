@@ -172,7 +172,7 @@ impl Running<'_> {
         let end = self.game.vs_melee.exit.match_end.clone();
         let c = self.game.gm.challenger;
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
         let p = &end.player_standings[0];
         self.results_add_coins(i32::from(p.coins));
         if !canceled(end.outcome) && p.stocks != 0 {

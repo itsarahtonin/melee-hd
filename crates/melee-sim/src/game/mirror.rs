@@ -328,8 +328,8 @@ mod label_tests {
     #[test]
     fn step_3s_renamed_fields_label_gives_the_originals_name() {
         use crate::game::structs::{
-            _StaticPlayer, Camera, Ground, GroundParam, MatchPlayerData, StageInfo, StaleMoveTable,
-            StartMeleeRules,
+            _StaticPlayer, Camera, EventData, GmSaveData, Ground, GroundParam, MatchPlayerData,
+            StageInfo, StaleMoveTable, StartMeleeRules,
         };
         assert_eq!(
             labels_after::<Fighter>("fighter", |fp| {
@@ -422,6 +422,26 @@ mod label_tests {
                 "stale_moves.total_attack_count_struct.walks (x580)",
                 "stale_moves.combos (x5EC).by_attacker (x10)[1].air_hits (x10)",
                 "stale_moves.ledge_catches (xCE8)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<GmSaveData>("save", |s| {
+                s.trophy_records.kos = 1;
+                s.total_kos = 1;
+            }),
+            [
+                "save.trophy_records (unk_30).kos (xC)",
+                "save.total_kos (x1A5C)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<EventData>("event", |e| {
+                e.round = 1;
+                e.target_test.color = 1;
+            }),
+            [
+                "event.round (x20)",
+                "event.target_test (unk_584).color (unk_585)"
             ]
         );
     }

@@ -967,7 +967,7 @@ impl Running<'_> {
         let mode = g.game_mode;
         let stkind = g.vs.start.stkind;
         if mode == super::GM_TARGET_TEST {
-            let ckind = self.game.game_data.vs.unk_530.unk_584.unk_584 as u8;
+            let ckind = self.game.game_data.vs.unk_530.target_test.ckind as u8;
             self.target_test_score(ckind);
         } else if mode == GM_CLASSIC && (0x21..=0x3A).contains(&stkind) {
             let ckind = self.game.one_player.classic.base.player.ckind as u8;

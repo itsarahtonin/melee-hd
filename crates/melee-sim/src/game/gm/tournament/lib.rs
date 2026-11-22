@@ -1423,8 +1423,8 @@ impl Running<'_> {
     pub fn tou_setup_match(&mut self) {
         self.load_announcer();
         let rules = self.game.game_data.x1850.clone();
-        let prefs_freq = self.game.game_data.thing.save_data.x1CB0.item_freq;
-        let prefs_mask = self.game.game_data.thing.save_data.x1CB0.item_mask;
+        let prefs_freq = self.game.game_data.thing.save_data.prefs.item_freq;
+        let prefs_mask = self.game.game_data.thing.save_data.prefs.item_mask;
         let mut d = StartMeleeData {
             rules: super::super::vs_mode::rules_defaults(),
             ..StartMeleeData::default()

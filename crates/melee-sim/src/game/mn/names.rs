@@ -607,7 +607,7 @@ impl Running<'_> {
         adjust(&mut g.vs.unk_522.nametag);
         adjust(&mut g.vs.unk_528.nametag);
         adjust(&mut g.vs.unk_530.nametag);
-        adjust(&mut g.vs.unk_530.unk_584.unk_586);
+        adjust(&mut g.vs.unk_530.target_test.nametag);
         for p in &mut self.game.modes.homerun.start.players {
             adjust(&mut p.nametag);
         }

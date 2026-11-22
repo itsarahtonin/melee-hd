@@ -112,7 +112,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801641E4")]
     pub(crate) fn set_stage_enabled(&mut self, entry: u8, on: bool) {
         let bit = (1i32 << entry) as u32;
-        let p = &mut self.game.game_data.thing.save_data.x1CB0;
+        let p = &mut self.game.game_data.thing.save_data.prefs;
         if on {
             p.stage_mask |= bit;
         } else {
@@ -123,7 +123,7 @@ impl Running<'_> {
     /// `gm_IsStageUnlocked`: whether the preferences' stage mask has an entry in.
     #[doc(alias = "gm_IsStageUnlocked")]
     pub(crate) fn stage_enabled(&self, entry: u8) -> bool {
-        (1i32 << entry) as u32 & self.game.game_data.thing.save_data.x1CB0.stage_mask != 0
+        (1i32 << entry) as u32 & self.game.game_data.thing.save_data.prefs.stage_mask != 0
     }
 
     /// `mnStageSw_8023593C`: every unlocked place's switch into the stage mask.

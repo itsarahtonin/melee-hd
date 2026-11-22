@@ -404,7 +404,7 @@ impl Running<'_> {
     pub fn stage_unlocked_inline(&self, stkind: u16) -> bool {
         match stage_unlock(stkind) {
             None => true,
-            Some(u) => self.game.game_data.thing.save_data.x186A & (1 << u[0]) != 0,
+            Some(u) => self.game.game_data.thing.save_data.unlocked_stages & (1 << u[0]) != 0,
         }
     }
 
@@ -414,7 +414,7 @@ impl Running<'_> {
     pub fn unlock_stage(&mut self, stkind: u16) {
         if let Some(u) = stage_unlock(stkind) {
             self.note_special_message(u32::from(u[2]));
-            self.game.game_data.thing.save_data.x186A |= 1 << u[0];
+            self.game.game_data.thing.save_data.unlocked_stages |= 1 << u[0];
             // The matches' view of the save follows it (All-Star's clear unlocks Battlefield
             // with no later sync in its tick).
             self.game.sync_unlocks();
@@ -438,9 +438,9 @@ impl Running<'_> {
             .clock_read(self.data, crate::game::session::TB_READ);
         let now = self.session_seconds();
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1B80[msg as usize] = now;
-        s.x1B40[word] |= bit;
-        s.x1B4C[word] |= bit;
+        s.message_times[msg as usize] = now;
+        s.messages_pending[word] |= bit;
+        s.messages_noted[word] |= bit;
     }
 }
 

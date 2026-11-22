@@ -275,25 +275,25 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015CCFC")]
     pub(crate) fn results_add_coins(&mut self, n: i32) -> i32 {
         let s = &mut self.game.game_data.thing.save_data;
-        let current = s.x1A48 as i32;
+        let current = s.coins as i32;
         // The original's test (`total > (u32)-1`) can never hold: the sums wrap.
-        s.x1A4C = (s.x1A4C as u32).wrapping_add(n as u32) as i32;
-        s.unk_30.x14 = s.unk_30.x14.wrapping_add(n as u32);
+        s.most_coins = (s.most_coins as u32).wrapping_add(n as u32) as i32;
+        s.trophy_records.most_coins = s.trophy_records.most_coins.wrapping_add(n as u32);
         let mut v = current.wrapping_add(n);
         if v as u32 > 0x270F {
             v = 0x270F;
         }
         let mut capped = v as u32;
-        if v as u32 > s.x1A4C as u32 {
-            s.x1A4C = v;
+        if v as u32 > s.most_coins as u32 {
+            s.most_coins = v;
         }
-        if v as u32 > s.unk_30.x14 {
-            s.unk_30.x14 = v as u32;
+        if v as u32 > s.trophy_records.most_coins {
+            s.trophy_records.most_coins = v as u32;
         }
         if v as u32 > 0x270F {
             capped = 0x270F;
         }
-        s.x1A48 = capped;
+        s.coins = capped;
         v
     }
 
@@ -321,7 +321,13 @@ impl Running<'_> {
     #[doc(alias = "gm_80172D78")]
     #[doc(alias = "gmMainLib_8015ED98")]
     fn challenger_by_time(&self) -> u8 {
-        let t = self.game.game_data.thing.save_data.unk_8.x4;
+        let t = self
+            .game
+            .game_data
+            .thing
+            .save_data
+            .challenger_records
+            .combined_vs_play_time;
         if !self
             .game
             .gm
@@ -339,7 +345,13 @@ impl Running<'_> {
     #[doc(alias = "gm_80172E74")]
     #[doc(alias = "gmMainLib_8015CFCC")]
     pub(super) fn challenger_by_characters(&self) -> u8 {
-        let mask = self.game.game_data.thing.save_data.unk_8.xC as u32;
+        let mask = self
+            .game
+            .game_data
+            .thing
+            .save_data
+            .challenger_records
+            .played as u32;
         let count = (0..25u8)
             .filter(|&i| {
                 super::super::gm::unlock_index(super::unlocks::selkind_to_ckind(i)).is_none()
@@ -397,16 +409,16 @@ impl Running<'_> {
     /// (`x10`, a million).
     #[doc(alias = "gm_80173DE4")]
     fn results_record_trophies(&mut self, end: &MatchEnd) {
-        let r = self.game.game_data.thing.save_data.unk_30.clone();
+        let r = self.game.game_data.thing.save_data.trophy_records.clone();
         for &(n, t) in &KO_TROPHIES {
-            if r.x0 as u32 >= n {
+            if r.vs_matches as u32 >= n {
                 self.give_record_trophy(t);
             }
         }
-        if r.x4 >= 100 {
+        if r.coin_matches >= 100 {
             self.give_record_trophy(0x76);
         }
-        if r.xC >= 1000 {
+        if r.kos >= 1000 {
             self.give_record_trophy(0xE2);
         }
         let mut sum = 0u32;
@@ -415,7 +427,7 @@ impl Running<'_> {
                 sum = add_u32_saturating(sum, p.walk_distance);
             }
         }
-        if add_u32_saturating(sum, r.x10 as u32) >= 0xF_4240 {
+        if add_u32_saturating(sum, r.walk_distance as u32) >= 0xF_4240 {
             self.give_record_trophy(0xB0);
         }
     }
@@ -461,7 +473,13 @@ impl Running<'_> {
                 let idx = smallest_loser(&me);
                 let p = &me.player_standings[idx];
                 let (ck, color, tag) = (p.ckind as u8, p.flags[0] >> 2, p.nametag);
-                let played = self.game.game_data.thing.save_data.unk_8.x0;
+                let played = self
+                    .game
+                    .game_data
+                    .thing
+                    .save_data
+                    .challenger_records
+                    .vs_matches;
                 let mut cpu = self.challenger_by_matches(played);
                 if cpu == CharacterKind::NONE {
                     cpu = self.challenger_by_time();
@@ -474,7 +492,13 @@ impl Running<'_> {
                     self.set_next_game_mode_state_id(VS_STATE_APPROACH);
                     challenger = true;
                 }
-                let one_p = self.game.game_data.thing.save_data.unk_28.x0 as u32;
+                let one_p = self
+                    .game
+                    .game_data
+                    .thing
+                    .save_data
+                    .stage_unlock_records
+                    .vs_matches as u32;
                 let st = self.stage_by_matches(one_p);
                 if st != 0x148 {
                     self.unlock_stage(st);

@@ -260,7 +260,7 @@ impl MultiMan {
 /// A won 15-Minute Melee's mark in the character's record, `gmMainLib_8015D780` (its selkind's:
 /// Master Hand's, by the character select's name entry, is Mario's, docs/melee-bugs.md).
 #[doc(alias = "gmMainLib_8015D780")]
-fn set_15min_cleared(rec: &mut crate::game::structs::FighterData_x7C) {
+fn set_15min_cleared(rec: &mut crate::game::structs::FighterRecords) {
     rec.fifteen_min_cleared = true;
 }
 
@@ -269,9 +269,9 @@ impl Running<'_> {
         &self.game.game_data.modes.table[VS_MODE]
     }
 
-    fn mm_record_1p(&mut self, ckind: i8) -> &mut crate::game::structs::FighterData_x7C {
+    fn mm_record_1p(&mut self, ckind: i8) -> &mut crate::game::structs::FighterRecords {
         let sel = selkind(ckind as u8);
-        &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records
+        &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records
     }
 
     /// `gm_Mode_10ManVs_OnLoad`, the six modes' load: the confirming port, the count, and
@@ -533,7 +533,7 @@ impl Running<'_> {
             return;
         }
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
         self.results_add_coins(i32::from(end.player_standings[0].coins));
         self.multi_man_store_result();
         let own = self.multi_man_data().start.players[0].ckind;
@@ -679,7 +679,7 @@ impl Running<'_> {
         let mm_mode = mode as u8;
         if mm_mode == GM_10MAN || mm_mode == GM_100MAN {
             let sel = usize::from(selkind(idx as u8));
-            let x7c = &self.game.game_data.thing.save_data.x1F2C[sel].records;
+            let x7c = &self.game.game_data.thing.save_data.fighters[sel].records;
             let cleared = if mm_mode == GM_10MAN {
                 x7c.ten_man_cleared
             } else {

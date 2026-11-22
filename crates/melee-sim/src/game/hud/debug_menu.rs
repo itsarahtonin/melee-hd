@@ -1211,14 +1211,14 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015FB68")]
     pub fn debug_relock_all(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;
-        s.x186C = 0;
+        s.unlocked_features = 0;
         s.unlocked_characters = 0;
-        s.x186A = 0;
+        s.unlocked_stages = 0;
         self.game.sync_unlocks();
         self.relock_messages();
         let s = &mut self.game.game_data.thing.save_data;
         for i in 0..300 {
-            s.x1B58[i / 32] &= !(1 << (i % 32));
+            s.trophies[i / 32] &= !(1 << (i % 32));
         }
         s.trophy_flags = [0; 293];
         s.trophy_category_flags = 0;

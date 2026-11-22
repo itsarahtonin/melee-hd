@@ -6959,6 +6959,7 @@ impl Default for _StaticPlayer {
 }
 
 /// `gm_controller_map`, 0x30 bytes.
+#[doc(alias("gm_controller_map"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct GmControllerMap {
     /// +0x0
@@ -6992,6 +6993,7 @@ impl Default for GmControllerMap {
 }
 
 /// `controller_map`, 0x100 bytes.
+#[doc(alias("controller_map"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct ControllerMap {
     /// +0x0
@@ -13405,25 +13407,30 @@ impl Default for gmm_x0_528_t {
 }
 
 /// `gmm_x0_584_t`, 0x4 bytes.
+#[doc(alias("gmm_x0_584_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_x0_584_t {
+pub struct TargetTestChoice {
     /// +0x0
-    pub unk_584: i8,
+    #[doc(alias("unk_584"))]
+    pub ckind: i8,
     /// +0x1
-    pub unk_585: u8,
+    #[doc(alias("unk_585"))]
+    pub color: u8,
     /// +0x2
-    pub unk_586: u8,
+    #[doc(alias("unk_586"))]
+    pub nametag: u8,
     /// +0x3
-    pub unk_587: i8,
+    #[doc(alias("unk_587"))]
+    pub unused_587: i8,
 }
 
-impl Default for gmm_x0_584_t {
+impl Default for TargetTestChoice {
     fn default() -> Self {
-        gmm_x0_584_t {
-            unk_584: 0,
-            unk_585: 0,
-            unk_586: 0,
-            unk_587: 0,
+        TargetTestChoice {
+            ckind: 0,
+            color: 0,
+            nametag: 0,
+            unused_587: 0,
         }
     }
 }
@@ -13432,127 +13439,165 @@ impl Default for gmm_x0_584_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct EventData {
     /// +0x0
-    pub x0: u8,
+    #[doc(alias("x0"))]
+    pub char_kind: u8,
     /// +0x1
-    pub x1: u8,
+    #[doc(alias("x1"))]
+    pub char_color: u8,
     /// +0x2
-    pub x2: i8,
+    #[doc(alias("x2"))]
+    pub chosen_char: i8,
     /// +0x3
-    pub x3: u8,
+    #[doc(alias("x3"))]
+    pub chosen_color: u8,
     /// +0x4
     pub nametag: u8,
     /// +0x5
-    pub unk_535: u8,
+    #[doc(alias("unk_535"))]
+    pub event: u8,
     /// +0x6
-    pub x6: u8,
+    #[doc(alias("x6"))]
+    pub port: u8,
     /// +0x7
-    pub x7: u8,
+    #[doc(alias("x7"))]
+    pub team: u8,
     /// +0x8
-    pub x8: i8,
+    #[doc(alias("x8"))]
+    pub random_char_1: i8,
     /// +0x9
-    pub x9: i8,
+    #[doc(alias("x9"))]
+    pub random_char_2: i8,
     /// +0xa
-    pub xA: i8,
+    #[doc(alias("xA"))]
+    pub random_char_3: i8,
     /// +0xb (bits 0..+1)
-    pub xB_0: bool,
+    #[doc(alias("xB_0"))]
+    pub timer_counts_up: bool,
     /// +0xb (bits 1..+1)
-    pub xB_1: bool,
+    #[doc(alias("xB_1"))]
+    pub cleared: bool,
     /// +0xb (bits 2..+1)
-    pub xB_2: bool,
+    #[doc(alias("xB_2"))]
+    pub round_won: bool,
     /// +0xb (bits 3..+1)
-    pub xB_3: bool,
+    #[doc(alias("xB_3"))]
+    pub crowd: bool,
     /// +0xb (bits 4..+1)
-    pub xB_4: bool,
+    #[doc(alias("xB_4"))]
+    pub series: bool,
     /// +0xb (bits 5..+1)
-    pub xB_5: bool,
+    #[doc(alias("xB_5"))]
+    pub voices_loaded: bool,
     /// +0xb (bits 6..+1)
-    pub xB_6: bool,
+    #[doc(alias("xB_6"))]
+    pub timed: bool,
     /// +0xb (bits 7..+1)
-    pub xB_7: bool,
+    #[doc(alias("xB_7"))]
+    pub unused_b7: bool,
     /// +0xc
-    pub xC: i32,
+    #[doc(alias("xC"))]
+    pub score: i32,
     /// +0x10
-    pub x10: i32,
+    #[doc(alias("x10"))]
+    pub proc_counter: i32,
     /// +0x14
-    pub x14: i32,
+    #[doc(alias("x14"))]
+    pub unread_14: i32,
     /// +0x18
-    pub x18: i32,
+    #[doc(alias("x18"))]
+    pub proc_state: i32,
     /// +0x1c
-    pub x1C: f32,
+    #[doc(alias("x1C"))]
+    pub quake_scale: f32,
     /// +0x20
-    pub x20: i32,
+    #[doc(alias("x20"))]
+    pub round: i32,
     /// +0x24
-    pub x24: i32,
+    #[doc(alias("x24"))]
+    pub round_stocks: i32,
     /// +0x28
-    pub x28: i32,
+    #[doc(alias("x28"))]
+    pub round_damage: i32,
     /// +0x2c
-    pub x2C: i32,
+    #[doc(alias("x2C"))]
+    pub round_seconds: i32,
     /// +0x30
-    pub x30: i32,
+    #[doc(alias("x30"))]
+    pub round_frames: i32,
     /// +0x34
-    pub x34: i32,
+    #[doc(alias("x34"))]
+    pub series_frames: i32,
     /// +0x38
-    pub x38: u8,
+    #[doc(alias("x38"))]
+    pub kept_char: u8,
     /// +0x3c
-    pub x3C: i32,
+    #[doc(alias("x3C"))]
+    pub coins: i32,
     /// +0x40
-    pub x40: i32,
+    #[doc(alias("x40"))]
+    pub play_frames: i32,
     /// +0x44
-    pub x44: i8,
+    #[doc(alias("x44"))]
+    pub load_kind: i8,
     /// +0x45
-    pub x45: u8,
+    #[doc(alias("x45"))]
+    pub crowd_kirby_copies: u8,
     /// +0x48
-    pub x48: i32,
+    #[doc(alias("x48"))]
+    pub stage: i32,
     /// +0x4c
-    pub x4C: [i8; 4],
+    #[doc(alias("x4C"))]
+    pub chars: [i8; 4],
     /// +0x50
-    pub x50: [u8; 4],
+    #[doc(alias("x50"))]
+    pub colors: [u8; 4],
     /// +0x54
-    pub unk_584: gmm_x0_584_t,
+    #[doc(alias("unk_584"))]
+    pub target_test: TargetTestChoice,
 }
 
 impl Default for EventData {
     fn default() -> Self {
         EventData {
-            x0: 0,
-            x1: 0,
-            x2: 0,
-            x3: 0,
+            char_kind: 0,
+            char_color: 0,
+            chosen_char: 0,
+            chosen_color: 0,
             nametag: 0,
-            unk_535: 0,
-            x6: 0,
-            x7: 0,
-            x8: 0,
-            x9: 0,
-            xA: 0,
-            xB_0: false,
-            xB_1: false,
-            xB_2: false,
-            xB_3: false,
-            xB_4: false,
-            xB_5: false,
-            xB_6: false,
-            xB_7: false,
-            xC: 0,
-            x10: 0,
-            x14: 0,
-            x18: 0,
-            x1C: 0.0,
-            x20: 0,
-            x24: 0,
-            x28: 0,
-            x2C: 0,
-            x30: 0,
-            x34: 0,
-            x38: 0,
-            x3C: 0,
-            x40: 0,
-            x44: 0,
-            x45: 0,
-            x48: 0,
-            x4C: [0; 4],
-            x50: [0; 4],
-            unk_584: Default::default(),
+            event: 0,
+            port: 0,
+            team: 0,
+            random_char_1: 0,
+            random_char_2: 0,
+            random_char_3: 0,
+            timer_counts_up: false,
+            cleared: false,
+            round_won: false,
+            crowd: false,
+            series: false,
+            voices_loaded: false,
+            timed: false,
+            unused_b7: false,
+            score: 0,
+            proc_counter: 0,
+            unread_14: 0,
+            proc_state: 0,
+            quake_scale: 0.0,
+            round: 0,
+            round_stocks: 0,
+            round_damage: 0,
+            round_seconds: 0,
+            round_frames: 0,
+            series_frames: 0,
+            kept_char: 0,
+            coins: 0,
+            play_frames: 0,
+            load_kind: 0,
+            crowd_kirby_copies: 0,
+            stage: 0,
+            chars: [0; 4],
+            colors: [0; 4],
+            target_test: Default::default(),
         }
     }
 }
@@ -13714,121 +13759,152 @@ impl Default for GameRules {
 }
 
 /// `gmm_retval_ED98`, 0x20 bytes.
+#[doc(alias("gmm_retval_ED98"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_retval_ED98 {
+pub struct ChallengerRecords {
     /// +0x0
-    pub x0: u32,
+    #[doc(alias("x0"))]
+    pub vs_matches: u32,
     /// +0x4
-    pub x4: u32,
+    #[doc(alias("x4"))]
+    pub combined_vs_play_time: u32,
     /// +0x8
     pub padding: [u8; 4],
     /// +0xc
-    pub xC: i32,
+    #[doc(alias("xC"))]
+    pub played: i32,
     /// +0x10
-    pub x10: i32,
+    #[doc(alias("x10"))]
+    pub classic_cleared: i32,
     /// +0x14
-    pub x14: i32,
+    #[doc(alias("x14"))]
+    pub adventure_cleared: i32,
     /// +0x18
-    pub x18: i32,
+    #[doc(alias("x18"))]
+    pub all_star_cleared: i32,
     /// +0x1c
-    pub x1C: i32,
+    #[doc(alias("x1C"))]
+    pub target_cleared: i32,
 }
 
-impl Default for gmm_retval_ED98 {
+impl Default for ChallengerRecords {
     fn default() -> Self {
-        gmm_retval_ED98 {
-            x0: 0,
-            x4: 0,
+        ChallengerRecords {
+            vs_matches: 0,
+            combined_vs_play_time: 0,
             padding: [0; 4],
-            xC: 0,
-            x10: 0,
-            x14: 0,
-            x18: 0,
-            x1C: 0,
+            played: 0,
+            classic_cleared: 0,
+            adventure_cleared: 0,
+            all_star_cleared: 0,
+            target_cleared: 0,
         }
     }
 }
 
 /// `gmm_retval_EDB0`, 0x8 bytes.
+#[doc(alias("gmm_retval_EDB0"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_retval_EDB0 {
+pub struct StageUnlockRecords {
     /// +0x0
-    pub x0: i32,
+    #[doc(alias("x0"))]
+    pub vs_matches: i32,
     /// +0x4
-    pub x4: i32,
+    #[doc(alias("x4"))]
+    pub target_cleared: i32,
 }
 
-impl Default for gmm_retval_EDB0 {
+impl Default for StageUnlockRecords {
     fn default() -> Self {
-        gmm_retval_EDB0 { x0: 0, x4: 0 }
+        StageUnlockRecords {
+            vs_matches: 0,
+            target_cleared: 0,
+        }
     }
 }
 
 /// `gmm_retval_EDBC`, 0x178 bytes.
+#[doc(alias("gmm_retval_EDBC"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_retval_EDBC {
+pub struct TrophyRecords {
     /// +0x0
-    pub x0: i32,
+    #[doc(alias("x0"))]
+    pub vs_matches: i32,
     /// +0x4
-    pub x4: u32,
+    #[doc(alias("x4"))]
+    pub coin_matches: u32,
     /// +0x8
-    pub x8: i32,
+    #[doc(alias("x8"))]
+    pub target_cleared: i32,
     /// +0xc
-    pub xC: u32,
+    #[doc(alias("xC"))]
+    pub kos: u32,
     /// +0x10
-    pub x10: i32,
+    #[doc(alias("x10"))]
+    pub walk_distance: i32,
     /// +0x14
-    pub x14: u32,
+    #[doc(alias("x14"))]
+    pub most_coins: u32,
     /// +0x18
-    pub x18: [u16; 25],
+    #[doc(alias("x18"))]
+    pub plays: [u16; 25],
     /// +0x4c
-    pub x4C: [i32; 4],
+    #[doc(alias("x4C"))]
+    pub target_best: [i32; 4],
     /// +0x5c
-    pub padding_x4C: [u8; 84],
+    #[doc(alias("padding_x4C"))]
+    pub target_best_rest: [u8; 84],
     /// +0xb0
-    pub xB0: [i32; 25],
+    #[doc(alias("xB0"))]
+    pub home_run_best: [i32; 25],
     /// +0x114
-    pub x114: [i32; 25],
+    #[doc(alias("x114"))]
+    pub training_combo_best: [i32; 25],
 }
 
-impl Default for gmm_retval_EDBC {
+impl Default for TrophyRecords {
     fn default() -> Self {
-        gmm_retval_EDBC {
-            x0: 0,
-            x4: 0,
-            x8: 0,
-            xC: 0,
-            x10: 0,
-            x14: 0,
-            x18: [0; 25],
-            x4C: [0; 4],
-            padding_x4C: [0; 84],
-            xB0: [0; 25],
-            x114: [0; 25],
+        TrophyRecords {
+            vs_matches: 0,
+            coin_matches: 0,
+            target_cleared: 0,
+            kos: 0,
+            walk_distance: 0,
+            most_coins: 0,
+            plays: [0; 25],
+            target_best: [0; 4],
+            target_best_rest: [0; 84],
+            home_run_best: [0; 25],
+            training_combo_best: [0; 25],
         }
     }
 }
 
 /// `gmm_x1868_1A8_t`, 0x8 bytes.
+#[doc(alias("gmm_x1868_1A8_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_x1868_1A8_t {
+pub struct MessageRecords {
     /// +0x0
-    pub x0: u32,
+    #[doc(alias("x0"))]
+    pub kos: u32,
     /// +0x4
-    pub x4: u8,
+    #[doc(alias("x4"))]
+    pub all_characters_shown: u8,
     /// +0x5
-    pub x5: u8,
+    #[doc(alias("x5"))]
+    pub stages_shown: u8,
     /// +0x6
-    pub x6: u8,
+    #[doc(alias("x6"))]
+    pub everything_shown: u8,
 }
 
-impl Default for gmm_x1868_1A8_t {
+impl Default for MessageRecords {
     fn default() -> Self {
-        gmm_x1868_1A8_t {
-            x0: 0,
-            x4: 0,
-            x5: 0,
-            x6: 0,
+        MessageRecords {
+            kos: 0,
+            all_characters_shown: 0,
+            stages_shown: 0,
+            everything_shown: 0,
         }
     }
 }
@@ -13939,8 +14015,9 @@ impl Default for GmStats {
 }
 
 /// `FighterData_x7C`, 0x30 bytes.
+#[doc(alias("FighterData_x7C"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct FighterData_x7C {
+pub struct FighterRecords {
     /// +0x0 (bits 0..+1)
     #[doc(alias("b0"))]
     pub target_cleared: bool,
@@ -14018,9 +14095,9 @@ pub struct FighterData_x7C {
     pub cruel_kos: i32,
 }
 
-impl Default for FighterData_x7C {
+impl Default for FighterRecords {
     fn default() -> Self {
-        FighterData_x7C {
+        FighterRecords {
             target_cleared: false,
             ten_man_cleared: false,
             hundred_man_cleared: false,
@@ -14074,7 +14151,7 @@ pub struct FighterData {
     pub unused_7b: i8,
     /// +0x7c
     #[doc(alias("x7C"))]
-    pub records: FighterData_x7C,
+    pub records: FighterRecords,
 }
 
 impl Default for FighterData {
@@ -14098,19 +14175,25 @@ pub struct GmSaveData {
     /// +0x0
     pub unlocked_characters: u16,
     /// +0x2
-    pub x186A: u16,
+    #[doc(alias("x186A"))]
+    pub unlocked_stages: u16,
     /// +0x4
-    pub x186C: u8,
+    #[doc(alias("x186C"))]
+    pub unlocked_features: u8,
     /// +0x5
     pub pad_5: [i8; 3],
     /// +0x8
-    pub unk_8: gmm_retval_ED98,
+    #[doc(alias("unk_8"))]
+    pub challenger_records: ChallengerRecords,
     /// +0x28
-    pub unk_28: gmm_retval_EDB0,
+    #[doc(alias("unk_28"))]
+    pub stage_unlock_records: StageUnlockRecords,
     /// +0x30
-    pub unk_30: gmm_retval_EDBC,
+    #[doc(alias("unk_30"))]
+    pub trophy_records: TrophyRecords,
     /// +0x1a8
-    pub unk_1A8: gmm_x1868_1A8_t,
+    #[doc(alias("unk_1A8"))]
+    pub message_records: MessageRecords,
     /// +0x1b0
     pub time_matches: u32,
     /// +0x1b4
@@ -14124,57 +14207,82 @@ pub struct GmSaveData {
     /// +0x1c4
     pub match_resets: u32,
     /// +0x1c8
-    pub x1A30: i32,
+    #[doc(alias("x1A30"))]
+    pub vs_contestants: i32,
     /// +0x1cc
-    pub x1A34: i32,
+    #[doc(alias("x1A34"))]
+    pub vs_play_time: i32,
     /// +0x1d0
-    pub x1A38: i32,
+    #[doc(alias("x1A38"))]
+    pub combined_vs_play_time: i32,
     /// +0x1d4
-    pub x1A3C: i32,
+    #[doc(alias("x1A3C"))]
+    pub one_player_time: i32,
     /// +0x1d8
-    pub x1A40: i32,
+    #[doc(alias("x1A40"))]
+    pub unused_1a40: i32,
     /// +0x1dc
-    pub x1A44: i32,
+    #[doc(alias("x1A44"))]
+    pub tournament_time: i32,
     /// +0x1e0
-    pub x1A48: u32,
+    #[doc(alias("x1A48"))]
+    pub coins: u32,
     /// +0x1e4
-    pub x1A4C: i32,
+    #[doc(alias("x1A4C"))]
+    pub most_coins: i32,
     /// +0x1e8
-    pub x1A50: i32,
+    #[doc(alias("x1A50"))]
+    pub power_count: i32,
     /// +0x1ec
-    pub x1A54: i32,
+    #[doc(alias("x1A54"))]
+    pub power_time: i32,
     /// +0x1f0
-    pub x1A58: i32,
+    #[doc(alias("x1A58"))]
+    pub total_damage: i32,
     /// +0x1f4
-    pub x1A5C: i32,
+    #[doc(alias("x1A5C"))]
+    pub total_kos: i32,
     /// +0x1f8
-    pub x1A60: i32,
+    #[doc(alias("x1A60"))]
+    pub total_self_destructs: i32,
     /// +0x1fc
-    pub x1A64: i32,
+    #[doc(alias("x1A64"))]
+    pub unused_1a64: i32,
     /// +0x200
-    pub x1A68: i64,
+    #[doc(alias("x1A68"))]
+    pub events_cleared: i64,
     /// +0x208
-    pub x1A70: [i32; 4],
+    #[doc(alias("x1A70"))]
+    pub event_scores: [i32; 4],
     /// +0x218
-    pub padding_x1A70: [u8; 188],
+    #[doc(alias("padding_x1A70"))]
+    pub event_scores_rest: [u8; 188],
     /// +0x2d4
-    pub x1B3C: u8,
+    #[doc(alias("x1B3C"))]
+    pub final_event_all_stocks: u8,
     /// +0x2d5
     pub pad_2D5: [i8; 3],
     /// +0x2d8
-    pub x1B40: [u32; 3],
+    #[doc(alias("x1B40"))]
+    pub messages_pending: [u32; 3],
     /// +0x2e4
-    pub x1B4C: [u32; 3],
+    #[doc(alias("x1B4C"))]
+    pub messages_noted: [u32; 3],
     /// +0x2f0
-    pub x1B58: [u32; 10],
+    #[doc(alias("x1B58"))]
+    pub trophies: [u32; 10],
     /// +0x318
-    pub x1B80: [u32; 66],
+    #[doc(alias("x1B80"))]
+    pub message_times: [u32; 66],
     /// +0x420
-    pub x1C88: [u32; 3],
+    #[doc(alias("x1C88"))]
+    pub bonuses_seen: [u32; 3],
     /// +0x42c
-    pub padding_x1C88: [u8; 28],
+    #[doc(alias("padding_x1C88"))]
+    pub bonuses_seen_rest: [u8; 28],
     /// +0x448
-    pub x1CB0: GamePrefs,
+    #[doc(alias("x1CB0"))]
+    pub prefs: GamePrefs,
     /// +0x468
     pub trophy_count: i16,
     /// +0x46a
@@ -14184,57 +14292,58 @@ pub struct GmSaveData {
     /// +0x6b6
     pub padding_trophy_flags: [u8; 14],
     /// +0x6c4
-    pub x1F2C: [FighterData; 25],
+    #[doc(alias("x1F2C"))]
+    pub fighters: [FighterData; 25],
 }
 
 impl Default for GmSaveData {
     fn default() -> Self {
         GmSaveData {
             unlocked_characters: 0,
-            x186A: 0,
-            x186C: 0,
+            unlocked_stages: 0,
+            unlocked_features: 0,
             pad_5: [0; 3],
-            unk_8: Default::default(),
-            unk_28: Default::default(),
-            unk_30: Default::default(),
-            unk_1A8: Default::default(),
+            challenger_records: Default::default(),
+            stage_unlock_records: Default::default(),
+            trophy_records: Default::default(),
+            message_records: Default::default(),
             time_matches: 0,
             stock_matches: 0,
             coin_matches: 0,
             bonus_matches: 0,
             stamina_matches: 0,
             match_resets: 0,
-            x1A30: 0,
-            x1A34: 0,
-            x1A38: 0,
-            x1A3C: 0,
-            x1A40: 0,
-            x1A44: 0,
-            x1A48: 0,
-            x1A4C: 0,
-            x1A50: 0,
-            x1A54: 0,
-            x1A58: 0,
-            x1A5C: 0,
-            x1A60: 0,
-            x1A64: 0,
-            x1A68: 0,
-            x1A70: [0; 4],
-            padding_x1A70: [0; 188],
-            x1B3C: 0,
+            vs_contestants: 0,
+            vs_play_time: 0,
+            combined_vs_play_time: 0,
+            one_player_time: 0,
+            unused_1a40: 0,
+            tournament_time: 0,
+            coins: 0,
+            most_coins: 0,
+            power_count: 0,
+            power_time: 0,
+            total_damage: 0,
+            total_kos: 0,
+            total_self_destructs: 0,
+            unused_1a64: 0,
+            events_cleared: 0,
+            event_scores: [0; 4],
+            event_scores_rest: [0; 188],
+            final_event_all_stocks: 0,
             pad_2D5: [0; 3],
-            x1B40: [0; 3],
-            x1B4C: [0; 3],
-            x1B58: [0; 10],
-            x1B80: [0; 66],
-            x1C88: [0; 3],
-            padding_x1C88: [0; 28],
-            x1CB0: Default::default(),
+            messages_pending: [0; 3],
+            messages_noted: [0; 3],
+            trophies: [0; 10],
+            message_times: [0; 66],
+            bonuses_seen: [0; 3],
+            bonuses_seen_rest: [0; 28],
+            prefs: Default::default(),
             trophy_count: 0,
             trophy_category_flags: 0,
             trophy_flags: [0; 293],
             padding_trophy_flags: [0; 14],
-            x1F2C: core::array::from_fn(|_| Default::default()),
+            fighters: core::array::from_fn(|_| Default::default()),
         }
     }
 }

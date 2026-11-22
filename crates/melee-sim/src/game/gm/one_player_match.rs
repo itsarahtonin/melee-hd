@@ -624,7 +624,7 @@ impl Running<'_> {
         self.results_add_coins(i32::from(p.coins));
         run.damage_taken = add(run.damage_taken as u32, p.damage_taken) as i32;
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
         if run.stage[0] & 0x80 == 0 {
             run.frames = add(run.frames, end.frame_count);
         }
@@ -645,7 +645,7 @@ impl Running<'_> {
             // the menu.
             let sel = super::match_exit::selkind(run.player.ckind as u8);
             let mode = self.game.game_mode;
-            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
+            let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
             let best = match mode {
                 super::one_player::GM_CLASSIC => Some(&mut rec.classic_score),
                 super::one_player::GM_ADVENTURE => Some(&mut rec.adventure_score),
@@ -872,7 +872,7 @@ impl Running<'_> {
             let challenger = self.challenger_by_characters();
             let p = run.player;
             let sel = super::match_exit::selkind(p.ckind as u8);
-            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
+            let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
             // `fn_80162BFC`, `fn_80162DF8`, `fn_80162FF4`: the mode's high score, a word
             // compared unsigned.
             let best = match self.game.game_mode {
@@ -935,9 +935,9 @@ impl Running<'_> {
             super::endings::GM_ADVENTURE_GOVER => {
                 let s = &mut self.game.game_data.thing.save_data;
                 // `gmMainLib_8015D25C`: cleared, and this run's clear in `x14`'s mask.
-                s.x1F2C[usize::from(sel)].records.adventure_cleared = true;
-                s.unk_8.x14 |= 1 << sel;
-                let rec = &mut s.x1F2C[usize::from(sel)].records;
+                s.fighters[usize::from(sel)].records.adventure_cleared = true;
+                s.challenger_records.adventure_cleared |= 1 << sel;
+                let rec = &mut s.fighters[usize::from(sel)].records;
                 // `fn_80162DF8`: the high score, compared unsigned.
                 if (rec.adventure_score as u32) < run.score as u32 {
                     rec.adventure_score = run.score;
@@ -955,9 +955,9 @@ impl Running<'_> {
             super::endings::GM_CLASSIC_GOVER => {
                 let s = &mut self.game.game_data.thing.save_data;
                 // `gmMainLib_8015D134`: cleared, and this run's clear in `x10`'s mask.
-                s.x1F2C[usize::from(sel)].records.classic_cleared = true;
-                s.unk_8.x10 |= 1 << sel;
-                let rec = &mut s.x1F2C[usize::from(sel)].records;
+                s.fighters[usize::from(sel)].records.classic_cleared = true;
+                s.challenger_records.classic_cleared |= 1 << sel;
+                let rec = &mut s.fighters[usize::from(sel)].records;
                 // `fn_80162BFC`: the high score, compared unsigned.
                 if (rec.classic_score as u32) < run.score as u32 {
                     rec.classic_score = run.score;
@@ -992,16 +992,16 @@ impl Running<'_> {
     fn allstar_clear_records(&mut self, run: &OnePlayerRun, sel: u8, stocks: u8) {
         let p = run.player;
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1F2C[usize::from(sel)].records.all_star_cleared = true;
-        s.unk_8.x18 |= 1 << sel;
-        let rec = &mut s.x1F2C[usize::from(sel)].records;
+        s.fighters[usize::from(sel)].records.all_star_cleared = true;
+        s.challenger_records.all_star_cleared |= 1 << sel;
+        let rec = &mut s.fighters[usize::from(sel)].records;
         if (rec.all_star_score as u32) < run.score as u32 {
             rec.all_star_score = run.score;
         }
         if !self.stage_unlocked(0x1F) {
             self.unlock_stage(0x1F);
         }
-        let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
+        let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
         if rec.all_star_level < p.cpu_level {
             rec.all_star_level = p.cpu_level;
         }
@@ -1032,7 +1032,7 @@ impl Running<'_> {
     fn one_player_enter_game_over(&mut self, run: &OnePlayerRun, kind: u8) {
         const COSTS: [[u16; 5]; 3] = [[1, 2, 3, 5, 10], [1, 2, 3, 5, 10], [10; 5]];
         // `gm_801623D8`: the save's coins.
-        let coins = self.game.game_data.thing.save_data.x1A48 as u16;
+        let coins = self.game.game_data.thing.save_data.coins as u16;
         let d = &mut self.game.one_player.game_over;
         d.score = run.score as u32;
         d.from_mode = u32::from(kind);

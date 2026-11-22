@@ -977,6 +977,134 @@ PL_KO_RING_ENTRY = {"x0": "instance", "x2": "kos", "x3_b0": "self_ko"}
 PL_BOMBHEI_RING = {"x0": "next", "x4": "entries"}
 PL_BOMBHEI_RING_ENTRY = {"x0": "spawn", "x4_b0": "hit", "x4_b1": "used"}
 
+# The save and the event mode (the continuation's fourth group): the save's records
+# (`GmSaveData`), its unlocks' counters (`gmm_retval_ED98`, `EDB0`, `EDBC`, `gmm_x1868_1A8_t`),
+# the event mode's run (`EventData`) and Target Test's choice (`gmm_x0_584_t`). Their
+# address-named types are named too (`config.RENAME_TYPES`).
+GM_SAVE_DATA = {
+    "x186A": "unlocked_stages",
+    "x186C": "unlocked_features",
+    "unk_8": "challenger_records",
+    "unk_28": "stage_unlock_records",
+    "unk_30": "trophy_records",
+    "unk_1A8": "message_records",
+    "x1A30": "vs_contestants",
+    "x1A34": "vs_play_time",
+    "x1A38": "combined_vs_play_time",
+    "x1A3C": "one_player_time",
+    "x1A40": "unused_1a40",
+    # The tournament's sudden deaths' seconds.
+    "x1A44": "tournament_time",
+    "x1A48": "coins",
+    "x1A4C": "most_coins",
+    "x1A50": "power_count",
+    "x1A54": "power_time",
+    "x1A58": "total_damage",
+    "x1A5C": "total_kos",
+    "x1A60": "total_self_destructs",
+    "x1A64": "unused_1a64",
+    # A bit per event cleared, and each event's best (the C splits the array).
+    "x1A68": "events_cleared",
+    "x1A70": "event_scores",
+    "padding_x1A70": "event_scores_rest",
+    # Event 51 ended with all three stocks left.
+    "x1B3C": "final_event_all_stocks",
+    # The messages pending and noted (a bit each), the trophies (a bit each), and each
+    # message's time.
+    "x1B40": "messages_pending",
+    "x1B4C": "messages_noted",
+    "x1B58": "trophies",
+    "x1B80": "message_times",
+    # The bonuses seen (a bit each; the C splits the array).
+    "x1C88": "bonuses_seen",
+    "padding_x1C88": "bonuses_seen_rest",
+    "x1CB0": "prefs",
+    "x1F2C": "fighters",
+}
+# The challengers' conditions.
+CHALLENGER_RECORDS = {
+    "x0": "vs_matches",
+    "x4": "combined_vs_play_time",
+    # Bits by character: played; Classic, Adventure, All-Star and Target Test cleared.
+    "xC": "played",
+    "x10": "classic_cleared",
+    "x14": "adventure_cleared",
+    "x18": "all_star_cleared",
+    "x1C": "target_cleared",
+}
+# The stages' unlock conditions.
+STAGE_UNLOCK_RECORDS = {"x0": "vs_matches", "x4": "target_cleared"}
+# The trophies' unlock conditions.
+TROPHY_RECORDS = {
+    "x0": "vs_matches",
+    "x4": "coin_matches",
+    "x8": "target_cleared",
+    "xC": "kos",
+    # The VS distance walked (`fn_80161C90`).
+    "x10": "walk_distance",
+    "x14": "most_coins",
+    "x18": "plays",
+    # Each character's best Target Test time (the C splits the array).
+    "x4C": "target_best",
+    "padding_x4C": "target_best_rest",
+    "xB0": "home_run_best",
+    "x114": "training_combo_best",
+}
+# The messages' conditions: the KOs, and three messages shown (every character, the first six
+# stages, everything).
+MESSAGE_RECORDS = {"x0": "kos", "x4": "all_characters_shown", "x5": "stages_shown", "x6": "everything_shown"}
+EVENT_DATA = {
+    # The first player's character and costume, as played.
+    "x0": "char_kind",
+    "x1": "char_color",
+    # The select's choice.
+    "x2": "chosen_char",
+    "x3": "chosen_color",
+    "unk_535": "event",
+    "x6": "port",
+    "x7": "team",
+    # The random opponents kept for the event's retries (players 2 to 4).
+    "x8": "random_char_1",
+    "x9": "random_char_2",
+    "xA": "random_char_3",
+    "xB_0": "timer_counts_up",
+    "xB_1": "cleared",
+    "xB_2": "round_won",
+    "xB_3": "crowd",
+    "xB_4": "series",
+    "xB_5": "voices_loaded",
+    "xB_6": "timed",
+    "xB_7": "unused_b7",
+    "xC": "score",
+    # The event's process's counter (the egg dropped, a round's wait, the joiner joined) and
+    # state (the egg broke, Event 36's round).
+    "x10": "proc_counter",
+    "x14": "unread_14",
+    "x18": "proc_state",
+    "x1C": "quake_scale",
+    # A series: the round, the first player's stocks and damage carried over, the time left,
+    # the series' frames, the character kept (Sheik, 0x21 none).
+    "x20": "round",
+    "x24": "round_stocks",
+    "x28": "round_damage",
+    "x2C": "round_seconds",
+    "x30": "round_frames",
+    "x34": "series_frames",
+    "x38": "kept_char",
+    "x3C": "coins",
+    "x40": "play_frames",
+    # How the files load (`gm_801BBB64`: 0 the first player's character set, 1 to choose, 2 to
+    # 4 a series' rounds), whether a Kirby crowd copies, the stage, the players' characters and
+    # costumes.
+    "x44": "load_kind",
+    "x45": "crowd_kirby_copies",
+    "x48": "stage",
+    "x4C": "chars",
+    "x50": "colors",
+    "unk_584": "target_test",
+}
+TARGET_TEST_CHOICE = {"unk_584": "ckind", "unk_585": "color", "unk_586": "nametag", "unk_587": "unused_587"}
+
 # The structs by step 3's commits, in order.
 GROUPS = [
     {"CollData": COLL_DATA, "HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
@@ -1040,7 +1168,27 @@ GROUPS = [
         "pl_x8D8_t": PL_BOMBHEI_RING,
         "pl_x8D8_t_x4": PL_BOMBHEI_RING_ENTRY,
     },
+    {
+        "GmSaveData": GM_SAVE_DATA,
+        "gmm_retval_ED98": CHALLENGER_RECORDS,
+        "gmm_retval_EDB0": STAGE_UNLOCK_RECORDS,
+        "gmm_retval_EDBC": TROPHY_RECORDS,
+        "gmm_x1868_1A8_t": MESSAGE_RECORDS,
+        "EventData": EVENT_DATA,
+        "gmm_x0_584_t": TARGET_TEST_CHOICE,
+    },
 ]
+
+# The port's names for the decomp's address-named structs (C name to Rust name), which
+# `config.RENAME_TYPES` takes.
+TYPE_NAMES = {
+    "FighterData_x7C": "FighterRecords",
+    "gmm_retval_ED98": "ChallengerRecords",
+    "gmm_retval_EDB0": "StageUnlockRecords",
+    "gmm_retval_EDBC": "TrophyRecords",
+    "gmm_x1868_1A8_t": "MessageRecords",
+    "gmm_x0_584_t": "TargetTestChoice",
+}
 
 STEP_3 = {}
 for _group in GROUPS:

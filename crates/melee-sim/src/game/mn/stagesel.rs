@@ -239,7 +239,7 @@ impl Running<'_> {
         if self.game.features() & 2 == 0 {
             return true;
         }
-        let mask = self.game.game_data.thing.save_data.x1CB0.stage_mask;
+        let mask = self.game.game_data.thing.save_data.prefs.stage_mask;
         (1u32 << u32::from(switch)) & mask != 0
     }
 

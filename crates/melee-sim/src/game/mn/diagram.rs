@@ -249,7 +249,7 @@ impl Running<'_> {
     /// `GetPersistentFighterData`: a character's records.
     #[doc(alias = "GetPersistentFighterData")]
     pub(crate) fn fighter_record(&self, selkind: u8) -> &super::super::structs::FighterData {
-        &self.game.game_data.thing.save_data.x1F2C[usize::from(selkind)]
+        &self.game.game_data.thing.save_data.fighters[usize::from(selkind)]
     }
 
     /// Whether name tag `slot` has a name (`GetNameText`'s null test).

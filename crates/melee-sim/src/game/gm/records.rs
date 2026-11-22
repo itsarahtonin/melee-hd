@@ -28,7 +28,7 @@ impl Game {
         }
         let k = usize::from(selkind(ckind));
         let s = &mut self.game_data.thing.save_data;
-        let f = &mut s.x1F2C[k];
+        let f = &mut s.fighters[k];
         let v = bump16(u16::from_be_bytes([
             f.play_count_hi as u8,
             f.play_count_lo as u8,
@@ -36,7 +36,7 @@ impl Game {
         .to_be_bytes();
         f.play_count_hi = v[0] as i8;
         f.play_count_lo = v[1] as i8;
-        s.unk_30.x18[k] = bump16(s.unk_30.x18[k]);
+        s.trophy_records.plays[k] = bump16(s.trophy_records.plays[k]);
     }
 
     /// The match's kind counted in the save, `gm_SetupHumanResultsScreen`: a cancelled
@@ -63,7 +63,7 @@ impl Game {
                 0 => &mut s.time_matches,
                 1 => &mut s.stock_matches,
                 2 => {
-                    s.unk_30.x4 = s.unk_30.x4.wrapping_add(1);
+                    s.trophy_records.coin_matches = s.trophy_records.coin_matches.wrapping_add(1);
                     &mut s.coin_matches
                 }
                 3 => &mut s.bonus_matches,
@@ -73,9 +73,9 @@ impl Game {
             }
         };
         *counter = counter.wrapping_add(1);
-        s.unk_8.x0 = s.unk_8.x0.wrapping_add(1);
-        s.unk_28.x0 = s.unk_28.x0.wrapping_add(1);
-        s.unk_30.x0 = s.unk_30.x0.wrapping_add(1);
+        s.challenger_records.vs_matches = s.challenger_records.vs_matches.wrapping_add(1);
+        s.stage_unlock_records.vs_matches = s.stage_unlock_records.vs_matches.wrapping_add(1);
+        s.trophy_records.vs_matches = s.trophy_records.vs_matches.wrapping_add(1);
     }
 
     /// The match's seconds added to the VS play time, and its seconds times the humans to
@@ -85,10 +85,13 @@ impl Game {
     #[doc(alias = "gmMainLib_GetCombinedVSPlayTime")]
     pub fn add_play_time(&mut self, seconds: u32, humans: u32) {
         let s = &mut self.game_data.thing.save_data;
-        s.x1A34 = (s.x1A34 as u32).wrapping_add(seconds) as i32;
+        s.vs_play_time = (s.vs_play_time as u32).wrapping_add(seconds) as i32;
         let both = seconds.wrapping_mul(humans);
-        s.x1A38 = (s.x1A38 as u32).wrapping_add(both) as i32;
-        s.unk_8.x4 = s.unk_8.x4.wrapping_add(both);
+        s.combined_vs_play_time = (s.combined_vs_play_time as u32).wrapping_add(both) as i32;
+        s.challenger_records.combined_vs_play_time = s
+            .challenger_records
+            .combined_vs_play_time
+            .wrapping_add(both);
     }
 
     /// The match's humans added to the save's contestants, `gm_80162800`: their number.
@@ -101,7 +104,7 @@ impl Game {
             .filter(|p| p.pkind == PKIND_HUMAN)
             .count() as u32;
         let s = &mut self.game_data.thing.save_data;
-        s.x1A30 = (s.x1A30 as u32).wrapping_add(n) as i32;
+        s.vs_contestants = (s.vs_contestants as u32).wrapping_add(n) as i32;
         n
     }
 
@@ -111,9 +114,9 @@ impl Game {
     #[doc(alias = "gmMainLib_8015EDC8")]
     pub fn add_kos(&mut self, n: i32) {
         let s = &mut self.game_data.thing.save_data;
-        s.x1A5C = s.x1A5C.wrapping_add(n);
-        s.unk_30.xC = (n as u32).wrapping_add(s.unk_30.xC);
-        s.unk_1A8.x0 = (n as u32).wrapping_add(s.unk_1A8.x0);
+        s.total_kos = s.total_kos.wrapping_add(n);
+        s.trophy_records.kos = (n as u32).wrapping_add(s.trophy_records.kos);
+        s.message_records.kos = (n as u32).wrapping_add(s.message_records.kos);
     }
 
     /// A player's self-destructs added to the save's total, `gm_RecordSelfDestructs`.
@@ -121,7 +124,7 @@ impl Game {
     #[doc(alias = "gmMainLib_GetSelfDestructTotal")]
     pub fn add_self_destructs(&mut self, n: i32) {
         let s = &mut self.game_data.thing.save_data;
-        s.x1A60 = (s.x1A60 as u32).wrapping_add(n as u32) as i32;
+        s.total_self_destructs = (s.total_self_destructs as u32).wrapping_add(n as u32) as i32;
     }
 
     /// A player's damage added to the save's total, `gm_80162A4C` (its result, a register
@@ -130,7 +133,7 @@ impl Game {
     #[doc(alias = "gmMainLib_GetTotalDamage")]
     pub fn add_damage(&mut self, n: i32) {
         let s = &mut self.game_data.thing.save_data;
-        s.x1A58 = s.x1A58.wrapping_add(n);
+        s.total_damage = s.total_damage.wrapping_add(n);
     }
 
     /// A bonus a human earned noted in the save, `gmMainLib_8015DAB4` (bit `n` of `x1C88`,
@@ -140,11 +143,11 @@ impl Game {
         let s = &mut self.game_data.thing.save_data;
         let w = n / 32;
         let bit = 1u32 << (n % 32);
-        if w < s.x1C88.len() {
-            s.x1C88[w] |= bit;
+        if w < s.bonuses_seen.len() {
+            s.bonuses_seen[w] |= bit;
         } else {
-            let at = (w - s.x1C88.len()) * 4;
-            let b = &mut s.padding_x1C88[at..at + 4];
+            let at = (w - s.bonuses_seen.len()) * 4;
+            let b = &mut s.bonuses_seen_rest[at..at + 4];
             let v = u32::from_be_bytes(b.try_into().unwrap()) | bit;
             b.copy_from_slice(&v.to_be_bytes());
         }
@@ -493,14 +496,14 @@ impl Game {
                     continue;
                 }
                 let sj = usize::from(selkind(ps[j].ckind as u8));
-                let fd = &mut self.game_data.thing.save_data.x1F2C[si];
+                let fd = &mut self.game_data.thing.save_data.fighters[si];
                 let sum = u32::from(ps[i].kills[j]) + u32::from(fd.fighter_kos[sj]);
                 fd.fighter_kos[sj] = sum.min(0xFFFF) as u16;
             }
             let sd = &mut self.game_data.thing.save_data;
-            let mut walk = sd.unk_30.x10;
-            add_stats(end, i, &mut sd.x1F2C[si].stats, &mut walk);
-            sd.unk_30.x10 = walk;
+            let mut walk = sd.trophy_records.walk_distance;
+            add_stats(end, i, &mut sd.fighters[si].stats, &mut walk);
+            sd.trophy_records.walk_distance = walk;
         }
         for i in 0..4 {
             let p = &ps[i];
@@ -517,12 +520,12 @@ impl Game {
                 }
             }
             let s = usize::from(selkind(p.ckind as u8));
-            let mut walk = self.game_data.thing.save_data.unk_30.x10;
+            let mut walk = self.game_data.thing.save_data.trophy_records.walk_distance;
             let nt = self.game_data.name_tag(usize::from(p.nametag));
             nt.play_time_by_fighter[s] =
                 nt.play_time_by_fighter[s].wrapping_add(end.frame_count / 60);
             add_stats(end, i, &mut nt.stats, &mut walk);
-            self.game_data.thing.save_data.unk_30.x10 = walk;
+            self.game_data.thing.save_data.trophy_records.walk_distance = walk;
         }
     }
 }

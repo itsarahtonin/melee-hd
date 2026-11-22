@@ -262,7 +262,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015F500")]
     #[doc(alias = "gmMainLib_8015F4E8")]
     pub fn reset_video_mode(&mut self) {
-        let d = self.game.game_data.thing.save_data.x1CB0.deflicker != 0;
+        let d = self.game.game_data.thing.save_data.prefs.deflicker != 0;
         self.set_video_mode(d);
     }
 }

@@ -2056,7 +2056,7 @@ impl Running<'_> {
     /// `gm_801603B0`: the announcer's and the effects' volumes from the save's sound
     /// balance (`gmMainLib_8015ED74`, `lbAudioAx_80024614`, `lbAudioAx_800245F4`).
     pub(crate) fn menu_sound_balance(&mut self) {
-        let b = self.game.game_data.thing.save_data.x1CB0.sound_balance;
+        let b = self.game.game_data.thing.save_data.prefs.sound_balance;
         self.game.audio.lb_apply_balance(b);
     }
 }

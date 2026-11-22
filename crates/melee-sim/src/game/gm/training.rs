@@ -245,8 +245,8 @@ impl Running<'_> {
     /// single-player time, held at the largest word.
     pub fn add_1p_time(&mut self, seconds: u32) {
         let s = &mut self.game.game_data.thing.save_data;
-        let t = s.x1A3C as u32;
-        s.x1A3C = t.saturating_add(seconds) as i32;
+        let t = s.one_player_time as u32;
+        s.one_player_time = t.saturating_add(seconds) as i32;
     }
 
     /// `gm_80188454`: a character's best combo this visit.
@@ -261,10 +261,10 @@ impl Running<'_> {
     fn training_record_combo(&mut self, ckind: i8, combo: u16) -> bool {
         let i = usize::from(super::match_exit::selkind(ckind as u8));
         let s = &mut self.game.game_data.thing.save_data;
-        if (s.unk_30.x114[i] as u32) < u32::from(combo) {
-            s.unk_30.x114[i] = i32::from(combo);
+        if (s.trophy_records.training_combo_best[i] as u32) < u32::from(combo) {
+            s.trophy_records.training_combo_best[i] = i32::from(combo);
         }
-        let record = &mut s.x1F2C[i].records.training_combo;
+        let record = &mut s.fighters[i].records.training_combo;
         if *record < combo {
             *record = combo;
             return true;
@@ -276,7 +276,13 @@ impl Running<'_> {
     /// every character's summed at 125.
     #[doc(alias = "gm_80173BC4")]
     fn training_combo_trophies(&mut self, ckind: i8) {
-        let x114 = self.game.game_data.thing.save_data.unk_30.x114;
+        let x114 = self
+            .game
+            .game_data
+            .thing
+            .save_data
+            .trophy_records
+            .training_combo_best;
         let mine = x114[usize::from(super::match_exit::selkind(ckind as u8))];
         let sum = x114.iter().fold(0i32, |s, &v| s.wrapping_add(v));
         if mine >= 10 {

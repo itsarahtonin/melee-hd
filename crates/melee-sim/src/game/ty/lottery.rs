@@ -253,7 +253,7 @@ impl Running<'_> {
     /// The coins the lottery counts: a tenth of the save's coin word (`gm_801623D8`).
     #[doc(alias = "gm_801623D8")]
     fn lot_coins(&self) -> u32 {
-        self.game.game_data.thing.save_data.x1A48 / 10
+        self.game.game_data.thing.save_data.coins / 10
     }
 
     /// `_tyFigupon_80314BE4`, the camera's render: the screen erased to dark blue, then its
@@ -711,7 +711,7 @@ impl Running<'_> {
         self.lot_ud(a).frames -= 1;
         if self.lot_ud(a).frames % 2 == 0 {
             self.lot_coin();
-            let coins = self.game.game_data.thing.save_data.x1A48.wrapping_sub(0xA);
+            let coins = self.game.game_data.thing.save_data.coins.wrapping_sub(0xA);
             self.game.game_data.set_score(coins);
             self.lot().bet -= 1;
             let total = self.lot_coins() as i32;

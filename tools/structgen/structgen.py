@@ -204,6 +204,9 @@ class Gen:
         r = self.recs[rid]
         name = rust_type_name(rid)
         out = [f"/// `{rec_name(rid)}`, {r['size']:#x} bytes."]
+        if name != rec_name(rid):
+            # A renamed type keeps its C name as an alias, as a renamed field does.
+            out.append(f'#[doc(alias("{rec_name(rid)}"))]')
         # CloneFrom: a restore copies field by field, reusing the target's storage.
         out.append("#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]")
         out.append(f"pub struct {name} {{")

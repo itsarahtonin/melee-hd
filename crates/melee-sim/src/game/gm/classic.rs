@@ -1027,7 +1027,7 @@ impl Running<'_> {
         if left == 0 {
             super::one_player::record_target_clear(self.game, sel, frames);
         }
-        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].records;
+        let x7c = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
         if !x7c.target_cleared {
             if left == 0 {
                 x7c.target_cleared = true;
