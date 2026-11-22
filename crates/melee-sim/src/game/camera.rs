@@ -28,16 +28,20 @@ use crate::math;
 use crate::mtx::Axis;
 use crate::vec::Vec3;
 
-/// `CameraType`.
-pub const STANDARD: i32 = 0;
-pub const PAUSE: i32 = 1;
-pub const TRAINING_MENU: i32 = 2;
-pub const CLEAR: i32 = 3;
-pub const FIXED: i32 = 4;
-pub const FREE: i32 = 5;
-pub const BOSS_INTRO: i32 = 6;
-pub const DEBUG_FOLLOW: i32 = 7;
-pub const DEBUG_FREE: i32 = 8;
+pub mod types;
+
+pub use types::{CameraMode, QuakeKind};
+
+/// `CameraType`'s values, by the decomp's names ([`CameraMode`]).
+pub const STANDARD: CameraMode = CameraMode::Standard;
+pub const PAUSE: CameraMode = CameraMode::Pause;
+pub const TRAINING_MENU: CameraMode = CameraMode::TrainingMenu;
+pub const CLEAR: CameraMode = CameraMode::Clear;
+pub const FIXED: CameraMode = CameraMode::Fixed;
+pub const FREE: CameraMode = CameraMode::Free;
+pub const BOSS_INTRO: CameraMode = CameraMode::BossIntro;
+pub const DEBUG_FOLLOW: CameraMode = CameraMode::DebugFollow;
+pub const DEBUG_FREE: CameraMode = CameraMode::DebugFree;
 
 /// `CmSubjectState`: always framed, never framed, or framed only inside the stage's camera
 /// bounds.
@@ -51,7 +55,7 @@ pub const OUTSIDE_BOTTOM: u32 = 2;
 pub const OUTSIDE_LEFT: u32 = 4;
 pub const OUTSIDE_RIGHT: u32 = 8;
 
-/// `CmQuakeKind`.
+/// `CmQuakeKind`'s values a request names by number ([`QuakeKind`]).
 pub const QUAKE_NONE: i32 = 0;
 pub const QUAKE_LOOP: i32 = 1;
 pub const QUAKE_MEDIUM: i32 = 3;
@@ -314,7 +318,7 @@ impl CameraState {
     }
 
     /// The camera's mode (`CameraType`: [`STANDARD`], [`PAUSE`] and the others).
-    pub fn mode(&self) -> i32 {
+    pub fn mode(&self) -> CameraMode {
         self.cam.mode
     }
 
@@ -669,7 +673,7 @@ impl CameraState {
         c.hide_layer_5 = false;
         c.layer = 0;
         c.hold_off_plane = false;
-        self.debug.last_mode = c.mode;
+        self.debug.last_mode = c.mode.raw();
         c.draw_collisions = false;
         c.draw_zones = false;
         c.stage_hidden = false;
@@ -1457,7 +1461,7 @@ pub fn update_quakes(r: &mut Running) {
     let c = &mut r.game.camera.cam;
     for i in 0..16 {
         c.quakes[1][i] = c.quakes[0][i].clone();
-        c.quakes[0][i].kind = QUAKE_NONE;
+        c.quakes[0][i].kind = QuakeKind::None;
     }
     if count_quakes_down(&mut c.quake_frames_left)
         && let Some(g) = c.quake_gobj
@@ -1559,8 +1563,8 @@ pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
     );
     c.quake_frames_left[kind as usize] = length;
     for q in &mut c.quakes[0] {
-        if q.kind == QUAKE_NONE {
-            q.kind = kind;
+        if q.kind == QuakeKind::None {
+            q.kind = QuakeKind::from_raw(kind);
             q.epicenter = pos.unwrap_or(Vec3::ZERO);
         }
     }
@@ -1837,7 +1841,7 @@ pub fn update(r: &mut Running) {
         FREE => update_free(r),
         BOSS_INTRO => update_script(r),
         DEBUG_FOLLOW | DEBUG_FREE => {}
-        m => panic!("camera mode {m} reads past the mode table"),
+        m => panic!("camera mode {m:?} reads past the mode table"),
     }
     if follows && r.game.display_phase.shake.is_none() && meets(&r.game.camera) {
         r.game.camera.stop_following();
@@ -1895,7 +1899,7 @@ pub fn with_followed<R>(r: &mut Running, f: impl FnOnce(&mut Running) -> R) -> O
 /// debug cameras', none of which a live match runs) the follower doesn't run: it stops, and
 /// the camera's readers are counted from then on, as playback's camera isn't known
 /// (`live::DisplayPhase::lost`).
-fn follow(r: &mut Running, mode: i32) {
+fn follow(r: &mut Running, mode: CameraMode) {
     match mode {
         STANDARD => {
             with_followed(r, |r| standard(r, false));
@@ -1921,7 +1925,7 @@ fn settle_followed(r: &mut Running) {
     match r.game.camera.cam.mode {
         STANDARD => standard(r, false),
         FIXED => fixed(r, false),
-        m => unreachable!("the follower settles in camera mode {m}, which it doesn't follow"),
+        m => unreachable!("the follower settles in camera mode {m:?}, which it doesn't follow"),
     }
     let c = &mut r.game.camera.cam;
     jump(&mut c.transform, &mut c.transform_copy);
@@ -1960,7 +1964,7 @@ pub fn settle_followed_boxes<const N: usize>(
 }
 
 /// Whether playback's followed camera takes mode `mode`'s update ([`follow`]).
-pub fn follows_mode(mode: i32) -> bool {
+pub fn follows_mode(mode: CameraMode) -> bool {
     matches!(mode, STANDARD | FIXED)
 }
 
@@ -2232,7 +2236,7 @@ impl CameraState {
     /// Back to the mode before the debug cameras, `Camera_800300F0`.
     #[doc(alias = "Camera_800300F0")]
     pub fn leave_debug(&mut self) {
-        self.cam.mode = self.debug.last_mode;
+        self.cam.mode = CameraMode::from_raw(self.debug.last_mode);
     }
 
     /// `Camera_8003010C`.
@@ -2514,8 +2518,8 @@ pub fn debug_follow(game: &mut Game, data: &Archives, slot: i32) {
         return;
     }
     let state = &mut game.camera;
-    if (state.cam.mode as u32) <= PAUSE as u32 {
-        state.debug.last_mode = state.cam.mode;
+    if (state.cam.mode.raw() as u32) <= PAUSE.raw() as u32 {
+        state.debug.last_mode = state.cam.mode.raw();
     }
     state.cam.mode = DEBUG_FOLLOW;
     state.debug.ply_slot = slot;
@@ -2553,8 +2557,8 @@ pub fn debug_free(game: &mut Game, data: &Archives) {
         return;
     }
     let state = &mut game.camera;
-    if (state.cam.mode as u32) <= PAUSE as u32 {
-        state.debug.last_mode = state.cam.mode;
+    if (state.cam.mode.raw() as u32) <= PAUSE.raw() as u32 {
+        state.debug.last_mode = state.cam.mode.raw();
     }
     state.cam.mode = DEBUG_FREE;
     let c = camera_cobj(game);
@@ -4125,7 +4129,7 @@ mod playback_camera_tests {
         let model = g.world.create(3, 18, 1);
         g.camera.cam.quake_gobj = Some(model);
         g.camera.cam.quake_frames_left[QUAKE_LOOP as usize] = 4;
-        let tick = |g: &mut Game, mode: i32, t: u32| {
+        let tick = |g: &mut Game, mode: CameraMode, t: u32| {
             g.camera.cam.mode = mode;
             g.scene.unk_8 = t;
             update_quakes(&mut Running {

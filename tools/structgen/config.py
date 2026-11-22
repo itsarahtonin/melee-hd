@@ -388,6 +388,10 @@ OWNED = {
     "CollData": ("CollData", "crate::mp::coll::CollData"),
     "_ftECB": ("Ecb", "crate::mp::coll::Ecb"),
     "SurfaceData": ("Surface", "crate::mp::coll::Surface"),
+    "Camera": ("Camera", "crate::game::camera::types::Camera"),
+    "CameraTransformState": ("CameraTransformState", "crate::game::camera::types::CameraTransformState"),
+    "CameraQuake": ("CameraQuake", "crate::game::camera::types::CameraQuake"),
+    "Camera_x2D0": ("OrbitLimits", "crate::game::camera::types::OrbitLimits"),
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.

@@ -73,79 +73,6 @@ HIT_VICTIM = {
 
 HURT_CAPSULE = {f"x24_b{i}": f"unused_24_b{i}" for i in range(1, 8)}
 
-# The game's camera (`Camera`, `game::camera`'s `cam`) and its parts.
-CAMERA = {
-    # The players' camera's average width over its samples (`Camera_8002B694`).
-    "x2B0": "average_width",
-    "x2B4": "width_sum",
-    "x2B8": "width_samples",
-    "x2BA": "zoom_step",
-    "x2BC": "zoom",
-    "x2C0": "zoom_distance",
-    "x2C4": "pauser_slot",
-    "x2C5": "pauser_id",
-    # The free and pause cameras' limits (`Camera_x2D0`).
-    "x2D0": "orbit_limits",
-    # The free camera's player slot and controller port (5: none).
-    "x304": "free_slot",
-    "x305": "free_port",
-    # Only the paused camera's carry copies them.
-    "x306": "unread_306",
-    "x307": "unread_307",
-    # The free camera's target (its player's) and its pan from it.
-    "x308": "free_target",
-    "x314": "free_pan",
-    "x32C": "free_fov",
-    "x340": "unused_340",
-    "x341_b0": "unused_341_b0",
-    # A cutscene camera's script: how its interest, its eye and its progress are given
-    # (a point, a player, a callback), and whether it's done.
-    "x341_b1_b2": "script_interest_kind",
-    "x341_b3_b4": "script_eye_kind",
-    "x341_b5_b6": "script_progress_kind",
-    "x341_b7": "script_done",
-    "x342_pad": "pad_342",
-    "x344": "script_interest",
-    "x350": "script_interest_start",
-    "x35C": "script_eye",
-    "x368": "script_eye_start",
-    "x374": "script_fov_start",
-    # The script's frame and its length, or its progress (a union).
-    "x378": "script_frame",
-    "x37C": "script_length",
-    # Only the camera's setup zeroes it.
-    "x380": "unread_380",
-    # The display pass's render layers the camera hides.
-    "x398_b0": "hide_layer_0",
-    "x398_b1": "hide_layer_1",
-    "x398_b2": "hide_layer_2",
-    "x398_b3": "hide_layer_3",
-    "x398_b4": "hide_layer_4",
-    "x398_b5": "hide_layer_5",
-    "x398_b6_b7": "pass",
-    "x399_b0_b1": "layer",
-    # The camera holds a player off its plane (`Camera_80030AE0`).
-    "x399_b2": "hold_off_plane",
-    # The debug views' switches.
-    "x399_b3": "draw_collisions",
-    "x399_b4": "draw_zones",
-    "x399_b5": "stage_hidden",
-    "x399_b6": "unread_399_b6",
-    "x399_b7": "shadows",
-    # Debug switches with a setter and a getter each, which nothing else reads
-    # (`Camera_80030B38`, `Camera_80030B64`).
-    "x39A_b0": "debug_switch_0",
-    "x39A_b1": "debug_switch_1",
-    "x39A_b2": "draw_special_points",
-    "x39A_b3": "unused_39a_b3",
-    "x39A_b4": "unused_39a_b4",
-    "x39A_b5": "unused_39a_b5",
-    "x39A_b6": "unused_39a_b6",
-    "x39A_b7": "unused_39a_b7",
-}
-
-CAMERA_X2D0 = {"unk28": "min_distance", "unk2C": "max_distance"}
-
 # A camera box (`CmSubject`): two vectors its reset zeroes and nothing reads.
 CM_SUBJECT = {"x54": "unread_54", "x60": "unread_60"}
 
@@ -624,8 +551,6 @@ STATIC_PLAYER_FLAGS_AE = {
 GROUPS = [
     {"HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
     {
-        "Camera": CAMERA,
-        "Camera_x2D0": CAMERA_X2D0,
         "CmSubject": CM_SUBJECT,
         "CameraDebugMode": CAMERA_DEBUG_MODE,
         "StageCameraInfo": STAGE_CAMERA_INFO,

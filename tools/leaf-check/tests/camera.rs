@@ -1337,7 +1337,7 @@ fn setters_and_getters() {
             r.game.camera.set_standard();
             let s = r.game.camera.mode();
             r.game.camera.set_fixed();
-            vec![Out::R3(s as u32)]
+            vec![Out::R3(s.raw() as u32)]
         },
         |ctx, _| {
             fns::Camera_SetModeToStandard(ctx);

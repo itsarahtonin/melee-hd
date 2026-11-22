@@ -29,11 +29,20 @@ struct CRecord {
 
 /// The hand-written structs, by their layouts. Each is on structgen's `OWNED` list.
 fn owned() -> Vec<Layout> {
+    use crate::game::camera::types::{Camera, CameraQuake, CameraTransformState, OrbitLimits};
     use crate::mp::coll::{CollData, Ecb, Surface};
-    [CollData::layout(), Ecb::layout(), Surface::layout()]
-        .into_iter()
-        .map(|l| l.expect("a derived layout"))
-        .collect()
+    [
+        CollData::layout(),
+        Ecb::layout(),
+        Surface::layout(),
+        Camera::layout(),
+        CameraTransformState::layout(),
+        CameraQuake::layout(),
+        OrbitLimits::layout(),
+    ]
+    .into_iter()
+    .map(|l| l.expect("a derived layout"))
+    .collect()
 }
 
 /// What's wrong with `l` against the C struct `c`, one line each; empty when it matches.
