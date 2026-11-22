@@ -18,7 +18,23 @@ The milestone is done when:
 - Every VS match under the ruleset runs Slippi 3.19's 27 gameplay codes in Slippi Dolphin's floating point, and **its `.slp` plays back exactly in Slippi Dolphin**: tick by tick the live match equals melee-hd's playback of its own `.slp`, whole state but a named list of playback's own bookkeeping; ssbm-rs's playback of the `.slp` (Slippi's real playback codes, `--fp slippi`) compares clean with melee-hd's and its replay check is clean; and Sarah's spot check in her Slippi Dolphin agrees.
 - What the ruleset makes unnecessary is skipped in its matches where that wins speed or simplicity, each skip held by a tripwire or a test, and Vanilla unchanged ([What the ruleset makes moot](#what-the-ruleset-makes-moot)).
 
-## Status (2026-11-18): tasks 1 to 6 done, the live match's audio the console's, the follow-ups in, the camera's reads decided both ways in the oracle
+## Status (2026-11-22): done, and the player's default
+
+Every done-when above holds: the spot check in Slippi Dolphin (below) was the last. Slippi is the player's default ruleset since 2026-11-22 (`front::DEFAULT_RULESET`, design call 2; Sarah: "Yes, switch it"); Vanilla stays offered.
+
+### The spot check in Slippi Dolphin (2026-11-22)
+
+Ten `.slp` files the player saved under the ruleset (the `dist` build of main `d23c237e`, `melee-hd --inputs FILE --bench 30000 --replays DIR` on `lockstep/m6s-match/matches-a` and `matches-b`: both Pokémon Stadium matches, three- and four-player matches, items) were each played in a copy of Slippi Launcher's playback Dolphin ("Faster Melee - Slippi (3.7.0) - Playback"), offline, with resync off so any drift would show, and re-recorded there (`SlippiRegenerateReplays`; the comm file in `"mode": "queue"`, ending in a short dummy entry so the last replay's file is closed: in `"mode": "normal"` this build writes nothing). Each re-recording was compared with its original event by event (`slp_evidence.py compare`, the coordinator's `upstream/slippi-defects/tools`), with one of Sarah's own 3.19.1 recordings as a control:
+
+| Replays | Result |
+| --- | --- |
+| 5, both Stadium matches among them | the same on every frame |
+| 4 | the same but on the entrance frames, -122 to -108: a fighter's Y one ulp off and the off-screen flag, the playback codes' own entrance defect that Slippi's recordings show too |
+| 1 (a paused match) | the same but the frame start's scene frame count after the pause and one off-screen bit, Slippi's paused-match defect; Sarah's control recording shows the same |
+
+Every re-recording also differs in the pre-frame physical buttons and triggers (playback leaves them at rest) and in the item updates' misc bytes (leftover memory), as Slippi's own do. Positions, action states, percents, the seed and every other item field match on every frame. The results: the coordinator's `notes/spotcheck-2026-11-22`.
+
+### Status (2026-11-18): tasks 1 to 6 done, the live match's audio the console's, the follow-ups in, the camera's reads decided both ways in the oracle
 
 Sarah answered the design calls on 2026-11-14 (see Decisions).
 
@@ -222,7 +238,7 @@ Tasks 1, 2 and 3 can start at once, and task 5's corpus run and tests beside the
 | # | Call | Recommendation | Who |
 | --- | --- | --- | --- |
 | 1 | Which Slippi version's rules | 3.19's gameplay codes, written with Slippi 3.19.1's bytes (the version of Sarah's 156 replays from her current Slippi Dolphin). A newer Slippi joins playback when her replays show it; the live ruleset moves to it only when she says so. | Sarah: compatibility |
-| 2 | The default ruleset | Slippi once this milestone's done-when holds, Vanilla until then, both always offered; switching restarts Melee from power-on. | Sarah: the player's default |
+| 2 | The default ruleset | Slippi once this milestone's done-when holds, Vanilla until then, both always offered; switching restarts Melee from power-on. Slippi since 2026-11-22. | Sarah: the player's default |
 | 3 | How a match reaches playback's heap | Build each Slippi-ruleset match as a replay's playback is built, from the game start it records, with the menus' session set aside across the match scene and handed back the results: it reuses the path already exact against ssbm-rs's playback, and the live match can be checked against its own playback tick by tick. The alternative is one continuous model, booting the ruleset with Slippi playback's memory map (six heaps, the bootloader's room, the long `Fighter`) and making each match scene let the `AllM` heap go, load its own files and zero its heap; it keeps the session whole but changes the menus' layout, which ssbm-rs's vanilla menus then can't check. Revised 2026-11-15: the match goes on from the console's timeline and hands its own back ([the scene entry's stall](#the-scene-entrys-stall)). | Sarah: how the requirement is met |
 | 4 | What a live `.slp` records | The code list melee-hd runs: the 27 gameplay codes and the 16 unlock and message writes, with 3.19.1's bytes, so Slippi's playback applies the same gameplay codes it would to Slippi Dolphin's own replay; UCF toggles 1; scene 2.2; online fields zero; `playedOn: melee-hd`, which playback doesn't read and which lets tools tell. The alternative, Slippi Dolphin's whole 288-code list, would claim menu and online codes melee-hd doesn't run. | Sarah: `.slp` compatibility |
 | 5 | The no-card question at boot | Port Slippi's Skip Memcard Prompt (one code), so the ruleset boots past the question as Slippi Dolphin does; ssbm-rs applies it with the unlock writes. The alternative shows Melee's "Continue without saving?" at every start. | Sarah: what players see |
@@ -264,6 +280,6 @@ Tasks 1, 2 and 3 can start at once, and task 5's corpus run and tests beside the
 
 - **Sarah's design calls**: 1 to 10 above.
 - **Task 1's request** to ssbm-rs's coordinator.
-- **Sarah's spot check**, once task 4 records its first matches: a few of melee-hd's `.slp` files played in her Slippi Dolphin.
+- **Sarah's spot check**, once task 4 records its first matches: a few of melee-hd's `.slp` files played in her Slippi Dolphin. Done 2026-11-22 in a copy of her playback Dolphin ([above](#the-spot-check-in-slippi-dolphin-2026-11-22)).
 - **The trace campaign**: about 26 sessions and matches, about 10 GB, fits the disk as it stands.
 - **The first survey's files** in ssbm-rs's `local/lockstep/slippi-survey/` (Slippi Dolphin's netplay `.ini`, a card copy, the boot probe's log) are background only; `local/traces/slippi-survey/` is empty.
