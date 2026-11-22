@@ -242,7 +242,7 @@ const PAGE_SHIFT: u32 = 16;
 /// A chunk's size, as a shift: a page keeps its runs by the chunk their start is in, each
 /// chunk shared between snapshots apart, so a write copies only its chunk's runs, not the
 /// page's (a run still ends at most at its page's end, and may reach over chunks).
-const CHUNK_SHIFT: u32 = 12;
+const CHUNK_SHIFT: u32 = 10;
 
 /// A page's chunks.
 const CHUNKS: usize = 1 << (PAGE_SHIFT - CHUNK_SHIFT);
@@ -274,7 +274,7 @@ impl Page {
     fn new(base: u32) -> Page {
         Page {
             base,
-            chunks: Default::default(),
+            chunks: std::array::from_fn(|_| None),
         }
     }
 
@@ -328,6 +328,12 @@ impl Page {
     fn get(&self, k: u32) -> Option<&Span> {
         // A key at the page's end (a write's end there) is no run of the page.
         self.chunks.get(self.chunk_of(k))?.as_deref()?.get(&k)
+    }
+
+    fn get_mut(&mut self, k: u32) -> Option<&mut Span> {
+        let i = self.chunk_of(k);
+        self.chunks.get(i)?.as_ref()?;
+        self.chunk_mut(i).get_mut(&k)
     }
 
     fn insert(&mut self, k: u32, s: Span) {
@@ -452,26 +458,28 @@ fn first(spans: &Page, lo: u32) -> u32 {
 
 /// Cuts `[lo, hi)` out of `spans`, keeping what the runs it overlaps hold either side.
 fn cut(spans: &mut Page, lo: u32, hi: u32) {
-    let hit: Vec<u32> = spans.range(first(spans, lo), hi).map(|(&k, _)| k).collect();
-    for k in hit {
-        let s = spans.remove(k).unwrap();
-        if k < lo {
-            spans.insert(
-                k,
-                Span {
-                    end: lo,
-                    src: s.src.clone(),
-                },
-            );
+    // The runs hit, by start: a few at most, kept on the stack while there's room.
+    let (mut few, mut n, mut more) = ([0u32; 8], 0, Vec::new());
+    for (&k, _) in spans.range(first(spans, lo), hi) {
+        if n < few.len() {
+            few[n] = k;
+            n += 1;
+        } else {
+            more.push(k);
         }
-        if s.end > hi {
-            spans.insert(
-                hi,
-                Span {
-                    end: s.end,
-                    src: s.src.advance(hi - k),
-                },
-            );
+    }
+    for k in few[..n].iter().chain(&more).copied() {
+        // A run starting before the cut keeps its start and ends at it, so it stays in place.
+        let (end, tail) = if k < lo {
+            let s = spans.get_mut(k).expect("a run hit");
+            let end = std::mem::replace(&mut s.end, lo);
+            (end, (end > hi).then(|| s.src.advance(hi - k)))
+        } else {
+            let s = spans.remove(k).expect("a run hit");
+            (s.end, (s.end > hi).then(|| s.src.advance(hi - k)))
+        };
+        if let Some(src) = tail {
+            spans.insert(hi, Span { end, src });
         }
     }
 }
@@ -1783,7 +1791,10 @@ mod tests {
         // A write copies its chunk alone: a snapshot shares the page's other chunks.
         let snap = img.clone();
         write(&mut img, lo0 + 0x10, lo0 + 0x20, Src::Unknown("c"));
-        let (p, q) = (img.page(page_of(lo0)).unwrap(), snap.page(page_of(lo0)).unwrap());
+        let (p, q) = (
+            img.page(page_of(lo0)).unwrap(),
+            snap.page(page_of(lo0)).unwrap(),
+        );
         let shared = |i: usize| match (&p.chunks[i], &q.chunks[i]) {
             (Some(a), Some(b)) => Arc::ptr_eq(a, b),
             (None, None) => true,
