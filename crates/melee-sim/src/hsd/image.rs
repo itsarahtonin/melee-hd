@@ -249,60 +249,78 @@ const CHUNKS: usize = 1 << (PAGE_SHIFT - CHUNK_SHIFT);
 
 /// A chunk's runs by start, sorted: a few dozen at most, so a copy (a write to a chunk a snapshot
 /// shares) is one allocation and a copy of its entries, and a lookup a binary search.
-#[derive(Clone, Debug, Default, PartialEq)]
-struct Chunk(Vec<(u32, Span)>);
+#[derive(Clone, Debug, Default)]
+struct Chunk {
+    runs: Vec<(u32, Span)>,
+    /// What it holds, as a number no other chunk's holding has had ([`next_version`]), so a
+    /// restore takes only the chunks that changed ([`Spans::clone_from`]). Not state.
+    ver: u64,
+}
+
+impl PartialEq for Chunk {
+    fn eq(&self, other: &Self) -> bool {
+        self.runs == other.runs
+    }
+}
+
+/// A number for what a chunk or a page holds after a write, unique to it: two holding the
+/// same number hold the same runs (a copy of one, or one shared).
+fn next_version() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
 
 impl Chunk {
     /// Where the first run starting at or after `k` is.
     fn at(&self, k: u32) -> usize {
-        self.0.partition_point(|e| e.0 < k)
+        self.runs.partition_point(|e| e.0 < k)
     }
 
     fn range(&self, lo: u32, hi: u32) -> impl Iterator<Item = (&u32, &Span)> + '_ {
         let (a, b) = (self.at(lo), self.at(hi));
-        self.0[a..b.max(a)].iter().map(|(k, s)| (k, s))
+        self.runs[a..b.max(a)].iter().map(|(k, s)| (k, s))
     }
 
     fn last_before(&self, lo: u32) -> Option<(&u32, &Span)> {
         let i = self.at(lo).checked_sub(1)?;
-        let (k, s) = &self.0[i];
+        let (k, s) = &self.runs[i];
         Some((k, s))
     }
 
     fn find(&self, k: u32) -> Option<usize> {
-        self.0.binary_search_by_key(&k, |e| e.0).ok()
+        self.runs.binary_search_by_key(&k, |e| e.0).ok()
     }
 
     fn get(&self, k: u32) -> Option<&Span> {
-        self.find(k).map(|i| &self.0[i].1)
+        self.find(k).map(|i| &self.runs[i].1)
     }
 
     fn get_mut(&mut self, k: u32) -> Option<&mut Span> {
-        self.find(k).map(|i| &mut self.0[i].1)
+        self.find(k).map(|i| &mut self.runs[i].1)
     }
 
     /// A run at `k`, in place of one there.
     fn insert(&mut self, k: u32, s: Span) {
-        match self.0.binary_search_by_key(&k, |e| e.0) {
-            Ok(i) => self.0[i].1 = s,
-            Err(i) => self.0.insert(i, (k, s)),
+        match self.runs.binary_search_by_key(&k, |e| e.0) {
+            Ok(i) => self.runs[i].1 = s,
+            Err(i) => self.runs.insert(i, (k, s)),
         }
     }
 
     fn remove(&mut self, k: u32) -> Option<Span> {
-        self.find(k).map(|i| self.0.remove(i).1)
+        self.find(k).map(|i| self.runs.remove(i).1)
     }
 
     fn iter(&self) -> impl Iterator<Item = (&u32, &Span)> + '_ {
-        self.0.iter().map(|(k, s)| (k, s))
+        self.runs.iter().map(|(k, s)| (k, s))
     }
 
     fn len(&self) -> usize {
-        self.0.len()
+        self.runs.len()
     }
 
     fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.runs.is_empty()
     }
 }
 
@@ -314,6 +332,8 @@ struct Page {
     /// The page's first address.
     base: u32,
     chunks: [Option<Arc<Chunk>>; CHUNKS],
+    /// As a chunk's ([`Chunk::ver`]): what the page holds, renewed at every write. Not state.
+    ver: u64,
 }
 
 impl PartialEq for Page {
@@ -334,6 +354,7 @@ impl Page {
         Page {
             base,
             chunks: std::array::from_fn(|_| None),
+            ver: next_version(),
         }
     }
 
@@ -362,7 +383,31 @@ impl Page {
     }
 
     fn chunk_mut(&mut self, i: usize) -> &mut Chunk {
-        Arc::make_mut(self.chunks[i].get_or_insert_with(Default::default))
+        let c = Arc::make_mut(self.chunks[i].get_or_insert_with(Default::default));
+        c.ver = next_version();
+        c
+    }
+
+    /// A restore of the page from `o`, a page of the same place: each chunk `o` shares with
+    /// it already, or that holds what `o`'s holds, is left; one this page holds alone takes
+    /// `o`'s runs into its own storage, so the two stay apart and a write to either copies
+    /// nothing; the rest share `o`'s.
+    fn restore_from(&mut self, o: &Page) {
+        if self.ver == o.ver {
+            return;
+        }
+        for (a, b) in self.chunks.iter_mut().zip(&o.chunks) {
+            match (a, b) {
+                (Some(x), Some(y)) if Arc::ptr_eq(x, y) || x.ver == y.ver => {}
+                (Some(x), Some(y)) if Arc::strong_count(x) == 1 => {
+                    let x = Arc::get_mut(x).expect("held alone");
+                    x.runs.clone_from(&y.runs);
+                    x.ver = y.ver;
+                }
+                (a, b) => a.clone_from(b),
+            }
+        }
+        self.ver = o.ver;
     }
 
     /// The runs starting in `[lo, hi)`, by start.
@@ -434,8 +479,25 @@ impl Clone for Spans {
         }
     }
 
+    /// A restore: each page `other` shares with this one already is left as it is (most of
+    /// them, between a state and its copy); one this holds alone is restored chunk by chunk
+    /// ([`Page::restore_from`]), so a state and the copy restored from it each tick (the
+    /// player's prediction) keep the chunks they write apart and copy only what changed; the
+    /// rest are shared.
     fn clone_from(&mut self, other: &Self) {
-        self.pages.clone_from(&other.pages);
+        self.pages.truncate(other.pages.len());
+        for (a, b) in self.pages.iter_mut().zip(&other.pages) {
+            match (a, b) {
+                (Some(x), Some(y)) if Arc::ptr_eq(x, y) => {}
+                (Some(x), Some(y)) if Arc::strong_count(x) == 1 => {
+                    Arc::get_mut(x).expect("held alone").restore_from(y);
+                }
+                (None, None) => {}
+                (a, b) => a.clone_from(b),
+            }
+        }
+        let n = self.pages.len();
+        self.pages.extend_from_slice(&other.pages[n..]);
     }
 }
 
@@ -473,7 +535,9 @@ impl Spans {
             self.pages.resize(i + 1, None);
         }
         let base = MEM1.start + ((i as u32) << PAGE_SHIFT);
-        Arc::make_mut(self.pages[i].get_or_insert_with(|| Arc::new(Page::new(base))))
+        let p = Arc::make_mut(self.pages[i].get_or_insert_with(|| Arc::new(Page::new(base))));
+        p.ver = next_version();
+        p
     }
 
     /// The runs overlapping `[lo, hi)`, by start.
@@ -1860,6 +1924,52 @@ mod tests {
             _ => false,
         };
         assert!(!shared(0) && (1..CHUNKS).all(shared));
+        // A restore takes what differs and leaves what's shared: a copy written apart, one
+        // with pages past the state's, and one with fewer, each restored, hold the state's runs.
+        let runs = |s: &Spans| s.iter().map(|(k, s)| (k, s.clone())).collect::<Vec<_>>();
+        let mut apart = snap.clone();
+        write(&mut apart, lo0 + 0x800, lo0 + 0x900, Src::Unknown("d"));
+        let mut longer = img.clone();
+        write(&mut longer, 0x8170_0000, 0x8170_0010, Src::Unknown("e"));
+        let mut shorter = Spans::default();
+        write(&mut shorter, lo0, lo0 + 4, Src::RenderTarget);
+        for mut c in [apart, longer, shorter] {
+            c.clone_from(&img);
+            assert_eq!(runs(&c), runs(&img));
+            assert_eq!(c.pages.len(), img.pages.len());
+        }
+        // The player's prediction: a copy restored from the state every tick, each written
+        // apart in between, in the same chunks and in others. Restored, the copy holds the
+        // state's runs; once both have written a chunk, neither shares it, so a write copies
+        // nothing; a chunk neither wrote stays shared.
+        let mut state = img.clone();
+        let mut copy = state.clone();
+        let chunk = |s: &Spans, a: u32| {
+            let p = s.page(page_of(a)).unwrap();
+            p.chunks[p.chunk_of(a)].clone().unwrap()
+        };
+        for t in 0..6u32 {
+            let at = lo0 + 0x40 * t;
+            write(&mut state, at, at + 8, bytes(&[t as u8; 8]));
+            write(&mut copy, at + 4, at + 12, bytes(&[0xEE; 8]));
+            write(
+                &mut copy,
+                lo0 + 0x2000 + t,
+                lo0 + 0x2001 + t,
+                Src::Unknown("f"),
+            );
+            copy.clone_from(&state);
+            assert_eq!(runs(&copy), runs(&state), "tick {t}");
+        }
+        assert!(!Arc::ptr_eq(&chunk(&copy, lo0), &chunk(&state, lo0)));
+        assert!(Arc::ptr_eq(
+            &chunk(&copy, lo0 + 0x4000),
+            &chunk(&state, lo0 + 0x4000)
+        ));
+        let page = |s: &Spans| s.pages[page_of(lo0)].clone().unwrap();
+        assert!(
+            Arc::strong_count(&page(&state)) == 2 && Arc::strong_count(&chunk(&state, lo0)) == 2
+        );
     }
 
     #[test]
