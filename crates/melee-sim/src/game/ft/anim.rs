@@ -429,10 +429,10 @@ impl Running<'_> {
             0.0
         };
         let e = &mut self.game.fighters[f.0].part_anims[slot as usize];
-        e.x11 = anim as i8;
-        e.x4 = frames;
-        e.x8 = 0.0;
-        e.xC = blend;
+        e.anim = anim as i8;
+        e.frames = frames;
+        e.frame = 0.0;
+        e.blend = blend;
         self.add_part_anims(f, start, aj);
     }
 
@@ -471,13 +471,13 @@ impl Running<'_> {
     /// hand's hold pose for an item.
     #[doc(alias = "ftAnim_80070FB4")]
     pub fn set_part_anim_pose(&mut self, gobj: GObjId, slot: i32, anim: i32) {
-        self.game.fighter_mut(gobj).part_anims[slot as usize].x10 = anim as i8;
+        self.game.fighter_mut(gobj).part_anims[slot as usize].part = anim as i8;
     }
 
     /// Plays set `slot`'s pose at once, if it has one, `ftAnim_80070C48`.
     #[doc(alias = "ftAnim_80070C48")]
     pub fn show_part_anim_pose(&mut self, gobj: GObjId, slot: i32) {
-        let anim = self.game.fighter(gobj).part_anims[slot as usize].x10;
+        let anim = self.game.fighter(gobj).part_anims[slot as usize].part;
         if anim != -1 {
             self.apply_part_anim(gobj, slot, i32::from(anim), 0.0);
         }
@@ -490,7 +490,7 @@ impl Running<'_> {
     pub fn end_part_anim(&mut self, gobj: GObjId, slot: i32) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let anim = fp.part_anims[slot as usize].x11;
+        let anim = fp.part_anims[slot as usize].anim;
         if anim == -1 {
             return;
         }
@@ -515,7 +515,7 @@ impl Running<'_> {
             cur = next_anim_joint(self.data, a, &mut stack);
         }
         let fp = &mut self.game.fighters[f.0];
-        fp.part_anims[slot as usize].x11 = -1;
+        fp.part_anims[slot as usize].anim = -1;
         if fp.action_tree.is_some() {
             let (frame, speed) = (fp.cur_anim_frame, fp.frame_speed_mul);
             self.restart_part_anim(f, start, frame, speed);
@@ -533,7 +533,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         for i in 0..5 {
             let fp = &self.game.fighters[f.0];
-            if fp.part_anims[i].x11 == -1 {
+            if fp.part_anims[i].anim == -1 {
                 continue;
             }
             let ft_data = fp.ft_data.expect("a fighter without data");
@@ -546,16 +546,16 @@ impl Running<'_> {
             let bones = self.data.ptr(entry.at(4));
             let fp = &mut self.game.fighters[f.0];
             let e = &mut fp.part_anims[i];
-            e.x8 = mem(fp::fadds(reg(e.x8), reg(e.xC)));
+            e.frame = mem(fp::fadds(reg(e.frame), reg(e.blend)));
             let (t, t_inv);
-            if e.x4 <= e.x8 {
-                e.x8 = e.x4;
+            if e.frames <= e.frame {
+                e.frame = e.frames;
                 t = 1.0;
                 t_inv = 0.0;
             } else {
                 let d = fp::fdivs(
-                    reg(e.xC),
-                    fp::fadds(reg(e.xC), fp::fsubs(reg(e.x4), reg(e.x8))),
+                    reg(e.blend),
+                    fp::fadds(reg(e.blend), fp::fsubs(reg(e.frames), reg(e.frame))),
                 );
                 t = d;
                 t_inv = fp::fsubs(1.0, d);
@@ -769,8 +769,8 @@ impl Game {
     #[doc(alias = "ftAnim_8007077C")]
     pub fn reset_part_anims(&mut self, f: FighterId) {
         for a in &mut self.fighters[f.0].part_anims {
-            a.x11 = -1;
-            a.x10 = -1;
+            a.anim = -1;
+            a.part = -1;
         }
     }
 }

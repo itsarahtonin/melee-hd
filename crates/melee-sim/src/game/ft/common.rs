@@ -844,12 +844,12 @@ impl Running<'_> {
             let off = crate::game::mirror::read_vec3(self.data, table.at(0x14 * i as u32 + 4));
             let fp = self.game.fighter_mut(gobj);
             let e = &mut fp.stamina_markers[i];
-            e.x14 = e.x8;
-            let j = e.x4;
+            e.prev_pos = e.pos;
+            let j = e.joint;
             let p = world_position(&mut self.game.objs, self.data, j, Some(off));
             let e = &mut self.game.fighter_mut(gobj).stamina_markers[i];
-            e.x8 = p;
-            e.x8.z = 0.0;
+            e.pos = p;
+            e.pos.z = 0.0;
         }
     }
 }

@@ -338,7 +338,7 @@ impl Running<'_> {
         let heal_mul = reg(self.ness_absorb_heal(gobj));
         let unk2 = self.ness_attr_f32(f, attr::PSI_MAGNET_UNK2);
         let fp = &mut self.game.fighters[f.0];
-        let taken = fp::frsp(f64::from(fp.absorb.x1A44_damageTaken));
+        let taken = fp::frsp(f64::from(fp.absorb.damage_taken));
         let mut heal = fp::frsp(f64::from(fp::fctiwz(fp::fmuls(taken, heal_mul))));
         fp.dmg.percent = mem(fp::fsubs(reg(fp.dmg.percent), heal));
         let cur = reg(fp.dmg.percent);
@@ -351,7 +351,7 @@ impl Running<'_> {
         self.game.set_player_damage_at(slot, sub, percent);
         self.game.add_healed(slot, sub, fp::fctiwz(heal));
         let fp = &mut self.game.fighters[f.0];
-        fp.facing_dir = fp.absorb.x1A40_absorbHitDirection;
+        fp.facing_dir = fp.absorb.hit_direction;
         let id = fp.motion_id;
         if (id != ms::SPECIAL_LW_HIT && id != ms::SPECIAL_AIR_LW_HIT)
             || !(fp.cur_anim_frame <= unk2)

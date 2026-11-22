@@ -33,8 +33,8 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.partner = Some(mewtwo);
         fp.victim_gobj = Some(mewtwo);
-        fp.state_flags.x221B_b5 = false;
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.holds_grab = false;
+        fp.state_flags.grounded_catch = false;
         fp.facing_dir = facing;
         self.attach_to_thrower(mewtwo, gobj);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, Some(mewtwo));

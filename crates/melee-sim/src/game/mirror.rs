@@ -343,6 +343,16 @@ mod label_tests {
             ]
         );
         assert_eq!(
+            labels_after::<Fighter>("fighter", |fp| {
+                fp.state_flags.holds_grab = true;
+                fp.reflect.damage_mul = 1.0;
+            }),
+            [
+                "fighter.reflect (ReflectAttr).damage_mul (x1A34_damageMul)",
+                "fighter.state_flags (x221B).holds_grab (x221B_b5)",
+            ]
+        );
+        assert_eq!(
             labels_after::<Item>("item", |ip| ip.hit_flags.bits.silenced = true),
             ["item.hit_flags (xDCD_flag).bits (x0).silenced (b2)"]
         );

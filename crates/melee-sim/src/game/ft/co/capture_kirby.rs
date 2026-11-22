@@ -130,8 +130,8 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.partner = Some(kirby);
         fp.victim_gobj = Some(kirby);
-        fp.state_flags.x221B_b5 = false;
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.holds_grab = false;
+        fp.state_flags.grounded_catch = false;
         fp.facing_dir = mem(fp::fneg(reg(facing)));
         self.change_motion_state(gobj, ms::CAPTURE_KIRBY, 0, 0.0, 1.0, 0.0, None);
         let f = self.game.fighter_id(gobj);

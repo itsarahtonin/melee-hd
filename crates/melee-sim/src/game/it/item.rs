@@ -1029,7 +1029,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     }
     if flags & COLANIM_PRESERVE == 0 {
         let colanims = r.game.it.colanims.expect("no item color animations");
-        let i = i32::from_be_bytes(super::item(r.game, gobj).color_overlay.x28_colanim);
+        let i = i32::from_be_bytes(super::item(r.game, gobj).color_overlay.colanim);
         if data.u8(colanims.at(8 * i as u32 + 5)) != 0 {
             super::anim::clear_overlay(item_mut(r.game, gobj));
         }

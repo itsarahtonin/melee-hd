@@ -887,8 +887,14 @@ fn flag_bytes(fp: &super::structs::Fighter) -> [u8; 5] {
             fp.shield_was_hit,
         ]),
         byte([
-            b.x221B_b0, b.x221B_b1, b.x221B_b2, b.x221B_b3, b.x221B_b4, b.x221B_b5, b.x221B_b6,
-            b.x221B_b7,
+            b.shield_bubble,
+            b.shield_deflects,
+            b.shield_no_entry,
+            b.bubble_faces,
+            b.bubble_reflectors_only,
+            b.holds_grab,
+            b.item_grab_set,
+            b.grounded_catch,
         ]),
         byte([
             fp.held_hit_light,

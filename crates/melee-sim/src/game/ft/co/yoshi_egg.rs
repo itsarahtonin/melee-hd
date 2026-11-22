@@ -131,8 +131,8 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.partner = Some(yoshi);
         fp.victim_gobj = Some(yoshi);
-        fp.state_flags.x221B_b5 = false;
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.holds_grab = false;
+        fp.state_flags.grounded_catch = false;
         fp.facing_dir = mem(fp::fneg(reg(yfacing)));
         self.attach_to_thrower(yoshi, gobj);
         self.change_motion_state(gobj, state, 0, 0.0, 1.0, 0.0, None);

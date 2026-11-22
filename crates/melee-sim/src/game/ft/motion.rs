@@ -377,7 +377,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_80070F28")]
     fn end_part_anims(&mut self, f: FighterId) {
         for i in 0..5 {
-            if self.game.fighters[f.0].part_anims[i].x11 == -1 {
+            if self.game.fighters[f.0].part_anims[i].anim == -1 {
                 continue;
             }
             let fp = &self.game.fighters[f.0];
@@ -396,7 +396,7 @@ impl Running<'_> {
                 let part = self.data.u8(list.expect("part animation parts").at(j));
                 self.game.fighter_parts[parts.0][part as usize].x8[0] &= !0x04;
             }
-            self.game.fighters[f.0].part_anims[i].x11 = -1;
+            self.game.fighters[f.0].part_anims[i].anim = -1;
         }
     }
 
@@ -405,7 +405,7 @@ impl Running<'_> {
     fn reapply_part_anims(&mut self, f: FighterId) {
         let gobj = self.game.fighters[f.0].gobj.expect("a fighter's GObj");
         for i in 0..5 {
-            let anim = self.game.fighters[f.0].part_anims[i].x10;
+            let anim = self.game.fighters[f.0].part_anims[i].part;
             if anim != -1 {
                 self.apply_part_anim(gobj, i as i32, i32::from(anim), 0.0);
             }
@@ -709,7 +709,7 @@ impl Running<'_> {
             fp.dmg.armor1 = 0.0;
             fp.dmg.tip_kb_applied = 0.0;
             fp.shield_was_hit = false;
-            fp.state_flags.x221B_b0 = false;
+            fp.state_flags.shield_bubble = false;
             fp.powershield_early = false;
             fp.counter_min_hitlag = 0.0;
             fp.counter_item_min_hitlag = 0.0;

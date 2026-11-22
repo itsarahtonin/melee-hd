@@ -257,7 +257,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C06B4")]
     fn cloaking_colors(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];
-        let id = i32::from_be_bytes(fp.spycloak_overlay.x28_colanim)
+        let id = i32::from_be_bytes(fp.spycloak_overlay.colanim)
             .wrapping_add(super::colanim::SPYCLOAK_START);
         fp.cloak && (id == 0x7B || id == 0x80) && fp.refracted
     }
@@ -623,7 +623,7 @@ impl Running<'_> {
             self.game.fighters[f.0].cpu.coin_flip = r > 0.5;
         }
         let fpp = &mut self.game.fighters[f.0];
-        if !fpp.state_flags.x221B_b5 {
+        if !fpp.state_flags.holds_grab {
             fpp.cpu.hold_choice = 0;
         }
         // DI in hitstun.

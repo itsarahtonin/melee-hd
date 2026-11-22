@@ -267,7 +267,7 @@ impl Running<'_> {
             return;
         }
         let mut count = 0;
-        if passed && !self.game.fighters[me.0].state_flags.x221B_b5 {
+        if passed && !self.game.fighters[me.0].state_flags.holds_grab {
             let other_ga = self.game.fighters[v.0].ground_or_air;
             for i in 0..4 {
                 let h = &self.game.fighters[me.0].hitboxes[i];
@@ -316,7 +316,7 @@ impl Running<'_> {
         // A box that only hits its owner's grab victim.
         if h0.owner.grabbed_victim_only()
             && vf.victim_gobj.is_some()
-            && vf.state_flags.x221B_b5
+            && vf.state_flags.holds_grab
             && vf.victim_gobj != Some(gobj)
         {
             return;
@@ -331,7 +331,7 @@ impl Running<'_> {
             && vf.victim_gobj != Some(gobj)
             && mf.ground_or_air == GA_GROUND
             && vf.ground_or_air == GA_GROUND
-            && !mf.state_flags.x221B_b5
+            && !mf.state_flags.holds_grab
             && element != ELEMENT_INERT
             && h0.clanks
             && count != 0
@@ -348,10 +348,10 @@ impl Running<'_> {
         let _ = other;
         let mf = &self.game.fighters[me.0];
         let mut bubble_hit = false;
-        if mf.state_flags.x221B_b0 {
+        if mf.state_flags.shield_bubble {
             let vx = self.game.fighters[v.0].cur_pos.x;
             let mut facing = true;
-            if mf.state_flags.x221B_b3 {
+            if mf.state_flags.bubble_faces {
                 if -1.0 == reg(mf.facing_dir) {
                     if reg(mf.cur_pos.x) < reg(vx) {
                         facing = false;
@@ -360,7 +360,9 @@ impl Running<'_> {
                     facing = false;
                 }
             }
-            if mf.state_flags.x221B_b4 && !self.game.fighters[v.0].hitboxes[j].meets_reflector {
+            if mf.state_flags.bubble_reflectors_only
+                && !self.game.fighters[v.0].hitboxes[j].meets_reflector
+            {
                 facing = false;
             }
             bubble_hit = facing && self.box_hits_shield(v, j, me, phantom);
@@ -624,10 +626,10 @@ impl Running<'_> {
         ip.absorber = fg;
         let dir = if reg(fx) > reg(ip.pos.x) { -1.0 } else { 1.0 };
         let fp = &mut self.game.fighters[me.0];
-        fp.absorb.x1A40_absorbHitDirection = dir;
+        fp.absorb.hit_direction = dir;
         if absorbable {
-            fp.absorb.x1A44_damageTaken = fp.absorb.x1A44_damageTaken.wrapping_add(damage);
-            fp.absorb.x1A48_hitsTaken = fp.absorb.x1A48_hitsTaken.wrapping_add(1);
+            fp.absorb.damage_taken = fp.absorb.damage_taken.wrapping_add(damage);
+            fp.absorb.hits_taken = fp.absorb.hits_taken.wrapping_add(1);
         }
     }
 
@@ -639,12 +641,12 @@ impl Running<'_> {
         let second = h.fighter_hit_alt;
         let fp = &self.game.fighters[me.0];
         let (fx, fg) = (fp.cur_pos.x, fp.gobj);
-        let over = damage > fp.reflect.x1A30_maxDamage;
+        let over = damage > fp.reflect.max_damage;
         let (x2070, rec, dmg_mul, speed_mul) = (
             i32::from_be_bytes(fp.attack_flags),
             fp.attack_record.clone(),
-            fp.reflect.x1A34_damageMul,
-            fp.reflect.x1A38_speedMul,
+            fp.reflect.damage_mul,
+            fp.reflect.speed_mul,
         );
         let (b5, b4) = (fp.reflect_behavior, fp.reflect_kept);
         let ip = it::item_mut(self.game, g);
@@ -696,9 +698,9 @@ impl Running<'_> {
         };
         let fp = &mut self.game.fighters[me.0];
         if over {
-            fp.reflect.x1A3C_damageOver = damage;
+            fp.reflect.damage_over = damage;
         }
-        fp.reflect.x1A2C_reflectHitDirection = dir;
+        fp.reflect.hit_direction = dir;
     }
 
     /// The clank's sound, `ftColl_800784B4`: a random sword clash between two slashes.
@@ -790,7 +792,7 @@ impl Running<'_> {
         let c = self.common();
         let (vf, mf) = (&self.game.fighters[v.0], &self.game.fighters[me.0]);
         let mut d = reg(vf.hitboxes[j].damage);
-        if mf.victim_gobj.is_some() && !mf.state_flags.x221B_b5 && mf.victim_gobj != vf.gobj {
+        if mf.victim_gobj.is_some() && !mf.state_flags.holds_grab && mf.victim_gobj != vf.gobj {
             d = fp::fmuls(d, reg(c.f32(0x128)));
         }
         if mf.motion_id == MS_DAMAGE_ICE {
@@ -1178,14 +1180,14 @@ impl Running<'_> {
                 let fp = &self.game.fighters[f.0];
                 let e = &fp.stamina_markers[i];
                 let mut mine = SweptCircle {
-                    radius: e.x0,
-                    pos: e.x8,
-                    prev_pos: e.x14,
-                    contact: e.x20,
+                    radius: e.radius,
+                    pos: e.pos,
+                    prev_pos: e.prev_pos,
+                    contact: e.contact,
                 };
                 let scale = fp.scale.y;
                 let touch = swept_circles_touch(&mut coin, &mut mine, scl, scale);
-                self.game.fighters[f.0].stamina_markers[i].x20 = mine.contact;
+                self.game.fighters[f.0].stamina_markers[i].contact = mine.contact;
                 if touch.is_some() {
                     // Past the coin's variables (`coin::CoinVars`).
                     let v = it::item_mut(self.game, g).vars.coin();
@@ -1248,7 +1250,7 @@ impl Running<'_> {
             // The fighter's own boxes that could clank with the item's (`ftColl_804D6560`),
             // unless a thrower holds the fighter.
             let mut clanks = 0;
-            if !self.game.fighters[me.0].state_flags.x221B_b5 && self.thrower(me).is_none() {
+            if !self.game.fighters[me.0].state_flags.holds_grab && self.thrower(me).is_none() {
                 let item_ga = it::item(self.game, g).ground_or_air;
                 for i in 0..4 {
                     let h = &self.game.fighters[me.0].hitboxes[i];
@@ -1314,7 +1316,7 @@ impl Running<'_> {
                 return;
             }
         }
-        if !self.game.fighters[me.0].state_flags.x221B_b5 && !phantom && clanks != 0 {
+        if !self.game.fighters[me.0].state_flags.holds_grab && !phantom && clanks != 0 {
             for m in 0..4 {
                 if !self.game.ft.hit_logs.clank[m] {
                     continue;
@@ -1345,10 +1347,10 @@ impl Running<'_> {
         }
         let mf = &self.game.fighters[me.0];
         let h = &it::item(self.game, g).hitboxes[j].hit;
-        if element != ELEMENT_INERT && mf.state_flags.x221B_b0 && h.meets_bubble {
+        if element != ELEMENT_INERT && mf.state_flags.shield_bubble && h.meets_bubble {
             let ix = it::item(self.game, g).pos.x;
             let mut facing = true;
-            if mf.state_flags.x221B_b3 {
+            if mf.state_flags.bubble_faces {
                 if -1.0 == reg(mf.facing_dir) {
                     if reg(mf.cur_pos.x) < reg(ix) {
                         facing = false;
@@ -1357,7 +1359,7 @@ impl Running<'_> {
                     facing = false;
                 }
             }
-            if mf.state_flags.x221B_b4 && !h.meets_reflector {
+            if mf.state_flags.bubble_reflectors_only && !h.meets_reflector {
                 facing = false;
             }
             if facing && self.item_box_hits_bubble(g, j, me, Bubble::Shield, phantom) {
@@ -1366,7 +1368,9 @@ impl Running<'_> {
                 // otherwise, and `item_shield_hit` reads them only in those cases.
                 let mf = &self.game.fighters[me.0];
                 let bounce = it::item(self.game, g).hitboxes[j].hit.bounces_off_shield;
-                let entry = if !mf.state_flags.x221B_b2 && (bounce || mf.state_flags.x221B_b1) {
+                let entry = if !mf.state_flags.shield_no_entry
+                    && (bounce || mf.state_flags.shield_deflects)
+                {
                     Some(self.item_box_shield_entry(g, j, me))
                 } else {
                     None
@@ -1589,8 +1593,8 @@ impl Running<'_> {
             let angle = self.common().f32(0x2D0);
             let mf = &self.game.fighters[me.0];
             let (deflects, deflect_off, mx, mg, unk1) = (
-                mf.state_flags.x221B_b1,
-                mf.state_flags.x221B_b2,
+                mf.state_flags.shield_deflects,
+                mf.state_flags.shield_no_entry,
                 mf.cur_pos.x,
                 mf.gobj,
                 mf.counter_item_min_hitlag,
@@ -1818,7 +1822,7 @@ impl Running<'_> {
         let raw = self.item_damage(g, j);
         let mut f3 = raw;
         let mf = &self.game.fighters[me.0];
-        if mf.victim_gobj.is_some() && !mf.state_flags.x221B_b5 {
+        if mf.victim_gobj.is_some() && !mf.state_flags.holds_grab {
             f3 = fp::fmuls(f3, reg(self.common().f32(0x128)));
         }
         if mf.motion_id == MS_DAMAGE_ICE {
@@ -2078,7 +2082,7 @@ impl Running<'_> {
         let c = self.common();
         let fp = &self.game.fighters[me.0];
         let mut d = fp::frsp(f64::from(count));
-        if fp.victim_gobj.is_some() && !fp.state_flags.x221B_b5 {
+        if fp.victim_gobj.is_some() && !fp.state_flags.holds_grab {
             d = fp::fmuls(d, reg(c.f32(0x128)));
         }
         if fp.motion_id == MS_DAMAGE_ICE {
@@ -2458,7 +2462,7 @@ impl Running<'_> {
                 let fp = &self.game.fighters[me.0];
                 let held = matches!(e.hit, LoggedHit::Fighter { .. })
                     && fp.victim_gobj.is_some()
-                    && !fp.state_flags.x221B_b5
+                    && !fp.state_flags.holds_grab
                     && fp.victim_gobj == e.gobj;
                 self.game.fighters[me.0].held_hit_light = held;
                 best = kb;

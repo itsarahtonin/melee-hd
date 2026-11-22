@@ -394,101 +394,131 @@ pub struct ColorOverlay {
     /// +0x0
     pub script: Script,
     /// +0x24
-    pub x24: i32,
+    #[doc(alias("x24"))]
+    pub unused_24: i32,
     /// +0x28
-    pub x28_colanim: [u8; 4],
+    #[doc(alias("x28_colanim"))]
+    pub colanim: [u8; 4],
     /// +0x2c
-    pub x2C_hex: _GXColor,
+    #[doc(alias("x2C_hex"))]
+    pub hex: _GXColor,
     /// +0x30
-    pub x30_color_red: f32,
+    #[doc(alias("x30_color_red"))]
+    pub color_red: f32,
     /// +0x34
-    pub x34_color_green: f32,
+    #[doc(alias("x34_color_green"))]
+    pub color_green: f32,
     /// +0x38
-    pub x38_color_blue: f32,
+    #[doc(alias("x38_color_blue"))]
+    pub color_blue: f32,
     /// +0x3c
-    pub x3C_color_alpha: f32,
+    #[doc(alias("x3C_color_alpha"))]
+    pub color_alpha: f32,
     /// +0x40
-    pub x40_colorblend_red: f32,
+    #[doc(alias("x40_colorblend_red"))]
+    pub colorblend_red: f32,
     /// +0x44
-    pub x44_colorblend_green: f32,
+    #[doc(alias("x44_colorblend_green"))]
+    pub colorblend_green: f32,
     /// +0x48
-    pub x48_colorblend_blue: f32,
+    #[doc(alias("x48_colorblend_blue"))]
+    pub colorblend_blue: f32,
     /// +0x4c
-    pub x4C_colorblend_alpha: f32,
+    #[doc(alias("x4C_colorblend_alpha"))]
+    pub colorblend_alpha: f32,
     /// +0x50
-    pub x50_light_color: _GXColor,
+    #[doc(alias("x50_light_color"))]
+    pub light_color: _GXColor,
     /// +0x54
-    pub x54_light_red: f32,
+    #[doc(alias("x54_light_red"))]
+    pub light_red: f32,
     /// +0x58
-    pub x58_light_green: f32,
+    #[doc(alias("x58_light_green"))]
+    pub light_green: f32,
     /// +0x5c
-    pub x5C_light_blue: f32,
+    #[doc(alias("x5C_light_blue"))]
+    pub light_blue: f32,
     /// +0x60
-    pub x60_light_alpha: f32,
+    #[doc(alias("x60_light_alpha"))]
+    pub light_alpha: f32,
     /// +0x64
-    pub x64_lightblend_red: f32,
+    #[doc(alias("x64_lightblend_red"))]
+    pub lightblend_red: f32,
     /// +0x68
-    pub x68_lightblend_green: f32,
+    #[doc(alias("x68_lightblend_green"))]
+    pub lightblend_green: f32,
     /// +0x6c
-    pub x6C_lightblend_blue: f32,
+    #[doc(alias("x6C_lightblend_blue"))]
+    pub lightblend_blue: f32,
     /// +0x70
-    pub x70_lightblend_alpha: f32,
+    #[doc(alias("x70_lightblend_alpha"))]
+    pub lightblend_alpha: f32,
     /// +0x74
-    pub x74_light_rot_x: f32,
+    #[doc(alias("x74_light_rot_x"))]
+    pub light_rot_x: f32,
     /// +0x78
-    pub x78_light_rot_yz: f32,
+    #[doc(alias("x78_light_rot_yz"))]
+    pub light_rot_yz: f32,
     /// +0x7c (bits 0..+1)
-    pub x7C_color_enable: bool,
+    #[doc(alias("x7C_color_enable"))]
+    pub color_enable: bool,
     /// +0x7c (bits 1..+1)
-    pub x7C_flag2: bool,
+    #[doc(alias("x7C_flag2"))]
+    pub flag2: bool,
     /// +0x7c (bits 2..+1)
-    pub x7C_light_enable: bool,
+    #[doc(alias("x7C_light_enable"))]
+    pub light_enable: bool,
     /// +0x7c (bits 3..+1)
-    pub x7C_flag4: bool,
+    #[doc(alias("x7C_flag4"))]
+    pub flag4: bool,
     /// +0x7c (bits 4..+1)
-    pub x7C_flag5: bool,
+    #[doc(alias("x7C_flag5"))]
+    pub flag5: bool,
     /// +0x7c (bits 5..+1)
-    pub x7C_flag6: bool,
+    #[doc(alias("x7C_flag6"))]
+    pub flag6: bool,
     /// +0x7c (bits 6..+1)
-    pub x7C_flag7: bool,
+    #[doc(alias("x7C_flag7"))]
+    pub flag7: bool,
     /// +0x7c (bits 7..+1)
-    pub x7C_flag8: bool,
+    #[doc(alias("x7C_flag8"))]
+    pub flag8: bool,
 }
 
 impl Default for ColorOverlay {
     fn default() -> Self {
         ColorOverlay {
             script: Default::default(),
-            x24: 0,
-            x28_colanim: [0; 4],
-            x2C_hex: Default::default(),
-            x30_color_red: 0.0,
-            x34_color_green: 0.0,
-            x38_color_blue: 0.0,
-            x3C_color_alpha: 0.0,
-            x40_colorblend_red: 0.0,
-            x44_colorblend_green: 0.0,
-            x48_colorblend_blue: 0.0,
-            x4C_colorblend_alpha: 0.0,
-            x50_light_color: Default::default(),
-            x54_light_red: 0.0,
-            x58_light_green: 0.0,
-            x5C_light_blue: 0.0,
-            x60_light_alpha: 0.0,
-            x64_lightblend_red: 0.0,
-            x68_lightblend_green: 0.0,
-            x6C_lightblend_blue: 0.0,
-            x70_lightblend_alpha: 0.0,
-            x74_light_rot_x: 0.0,
-            x78_light_rot_yz: 0.0,
-            x7C_color_enable: false,
-            x7C_flag2: false,
-            x7C_light_enable: false,
-            x7C_flag4: false,
-            x7C_flag5: false,
-            x7C_flag6: false,
-            x7C_flag7: false,
-            x7C_flag8: false,
+            unused_24: 0,
+            colanim: [0; 4],
+            hex: Default::default(),
+            color_red: 0.0,
+            color_green: 0.0,
+            color_blue: 0.0,
+            color_alpha: 0.0,
+            colorblend_red: 0.0,
+            colorblend_green: 0.0,
+            colorblend_blue: 0.0,
+            colorblend_alpha: 0.0,
+            light_color: Default::default(),
+            light_red: 0.0,
+            light_green: 0.0,
+            light_blue: 0.0,
+            light_alpha: 0.0,
+            lightblend_red: 0.0,
+            lightblend_green: 0.0,
+            lightblend_blue: 0.0,
+            lightblend_alpha: 0.0,
+            light_rot_x: 0.0,
+            light_rot_yz: 0.0,
+            color_enable: false,
+            flag2: false,
+            light_enable: false,
+            flag4: false,
+            flag5: false,
+            flag6: false,
+            flag7: false,
+            flag8: false,
         }
     }
 }
@@ -501,7 +531,8 @@ pub struct FtPartsVis {
     /// +0x4
     pub cleared: [u8; 5],
     /// +0xc
-    pub xC: [Option<DataRef>; 5],
+    #[doc(alias("xC"))]
+    pub lookups: [Option<DataRef>; 5],
 }
 
 impl Default for FtPartsVis {
@@ -509,7 +540,7 @@ impl Default for FtPartsVis {
         FtPartsVis {
             model_num: 0,
             cleared: [0; 5],
-            xC: [None; 5],
+            lookups: [None; 5],
         }
     }
 }
@@ -783,28 +814,34 @@ impl Default for CollData {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Fighter_x8B0_t {
     /// +0x0
-    pub x0: i32,
+    #[doc(alias("x0"))]
+    pub unused_0: i32,
     /// +0x4
-    pub x4: f32,
+    #[doc(alias("x4"))]
+    pub frames: f32,
     /// +0x8
-    pub x8: f32,
+    #[doc(alias("x8"))]
+    pub frame: f32,
     /// +0xc
-    pub xC: f32,
+    #[doc(alias("xC"))]
+    pub blend: f32,
     /// +0x10
-    pub x10: i8,
+    #[doc(alias("x10"))]
+    pub part: i8,
     /// +0x11
-    pub x11: i8,
+    #[doc(alias("x11"))]
+    pub anim: i8,
 }
 
 impl Default for Fighter_x8B0_t {
     fn default() -> Self {
         Fighter_x8B0_t {
-            x0: 0,
-            x4: 0.0,
-            x8: 0.0,
-            xC: 0.0,
-            x10: 0,
-            x11: 0,
+            unused_0: 0,
+            frames: 0.0,
+            frame: 0.0,
+            blend: 0.0,
+            part: 0,
+            anim: 0,
         }
     }
 }
@@ -1119,25 +1156,30 @@ impl Default for FighterHurtCapsule {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Fighter_x1614_t {
     /// +0x0
-    pub x0: f32,
+    #[doc(alias("x0"))]
+    pub radius: f32,
     /// +0x4
-    pub x4: Option<JObjId>,
+    #[doc(alias("x4"))]
+    pub joint: Option<JObjId>,
     /// +0x8
-    pub x8: Vec3,
+    #[doc(alias("x8"))]
+    pub pos: Vec3,
     /// +0x14
-    pub x14: Vec3,
+    #[doc(alias("x14"))]
+    pub prev_pos: Vec3,
     /// +0x20
-    pub x20: Vec3,
+    #[doc(alias("x20"))]
+    pub contact: Vec3,
 }
 
 impl Default for Fighter_x1614_t {
     fn default() -> Self {
         Fighter_x1614_t {
-            x0: 0.0,
-            x4: None,
-            x8: Default::default(),
-            x14: Default::default(),
-            x20: Default::default(),
+            radius: 0.0,
+            joint: None,
+            pos: Default::default(),
+            prev_pos: Default::default(),
+            contact: Default::default(),
         }
     }
 }
@@ -1152,11 +1194,14 @@ pub struct Fighter_x1670_t {
     /// +0x10
     pub jobj: Option<JObjId>,
     /// +0x14
-    pub x14: f32,
+    #[doc(alias("x14"))]
+    pub unused_14: f32,
     /// +0x18
-    pub x18: Vec3,
+    #[doc(alias("x18"))]
+    pub center: Vec3,
     /// +0x24
-    pub x24: i32,
+    #[doc(alias("x24"))]
+    pub bone: i32,
 }
 
 impl Default for Fighter_x1670_t {
@@ -1165,9 +1210,9 @@ impl Default for Fighter_x1670_t {
             v1: Default::default(),
             v2: 0.0,
             jobj: None,
-            x14: 0.0,
-            x18: Default::default(),
-            x24: 0,
+            unused_14: 0.0,
+            center: Default::default(),
+            bone: 0,
         }
     }
 }
@@ -1558,25 +1603,30 @@ impl Default for HitResult {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Fighter_ReflectAttr {
     /// +0x0
-    pub x1A2C_reflectHitDirection: f32,
+    #[doc(alias("x1A2C_reflectHitDirection"))]
+    pub hit_direction: f32,
     /// +0x4
-    pub x1A30_maxDamage: i32,
+    #[doc(alias("x1A30_maxDamage"))]
+    pub max_damage: i32,
     /// +0x8
-    pub x1A34_damageMul: f32,
+    #[doc(alias("x1A34_damageMul"))]
+    pub damage_mul: f32,
     /// +0xc
-    pub x1A38_speedMul: f32,
+    #[doc(alias("x1A38_speedMul"))]
+    pub speed_mul: f32,
     /// +0x10
-    pub x1A3C_damageOver: i32,
+    #[doc(alias("x1A3C_damageOver"))]
+    pub damage_over: i32,
 }
 
 impl Default for Fighter_ReflectAttr {
     fn default() -> Self {
         Fighter_ReflectAttr {
-            x1A2C_reflectHitDirection: 0.0,
-            x1A30_maxDamage: 0,
-            x1A34_damageMul: 0.0,
-            x1A38_speedMul: 0.0,
-            x1A3C_damageOver: 0,
+            hit_direction: 0.0,
+            max_damage: 0,
+            damage_mul: 0.0,
+            speed_mul: 0.0,
+            damage_over: 0,
         }
     }
 }
@@ -1585,19 +1635,22 @@ impl Default for Fighter_ReflectAttr {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Fighter_AbsorbAttr {
     /// +0x0
-    pub x1A40_absorbHitDirection: f32,
+    #[doc(alias("x1A40_absorbHitDirection"))]
+    pub hit_direction: f32,
     /// +0x4
-    pub x1A44_damageTaken: i32,
+    #[doc(alias("x1A44_damageTaken"))]
+    pub damage_taken: i32,
     /// +0x8
-    pub x1A48_hitsTaken: i32,
+    #[doc(alias("x1A48_hitsTaken"))]
+    pub hits_taken: i32,
 }
 
 impl Default for Fighter_AbsorbAttr {
     fn default() -> Self {
         Fighter_AbsorbAttr {
-            x1A40_absorbHitDirection: 0.0,
-            x1A44_damageTaken: 0,
-            x1A48_hitsTaken: 0,
+            hit_direction: 0.0,
+            damage_taken: 0,
+            hits_taken: 0,
         }
     }
 }
@@ -1621,19 +1674,24 @@ impl Default for S8Vec2 {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Fighter_x1A88_xFC_t {
     /// +0x0
-    pub x0: u32,
+    #[doc(alias("x0"))]
+    pub buttons: u32,
     /// +0x4
-    pub x4: u8,
+    #[doc(alias("x4"))]
+    pub ltrigger: u8,
     /// +0x5
-    pub x5: u8,
+    #[doc(alias("x5"))]
+    pub rtrigger: u8,
     /// +0x6
     pub lstick: S8Vec2,
     /// +0x8
     pub cstick: S8Vec2,
     /// +0xa
-    pub xA: u8,
+    #[doc(alias("xA"))]
+    pub unused_a: u8,
     /// +0xb
-    pub xB: u8,
+    #[doc(alias("xB"))]
+    pub unused_b: u8,
     /// +0xc
     pub cur_pos: Vec3,
     /// +0x18
@@ -1643,13 +1701,13 @@ pub struct Fighter_x1A88_xFC_t {
 impl Default for Fighter_x1A88_xFC_t {
     fn default() -> Self {
         Fighter_x1A88_xFC_t {
-            x0: 0,
-            x4: 0,
-            x5: 0,
+            buttons: 0,
+            ltrigger: 0,
+            rtrigger: 0,
             lstick: Default::default(),
             cstick: Default::default(),
-            xA: 0,
-            xB: 0,
+            unused_a: 0,
+            unused_b: 0,
             cur_pos: Default::default(),
             facing_dir: 0.0,
         }
@@ -2117,16 +2175,18 @@ impl Default for LbShadow {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Fighter_x20B0_t {
     /// +0x0
-    pub x0: Vec3,
+    #[doc(alias("x0"))]
+    pub point_0: Vec3,
     /// +0xc
-    pub xC: Vec3,
+    #[doc(alias("xC"))]
+    pub point_1: Vec3,
 }
 
 impl Default for Fighter_x20B0_t {
     fn default() -> Self {
         Fighter_x20B0_t {
-            x0: Default::default(),
-            xC: Default::default(),
+            point_0: Default::default(),
+            point_1: Default::default(),
         }
     }
 }
@@ -2195,34 +2255,42 @@ impl Default for _SmashAttr {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Fighter_x221B {
     /// +0x0 (bits 0..+1)
-    pub x221B_b0: bool,
+    #[doc(alias("x221B_b0"))]
+    pub shield_bubble: bool,
     /// +0x0 (bits 1..+1)
-    pub x221B_b1: bool,
+    #[doc(alias("x221B_b1"))]
+    pub shield_deflects: bool,
     /// +0x0 (bits 2..+1)
-    pub x221B_b2: bool,
+    #[doc(alias("x221B_b2"))]
+    pub shield_no_entry: bool,
     /// +0x0 (bits 3..+1)
-    pub x221B_b3: bool,
+    #[doc(alias("x221B_b3"))]
+    pub bubble_faces: bool,
     /// +0x0 (bits 4..+1)
-    pub x221B_b4: bool,
+    #[doc(alias("x221B_b4"))]
+    pub bubble_reflectors_only: bool,
     /// +0x0 (bits 5..+1)
-    pub x221B_b5: bool,
+    #[doc(alias("x221B_b5"))]
+    pub holds_grab: bool,
     /// +0x0 (bits 6..+1)
-    pub x221B_b6: bool,
+    #[doc(alias("x221B_b6"))]
+    pub item_grab_set: bool,
     /// +0x0 (bits 7..+1)
-    pub x221B_b7: bool,
+    #[doc(alias("x221B_b7"))]
+    pub grounded_catch: bool,
 }
 
 impl Default for Fighter_x221B {
     fn default() -> Self {
         Fighter_x221B {
-            x221B_b0: false,
-            x221B_b1: false,
-            x221B_b2: false,
-            x221B_b3: false,
-            x221B_b4: false,
-            x221B_b5: false,
-            x221B_b6: false,
-            x221B_b7: false,
+            shield_bubble: false,
+            shield_deflects: false,
+            shield_no_entry: false,
+            bubble_faces: false,
+            bubble_reflectors_only: false,
+            holds_grab: false,
+            item_grab_set: false,
+            grounded_catch: false,
         }
     }
 }

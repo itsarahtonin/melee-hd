@@ -202,14 +202,14 @@ pub fn coin_capsule(
         return false;
     }
     let size = crate::fpu::mem(gekko_fp::fmuls(
-        crate::fpu::reg(c.x0),
+        crate::fpu::reg(c.radius),
         crate::fpu::reg(scale_y),
     ));
     push(
         objs,
         DebugDraw::Capsule {
-            a: c.x14,
-            b: c.x8,
+            a: c.prev_pos,
+            b: c.pos,
             color,
             amb,
             size,

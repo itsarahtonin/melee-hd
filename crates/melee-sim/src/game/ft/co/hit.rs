@@ -686,7 +686,7 @@ impl Running<'_> {
         }
         let fp = &self.game.fighters[f.0];
         if let Some(other) = fp.victim_gobj {
-            if fp.state_flags.x221B_b5 {
+            if fp.state_flags.holds_grab {
                 self.holder_hit(gobj, other, facing);
             } else {
                 self.held_hit(gobj, other, cape.is_some(), facing);
@@ -1058,7 +1058,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DCE34")]
     fn grab_break(&mut self, a: GObjId, b: GObjId) {
         self.grab_release(a, b);
-        let g = if self.game.fighter(b).state_flags.x221B_b7 {
+        let g = if self.game.fighter(b).state_flags.grounded_catch {
             a
         } else {
             b

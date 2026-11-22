@@ -357,12 +357,12 @@ impl Running<'_> {
     /// once it stops, the flash clears.
     #[doc(alias = "lbBgFlash_Proc")]
     pub fn bg_flash_proc(&mut self) {
-        let was = self.bg_flash_user().x4.x7C_color_enable;
+        let was = self.bg_flash_user().x4.color_enable;
         self.bg_flash_run();
         let u = self.bg_flash_user();
-        if u.x4.x7C_color_enable {
+        if u.x4.color_enable {
             let scale = reg(self.game.bgflash.scale);
-            let c = &u.x4.x2C_hex;
+            let c = &u.x4.hex;
             let s = |v: u8| fp::fctiwz(fp::fmuls(fp::frsp(f64::from(v)), scale)) as u8;
             let a = (i32::from(c.a) * i32::from(u.x0) / 255) as u8;
             let c = color(s(c.r), s(c.g), s(c.b), a);

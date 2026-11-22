@@ -152,14 +152,14 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         }
     } else if fp.dmg.max_shield_damage != 0 {
         strength = fp.dmg.max_shield_damage;
-    } else if fp.reflect.x1A3C_damageOver != 0 {
+    } else if fp.reflect.damage_over != 0 {
         // A reflector overpowered breaks like a shield (`ftCo_80098C9C`).
         g.enter_shield_break(gobj);
-    } else if reg(fp.reflect.x1A2C_reflectHitDirection) != 0.0 {
+    } else if reg(fp.reflect.hit_direction) != 0.0 {
         if let Some(cb) = fp.reflect_hit_cb {
             run_fighter_cb(g, gobj, cb);
         }
-    } else if reg(fp.absorb.x1A40_absorbHitDirection) != 0.0 {
+    } else if reg(fp.absorb.hit_direction) != 0.0 {
         // `ftData_OnAbsorb`: Ness's and Mr. Game & Watch's.
         match fp.fighter_kind() {
             FighterKind::Ness => g.ness_on_absorb(gobj),
@@ -252,11 +252,11 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     fp.shield_damage_taken = 0;
     fp.shield_hit_damage = 0;
     fp.shield_hit_by = None;
-    fp.reflect.x1A3C_damageOver = 0;
-    fp.reflect.x1A2C_reflectHitDirection = 0.0;
-    fp.absorb.x1A40_absorbHitDirection = 0.0;
-    fp.absorb.x1A44_damageTaken = 0;
-    fp.absorb.x1A48_hitsTaken = 0;
+    fp.reflect.damage_over = 0;
+    fp.reflect.hit_direction = 0.0;
+    fp.absorb.hit_direction = 0.0;
+    fp.absorb.damage_taken = 0;
+    fp.absorb.hits_taken = 0;
     fp.hitlag_vibrate_mul = 1.0;
     fp.min_hitlag = 0.0;
     fp.dmg.stepped_on_item = 0;
@@ -395,8 +395,8 @@ impl Running<'_> {
             .mtx
             .m;
         let fp = &mut self.game.fighters[f.0];
-        fp.afterimage_ring[at].x0 = pos;
-        fp.afterimage_ring[at].xC = crate::vec::Vec3::new(m[0][axis], m[1][axis], m[2][axis]);
+        fp.afterimage_ring[at].point_0 = pos;
+        fp.afterimage_ring[at].point_1 = crate::vec::Vec3::new(m[0][axis], m[1][axis], m[2][axis]);
         fp.afterimage_slot = if at == 2 { 0 } else { at as u8 + 1 };
         if fp.afterimage_mode < 3 {
             fp.afterimage_mode += 1;

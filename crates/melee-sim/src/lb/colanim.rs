@@ -15,9 +15,9 @@ use crate::lb::command;
 pub fn clear(co: &mut ColorOverlay) {
     co.script.cursor = None;
     co.script.frame_count = 0;
-    co.x28_colanim = [0; 4];
-    co.x7C_flag2 = false;
-    co.x7C_color_enable = false;
+    co.colanim = [0; 4];
+    co.flag2 = false;
+    co.color_enable = false;
 }
 
 /// A color script command word: the opcode in its top six bits.
@@ -69,15 +69,15 @@ fn blend_step(to: u8, from: u8, frames: f64) -> f32 {
 
 /// A light color and its blend's start (`lb_80013C18`, `lb_80013D68`).
 fn set_light(co: &mut ColorOverlay, [r, g, b, a]: [u8; 4]) {
-    co.x50_light_color = _GXColor { r, g, b, a };
-    co.x54_light_red = mem(byte_reg(r));
-    co.x58_light_green = mem(byte_reg(g));
-    co.x5C_light_blue = mem(byte_reg(b));
-    co.x60_light_alpha = mem(byte_reg(a));
-    co.x70_lightblend_alpha = 0.0;
-    co.x6C_lightblend_blue = 0.0;
-    co.x68_lightblend_green = 0.0;
-    co.x64_lightblend_red = 0.0;
+    co.light_color = _GXColor { r, g, b, a };
+    co.light_red = mem(byte_reg(r));
+    co.light_green = mem(byte_reg(g));
+    co.light_blue = mem(byte_reg(b));
+    co.light_alpha = mem(byte_reg(a));
+    co.lightblend_alpha = 0.0;
+    co.lightblend_blue = 0.0;
+    co.lightblend_green = 0.0;
+    co.lightblend_red = 0.0;
 }
 
 /// Runs one command of a color overlay's own set (`lb_803BA248`, opcodes 10 to 20): whether
@@ -105,18 +105,18 @@ fn color_command(data: &Archives, co: &mut ColorOverlay, opcode: u32) -> bool {
         // lb_80013BE4: color and light off.
         12 => {
             next_word(data, co);
-            co.x7C_flag2 = false;
-            co.x7C_color_enable = false;
+            co.flag2 = false;
+            co.color_enable = false;
         }
         // lb_80013C18: the light on, with its direction and color.
         13 => {
             let w = next_word(data, co);
-            co.x7C_light_enable = w.0 >> 25 & 1 != 0;
-            co.x74_light_rot_x = mem(fp::frsp(f64::from(w.signed(12, 12))));
-            co.x78_light_rot_yz = mem(fp::frsp(f64::from(w.signed(0, 12))));
+            co.light_enable = w.0 >> 25 & 1 != 0;
+            co.light_rot_x = mem(fp::frsp(f64::from(w.signed(12, 12))));
+            co.light_rot_yz = mem(fp::frsp(f64::from(w.signed(0, 12))));
             let c = next_word(data, co).rgba();
             set_light(co, c);
-            co.x7C_flag2 = true;
+            co.flag2 = true;
         }
         // lb_80013D68: the light's color.
         14 => {
@@ -128,55 +128,55 @@ fn color_command(data: &Archives, co: &mut ColorOverlay, opcode: u32) -> bool {
         15 => {
             let frames = fp::frsp(f64::from(next_word(data, co).timer()));
             let [r, g, b, a] = current(data, co).rgba();
-            let c = &co.x50_light_color;
+            let c = &co.light_color;
             let (cr, cg, cb, ca) = (c.r, c.g, c.b, c.a);
-            co.x64_lightblend_red = blend_step(r, cr, frames);
-            co.x68_lightblend_green = blend_step(g, cg, frames);
-            co.x6C_lightblend_blue = blend_step(b, cb, frames);
-            co.x70_lightblend_alpha = blend_step(a, ca, frames);
+            co.lightblend_red = blend_step(r, cr, frames);
+            co.lightblend_green = blend_step(g, cg, frames);
+            co.lightblend_blue = blend_step(b, cb, frames);
+            co.lightblend_alpha = blend_step(a, ca, frames);
             next_word(data, co);
         }
         // lb_80013F78: the light's direction.
         16 => {
             let w = next_word(data, co);
-            co.x74_light_rot_x = mem(fp::frsp(f64::from(w.signed(13, 13))));
-            co.x78_light_rot_yz = mem(fp::frsp(f64::from(w.signed(0, 13))));
+            co.light_rot_x = mem(fp::frsp(f64::from(w.signed(13, 13))));
+            co.light_rot_yz = mem(fp::frsp(f64::from(w.signed(0, 13))));
         }
         // lb_80013FF0: the light off.
         17 => {
             next_word(data, co);
-            co.x7C_flag2 = false;
+            co.flag2 = false;
         }
         // lb_80014014: the color on.
         18 => {
-            co.x7C_color_enable = true;
+            co.color_enable = true;
             next_word(data, co);
             let [r, g, b, a] = next_word(data, co).rgba();
-            co.x2C_hex = _GXColor { r, g, b, a };
-            co.x30_color_red = mem(byte_reg(r));
-            co.x34_color_green = mem(byte_reg(g));
-            co.x38_color_blue = mem(byte_reg(b));
-            co.x3C_color_alpha = mem(byte_reg(a));
-            co.x4C_colorblend_alpha = 0.0;
-            co.x48_colorblend_blue = 0.0;
-            co.x44_colorblend_green = 0.0;
-            co.x40_colorblend_red = 0.0;
+            co.hex = _GXColor { r, g, b, a };
+            co.color_red = mem(byte_reg(r));
+            co.color_green = mem(byte_reg(g));
+            co.color_blue = mem(byte_reg(b));
+            co.color_alpha = mem(byte_reg(a));
+            co.colorblend_alpha = 0.0;
+            co.colorblend_blue = 0.0;
+            co.colorblend_green = 0.0;
+            co.colorblend_red = 0.0;
         }
         // lb_800140F8: a color blend.
         19 => {
             let frames = fp::frsp(f64::from(next_word(data, co).timer()));
             let [r, g, b, a] = current(data, co).rgba();
-            let c = &co.x2C_hex;
+            let c = &co.hex;
             let (cr, cg, cb, ca) = (c.r, c.g, c.b, c.a);
-            co.x40_colorblend_red = blend_step(r, cr, frames);
-            co.x44_colorblend_green = blend_step(g, cg, frames);
-            co.x48_colorblend_blue = blend_step(b, cb, frames);
-            co.x4C_colorblend_alpha = blend_step(a, ca, frames);
+            co.colorblend_red = blend_step(r, cr, frames);
+            co.colorblend_green = blend_step(g, cg, frames);
+            co.colorblend_blue = blend_step(b, cb, frames);
+            co.colorblend_alpha = blend_step(a, ca, frames);
             next_word(data, co);
         }
         // lb_80014234: the color off.
         20 => {
-            co.x7C_color_enable = false;
+            co.color_enable = false;
             next_word(data, co);
         }
         _ => unreachable!(),
@@ -223,25 +223,25 @@ pub fn run_commands(data: &Archives, co: &mut ColorOverlay) -> Option<Stop> {
 pub fn blend(co: &mut ColorOverlay) -> bool {
     let byte = |v: f32| fp::fctiwz(reg(v)) as u8;
     let add = |a: f32, b: f32| mem(fp::fadds(reg(a), reg(b)));
-    if co.x7C_color_enable {
-        co.x30_color_red = add(co.x30_color_red, co.x40_colorblend_red);
-        co.x34_color_green = add(co.x34_color_green, co.x44_colorblend_green);
-        co.x38_color_blue = add(co.x38_color_blue, co.x48_colorblend_blue);
-        co.x3C_color_alpha = add(co.x3C_color_alpha, co.x4C_colorblend_alpha);
-        co.x2C_hex.r = byte(co.x30_color_red);
-        co.x2C_hex.g = byte(co.x34_color_green);
-        co.x2C_hex.b = byte(co.x38_color_blue);
-        co.x2C_hex.a = byte(co.x3C_color_alpha);
+    if co.color_enable {
+        co.color_red = add(co.color_red, co.colorblend_red);
+        co.color_green = add(co.color_green, co.colorblend_green);
+        co.color_blue = add(co.color_blue, co.colorblend_blue);
+        co.color_alpha = add(co.color_alpha, co.colorblend_alpha);
+        co.hex.r = byte(co.color_red);
+        co.hex.g = byte(co.color_green);
+        co.hex.b = byte(co.color_blue);
+        co.hex.a = byte(co.color_alpha);
     }
-    if co.x7C_flag2 {
-        co.x54_light_red = add(co.x54_light_red, co.x64_lightblend_red);
-        co.x58_light_green = add(co.x58_light_green, co.x68_lightblend_green);
-        co.x5C_light_blue = add(co.x5C_light_blue, co.x6C_lightblend_blue);
-        co.x60_light_alpha = add(co.x60_light_alpha, co.x70_lightblend_alpha);
-        co.x50_light_color.r = byte(co.x54_light_red);
-        co.x50_light_color.g = byte(co.x58_light_green);
-        co.x50_light_color.b = byte(co.x5C_light_blue);
-        co.x50_light_color.a = byte(co.x60_light_alpha);
+    if co.flag2 {
+        co.light_red = add(co.light_red, co.lightblend_red);
+        co.light_green = add(co.light_green, co.lightblend_green);
+        co.light_blue = add(co.light_blue, co.lightblend_blue);
+        co.light_alpha = add(co.light_alpha, co.lightblend_alpha);
+        co.light_color.r = byte(co.light_red);
+        co.light_color.g = byte(co.light_green);
+        co.light_color.b = byte(co.light_blue);
+        co.light_color.a = byte(co.light_alpha);
     }
     let fc = co.script.frame_count as i32;
     if fc != 0 {
@@ -279,16 +279,16 @@ pub fn step(
 #[doc(alias = "lb_800144C8")]
 pub fn start(co: &mut ColorOverlay, data: &Archives, table: DataRef, id: i32, frames: i32) -> bool {
     let entry = |i: i32| table.at(8 * i as u32);
-    let cur = i32::from_be_bytes(co.x28_colanim);
+    let cur = i32::from_be_bytes(co.colanim);
     if data.u8(entry(cur).at(4)) > data.u8(entry(id).at(4)) {
         return false;
     }
-    co.x28_colanim = id.to_be_bytes();
+    co.colanim = id.to_be_bytes();
     co.script.frame_count = frames as u32;
     co.script.cursor = data.ptr(entry(id));
     co.script.timer = 0;
     co.script.loop_count = 0;
-    co.x7C_color_enable = false;
-    co.x7C_flag2 = false;
+    co.color_enable = false;
+    co.flag2 = false;
     true
 }

@@ -111,7 +111,7 @@ impl Running<'_> {
                 let mut added = false;
                 if fp.debug_draw_flags[0] & 1 != 0 {
                     let (shown, accessory) = (
-                        !fp.invisible && !fp.visible && fp.parts_vis.xC[1].is_some(),
+                        !fp.invisible && !fp.visible && fp.parts_vis.lookups[1].is_some(),
                         fp.accessory,
                     );
                     if shown {

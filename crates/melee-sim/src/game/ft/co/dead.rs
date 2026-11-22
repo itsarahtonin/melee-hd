@@ -84,7 +84,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
         if let Some(v) = fp.victim_gobj {
-            if fp.state_flags.x221B_b5 {
+            if fp.state_flags.holds_grab {
                 let vf = self.game.fighter_mut(v);
                 if !vf.is_sub_fighter {
                     vf.dead_holder_slot = slot;
@@ -112,7 +112,7 @@ impl Running<'_> {
         }
         // `ftCo_800DD100`: a grab ends, and the other fighter waits or falls.
         if let Some(v) = self.game.fighters[f.0].victim_gobj {
-            if self.game.fighters[f.0].state_flags.x221B_b5 {
+            if self.game.fighters[f.0].state_flags.holds_grab {
                 self.grab_release(gobj, v);
             } else {
                 self.grab_release(v, gobj);

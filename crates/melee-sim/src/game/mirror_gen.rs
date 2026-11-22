@@ -841,36 +841,36 @@ impl Mirror for ColorOverlay {
         let _ = (&m, at, &cx);
         ColorOverlay {
             script: Script::import(m, at + 0x0, cx),
-            x24: m.u32(at + 0x24) as i32,
-            x28_colanim: m.bytes(at + 0x28),
-            x2C_hex: _GXColor::import(m, at + 0x2c, cx),
-            x30_color_red: f32::from_bits(m.u32(at + 0x30)),
-            x34_color_green: f32::from_bits(m.u32(at + 0x34)),
-            x38_color_blue: f32::from_bits(m.u32(at + 0x38)),
-            x3C_color_alpha: f32::from_bits(m.u32(at + 0x3c)),
-            x40_colorblend_red: f32::from_bits(m.u32(at + 0x40)),
-            x44_colorblend_green: f32::from_bits(m.u32(at + 0x44)),
-            x48_colorblend_blue: f32::from_bits(m.u32(at + 0x48)),
-            x4C_colorblend_alpha: f32::from_bits(m.u32(at + 0x4c)),
-            x50_light_color: _GXColor::import(m, at + 0x50, cx),
-            x54_light_red: f32::from_bits(m.u32(at + 0x54)),
-            x58_light_green: f32::from_bits(m.u32(at + 0x58)),
-            x5C_light_blue: f32::from_bits(m.u32(at + 0x5c)),
-            x60_light_alpha: f32::from_bits(m.u32(at + 0x60)),
-            x64_lightblend_red: f32::from_bits(m.u32(at + 0x64)),
-            x68_lightblend_green: f32::from_bits(m.u32(at + 0x68)),
-            x6C_lightblend_blue: f32::from_bits(m.u32(at + 0x6c)),
-            x70_lightblend_alpha: f32::from_bits(m.u32(at + 0x70)),
-            x74_light_rot_x: f32::from_bits(m.u32(at + 0x74)),
-            x78_light_rot_yz: f32::from_bits(m.u32(at + 0x78)),
-            x7C_color_enable: m.bits(at, 992, 1) != 0,
-            x7C_flag2: m.bits(at, 993, 1) != 0,
-            x7C_light_enable: m.bits(at, 994, 1) != 0,
-            x7C_flag4: m.bits(at, 995, 1) != 0,
-            x7C_flag5: m.bits(at, 996, 1) != 0,
-            x7C_flag6: m.bits(at, 997, 1) != 0,
-            x7C_flag7: m.bits(at, 998, 1) != 0,
-            x7C_flag8: m.bits(at, 999, 1) != 0,
+            unused_24: m.u32(at + 0x24) as i32,
+            colanim: m.bytes(at + 0x28),
+            hex: _GXColor::import(m, at + 0x2c, cx),
+            color_red: f32::from_bits(m.u32(at + 0x30)),
+            color_green: f32::from_bits(m.u32(at + 0x34)),
+            color_blue: f32::from_bits(m.u32(at + 0x38)),
+            color_alpha: f32::from_bits(m.u32(at + 0x3c)),
+            colorblend_red: f32::from_bits(m.u32(at + 0x40)),
+            colorblend_green: f32::from_bits(m.u32(at + 0x44)),
+            colorblend_blue: f32::from_bits(m.u32(at + 0x48)),
+            colorblend_alpha: f32::from_bits(m.u32(at + 0x4c)),
+            light_color: _GXColor::import(m, at + 0x50, cx),
+            light_red: f32::from_bits(m.u32(at + 0x54)),
+            light_green: f32::from_bits(m.u32(at + 0x58)),
+            light_blue: f32::from_bits(m.u32(at + 0x5c)),
+            light_alpha: f32::from_bits(m.u32(at + 0x60)),
+            lightblend_red: f32::from_bits(m.u32(at + 0x64)),
+            lightblend_green: f32::from_bits(m.u32(at + 0x68)),
+            lightblend_blue: f32::from_bits(m.u32(at + 0x6c)),
+            lightblend_alpha: f32::from_bits(m.u32(at + 0x70)),
+            light_rot_x: f32::from_bits(m.u32(at + 0x74)),
+            light_rot_yz: f32::from_bits(m.u32(at + 0x78)),
+            color_enable: m.bits(at, 992, 1) != 0,
+            flag2: m.bits(at, 993, 1) != 0,
+            light_enable: m.bits(at, 994, 1) != 0,
+            flag4: m.bits(at, 995, 1) != 0,
+            flag5: m.bits(at, 996, 1) != 0,
+            flag6: m.bits(at, 997, 1) != 0,
+            flag7: m.bits(at, 998, 1) != 0,
+            flag8: m.bits(at, 999, 1) != 0,
         }
     }
 
@@ -878,203 +878,207 @@ impl Mirror for ColorOverlay {
         let _ = (&m, at, path, &cx);
         self.script
             .compare(m, at + 0x0, &format!("{path}.script"), cx);
-        if self.x24 != m.u32(at + 0x24) as i32 {
+        if self.unused_24 != m.u32(at + 0x24) as i32 {
             cx.mismatch(
-                &format!("{path}.x24"),
-                format!("{:?}", self.x24),
+                &format!("{path}.unused_24 (x24)"),
+                format!("{:?}", self.unused_24),
                 format!("{:?}", m.u32(at + 0x24) as i32),
             );
         }
-        if self.x28_colanim != m.bytes::<4>(at + 0x28) {
+        if self.colanim != m.bytes::<4>(at + 0x28) {
             cx.mismatch(
-                &format!("{path}.x28_colanim"),
-                format!("{:02x?}", self.x28_colanim),
+                &format!("{path}.colanim (x28_colanim)"),
+                format!("{:02x?}", self.colanim),
                 format!("{:02x?}", m.bytes::<4>(at + 0x28)),
             );
         }
-        self.x2C_hex
-            .compare(m, at + 0x2c, &format!("{path}.x2C_hex"), cx);
-        if self.x30_color_red.to_bits() != m.u32(at + 0x30) {
+        self.hex
+            .compare(m, at + 0x2c, &format!("{path}.hex (x2C_hex)"), cx);
+        if self.color_red.to_bits() != m.u32(at + 0x30) {
             cx.mismatch(
-                &format!("{path}.x30_color_red"),
-                format!("{:?}", self.x30_color_red),
+                &format!("{path}.color_red (x30_color_red)"),
+                format!("{:?}", self.color_red),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x30))),
             );
         }
-        if self.x34_color_green.to_bits() != m.u32(at + 0x34) {
+        if self.color_green.to_bits() != m.u32(at + 0x34) {
             cx.mismatch(
-                &format!("{path}.x34_color_green"),
-                format!("{:?}", self.x34_color_green),
+                &format!("{path}.color_green (x34_color_green)"),
+                format!("{:?}", self.color_green),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x34))),
             );
         }
-        if self.x38_color_blue.to_bits() != m.u32(at + 0x38) {
+        if self.color_blue.to_bits() != m.u32(at + 0x38) {
             cx.mismatch(
-                &format!("{path}.x38_color_blue"),
-                format!("{:?}", self.x38_color_blue),
+                &format!("{path}.color_blue (x38_color_blue)"),
+                format!("{:?}", self.color_blue),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x38))),
             );
         }
-        if self.x3C_color_alpha.to_bits() != m.u32(at + 0x3c) {
+        if self.color_alpha.to_bits() != m.u32(at + 0x3c) {
             cx.mismatch(
-                &format!("{path}.x3C_color_alpha"),
-                format!("{:?}", self.x3C_color_alpha),
+                &format!("{path}.color_alpha (x3C_color_alpha)"),
+                format!("{:?}", self.color_alpha),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x3c))),
             );
         }
-        if self.x40_colorblend_red.to_bits() != m.u32(at + 0x40) {
+        if self.colorblend_red.to_bits() != m.u32(at + 0x40) {
             cx.mismatch(
-                &format!("{path}.x40_colorblend_red"),
-                format!("{:?}", self.x40_colorblend_red),
+                &format!("{path}.colorblend_red (x40_colorblend_red)"),
+                format!("{:?}", self.colorblend_red),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x40))),
             );
         }
-        if self.x44_colorblend_green.to_bits() != m.u32(at + 0x44) {
+        if self.colorblend_green.to_bits() != m.u32(at + 0x44) {
             cx.mismatch(
-                &format!("{path}.x44_colorblend_green"),
-                format!("{:?}", self.x44_colorblend_green),
+                &format!("{path}.colorblend_green (x44_colorblend_green)"),
+                format!("{:?}", self.colorblend_green),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x44))),
             );
         }
-        if self.x48_colorblend_blue.to_bits() != m.u32(at + 0x48) {
+        if self.colorblend_blue.to_bits() != m.u32(at + 0x48) {
             cx.mismatch(
-                &format!("{path}.x48_colorblend_blue"),
-                format!("{:?}", self.x48_colorblend_blue),
+                &format!("{path}.colorblend_blue (x48_colorblend_blue)"),
+                format!("{:?}", self.colorblend_blue),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x48))),
             );
         }
-        if self.x4C_colorblend_alpha.to_bits() != m.u32(at + 0x4c) {
+        if self.colorblend_alpha.to_bits() != m.u32(at + 0x4c) {
             cx.mismatch(
-                &format!("{path}.x4C_colorblend_alpha"),
-                format!("{:?}", self.x4C_colorblend_alpha),
+                &format!("{path}.colorblend_alpha (x4C_colorblend_alpha)"),
+                format!("{:?}", self.colorblend_alpha),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x4c))),
             );
         }
-        self.x50_light_color
-            .compare(m, at + 0x50, &format!("{path}.x50_light_color"), cx);
-        if self.x54_light_red.to_bits() != m.u32(at + 0x54) {
+        self.light_color.compare(
+            m,
+            at + 0x50,
+            &format!("{path}.light_color (x50_light_color)"),
+            cx,
+        );
+        if self.light_red.to_bits() != m.u32(at + 0x54) {
             cx.mismatch(
-                &format!("{path}.x54_light_red"),
-                format!("{:?}", self.x54_light_red),
+                &format!("{path}.light_red (x54_light_red)"),
+                format!("{:?}", self.light_red),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x54))),
             );
         }
-        if self.x58_light_green.to_bits() != m.u32(at + 0x58) {
+        if self.light_green.to_bits() != m.u32(at + 0x58) {
             cx.mismatch(
-                &format!("{path}.x58_light_green"),
-                format!("{:?}", self.x58_light_green),
+                &format!("{path}.light_green (x58_light_green)"),
+                format!("{:?}", self.light_green),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x58))),
             );
         }
-        if self.x5C_light_blue.to_bits() != m.u32(at + 0x5c) {
+        if self.light_blue.to_bits() != m.u32(at + 0x5c) {
             cx.mismatch(
-                &format!("{path}.x5C_light_blue"),
-                format!("{:?}", self.x5C_light_blue),
+                &format!("{path}.light_blue (x5C_light_blue)"),
+                format!("{:?}", self.light_blue),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x5c))),
             );
         }
-        if self.x60_light_alpha.to_bits() != m.u32(at + 0x60) {
+        if self.light_alpha.to_bits() != m.u32(at + 0x60) {
             cx.mismatch(
-                &format!("{path}.x60_light_alpha"),
-                format!("{:?}", self.x60_light_alpha),
+                &format!("{path}.light_alpha (x60_light_alpha)"),
+                format!("{:?}", self.light_alpha),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x60))),
             );
         }
-        if self.x64_lightblend_red.to_bits() != m.u32(at + 0x64) {
+        if self.lightblend_red.to_bits() != m.u32(at + 0x64) {
             cx.mismatch(
-                &format!("{path}.x64_lightblend_red"),
-                format!("{:?}", self.x64_lightblend_red),
+                &format!("{path}.lightblend_red (x64_lightblend_red)"),
+                format!("{:?}", self.lightblend_red),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x64))),
             );
         }
-        if self.x68_lightblend_green.to_bits() != m.u32(at + 0x68) {
+        if self.lightblend_green.to_bits() != m.u32(at + 0x68) {
             cx.mismatch(
-                &format!("{path}.x68_lightblend_green"),
-                format!("{:?}", self.x68_lightblend_green),
+                &format!("{path}.lightblend_green (x68_lightblend_green)"),
+                format!("{:?}", self.lightblend_green),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x68))),
             );
         }
-        if self.x6C_lightblend_blue.to_bits() != m.u32(at + 0x6c) {
+        if self.lightblend_blue.to_bits() != m.u32(at + 0x6c) {
             cx.mismatch(
-                &format!("{path}.x6C_lightblend_blue"),
-                format!("{:?}", self.x6C_lightblend_blue),
+                &format!("{path}.lightblend_blue (x6C_lightblend_blue)"),
+                format!("{:?}", self.lightblend_blue),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x6c))),
             );
         }
-        if self.x70_lightblend_alpha.to_bits() != m.u32(at + 0x70) {
+        if self.lightblend_alpha.to_bits() != m.u32(at + 0x70) {
             cx.mismatch(
-                &format!("{path}.x70_lightblend_alpha"),
-                format!("{:?}", self.x70_lightblend_alpha),
+                &format!("{path}.lightblend_alpha (x70_lightblend_alpha)"),
+                format!("{:?}", self.lightblend_alpha),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x70))),
             );
         }
-        if self.x74_light_rot_x.to_bits() != m.u32(at + 0x74) {
+        if self.light_rot_x.to_bits() != m.u32(at + 0x74) {
             cx.mismatch(
-                &format!("{path}.x74_light_rot_x"),
-                format!("{:?}", self.x74_light_rot_x),
+                &format!("{path}.light_rot_x (x74_light_rot_x)"),
+                format!("{:?}", self.light_rot_x),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x74))),
             );
         }
-        if self.x78_light_rot_yz.to_bits() != m.u32(at + 0x78) {
+        if self.light_rot_yz.to_bits() != m.u32(at + 0x78) {
             cx.mismatch(
-                &format!("{path}.x78_light_rot_yz"),
-                format!("{:?}", self.x78_light_rot_yz),
+                &format!("{path}.light_rot_yz (x78_light_rot_yz)"),
+                format!("{:?}", self.light_rot_yz),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x78))),
             );
         }
-        if (self.x7C_color_enable as u32) != m.bits(at, 992, 1) {
+        if (self.color_enable as u32) != m.bits(at, 992, 1) {
             cx.mismatch(
-                &format!("{path}.x7C_color_enable"),
-                format!("{:?}", self.x7C_color_enable),
+                &format!("{path}.color_enable (x7C_color_enable)"),
+                format!("{:?}", self.color_enable),
                 format!("{:?}", m.bits(at, 992, 1)),
             );
         }
-        if (self.x7C_flag2 as u32) != m.bits(at, 993, 1) {
+        if (self.flag2 as u32) != m.bits(at, 993, 1) {
             cx.mismatch(
-                &format!("{path}.x7C_flag2"),
-                format!("{:?}", self.x7C_flag2),
+                &format!("{path}.flag2 (x7C_flag2)"),
+                format!("{:?}", self.flag2),
                 format!("{:?}", m.bits(at, 993, 1)),
             );
         }
-        if (self.x7C_light_enable as u32) != m.bits(at, 994, 1) {
+        if (self.light_enable as u32) != m.bits(at, 994, 1) {
             cx.mismatch(
-                &format!("{path}.x7C_light_enable"),
-                format!("{:?}", self.x7C_light_enable),
+                &format!("{path}.light_enable (x7C_light_enable)"),
+                format!("{:?}", self.light_enable),
                 format!("{:?}", m.bits(at, 994, 1)),
             );
         }
-        if (self.x7C_flag4 as u32) != m.bits(at, 995, 1) {
+        if (self.flag4 as u32) != m.bits(at, 995, 1) {
             cx.mismatch(
-                &format!("{path}.x7C_flag4"),
-                format!("{:?}", self.x7C_flag4),
+                &format!("{path}.flag4 (x7C_flag4)"),
+                format!("{:?}", self.flag4),
                 format!("{:?}", m.bits(at, 995, 1)),
             );
         }
-        if (self.x7C_flag5 as u32) != m.bits(at, 996, 1) {
+        if (self.flag5 as u32) != m.bits(at, 996, 1) {
             cx.mismatch(
-                &format!("{path}.x7C_flag5"),
-                format!("{:?}", self.x7C_flag5),
+                &format!("{path}.flag5 (x7C_flag5)"),
+                format!("{:?}", self.flag5),
                 format!("{:?}", m.bits(at, 996, 1)),
             );
         }
-        if (self.x7C_flag6 as u32) != m.bits(at, 997, 1) {
+        if (self.flag6 as u32) != m.bits(at, 997, 1) {
             cx.mismatch(
-                &format!("{path}.x7C_flag6"),
-                format!("{:?}", self.x7C_flag6),
+                &format!("{path}.flag6 (x7C_flag6)"),
+                format!("{:?}", self.flag6),
                 format!("{:?}", m.bits(at, 997, 1)),
             );
         }
-        if (self.x7C_flag7 as u32) != m.bits(at, 998, 1) {
+        if (self.flag7 as u32) != m.bits(at, 998, 1) {
             cx.mismatch(
-                &format!("{path}.x7C_flag7"),
-                format!("{:?}", self.x7C_flag7),
+                &format!("{path}.flag7 (x7C_flag7)"),
+                format!("{:?}", self.flag7),
                 format!("{:?}", m.bits(at, 998, 1)),
             );
         }
-        if (self.x7C_flag8 as u32) != m.bits(at, 999, 1) {
+        if (self.flag8 as u32) != m.bits(at, 999, 1) {
             cx.mismatch(
-                &format!("{path}.x7C_flag8"),
-                format!("{:?}", self.x7C_flag8),
+                &format!("{path}.flag8 (x7C_flag8)"),
+                format!("{:?}", self.flag8),
                 format!("{:?}", m.bits(at, 999, 1)),
             );
         }
@@ -1089,7 +1093,7 @@ impl Mirror for FtPartsVis {
         FtPartsVis {
             model_num: m.u32(at + 0x0),
             cleared: core::array::from_fn(|i0| m.u8(at + 0x4 + i0 as u32 * 0x1)),
-            xC: core::array::from_fn(|i0| cx.import_data(m.u32(at + 0xc + i0 as u32 * 0x4))),
+            lookups: core::array::from_fn(|i0| cx.import_data(m.u32(at + 0xc + i0 as u32 * 0x4))),
         }
     }
 
@@ -1113,8 +1117,8 @@ impl Mirror for FtPartsVis {
         }
         for i0 in 0..5 {
             cx.compare_data(
-                &format!("{}[{}]", format!("{path}.xC"), i0),
-                self.xC[i0],
+                &format!("{}[{}]", format!("{path}.lookups (xC)"), i0),
+                self.lookups[i0],
                 m.u32(at + 0xc + i0 as u32 * 0x4),
             );
         }
@@ -1579,56 +1583,56 @@ impl Mirror for Fighter_x8B0_t {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         Fighter_x8B0_t {
-            x0: m.u32(at + 0x0) as i32,
-            x4: f32::from_bits(m.u32(at + 0x4)),
-            x8: f32::from_bits(m.u32(at + 0x8)),
-            xC: f32::from_bits(m.u32(at + 0xc)),
-            x10: m.u8(at + 0x10) as i8,
-            x11: m.u8(at + 0x11) as i8,
+            unused_0: m.u32(at + 0x0) as i32,
+            frames: f32::from_bits(m.u32(at + 0x4)),
+            frame: f32::from_bits(m.u32(at + 0x8)),
+            blend: f32::from_bits(m.u32(at + 0xc)),
+            part: m.u8(at + 0x10) as i8,
+            anim: m.u8(at + 0x11) as i8,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x0 != m.u32(at + 0x0) as i32 {
+        if self.unused_0 != m.u32(at + 0x0) as i32 {
             cx.mismatch(
-                &format!("{path}.x0"),
-                format!("{:?}", self.x0),
+                &format!("{path}.unused_0 (x0)"),
+                format!("{:?}", self.unused_0),
                 format!("{:?}", m.u32(at + 0x0) as i32),
             );
         }
-        if self.x4.to_bits() != m.u32(at + 0x4) {
+        if self.frames.to_bits() != m.u32(at + 0x4) {
             cx.mismatch(
-                &format!("{path}.x4"),
-                format!("{:?}", self.x4),
+                &format!("{path}.frames (x4)"),
+                format!("{:?}", self.frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
             );
         }
-        if self.x8.to_bits() != m.u32(at + 0x8) {
+        if self.frame.to_bits() != m.u32(at + 0x8) {
             cx.mismatch(
-                &format!("{path}.x8"),
-                format!("{:?}", self.x8),
+                &format!("{path}.frame (x8)"),
+                format!("{:?}", self.frame),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x8))),
             );
         }
-        if self.xC.to_bits() != m.u32(at + 0xc) {
+        if self.blend.to_bits() != m.u32(at + 0xc) {
             cx.mismatch(
-                &format!("{path}.xC"),
-                format!("{:?}", self.xC),
+                &format!("{path}.blend (xC)"),
+                format!("{:?}", self.blend),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xc))),
             );
         }
-        if self.x10 != m.u8(at + 0x10) as i8 {
+        if self.part != m.u8(at + 0x10) as i8 {
             cx.mismatch(
-                &format!("{path}.x10"),
-                format!("{:?}", self.x10),
+                &format!("{path}.part (x10)"),
+                format!("{:?}", self.part),
                 format!("{:?}", m.u8(at + 0x10) as i8),
             );
         }
-        if self.x11 != m.u8(at + 0x11) as i8 {
+        if self.anim != m.u8(at + 0x11) as i8 {
             cx.mismatch(
-                &format!("{path}.x11"),
-                format!("{:?}", self.x11),
+                &format!("{path}.anim (x11)"),
+                format!("{:?}", self.anim),
                 format!("{:?}", m.u8(at + 0x11) as i8),
             );
         }
@@ -2211,32 +2215,35 @@ impl Mirror for Fighter_x1614_t {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         Fighter_x1614_t {
-            x0: f32::from_bits(m.u32(at + 0x0)),
-            x4: cx.import_handle("JObjId", m.u32(at + 0x4)).map(JObjId),
-            x8: Vec3::import(m, at + 0x8, cx),
-            x14: Vec3::import(m, at + 0x14, cx),
-            x20: Vec3::import(m, at + 0x20, cx),
+            radius: f32::from_bits(m.u32(at + 0x0)),
+            joint: cx.import_handle("JObjId", m.u32(at + 0x4)).map(JObjId),
+            pos: Vec3::import(m, at + 0x8, cx),
+            prev_pos: Vec3::import(m, at + 0x14, cx),
+            contact: Vec3::import(m, at + 0x20, cx),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x0.to_bits() != m.u32(at + 0x0) {
+        if self.radius.to_bits() != m.u32(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.x0"),
-                format!("{:?}", self.x0),
+                &format!("{path}.radius (x0)"),
+                format!("{:?}", self.radius),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x4"),
+            &format!("{path}.joint (x4)"),
             "JObjId",
-            self.x4.map(|h| h.0),
+            self.joint.map(|h| h.0),
             m.u32(at + 0x4),
         );
-        self.x8.compare(m, at + 0x8, &format!("{path}.x8"), cx);
-        self.x14.compare(m, at + 0x14, &format!("{path}.x14"), cx);
-        self.x20.compare(m, at + 0x20, &format!("{path}.x20"), cx);
+        self.pos
+            .compare(m, at + 0x8, &format!("{path}.pos (x8)"), cx);
+        self.prev_pos
+            .compare(m, at + 0x14, &format!("{path}.prev_pos (x14)"), cx);
+        self.contact
+            .compare(m, at + 0x20, &format!("{path}.contact (x20)"), cx);
     }
 }
 
@@ -2249,9 +2256,9 @@ impl Mirror for Fighter_x1670_t {
             v1: Vec3::import(m, at + 0x0, cx),
             v2: f32::from_bits(m.u32(at + 0xc)),
             jobj: cx.import_handle("JObjId", m.u32(at + 0x10)).map(JObjId),
-            x14: f32::from_bits(m.u32(at + 0x14)),
-            x18: Vec3::import(m, at + 0x18, cx),
-            x24: m.u32(at + 0x24) as i32,
+            unused_14: f32::from_bits(m.u32(at + 0x14)),
+            center: Vec3::import(m, at + 0x18, cx),
+            bone: m.u32(at + 0x24) as i32,
         }
     }
 
@@ -2271,18 +2278,19 @@ impl Mirror for Fighter_x1670_t {
             self.jobj.map(|h| h.0),
             m.u32(at + 0x10),
         );
-        if self.x14.to_bits() != m.u32(at + 0x14) {
+        if self.unused_14.to_bits() != m.u32(at + 0x14) {
             cx.mismatch(
-                &format!("{path}.x14"),
-                format!("{:?}", self.x14),
+                &format!("{path}.unused_14 (x14)"),
+                format!("{:?}", self.unused_14),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x14))),
             );
         }
-        self.x18.compare(m, at + 0x18, &format!("{path}.x18"), cx);
-        if self.x24 != m.u32(at + 0x24) as i32 {
+        self.center
+            .compare(m, at + 0x18, &format!("{path}.center (x18)"), cx);
+        if self.bone != m.u32(at + 0x24) as i32 {
             cx.mismatch(
-                &format!("{path}.x24"),
-                format!("{:?}", self.x24),
+                &format!("{path}.bone (x24)"),
+                format!("{:?}", self.bone),
                 format!("{:?}", m.u32(at + 0x24) as i32),
             );
         }
@@ -3039,48 +3047,48 @@ impl Mirror for Fighter_ReflectAttr {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         Fighter_ReflectAttr {
-            x1A2C_reflectHitDirection: f32::from_bits(m.u32(at + 0x0)),
-            x1A30_maxDamage: m.u32(at + 0x4) as i32,
-            x1A34_damageMul: f32::from_bits(m.u32(at + 0x8)),
-            x1A38_speedMul: f32::from_bits(m.u32(at + 0xc)),
-            x1A3C_damageOver: m.u32(at + 0x10) as i32,
+            hit_direction: f32::from_bits(m.u32(at + 0x0)),
+            max_damage: m.u32(at + 0x4) as i32,
+            damage_mul: f32::from_bits(m.u32(at + 0x8)),
+            speed_mul: f32::from_bits(m.u32(at + 0xc)),
+            damage_over: m.u32(at + 0x10) as i32,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x1A2C_reflectHitDirection.to_bits() != m.u32(at + 0x0) {
+        if self.hit_direction.to_bits() != m.u32(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.x1A2C_reflectHitDirection"),
-                format!("{:?}", self.x1A2C_reflectHitDirection),
+                &format!("{path}.hit_direction (x1A2C_reflectHitDirection)"),
+                format!("{:?}", self.hit_direction),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
             );
         }
-        if self.x1A30_maxDamage != m.u32(at + 0x4) as i32 {
+        if self.max_damage != m.u32(at + 0x4) as i32 {
             cx.mismatch(
-                &format!("{path}.x1A30_maxDamage"),
-                format!("{:?}", self.x1A30_maxDamage),
+                &format!("{path}.max_damage (x1A30_maxDamage)"),
+                format!("{:?}", self.max_damage),
                 format!("{:?}", m.u32(at + 0x4) as i32),
             );
         }
-        if self.x1A34_damageMul.to_bits() != m.u32(at + 0x8) {
+        if self.damage_mul.to_bits() != m.u32(at + 0x8) {
             cx.mismatch(
-                &format!("{path}.x1A34_damageMul"),
-                format!("{:?}", self.x1A34_damageMul),
+                &format!("{path}.damage_mul (x1A34_damageMul)"),
+                format!("{:?}", self.damage_mul),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x8))),
             );
         }
-        if self.x1A38_speedMul.to_bits() != m.u32(at + 0xc) {
+        if self.speed_mul.to_bits() != m.u32(at + 0xc) {
             cx.mismatch(
-                &format!("{path}.x1A38_speedMul"),
-                format!("{:?}", self.x1A38_speedMul),
+                &format!("{path}.speed_mul (x1A38_speedMul)"),
+                format!("{:?}", self.speed_mul),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xc))),
             );
         }
-        if self.x1A3C_damageOver != m.u32(at + 0x10) as i32 {
+        if self.damage_over != m.u32(at + 0x10) as i32 {
             cx.mismatch(
-                &format!("{path}.x1A3C_damageOver"),
-                format!("{:?}", self.x1A3C_damageOver),
+                &format!("{path}.damage_over (x1A3C_damageOver)"),
+                format!("{:?}", self.damage_over),
                 format!("{:?}", m.u32(at + 0x10) as i32),
             );
         }
@@ -3093,32 +3101,32 @@ impl Mirror for Fighter_AbsorbAttr {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         Fighter_AbsorbAttr {
-            x1A40_absorbHitDirection: f32::from_bits(m.u32(at + 0x0)),
-            x1A44_damageTaken: m.u32(at + 0x4) as i32,
-            x1A48_hitsTaken: m.u32(at + 0x8) as i32,
+            hit_direction: f32::from_bits(m.u32(at + 0x0)),
+            damage_taken: m.u32(at + 0x4) as i32,
+            hits_taken: m.u32(at + 0x8) as i32,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x1A40_absorbHitDirection.to_bits() != m.u32(at + 0x0) {
+        if self.hit_direction.to_bits() != m.u32(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.x1A40_absorbHitDirection"),
-                format!("{:?}", self.x1A40_absorbHitDirection),
+                &format!("{path}.hit_direction (x1A40_absorbHitDirection)"),
+                format!("{:?}", self.hit_direction),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
             );
         }
-        if self.x1A44_damageTaken != m.u32(at + 0x4) as i32 {
+        if self.damage_taken != m.u32(at + 0x4) as i32 {
             cx.mismatch(
-                &format!("{path}.x1A44_damageTaken"),
-                format!("{:?}", self.x1A44_damageTaken),
+                &format!("{path}.damage_taken (x1A44_damageTaken)"),
+                format!("{:?}", self.damage_taken),
                 format!("{:?}", m.u32(at + 0x4) as i32),
             );
         }
-        if self.x1A48_hitsTaken != m.u32(at + 0x8) as i32 {
+        if self.hits_taken != m.u32(at + 0x8) as i32 {
             cx.mismatch(
-                &format!("{path}.x1A48_hitsTaken"),
-                format!("{:?}", self.x1A48_hitsTaken),
+                &format!("{path}.hits_taken (x1A48_hitsTaken)"),
+                format!("{:?}", self.hits_taken),
                 format!("{:?}", m.u32(at + 0x8) as i32),
             );
         }
@@ -3161,13 +3169,13 @@ impl Mirror for Fighter_x1A88_xFC_t {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         Fighter_x1A88_xFC_t {
-            x0: m.u32(at + 0x0),
-            x4: m.u8(at + 0x4),
-            x5: m.u8(at + 0x5),
+            buttons: m.u32(at + 0x0),
+            ltrigger: m.u8(at + 0x4),
+            rtrigger: m.u8(at + 0x5),
             lstick: S8Vec2::import(m, at + 0x6, cx),
             cstick: S8Vec2::import(m, at + 0x8, cx),
-            xA: m.u8(at + 0xa),
-            xB: m.u8(at + 0xb),
+            unused_a: m.u8(at + 0xa),
+            unused_b: m.u8(at + 0xb),
             cur_pos: Vec3::import(m, at + 0xc, cx),
             facing_dir: f32::from_bits(m.u32(at + 0x18)),
         }
@@ -3175,24 +3183,24 @@ impl Mirror for Fighter_x1A88_xFC_t {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x0 != m.u32(at + 0x0) {
+        if self.buttons != m.u32(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.x0"),
-                format!("{:?}", self.x0),
+                &format!("{path}.buttons (x0)"),
+                format!("{:?}", self.buttons),
                 format!("{:?}", m.u32(at + 0x0)),
             );
         }
-        if self.x4 != m.u8(at + 0x4) {
+        if self.ltrigger != m.u8(at + 0x4) {
             cx.mismatch(
-                &format!("{path}.x4"),
-                format!("{:?}", self.x4),
+                &format!("{path}.ltrigger (x4)"),
+                format!("{:?}", self.ltrigger),
                 format!("{:?}", m.u8(at + 0x4)),
             );
         }
-        if self.x5 != m.u8(at + 0x5) {
+        if self.rtrigger != m.u8(at + 0x5) {
             cx.mismatch(
-                &format!("{path}.x5"),
-                format!("{:?}", self.x5),
+                &format!("{path}.rtrigger (x5)"),
+                format!("{:?}", self.rtrigger),
                 format!("{:?}", m.u8(at + 0x5)),
             );
         }
@@ -3200,17 +3208,17 @@ impl Mirror for Fighter_x1A88_xFC_t {
             .compare(m, at + 0x6, &format!("{path}.lstick"), cx);
         self.cstick
             .compare(m, at + 0x8, &format!("{path}.cstick"), cx);
-        if self.xA != m.u8(at + 0xa) {
+        if self.unused_a != m.u8(at + 0xa) {
             cx.mismatch(
-                &format!("{path}.xA"),
-                format!("{:?}", self.xA),
+                &format!("{path}.unused_a (xA)"),
+                format!("{:?}", self.unused_a),
                 format!("{:?}", m.u8(at + 0xa)),
             );
         }
-        if self.xB != m.u8(at + 0xb) {
+        if self.unused_b != m.u8(at + 0xb) {
             cx.mismatch(
-                &format!("{path}.xB"),
-                format!("{:?}", self.xB),
+                &format!("{path}.unused_b (xB)"),
+                format!("{:?}", self.unused_b),
                 format!("{:?}", m.u8(at + 0xb)),
             );
         }
@@ -4127,15 +4135,17 @@ impl Mirror for Fighter_x20B0_t {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         Fighter_x20B0_t {
-            x0: Vec3::import(m, at + 0x0, cx),
-            xC: Vec3::import(m, at + 0xc, cx),
+            point_0: Vec3::import(m, at + 0x0, cx),
+            point_1: Vec3::import(m, at + 0xc, cx),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        self.x0.compare(m, at + 0x0, &format!("{path}.x0"), cx);
-        self.xC.compare(m, at + 0xc, &format!("{path}.xC"), cx);
+        self.point_0
+            .compare(m, at + 0x0, &format!("{path}.point_0 (x0)"), cx);
+        self.point_1
+            .compare(m, at + 0xc, &format!("{path}.point_1 (xC)"), cx);
     }
 }
 
@@ -4287,72 +4297,72 @@ impl Mirror for Fighter_x221B {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         Fighter_x221B {
-            x221B_b0: m.bits(at, 0, 1) != 0,
-            x221B_b1: m.bits(at, 1, 1) != 0,
-            x221B_b2: m.bits(at, 2, 1) != 0,
-            x221B_b3: m.bits(at, 3, 1) != 0,
-            x221B_b4: m.bits(at, 4, 1) != 0,
-            x221B_b5: m.bits(at, 5, 1) != 0,
-            x221B_b6: m.bits(at, 6, 1) != 0,
-            x221B_b7: m.bits(at, 7, 1) != 0,
+            shield_bubble: m.bits(at, 0, 1) != 0,
+            shield_deflects: m.bits(at, 1, 1) != 0,
+            shield_no_entry: m.bits(at, 2, 1) != 0,
+            bubble_faces: m.bits(at, 3, 1) != 0,
+            bubble_reflectors_only: m.bits(at, 4, 1) != 0,
+            holds_grab: m.bits(at, 5, 1) != 0,
+            item_grab_set: m.bits(at, 6, 1) != 0,
+            grounded_catch: m.bits(at, 7, 1) != 0,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if (self.x221B_b0 as u32) != m.bits(at, 0, 1) {
+        if (self.shield_bubble as u32) != m.bits(at, 0, 1) {
             cx.mismatch(
-                &format!("{path}.x221B_b0"),
-                format!("{:?}", self.x221B_b0),
+                &format!("{path}.shield_bubble (x221B_b0)"),
+                format!("{:?}", self.shield_bubble),
                 format!("{:?}", m.bits(at, 0, 1)),
             );
         }
-        if (self.x221B_b1 as u32) != m.bits(at, 1, 1) {
+        if (self.shield_deflects as u32) != m.bits(at, 1, 1) {
             cx.mismatch(
-                &format!("{path}.x221B_b1"),
-                format!("{:?}", self.x221B_b1),
+                &format!("{path}.shield_deflects (x221B_b1)"),
+                format!("{:?}", self.shield_deflects),
                 format!("{:?}", m.bits(at, 1, 1)),
             );
         }
-        if (self.x221B_b2 as u32) != m.bits(at, 2, 1) {
+        if (self.shield_no_entry as u32) != m.bits(at, 2, 1) {
             cx.mismatch(
-                &format!("{path}.x221B_b2"),
-                format!("{:?}", self.x221B_b2),
+                &format!("{path}.shield_no_entry (x221B_b2)"),
+                format!("{:?}", self.shield_no_entry),
                 format!("{:?}", m.bits(at, 2, 1)),
             );
         }
-        if (self.x221B_b3 as u32) != m.bits(at, 3, 1) {
+        if (self.bubble_faces as u32) != m.bits(at, 3, 1) {
             cx.mismatch(
-                &format!("{path}.x221B_b3"),
-                format!("{:?}", self.x221B_b3),
+                &format!("{path}.bubble_faces (x221B_b3)"),
+                format!("{:?}", self.bubble_faces),
                 format!("{:?}", m.bits(at, 3, 1)),
             );
         }
-        if (self.x221B_b4 as u32) != m.bits(at, 4, 1) {
+        if (self.bubble_reflectors_only as u32) != m.bits(at, 4, 1) {
             cx.mismatch(
-                &format!("{path}.x221B_b4"),
-                format!("{:?}", self.x221B_b4),
+                &format!("{path}.bubble_reflectors_only (x221B_b4)"),
+                format!("{:?}", self.bubble_reflectors_only),
                 format!("{:?}", m.bits(at, 4, 1)),
             );
         }
-        if (self.x221B_b5 as u32) != m.bits(at, 5, 1) {
+        if (self.holds_grab as u32) != m.bits(at, 5, 1) {
             cx.mismatch(
-                &format!("{path}.x221B_b5"),
-                format!("{:?}", self.x221B_b5),
+                &format!("{path}.holds_grab (x221B_b5)"),
+                format!("{:?}", self.holds_grab),
                 format!("{:?}", m.bits(at, 5, 1)),
             );
         }
-        if (self.x221B_b6 as u32) != m.bits(at, 6, 1) {
+        if (self.item_grab_set as u32) != m.bits(at, 6, 1) {
             cx.mismatch(
-                &format!("{path}.x221B_b6"),
-                format!("{:?}", self.x221B_b6),
+                &format!("{path}.item_grab_set (x221B_b6)"),
+                format!("{:?}", self.item_grab_set),
                 format!("{:?}", m.bits(at, 6, 1)),
             );
         }
-        if (self.x221B_b7 as u32) != m.bits(at, 7, 1) {
+        if (self.grounded_catch as u32) != m.bits(at, 7, 1) {
             cx.mismatch(
-                &format!("{path}.x221B_b7"),
-                format!("{:?}", self.x221B_b7),
+                &format!("{path}.grounded_catch (x221B_b7)"),
+                format!("{:?}", self.grounded_catch),
                 format!("{:?}", m.bits(at, 7, 1)),
             );
         }
@@ -27444,36 +27454,36 @@ impl LayOut for ColorOverlay {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
         self.script.lay(l, at + 0x0, cx);
-        l.put_u32(at + 0x24, self.x24 as u32);
-        l.put_bytes(at + 0x28, &self.x28_colanim);
-        self.x2C_hex.lay(l, at + 0x2c, cx);
-        l.put_u32(at + 0x30, self.x30_color_red.to_bits());
-        l.put_u32(at + 0x34, self.x34_color_green.to_bits());
-        l.put_u32(at + 0x38, self.x38_color_blue.to_bits());
-        l.put_u32(at + 0x3c, self.x3C_color_alpha.to_bits());
-        l.put_u32(at + 0x40, self.x40_colorblend_red.to_bits());
-        l.put_u32(at + 0x44, self.x44_colorblend_green.to_bits());
-        l.put_u32(at + 0x48, self.x48_colorblend_blue.to_bits());
-        l.put_u32(at + 0x4c, self.x4C_colorblend_alpha.to_bits());
-        self.x50_light_color.lay(l, at + 0x50, cx);
-        l.put_u32(at + 0x54, self.x54_light_red.to_bits());
-        l.put_u32(at + 0x58, self.x58_light_green.to_bits());
-        l.put_u32(at + 0x5c, self.x5C_light_blue.to_bits());
-        l.put_u32(at + 0x60, self.x60_light_alpha.to_bits());
-        l.put_u32(at + 0x64, self.x64_lightblend_red.to_bits());
-        l.put_u32(at + 0x68, self.x68_lightblend_green.to_bits());
-        l.put_u32(at + 0x6c, self.x6C_lightblend_blue.to_bits());
-        l.put_u32(at + 0x70, self.x70_lightblend_alpha.to_bits());
-        l.put_u32(at + 0x74, self.x74_light_rot_x.to_bits());
-        l.put_u32(at + 0x78, self.x78_light_rot_yz.to_bits());
-        l.put_bits(at, 992, 1, (self.x7C_color_enable) as u32);
-        l.put_bits(at, 993, 1, (self.x7C_flag2) as u32);
-        l.put_bits(at, 994, 1, (self.x7C_light_enable) as u32);
-        l.put_bits(at, 995, 1, (self.x7C_flag4) as u32);
-        l.put_bits(at, 996, 1, (self.x7C_flag5) as u32);
-        l.put_bits(at, 997, 1, (self.x7C_flag6) as u32);
-        l.put_bits(at, 998, 1, (self.x7C_flag7) as u32);
-        l.put_bits(at, 999, 1, (self.x7C_flag8) as u32);
+        l.put_u32(at + 0x24, self.unused_24 as u32);
+        l.put_bytes(at + 0x28, &self.colanim);
+        self.hex.lay(l, at + 0x2c, cx);
+        l.put_u32(at + 0x30, self.color_red.to_bits());
+        l.put_u32(at + 0x34, self.color_green.to_bits());
+        l.put_u32(at + 0x38, self.color_blue.to_bits());
+        l.put_u32(at + 0x3c, self.color_alpha.to_bits());
+        l.put_u32(at + 0x40, self.colorblend_red.to_bits());
+        l.put_u32(at + 0x44, self.colorblend_green.to_bits());
+        l.put_u32(at + 0x48, self.colorblend_blue.to_bits());
+        l.put_u32(at + 0x4c, self.colorblend_alpha.to_bits());
+        self.light_color.lay(l, at + 0x50, cx);
+        l.put_u32(at + 0x54, self.light_red.to_bits());
+        l.put_u32(at + 0x58, self.light_green.to_bits());
+        l.put_u32(at + 0x5c, self.light_blue.to_bits());
+        l.put_u32(at + 0x60, self.light_alpha.to_bits());
+        l.put_u32(at + 0x64, self.lightblend_red.to_bits());
+        l.put_u32(at + 0x68, self.lightblend_green.to_bits());
+        l.put_u32(at + 0x6c, self.lightblend_blue.to_bits());
+        l.put_u32(at + 0x70, self.lightblend_alpha.to_bits());
+        l.put_u32(at + 0x74, self.light_rot_x.to_bits());
+        l.put_u32(at + 0x78, self.light_rot_yz.to_bits());
+        l.put_bits(at, 992, 1, (self.color_enable) as u32);
+        l.put_bits(at, 993, 1, (self.flag2) as u32);
+        l.put_bits(at, 994, 1, (self.light_enable) as u32);
+        l.put_bits(at, 995, 1, (self.flag4) as u32);
+        l.put_bits(at, 996, 1, (self.flag5) as u32);
+        l.put_bits(at, 997, 1, (self.flag6) as u32);
+        l.put_bits(at, 998, 1, (self.flag7) as u32);
+        l.put_bits(at, 999, 1, (self.flag8) as u32);
     }
 }
 
@@ -27485,7 +27495,7 @@ impl LayOut for FtPartsVis {
             l.put_u8(at + 0x4 + i0 as u32 * 0x1, self.cleared[i0] as u8);
         }
         for i0 in 0..5 {
-            l.put_word(at + 0xc + i0 as u32 * 0x4, cx.data(self.xC[i0]));
+            l.put_word(at + 0xc + i0 as u32 * 0x4, cx.data(self.lookups[i0]));
         }
     }
 }
@@ -27604,12 +27614,12 @@ impl LayOut for CollData {
 impl LayOut for Fighter_x8B0_t {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_u32(at + 0x0, self.x0 as u32);
-        l.put_u32(at + 0x4, self.x4.to_bits());
-        l.put_u32(at + 0x8, self.x8.to_bits());
-        l.put_u32(at + 0xc, self.xC.to_bits());
-        l.put_u8(at + 0x10, self.x10 as u8);
-        l.put_u8(at + 0x11, self.x11 as u8);
+        l.put_u32(at + 0x0, self.unused_0 as u32);
+        l.put_u32(at + 0x4, self.frames.to_bits());
+        l.put_u32(at + 0x8, self.frame.to_bits());
+        l.put_u32(at + 0xc, self.blend.to_bits());
+        l.put_u8(at + 0x10, self.part as u8);
+        l.put_u8(at + 0x11, self.anim as u8);
     }
 }
 
@@ -27717,11 +27727,11 @@ impl LayOut for FighterHurtCapsule {
 impl LayOut for Fighter_x1614_t {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_u32(at + 0x0, self.x0.to_bits());
-        l.put_word(at + 0x4, cx.handle("JObjId", self.x4.map(|h| h.0)));
-        self.x8.lay(l, at + 0x8, cx);
-        self.x14.lay(l, at + 0x14, cx);
-        self.x20.lay(l, at + 0x20, cx);
+        l.put_u32(at + 0x0, self.radius.to_bits());
+        l.put_word(at + 0x4, cx.handle("JObjId", self.joint.map(|h| h.0)));
+        self.pos.lay(l, at + 0x8, cx);
+        self.prev_pos.lay(l, at + 0x14, cx);
+        self.contact.lay(l, at + 0x20, cx);
     }
 }
 
@@ -27731,9 +27741,9 @@ impl LayOut for Fighter_x1670_t {
         self.v1.lay(l, at + 0x0, cx);
         l.put_u32(at + 0xc, self.v2.to_bits());
         l.put_word(at + 0x10, cx.handle("JObjId", self.jobj.map(|h| h.0)));
-        l.put_u32(at + 0x14, self.x14.to_bits());
-        self.x18.lay(l, at + 0x18, cx);
-        l.put_u32(at + 0x24, self.x24 as u32);
+        l.put_u32(at + 0x14, self.unused_14.to_bits());
+        self.center.lay(l, at + 0x18, cx);
+        l.put_u32(at + 0x24, self.bone as u32);
     }
 }
 
@@ -27855,20 +27865,20 @@ impl LayOut for HitResult {
 impl LayOut for Fighter_ReflectAttr {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_u32(at + 0x0, self.x1A2C_reflectHitDirection.to_bits());
-        l.put_u32(at + 0x4, self.x1A30_maxDamage as u32);
-        l.put_u32(at + 0x8, self.x1A34_damageMul.to_bits());
-        l.put_u32(at + 0xc, self.x1A38_speedMul.to_bits());
-        l.put_u32(at + 0x10, self.x1A3C_damageOver as u32);
+        l.put_u32(at + 0x0, self.hit_direction.to_bits());
+        l.put_u32(at + 0x4, self.max_damage as u32);
+        l.put_u32(at + 0x8, self.damage_mul.to_bits());
+        l.put_u32(at + 0xc, self.speed_mul.to_bits());
+        l.put_u32(at + 0x10, self.damage_over as u32);
     }
 }
 
 impl LayOut for Fighter_AbsorbAttr {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_u32(at + 0x0, self.x1A40_absorbHitDirection.to_bits());
-        l.put_u32(at + 0x4, self.x1A44_damageTaken as u32);
-        l.put_u32(at + 0x8, self.x1A48_hitsTaken as u32);
+        l.put_u32(at + 0x0, self.hit_direction.to_bits());
+        l.put_u32(at + 0x4, self.damage_taken as u32);
+        l.put_u32(at + 0x8, self.hits_taken as u32);
     }
 }
 
@@ -27883,13 +27893,13 @@ impl LayOut for S8Vec2 {
 impl LayOut for Fighter_x1A88_xFC_t {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_u32(at + 0x0, self.x0 as u32);
-        l.put_u8(at + 0x4, self.x4 as u8);
-        l.put_u8(at + 0x5, self.x5 as u8);
+        l.put_u32(at + 0x0, self.buttons as u32);
+        l.put_u8(at + 0x4, self.ltrigger as u8);
+        l.put_u8(at + 0x5, self.rtrigger as u8);
         self.lstick.lay(l, at + 0x6, cx);
         self.cstick.lay(l, at + 0x8, cx);
-        l.put_u8(at + 0xa, self.xA as u8);
-        l.put_u8(at + 0xb, self.xB as u8);
+        l.put_u8(at + 0xa, self.unused_a as u8);
+        l.put_u8(at + 0xb, self.unused_b as u8);
         self.cur_pos.lay(l, at + 0xc, cx);
         l.put_u32(at + 0x18, self.facing_dir.to_bits());
     }
@@ -28066,8 +28076,8 @@ impl LayOut for LbShadow {
 impl LayOut for Fighter_x20B0_t {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        self.x0.lay(l, at + 0x0, cx);
-        self.xC.lay(l, at + 0xc, cx);
+        self.point_0.lay(l, at + 0x0, cx);
+        self.point_1.lay(l, at + 0xc, cx);
     }
 }
 
@@ -28096,14 +28106,14 @@ impl LayOut for _SmashAttr {
 impl LayOut for Fighter_x221B {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_bits(at, 0, 1, (self.x221B_b0) as u32);
-        l.put_bits(at, 1, 1, (self.x221B_b1) as u32);
-        l.put_bits(at, 2, 1, (self.x221B_b2) as u32);
-        l.put_bits(at, 3, 1, (self.x221B_b3) as u32);
-        l.put_bits(at, 4, 1, (self.x221B_b4) as u32);
-        l.put_bits(at, 5, 1, (self.x221B_b5) as u32);
-        l.put_bits(at, 6, 1, (self.x221B_b6) as u32);
-        l.put_bits(at, 7, 1, (self.x221B_b7) as u32);
+        l.put_bits(at, 0, 1, (self.shield_bubble) as u32);
+        l.put_bits(at, 1, 1, (self.shield_deflects) as u32);
+        l.put_bits(at, 2, 1, (self.shield_no_entry) as u32);
+        l.put_bits(at, 3, 1, (self.bubble_faces) as u32);
+        l.put_bits(at, 4, 1, (self.bubble_reflectors_only) as u32);
+        l.put_bits(at, 5, 1, (self.holds_grab) as u32);
+        l.put_bits(at, 6, 1, (self.item_grab_set) as u32);
+        l.put_bits(at, 7, 1, (self.grounded_catch) as u32);
     }
 }
 

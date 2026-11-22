@@ -234,7 +234,7 @@ impl Running<'_> {
         if d < reg(fp.grab_distance) {
             fp.partner = vg;
             fp.victim_gobj = vg;
-            fp.state_flags.x221B_b5 = true;
+            fp.state_flags.holds_grab = true;
             fp.grab_distance = mem(d);
         }
     }
@@ -255,7 +255,7 @@ impl Running<'_> {
         if d < reg(fp.grab_distance) {
             fp.caught_item = Some(it);
             fp.target_item_gobj = Some(it);
-            fp.state_flags.x221B_b6 = true;
+            fp.state_flags.item_grab_set = true;
             fp.grab_distance = mem(d);
         }
     }

@@ -339,7 +339,7 @@ impl Running<'_> {
         }
         let fp = &mut self.game.fighters[f.0];
         fp.parts_vis.model_num = model_num;
-        fp.parts_vis.xC = xc;
+        fp.parts_vis.lookups = xc;
         fp.parts_vis.cleared = [1; 5];
         let (main, second) = (fp.dobj_list.data, fp.second_dobjs.data);
         for (idx, list) in [(0, main), (1, main), (2, second), (3, main), (4, main)] {
@@ -358,7 +358,9 @@ impl Running<'_> {
     #[doc(alias = "ftParts_80074B6C")]
     pub fn show_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {
         let vis = &self.game.fighters[f.0].parts_vis;
-        let Some(lookup) = vis.xC[idx] else { return };
+        let Some(lookup) = vis.lookups[idx] else {
+            return;
+        };
         if vis.cleared[idx] != 0 {
             return;
         }
@@ -436,7 +438,9 @@ impl Running<'_> {
     #[doc(alias = "ftParts_80074D7C")]
     pub fn hide_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {
         let vis = &self.game.fighters[f.0].parts_vis;
-        let Some(lookup) = vis.xC[idx] else { return };
+        let Some(lookup) = vis.lookups[idx] else {
+            return;
+        };
         if vis.cleared[idx] == 0 {
             return;
         }

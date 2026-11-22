@@ -360,7 +360,7 @@ impl Running<'_> {
         for (dst, c) in held.iter_mut().zip(&fp.ledge_points[..count]) {
             *dst = Collider {
                 radius: c.v2,
-                center: c.x18,
+                center: c.center,
             };
         }
         let colliders = &held[..count];
@@ -431,7 +431,7 @@ impl Running<'_> {
             let c = &self.game.fighters[f.0].ledge_points[i];
             let (j, off) = (c.jobj, c.v1);
             let at = world_position(&mut self.game.objs, self.data, j, Some(off));
-            self.game.fighters[f.0].ledge_points[i].x18 = at;
+            self.game.fighters[f.0].ledge_points[i].center = at;
         }
     }
 

@@ -879,7 +879,7 @@ impl Running<'_> {
         self.game.fighters[f.0]
             .u
             .set_data_at(VIS_LOOKUPS + 16, lookup);
-        self.game.fighters[f.0].parts_vis.xC[4] = lookup;
+        self.game.fighters[f.0].parts_vis.lookups[4] = lookup;
         self.kb_hat_lookup(f, 4, false, u::HAT_DOBJS);
         let c = self.kb_gw_color(4);
         let list = self.game.fighters[f.0]
@@ -921,7 +921,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F15D8")]
     pub fn kb_gamewatch_hat_off(&mut self, gobj: GObjId) {
         self.kb_unload_hat_parts(gobj, 24);
-        self.game.fighter_mut(gobj).parts_vis.xC[4] = None;
+        self.game.fighter_mut(gobj).parts_vis.lookups[4] = None;
         self.update_model_scale(gobj);
     }
 

@@ -194,13 +194,13 @@ impl Running<'_> {
         fp.intangible_frames = 0;
         fp.invincible_frames = 0;
         fp.starman = false;
-        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.holds_grab = false;
         fp.victim_gobj = None;
         fp.partner = None;
-        fp.state_flags.x221B_b6 = false;
+        fp.state_flags.item_grab_set = false;
         fp.target_item_gobj = None;
         fp.caught_item = Default::default();
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.grounded_catch = false;
         fp.held_hit_light = false;
         fp.leg_reach = 0;
         fp.hit_by = None;
@@ -213,10 +213,10 @@ impl Running<'_> {
         fp.combo_push_frames = 0;
         fp.combo_victim = None;
         fp.shield_was_hit = false;
-        fp.state_flags.x221B_b0 = false;
-        fp.state_flags.x221B_b1 = false;
-        fp.state_flags.x221B_b3 = false;
-        fp.state_flags.x221B_b4 = false;
+        fp.state_flags.shield_bubble = false;
+        fp.state_flags.shield_deflects = false;
+        fp.state_flags.bubble_faces = false;
+        fp.state_flags.bubble_reflectors_only = false;
         fp.powershield_early = false;
         fp.powershield_late = false;
         fp.powershield = false;
@@ -230,13 +230,13 @@ impl Running<'_> {
         fp.shield_hit_by_sub = false;
         fp.reflecting = false;
         fp.reflect_kept = false;
-        fp.reflect.x1A3C_damageOver = 0;
-        fp.reflect.x1A2C_reflectHitDirection = 0.0;
+        fp.reflect.damage_over = 0;
+        fp.reflect.hit_direction = 0.0;
         fp.absorbing = false;
         fp.absorb_any = false;
-        fp.absorb.x1A40_absorbHitDirection = 0.0;
-        fp.absorb.x1A44_damageTaken = 0;
-        fp.absorb.x1A48_hitsTaken = 0;
+        fp.absorb.hit_direction = 0.0;
+        fp.absorb.damage_taken = 0;
+        fp.absorb.hits_taken = 0;
         fp.lstick_angle = 0.0;
         fp.air_grab_timer = 0;
         fp.air_item_caught = false;
@@ -785,10 +785,10 @@ impl Running<'_> {
                 Some(offset),
             );
             let p = &mut self.game.fighters[f.0].stamina_markers[i as usize];
-            p.x4 = joint;
-            p.x0 = x0;
-            p.x8 = Vec3::new(v.x, v.y, 0.0);
-            p.x14 = p.x8;
+            p.joint = joint;
+            p.radius = x0;
+            p.pos = Vec3::new(v.x, v.y, 0.0);
+            p.prev_pos = p.pos;
         }
     }
 

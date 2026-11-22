@@ -646,6 +646,75 @@ STATIC_PLAYER_FLAGS_AE = {
     "b7": "unused_b7",
 }
 
+# The fighter's nested structs (the continuation's first group): a color overlay (`ColorOverlay`,
+# a fighter's, an item's and a stage object's) under the decomp's half-names, `state_flags`'
+# bits (`Fighter_x221B`), the part animations, the stamina markers, the reflect and absorb
+# attributes, Nana's input record, the afterimage's points, the swing chains' colliders and the
+# parts' visibility lookups.
+COLOR_OVERLAY = {
+    # Laid out for the heap's image; nothing writes or reads it.
+    "x24": "unused_24",
+    "x28_colanim": "colanim",
+    "x2C_hex": "hex",
+    "x30_color_red": "color_red",
+    "x34_color_green": "color_green",
+    "x38_color_blue": "color_blue",
+    "x3C_color_alpha": "color_alpha",
+    "x40_colorblend_red": "colorblend_red",
+    "x44_colorblend_green": "colorblend_green",
+    "x48_colorblend_blue": "colorblend_blue",
+    "x4C_colorblend_alpha": "colorblend_alpha",
+    "x50_light_color": "light_color",
+    "x54_light_red": "light_red",
+    "x58_light_green": "light_green",
+    "x5C_light_blue": "light_blue",
+    "x60_light_alpha": "light_alpha",
+    "x64_lightblend_red": "lightblend_red",
+    "x68_lightblend_green": "lightblend_green",
+    "x6C_lightblend_blue": "lightblend_blue",
+    "x70_lightblend_alpha": "lightblend_alpha",
+    "x74_light_rot_x": "light_rot_x",
+    "x78_light_rot_yz": "light_rot_yz",
+    "x7C_color_enable": "color_enable",
+    "x7C_flag2": "flag2",
+    "x7C_light_enable": "light_enable",
+    "x7C_flag4": "flag4",
+    "x7C_flag5": "flag5",
+    "x7C_flag6": "flag6",
+    "x7C_flag7": "flag7",
+    "x7C_flag8": "flag8",
+}
+FIGHTER_X221B = {
+    # A shield bubble is up (`ftCo_800925A4`'s drain); a hit on it deflects or doesn't enter
+    # (`ftColl_8007B1B8`); the bubble faces one way, and passes all but the boxes reflectors meet.
+    "x221B_b0": "shield_bubble",
+    "x221B_b1": "shield_deflects",
+    "x221B_b2": "shield_no_entry",
+    "x221B_b3": "bubble_faces",
+    "x221B_b4": "bubble_reflectors_only",
+    # It holds a fighter it grabbed (`ftColl_8007B5AC`'s catch).
+    "x221B_b5": "holds_grab",
+    "x221B_b6": "item_grab_set",
+    # A special's catch of a grounded fighter (Falcon Dive's, `ftCa_SpecialHi`).
+    "x221B_b7": "grounded_catch",
+}
+FIGHTER_X8B0 = {"x0": "unused_0", "x4": "frames", "x8": "frame", "xC": "blend", "x10": "part", "x11": "anim"}
+FIGHTER_X1614 = {"x0": "radius", "x4": "joint", "x8": "pos", "x14": "prev_pos", "x20": "contact"}
+FIGHTER_REFLECT = {
+    "x1A2C_reflectHitDirection": "hit_direction",
+    "x1A30_maxDamage": "max_damage",
+    "x1A34_damageMul": "damage_mul",
+    "x1A38_speedMul": "speed_mul",
+    "x1A3C_damageOver": "damage_over",
+}
+FIGHTER_ABSORB = {"x1A40_absorbHitDirection": "hit_direction", "x1A44_damageTaken": "damage_taken", "x1A48_hitsTaken": "hits_taken"}
+# An entry of Nana's record of Popo's inputs.
+FIGHTER_X1A88_XFC = {"x0": "buttons", "x4": "ltrigger", "x5": "rtrigger", "xA": "unused_a", "xB": "unused_b"}
+# An afterimage's two points.
+FIGHTER_X20B0 = {"x0": "point_0", "xC": "point_1"}
+FIGHTER_X1670 = {"x14": "unused_14", "x18": "center", "x24": "bone"}
+FT_PARTS_VIS = {"xC": "lookups"}
+
 # The structs by step 3's commits, in order.
 GROUPS = [
     {"CollData": COLL_DATA, "HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
@@ -673,6 +742,18 @@ GROUPS = [
         "_StaticPlayer_flags": STATIC_PLAYER_FLAGS,
         "_StaticPlayer_more_flags": STATIC_PLAYER_MORE_FLAGS,
         "_StaticPlayer_flagsAE": STATIC_PLAYER_FLAGS_AE,
+    },
+    {
+        "ColorOverlay": COLOR_OVERLAY,
+        "Fighter_x221B": FIGHTER_X221B,
+        "Fighter_x8B0_t": FIGHTER_X8B0,
+        "Fighter_x1614_t": FIGHTER_X1614,
+        "Fighter_ReflectAttr": FIGHTER_REFLECT,
+        "Fighter_AbsorbAttr": FIGHTER_ABSORB,
+        "Fighter_x1A88_xFC_t": FIGHTER_X1A88_XFC,
+        "Fighter_x20B0_t": FIGHTER_X20B0,
+        "Fighter_x1670_t": FIGHTER_X1670,
+        "FtPartsVis": FT_PARTS_VIS,
     },
 ]
 
