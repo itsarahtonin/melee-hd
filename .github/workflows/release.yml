@@ -2,12 +2,23 @@
 # release as melee-hd-linux-x86_64.tar.gz: the program and the GameCube adapter's udev rule. The
 # Windows build (melee-hd.exe) is built and uploaded by hand; this workflow never touches it.
 #
-# It builds on the oldest Ubuntu runner GitHub offers, so the program needs only that glibc
-# (2.35) and runs on most distributions since 2022. It builds as `cargo run -p dist` does (the
-# dist profile, the source paths remapped), so the program names no runner folder.
+# A release's builds are profile-guided, and nothing else is (Sarah, 2026-11-21: "PGO off for
+# everything except release builds, in which case PGO mandatory"). The profile is made from the
+# tag's commit on a machine with the disc and a GPU (`cargo run -p dist -- --pgo-profile DIR`,
+# docs/player.md, "Releases"), since the training plays the game and this runner must never have
+# the disc, and uploaded to the tag's (draft) release as pgo-x86_64-unknown-linux-gnu.profdata and
+# .txt before the tag is pushed. This workflow builds with it (`--pgo-use`), which refuses a
+# profile made from another commit, toolchain or crate graph; without the profile it fails and
+# attaches nothing. Once the archive is attached the profile's two files are removed from the
+# release.
 #
-# Run by hand (Actions, Release, Run workflow) it only builds and keeps the archive as the run's
-# artifact, without touching any release.
+# It builds on the oldest Ubuntu runner GitHub offers, so the program needs only that glibc
+# (2.35) and runs on most distributions since 2022; a newer symbol fails the job. It builds as
+# `cargo run -p dist` does (the dist profile, the source paths remapped), so the program names no
+# runner folder.
+#
+# Run by hand (Actions, Release, Run workflow) it only builds, without a profile, and keeps the
+# archive as the run's artifact (melee-hd-linux-x86_64-not-pgo), without touching any release.
 name: Release
 
 on:
@@ -20,6 +31,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  PROFILE: pgo-x86_64-unknown-linux-gnu
 
 jobs:
   linux:
@@ -37,10 +49,30 @@ jobs:
       - name: Toolchain
         run: rustup toolchain install
 
+      # The tag's release must hold the profile made from this commit.
+      - name: The PGO profile
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/pgo"
+          if ! gh release download "$TAG" -D "$RUNNER_TEMP/pgo" -p "$PROFILE.profdata" -p "$PROFILE.txt"; then
+            echo "::error::release $TAG has no $PROFILE.profdata and $PROFILE.txt: make them from this commit with cargo run -p dist -- --pgo-profile DIR on a machine with the disc and upload them (docs/player.md, Releases); a release's Linux build is never made without PGO"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/pgo/$PROFILE.txt"
+
       # The dist tool stamps the channel and commit and remaps the paths; --out keeps the copy
-      # in the job's folder.
+      # in the job's folder. With the profile it refuses one that isn't this build's.
       - name: Build
-        run: cargo run --locked --release -p dist -- --out "$RUNNER_TEMP/build"
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            cargo run --locked --release -p dist -- --pgo-use "$RUNNER_TEMP/pgo" --out "$RUNNER_TEMP/build"
+          else
+            cargo run --locked --release -p dist -- --out "$RUNNER_TEMP/build"
+          fi
 
       - name: Package
         run: |
@@ -53,16 +85,22 @@ jobs:
           install -m 644 LICENSE "$dir/LICENSE"
           tar -C "$RUNNER_TEMP/pkg" --owner=0 --group=0 -czf "$RUNNER_TEMP/melee-hd-linux-x86_64.tar.gz" melee-hd
           tar -tvzf "$RUNNER_TEMP/melee-hd-linux-x86_64.tar.gz"
-          # The newest glibc symbol the program needs.
-          objdump -T "$dir/melee-hd" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1
+          # The newest glibc symbol the program needs: 2.35 at most.
+          newest=$(objdump -T "$dir/melee-hd" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
+          echo "$newest"
+          if [ "$(printf '%s\n' "$newest" GLIBC_2.35 | sort -V | tail -1)" != GLIBC_2.35 ]; then
+            echo "::error::the program needs $newest, newer than the 2.35 floor"
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: melee-hd-linux-x86_64
+          name: ${{ github.event_name == 'push' && 'melee-hd-linux-x86_64' || 'melee-hd-linux-x86_64-not-pgo' }}
           path: ${{ runner.temp }}/melee-hd-linux-x86_64.tar.gz
 
-      # Adds the archive to the tag's release, making a draft release when the tag has none yet;
-      # an archive of the same name already there is replaced, other assets are left alone.
+      # Adds the archive to the tag's release, the one the profile came from; an archive of the
+      # same name already there is replaced. Other assets are left alone, but for the profile's,
+      # which are removed.
       - name: Attach to the release
         if: github.event_name == 'push'
         env:
@@ -70,7 +108,6 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -eu
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes ""
-          fi
           gh release upload "$TAG" "$RUNNER_TEMP/melee-hd-linux-x86_64.tar.gz" --clobber
+          gh release delete-asset "$TAG" "$PROFILE.profdata" --yes
+          gh release delete-asset "$TAG" "$PROFILE.txt" --yes
