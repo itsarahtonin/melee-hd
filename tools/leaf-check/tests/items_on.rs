@@ -36,7 +36,7 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::kinds::{
-    egg, fflower, freeze, lgun, lipstick, parasol, sscope, sscopebeam, wstar,
+    egg, fflower, freeze, held, lgun, parasol, sscope, sscopebeam, wstar,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, item};
 use melee_sim::game::state::Running;
@@ -192,17 +192,17 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_80288E6C", egg::landed),
     ("it_80289094", egg::explode),
     ("it_80289158", egg::vanish),
-    ("it_8028E7D8", lgun::landed),
+    ("it_8028E7D8", held::landed),
     ("it_8028E938", lgun::shot),
     ("it_8028EDBC", freeze::slide),
     ("it_8028EF34", freeze::landed),
     ("it_8028F7C8", freeze::stopped),
-    ("it_80292030", sscope::landed),
+    ("it_80292030", held::landed),
     ("it_80292E64", fflower::start_shooting),
     ("it_80292EAC", fflower::stop_shooting),
-    ("it_80292FF0", fflower::landed),
+    ("it_80292FF0", held::landed),
     ("it_8029455C", wstar::landed),
-    ("it_802957AC", lipstick::landed),
+    ("it_802957AC", held::landed),
     ("Item_80268560", it::item::init_dynamics),
     ("Item_8026A788", it::item::proc_dynamics),
     ("Item_8026A8EC", it::item::destroy),

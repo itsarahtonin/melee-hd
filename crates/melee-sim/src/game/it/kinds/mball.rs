@@ -1,15 +1,15 @@
 //! The Poké Ball, `melee/it/kinds/itmball.c`: it falls and lies about; thrown, it opens where
 //! it lands and, at its attributes' moment, lets a Pokémon out (`it_8027AB64`, not ported).
 //! Out of the count of Poké Balls (`Item_804A0C64.x1C`) once gone, unless its Pokémon came
-//! out.
+//! out. The held items' callbacks ([`super::held`]), but for its fall and its opening.
 
 use gekko_fp as fp;
 
 use super::super::effect;
-use super::super::ground::{fall, fall_to_floor, ground_or_fall, ground_skid};
+use super::super::ground::{fall, fall_to_floor, ground_or_fall};
 use super::super::item::{article, change, change_state, play_sfx};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib};
-use super::falling_phys;
+use super::held::{self, Held};
 use crate::fpu::reg;
 use crate::game::ef::SpawnKind;
 use crate::game::handles::CodeRef;
@@ -53,21 +53,37 @@ pub const REFLECTED: u32 = 0x8029_80A0;
 pub const HIT_SHIELD: u32 = 0x8029_80D4;
 pub const SHIELD_BOUNCED: u32 = 0x8029_8114;
 
+/// The Poké Ball: closed as it spawns, its own fall, let go of or thrown into state 3,
+/// skidding in 4 facing its motion; a hit, a reflection or a shield disarms it.
+pub const POKE_BALL: Held = Held {
+    name: "Poké Ball",
+    charges: false,
+    on_spawn: Some(closed),
+    fell,
+    dropped: 3,
+    thrown: 3,
+    drop_update: true,
+    skid: 4,
+    bounces_only_let_go: false,
+    hits_disarm: true,
+    skid_faces_motion: true,
+};
+
 /// Runs one of the Poké Ball's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM1 | ANIM2 | ANIM4 => still(r, gobj),
+        ANIM0 | ANIM1 | ANIM2 | ANIM4 => held::still(r, gobj),
         ANIM5 | ANIM6 => opening(r, gobj),
-        COLL0 => coll0(r, gobj),
+        COLL0 => held::grounded(r, gobj, &POKE_BALL),
         COLL1 => coll1(r, gobj),
         COLL3 => coll3(r, gobj),
-        COLL4 => coll4(r, gobj),
+        COLL4 => held::skid(r, gobj, &POKE_BALL),
         COLL5 => coll5(r, gobj),
         COLL6 => coll6(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD => bounce(r, gobj),
-        REFLECTED => reflected(r, gobj),
-        SHIELD_BOUNCED => shield_bounced(r, gobj),
+        DMG_DEALT | CLANKED | HIT_SHIELD => held::bounce(r, gobj, &POKE_BALL),
+        REFLECTED => held::reflected(r, gobj, &POKE_BALL),
+        SHIELD_BOUNCED => held::shield_bounced(r, gobj, &POKE_BALL),
         _ => return None,
     })
 }
@@ -77,15 +93,15 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),
-        SPAWNED => spawned(r, gobj),
-        LANDED => landed(r, gobj),
+        SPAWNED => held::spawned(r, gobj, &POKE_BALL),
+        LANDED => held::landed(r, gobj),
         FELL => fell(r, gobj),
-        PHYS0 | PHYS2 | PHYS4 | PHYS5 => idle(r, gobj),
-        PHYS1 | PHYS6 => gravity(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        DROPPED | THROWN => thrown(r, gobj),
-        PHYS3 => thrown_phys(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        PHYS0 | PHYS2 | PHYS4 | PHYS5 => held::idle(r, gobj),
+        PHYS1 | PHYS6 => held::gravity(r, gobj),
+        PICKED_UP => held::picked_up(r, gobj),
+        DROPPED | THROWN => held::dropped(r, gobj, &POKE_BALL),
+        PHYS3 => held::thrown_phys(r, gobj),
+        ENTERED_AIR => held::entered_air(r, gobj, &POKE_BALL),
         OPEN => open(r, gobj),
         ON_ACCESSORY => on_accessory(r, gobj),
         OPEN_GROUNDED => open_grounded(r, gobj),
@@ -111,44 +127,11 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// `itMball_Spawned`: closed, falling.
-#[doc(alias = "itMball_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
+/// Its spawn's own part: closed, its Pokémon not out.
+fn closed(r: &mut Running, gobj: GObjId) {
     let v = item_mut(r.game, gobj).vars.mball();
     v.open.set(false);
     v.out.set(false);
-    fell(r, gobj);
-}
-
-/// Lands and lies still, `itMball_80297944`.
-#[doc(alias = "itMball_80297944")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib26b1::enable_pickup(r.game, gobj);
-    lib2725::clear_velocity(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The states that animate nothing, `itMball_Motion0_Anim` (2, 3 for 1 and 3, 4).
-#[doc(alias = "itMball_Motion0_Anim")]
-#[doc(alias = "itMball_Motion2_Anim")]
-#[doc(alias = "itMball_Motion3_Anim")]
-#[doc(alias = "itMball_Motion4_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itMball_Motion0_Phys` (2, 4, 5).
-#[doc(alias = "itMball_Motion0_Phys")]
-#[doc(alias = "itMball_Motion2_Phys")]
-#[doc(alias = "itMball_Motion4_Phys")]
-#[doc(alias = "itMball_Motion5_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itMball_Motion0_Coll`: falls off ledges.
-#[doc(alias = "itMball_Motion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
 }
 
 /// Falls, `itMball_802979D4`: a closed ball's state keeps its animation from where it was.
@@ -157,13 +140,6 @@ pub fn fell(r: &mut Running, gobj: GObjId) {
     let open = item_mut(r.game, gobj).vars.mball().open.get();
     let flags = if open { change::ANIM_UPDATE } else { 1 };
     change_state(r, gobj, 1, flags);
-}
-
-/// Gravity, `itMball_Motion1_Phys` and `itMball_Motion6_Phys`.
-#[doc(alias = "itMball_Motion1_Phys")]
-#[doc(alias = "itMball_Motion6_Phys")]
-pub fn gravity(r: &mut Running, gobj: GObjId) {
-    super::gravity(r, gobj);
 }
 
 /// A fall that turns to face its motion when it bounces, the falling states' collision.
@@ -178,74 +154,14 @@ fn fall_facing(r: &mut Running, gobj: GObjId, landed: fn(&mut Running, GObjId)) 
 /// `itMball_Motion1_Coll`: lands, facing its motion after a bounce.
 #[doc(alias = "itMball_Motion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall_facing(r, gobj, landed);
+    fall_facing(r, gobj, held::landed);
     false
-}
-
-/// Held, `itMball_PickedUp`.
-#[doc(alias = "itMball_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-}
-
-/// Let go of or thrown, `itMball_Dropped` and `itMball_Thrown`.
-#[doc(alias = "itMball_Dropped")]
-#[doc(alias = "itMball_Thrown")]
-pub fn thrown(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 3, change::ANIM_UPDATE | change::DROP_UPDATE);
 }
 
 /// `itMball_Motion3_Coll`: thrown, it opens where it lands.
 #[doc(alias = "itMball_Motion3_Coll")]
 pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
     fall_to_floor(r, gobj, open);
-    false
-}
-
-/// Bounces off what it hit, a clank or a shield, no longer to be picked up, its hitboxes
-/// off, `itMball_DmgDealt` (and `Clanked`, `HitShield`).
-#[doc(alias = "itMball_DmgDealt")]
-#[doc(alias = "itMball_Clanked")]
-#[doc(alias = "itMball_HitShield")]
-pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
-    lib26b1::disable_pickup(r.game, gobj);
-    lib2725::clear_hitboxes(r.game, r.data, gobj);
-    lib2725::bounce_off_victim(r.game, r.data, gobj);
-    false
-}
-
-/// Sent back by a reflection, `itMball_Reflected`.
-#[doc(alias = "itMball_Reflected")]
-pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib26b1::disable_pickup(r.game, gobj);
-    lib2725::reflected_back(r.game, gobj)
-}
-
-/// Bounces off a shield, `itMball_ShieldBounced`.
-#[doc(alias = "itMball_ShieldBounced")]
-pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
-    lib26b1::disable_pickup(r.game, gobj);
-    lib2725::bounce_off_shield(r.game, gobj)
-}
-
-/// Skidding off a slope, `itMball_EnteredAir`: facing the way it moves.
-#[doc(alias = "itMball_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, change::ANIM_UPDATE);
-    let ip = item_mut(r.game, gobj);
-    let v = fp::fadds(
-        fp::fadds(reg(ip.vel.x), reg(ip.skid_vel.x)),
-        reg(ip.slide_vel.x),
-    );
-    ip.facing_dir = if v >= 0.0 { 1.0 } else { -1.0 };
-    let dir = if -1.0 == ip.facing_dir { -1 } else { 1 };
-    ip.coll.set_facing_dir(dir);
-}
-
-/// `itMball_Motion4_Coll`: skidding, it stops or falls.
-#[doc(alias = "itMball_Motion4_Coll")]
-pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
     false
 }
 
@@ -326,10 +242,4 @@ pub fn open_grounded(r: &mut Running, gobj: GObjId) {
 pub fn coll6(r: &mut Running, gobj: GObjId) -> bool {
     fall_facing(r, gobj, open);
     false
-}
-
-/// Thrown, gravity and the spin it slows (`Item_ApplyFallingPhysics`), `itMball_Motion3_Phys`.
-#[doc(alias = "itMball_Motion3_Phys")]
-pub fn thrown_phys(r: &mut Running, gobj: GObjId) {
-    falling_phys(r, gobj);
 }

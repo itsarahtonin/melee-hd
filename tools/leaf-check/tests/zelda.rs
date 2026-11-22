@@ -78,7 +78,8 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::fox::ext as fox_ext;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it;
-use melee_sim::game::it::kinds::{zeldadinfire, zeldadinfireexplode};
+use melee_sim::game::it::ItKind;
+use melee_sim::game::it::kinds::{steeredshot, zeldadinfire, zeldadinfireexplode};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::vec::Vec3;
@@ -223,14 +224,14 @@ fn run_zelda(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "ftZd_SpecialLw_8013B540" => b(g.zelda_din_fire_held(gobj_arg(maps, call))),
         "ftZd_SpecialLw_8013B574" => b(g.zelda_din_fire_released(gobj_arg(maps, call))),
-        "it_802C3AFC" => b(zeldadinfire::hit_stage(g, gobj_arg(maps, call))),
+        "it_802C3AFC" => b(steeredshot::hit_stage(g, gobj_arg(maps, call))),
         "it_802C3BAC" => {
             let pos = vec_at(call, r(1));
             zeldadinfire::spawn(g, gobj_arg(maps, call), pos, fpr(call, 1));
             Ret::Nothing
         }
         "it_802C3D74" => {
-            zeldadinfire::start(g, gobj_arg(maps, call));
+            steeredshot::start(g, gobj_arg(maps, call), &zeldadinfire::DINS_FIRE);
             Ret::Nothing
         }
         "it_802C3D44" => {
@@ -244,18 +245,24 @@ fn run_zelda(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802C4580" => {
             let pos = vec_at(call, r(2));
             let fire = gobj_in(maps, call, 4).expect("a null fire");
-            zeldadinfireexplode::spawn(
+            steeredshot::blast_spawn(
                 g,
                 gobj_arg(maps, call),
                 fire,
                 pos,
+                ItKind::ZeldaDinsFireExplosion.id(),
                 fpr(call, 1),
                 fpr(call, 2),
+                &zeldadinfireexplode::DINS_FIRE_BLAST,
             );
             Ret::Nothing
         }
         "it_802C46C4" => {
-            zeldadinfireexplode::start(g, gobj_arg(maps, call));
+            steeredshot::blast_start(
+                g,
+                gobj_arg(maps, call),
+                &zeldadinfireexplode::DINS_FIRE_BLAST,
+            );
             Ret::Nothing
         }
         "itZeldaDinFireExplode_Logic66_EvtUnk" => {

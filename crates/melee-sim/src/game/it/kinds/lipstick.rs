@@ -1,11 +1,13 @@
 //! Lip's Stick, `melee/it/kinds/itlipstick.c`: a swung item with charges (`xD4C`) that falls,
 //! lands and is held; each swing's script flag puffs spores (`itlipstickspore.c`) while
-//! charges last; thrown, the first thing it touches bursts its spores and it bounces off.
+//! charges last; thrown, the first thing it touches bursts its spores and it bounces off. Its
+//! callbacks are the held items' ([`super::held`]), but for the throw's flight and its
+//! readiness in hand.
 
-use super::super::ground::{air, air_touches, fall, ground_or_fall, ground_skid, try_land};
-use super::super::item::{article, change, change_state};
-use super::super::{item, item_mut, lib26b1, lib2725, maplib};
-use super::{falling_phys, lipstickspore};
+use super::super::ground::{air, air_touches, try_land};
+use super::super::{item, item_mut, maplib};
+use super::held::{self, Held};
+use super::lipstickspore;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -37,20 +39,36 @@ pub const REFLECTED: u32 = 0x8029_5BAC;
 pub const HIT_SHIELD: u32 = 0x8029_5BCC;
 pub const SHIELD_BOUNCED: u32 = 0x8029_5C08;
 
+/// Lip's Stick: its charges and its spores not yet ready, thrown into state 3 and dropped into
+/// 4, skidding in 5, its hits bouncing it only once let go of.
+pub const LIPS_STICK: Held = Held {
+    name: "Lip's Stick",
+    charges: true,
+    on_spawn: Some(unready),
+    fell: held::fell,
+    dropped: 4,
+    thrown: 3,
+    drop_update: true,
+    skid: 5,
+    bounces_only_let_go: true,
+    hits_disarm: false,
+    skid_faces_motion: false,
+};
+
 /// Runs one of Lip's Stick's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM1 | ANIM5 => still(r, gobj),
-        ANIM2 => held(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL1 => coll1(r, gobj),
+        ANIM0 | ANIM1 | ANIM5 => held::still(r, gobj),
+        ANIM2 => ready(r, gobj),
+        COLL0 => held::grounded(r, gobj, &LIPS_STICK),
+        COLL1 => held::lands(r, gobj),
         COLL3 => coll3(r, gobj),
-        COLL4 => coll4(r, gobj),
-        COLL5 => coll5(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD => dmg_dealt(r, gobj),
-        REFLECTED => reflected(r, gobj),
-        SHIELD_BOUNCED => shield_bounced(r, gobj),
+        COLL4 => held::lands_loaded(r, gobj),
+        COLL5 => held::skid(r, gobj, &LIPS_STICK),
+        DMG_DEALT | CLANKED | HIT_SHIELD => held::bounce(r, gobj, &LIPS_STICK),
+        REFLECTED => held::reflected(r, gobj, &LIPS_STICK),
+        SHIELD_BOUNCED => held::shield_bounced(r, gobj, &LIPS_STICK),
         _ => return None,
     })
 }
@@ -59,142 +77,44 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => spawned(r, gobj),
-        LANDED => landed(r, gobj),
-        FELL => fell(r, gobj),
-        PHYS0 | PHYS2 | PHYS5 => idle(r, gobj),
-        PHYS1 => gravity(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        DROPPED => dropped(r, gobj),
-        THROWN => thrown(r, gobj),
-        PHYS4 => thrown_phys(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        SPAWNED => held::spawned(r, gobj, &LIPS_STICK),
+        LANDED => held::landed(r, gobj),
+        FELL => held::fell(r, gobj),
+        PHYS0 | PHYS2 | PHYS5 => held::idle(r, gobj),
+        PHYS1 => held::gravity(r, gobj),
+        PICKED_UP => held::picked_up(r, gobj),
+        DROPPED => held::dropped(r, gobj, &LIPS_STICK),
+        THROWN => held::thrown(r, gobj, &LIPS_STICK),
+        PHYS4 => held::thrown_phys(r, gobj),
+        ENTERED_AIR => held::entered_air(r, gobj, &LIPS_STICK),
         _ => return false,
     }
     true
 }
 
-/// `itLipstick_Logic23_Spawned`: its attributes' charges, falling.
-#[doc(alias = "itLipstick_Logic23_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let a = article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a Lip's Stick without attributes");
-    let charges = r.data.u32(a) as i32;
-    let ip = item_mut(r.game, gobj);
-    ip.ammo = charges;
-    ip.cmd_var0 = 0;
-    fell(r, gobj);
+/// Its spawn's own part: its spores not ready until it's held (`xDAC`).
+fn unready(r: &mut Running, gobj: GObjId) {
+    item_mut(r.game, gobj).cmd_var0 = 0;
 }
 
-/// Where a swing's spores leave from, in the hand's space (the attributes' `x4`),
-/// `it_80295748`.
-#[doc(alias = "it_80295748")]
+/// Where a swing's spores leave from, in the hand's space ([`held::hand_offset`]).
 pub fn spore_offset(r: &Running, gobj: GObjId) -> Vec3 {
-    let a = article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a Lip's Stick without attributes");
-    Vec3::new(
-        r.data.f32(a.at(4)),
-        r.data.f32(a.at(8)),
-        r.data.f32(a.at(0xC)),
-    )
+    held::hand_offset(r, gobj, &LIPS_STICK)
 }
 
 /// A swing's spores from `pos`, facing `facing` (`kind` by the swing), a charge spent,
 /// `it_80295770`.
 #[doc(alias = "it_80295770")]
 pub fn puff(r: &mut Running, gobj: GObjId, pos: Vec3, facing: f32, kind: i32) {
-    let ip = item_mut(r.game, gobj);
-    if ip.ammo > 0 {
-        ip.ammo -= 1;
-    }
-    let owner = ip.owner.expect("a Lip's Stick swung with no owner");
+    let owner = held::spend_charge(r, gobj).expect("a Lip's Stick swung with no owner");
     lipstickspore::swing(r, owner, pos, facing, kind);
-}
-
-/// Lands and lies still, `it_802957AC`.
-#[doc(alias = "it_802957AC")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib26b1::enable_pickup(r.game, gobj);
-    lib2725::clear_velocity(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The states that animate nothing, `itLipstick_UnkMotion0_Anim` (4 for 1, 3, 4; and 5).
-#[doc(alias = "itLipstick_UnkMotion0_Anim")]
-#[doc(alias = "itLipstick_UnkMotion4_Anim")]
-#[doc(alias = "itLipstick_UnkMotion5_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itLipstick_UnkMotion0_Phys` (2, 5).
-#[doc(alias = "itLipstick_UnkMotion0_Phys")]
-#[doc(alias = "itLipstick_UnkMotion2_Phys")]
-#[doc(alias = "itLipstick_UnkMotion5_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itLipstick_UnkMotion0_Coll`: falls off ledges.
-#[doc(alias = "itLipstick_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
-}
-
-/// Falls, `it_8029583C`.
-#[doc(alias = "it_8029583C")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
-/// Gravity, `itLipstick_UnkMotion1_Phys`.
-#[doc(alias = "itLipstick_UnkMotion1_Phys")]
-pub fn gravity(r: &mut Running, gobj: GObjId) {
-    super::gravity(r, gobj);
-}
-
-/// `itLipstick_UnkMotion1_Coll`: lands.
-#[doc(alias = "itLipstick_UnkMotion1_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
-    false
-}
-
-/// Held, `itLipstick_Logic23_PickedUp`.
-#[doc(alias = "itLipstick_Logic23_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
 }
 
 /// `itLipstick_UnkMotion2_Anim`: held, it will spread spores if thrown.
 #[doc(alias = "itLipstick_UnkMotion2_Anim")]
-pub fn held(r: &mut Running, gobj: GObjId) -> bool {
+pub fn ready(r: &mut Running, gobj: GObjId) -> bool {
     item_mut(r.game, gobj).cmd_var0 = 1;
     false
-}
-
-/// Let go of, it falls, `itLipstick_Logic23_Dropped`.
-#[doc(alias = "itLipstick_Logic23_Dropped")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, change::ANIM_UPDATE | change::DROP_UPDATE);
-}
-
-/// `itLipstick_UnkMotion4_Coll`: dropped, with charges left it lands; empty, it falls
-/// through, gone once it's past the stage.
-#[doc(alias = "itLipstick_UnkMotion4_Coll")]
-pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ammo != 0 {
-        fall(r, gobj, landed);
-        return false;
-    }
-    air(r, gobj)
-}
-
-/// Thrown, `itLipstick_Logic23_Thrown`.
-#[doc(alias = "itLipstick_Logic23_Thrown")]
-pub fn thrown(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 3, change::ANIM_UPDATE | change::DROP_UPDATE);
 }
 
 /// `itLipstick_UnkMotion3_Coll`: thrown with charges left, the first thing it touches puffs
@@ -216,51 +136,8 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
         }
         maplib::bounce(r, gobj, t);
         if t & 1 != 0 && try_land(r, gobj) {
-            landed(r, gobj);
+            held::landed(r, gobj);
         }
     }
     false
-}
-
-/// Bounces off what it hit when thrown or dropped, a clank or a shield,
-/// `itLipstick_Logic23_DmgDealt` (and `Clanked`, `HitShield`).
-#[doc(alias = "itLipstick_Logic23_DmgDealt")]
-#[doc(alias = "itLipstick_Logic23_Clanked")]
-#[doc(alias = "itLipstick_Logic23_HitShield")]
-pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
-    if matches!(item(r.game, gobj).msid, 3 | 4) {
-        lib2725::bounce_off_victim(r.game, r.data, gobj);
-    }
-    false
-}
-
-/// Sent back by a reflection, `itLipstick_Logic23_Reflected`.
-#[doc(alias = "itLipstick_Logic23_Reflected")]
-pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::reflected_back(r.game, gobj)
-}
-
-/// Bounces off a shield, `itLipstick_Logic23_ShieldBounced`.
-#[doc(alias = "itLipstick_Logic23_ShieldBounced")]
-pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::bounce_off_shield(r.game, gobj)
-}
-
-/// Skidding off a slope, `itLipstick_Logic23_EnteredAir`.
-#[doc(alias = "itLipstick_Logic23_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 5, change::ANIM_UPDATE);
-}
-
-/// `itLipstick_UnkMotion5_Coll`: skidding, it stops or falls.
-#[doc(alias = "itLipstick_UnkMotion5_Coll")]
-pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
-}
-
-/// Thrown, gravity and the spin it slows (`Item_ApplyFallingPhysics`), `itLipstick_UnkMotion4_Phys`.
-#[doc(alias = "itLipstick_UnkMotion4_Phys")]
-pub fn thrown_phys(r: &mut Running, gobj: GObjId) {
-    falling_phys(r, gobj);
 }

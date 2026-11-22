@@ -1,18 +1,18 @@
 //! Din's Fire's explosion, `melee/it/kinds/itzeldadinfireexplode.c`: a blast as big and as
 //! strong as the fire had grown, for 60 frames, with a rumble and, for the bigger ones, a quake.
+//! PK Flash's blast's code ([`super::steeredshot`]) with its own effect, damage and rumbles.
 
 use gekko_fp as fp;
 
-use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
+use super::super::item::article;
+use super::super::vars::ItemVars;
 use super::super::{coll, item, item_mut, jobj_of, lib26b1, lib2725};
+use super::steeredshot::{self, Blast, BlastVars};
 use crate::fpu::{mem, reg};
 use crate::game::camera::request_quake;
 use crate::game::ef::{self, Arg};
-use crate::game::it::ItKind;
 use crate::game::state::Running;
-use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
-use crate::hsd::jobj;
 use crate::lb::hitcapsule;
 use crate::vec::Vec3;
 
@@ -32,12 +32,9 @@ pub const HIT_SHIELD: u32 = 0x802C_49B8;
 #[doc(alias("EVT_UNK"))]
 pub const FORGET: u32 = 0x802C_49C0;
 
-/// `itZeldaDinFireExplodeAttributes`: the fire's size it scales by, the smallest and largest
-/// scale, and the damage's base and growth.
+/// `itZeldaDinFireExplodeAttributes`, those only the explosion reads ([`steeredshot`] reads
+/// the fire's size and the scales): the damage's base and growth.
 mod attr {
-    pub const SIZE: u32 = 0x0;
-    pub const SCALE_MIN: u32 = 0x4;
-    pub const SCALE_MAX: u32 = 0x8;
     pub const DAMAGE: u32 = 0xC;
     pub const DAMAGE_GROWTH: u32 = 0x10;
 }
@@ -48,6 +45,27 @@ const GFX: i32 = 0x4FA;
 /// `QuakeKind_Small` and `QuakeKind_Medium`.
 const QUAKE_SMALL: i32 = 2;
 const QUAKE_MEDIUM: i32 = 3;
+
+/// Din's Fire's explosion: 60 frames, its effect, ended at its end.
+pub const DINS_FIRE_BLAST: Blast = Blast {
+    name: "Din's Fire's explosion",
+    vars: shared,
+    life: 60.0,
+    on_start: Some(effect),
+    animate,
+    rumble,
+    end_effects: Some(end_effects),
+};
+
+/// The explosion's variables' shared fields.
+fn shared(v: &mut ItemVars) -> BlastVars<'_> {
+    let v = v.zelda_din_fire_explode();
+    BlastVars {
+        charge: &mut v.size,
+        hit_scale: &mut v.first_scale,
+        owner: &mut v.unread_parent,
+    }
+}
 
 /// Runs one of the explosion's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -64,8 +82,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        DESTROYED => destroyed(r, gobj),
-        PHYS => physics(r, gobj),
+        DESTROYED => steeredshot::blast_destroyed(r, gobj, &DINS_FIRE_BLAST),
+        PHYS => steeredshot::blast_stopped(r, gobj),
         _ => return false,
     }
     true
@@ -78,50 +96,19 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
     r.data.f32(attrs.at(off))
 }
 
-/// Makes the explosion at `pos` of a fire grown to `size`, `it_802C4580`.
-#[doc(alias = "it_802C4580")]
-pub fn spawn(
-    r: &mut Running,
-    parent: GObjId,
-    fire: GObjId,
-    pos: Vec3,
-    facing_dir: f32,
-    size: f32,
-) -> Option<GObjId> {
-    let mut spawn = SpawnItem {
-        kind: ItKind::ZeldaDinsFireExplosion.id(),
-        ..Default::default()
-    };
-    // `Item_InitSpawnPosition`, on the plane.
-    spawn.prev_pos = pos;
-    spawn.prev_pos.z = 0.0;
-    spawn.pos = spawn.prev_pos;
-    spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
-    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = Some(fire);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
-    let gobj = spawn_air(r, &mut spawn)?;
-    let ip = item_mut(r.game, gobj);
-    // `Item_ClearCmdVars`.
-    ip.cmd_var3 = 0;
-    ip.cmd_var2 = 0;
-    ip.cmd_var1 = 0;
-    ip.cmd_var0 = 0;
-    let v = ip.vars.zelda_din_fire_explode();
-    v.size.set(size);
-    v.unread_parent.set(Some(parent));
-    start(r, gobj);
-    Some(gobj)
+/// Its start's own part: its effect, on.
+fn effect(r: &mut Running, gobj: GObjId) {
+    let j = jobj_of(r.game, gobj);
+    ef::spawn(r, GFX, Some(gobj), &[Arg::JObj(j)]);
+    item_mut(r.game, gobj)
+        .vars
+        .zelda_din_fire_explode()
+        .started
+        .set(1);
 }
 
-/// The explosion's end, `itZeldaDinFireExplode_Logic66_Destroyed`.
-#[doc(alias = "itZeldaDinFireExplode_Logic66_Destroyed")]
-pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    lib2725::clear_hitboxes(r.game, r.data, gobj);
-    item_mut(r.game, gobj).owner = None;
+/// Its end's own part: its effects gone.
+fn end_effects(r: &mut Running, gobj: GObjId) {
     crate::game::ef::eflib::destroy_all(r, gobj);
     item_mut(r.game, gobj)
         .vars
@@ -130,39 +117,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         .set(0);
 }
 
-/// The explosion's start, `it_802C46C4`: 60 frames, its effect, its first frame, and by the
-/// fire's size a rumble and a quake.
-#[doc(alias = "it_802C46C4")]
-pub fn start(r: &mut Running, gobj: GObjId) {
-    let j = jobj_of(r.game, gobj);
-    // `Item_ClearFlagsAndEnterState(gobj, ip, 0)`.
-    lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).flags.flags.held = false;
-    lib2725::show(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-    lib2725::set_lifetime(r.game, r.data, gobj, 60.0);
-    item_mut(r.game, gobj)
-        .vars
-        .zelda_din_fire_explode()
-        .first_scale
-        .set(0.0);
-    ef::spawn(r, GFX, Some(gobj), &[Arg::JObj(j)]);
-    item_mut(r.game, gobj)
-        .vars
-        .zelda_din_fire_explode()
-        .started
-        .set(1);
-    // `Item_802694CC`.
-    super::super::item::animate(r, gobj);
-    animate(r, gobj);
-    let full = reg(attr_f32(r, gobj, attr::SIZE));
-    let size = reg(item_mut(r.game, gobj)
-        .vars
-        .zelda_din_fire_explode()
-        .size
-        .get());
-    let t = fp::fdivs(size, full);
-    let pos = item(r.game, gobj).pos;
+/// The explosion's rumble by the fire's share of the full size, and a quake for the bigger
+/// ones.
+fn rumble(r: &mut Running, gobj: GObjId, t: f64, pos: Vec3) {
     if t < 0.4375 {
         lib2725::rumble_owner(r, gobj, 0xB, 0xA);
     } else if t < 0.625 {
@@ -174,33 +131,22 @@ pub fn start(r: &mut Running, gobj: GObjId) {
         lib2725::rumble_owner(r, gobj, 0xE, 0x14);
         request_quake(r, QUAKE_MEDIUM, Some(pos));
     }
-    let owner = item(r.game, gobj).owner;
-    debug_owner_bubbles(r.game, gobj, owner);
 }
 
 /// The explosion's frame, `itZeldadinfireexplode_UnkMotion0_Anim`: scaled by the fire's size,
-/// the hitbox's damage and size with it; whether its life ran out.
+/// the hitbox's damage (rounded to single, unlike the flash's, and set every frame) and size
+/// with it while it's on; whether its life ran out.
 #[doc(alias = "itZeldadinfireexplode_UnkMotion0_Anim")]
 pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
-    let (full, min, max) = (
-        reg(attr_f32(r, gobj, attr::SIZE)),
-        reg(attr_f32(r, gobj, attr::SCALE_MIN)),
-        reg(attr_f32(r, gobj, attr::SCALE_MAX)),
-    );
     let (base, growth) = (
         reg(attr_f32(r, gobj, attr::DAMAGE)),
         reg(attr_f32(r, gobj, attr::DAMAGE_GROWTH)),
     );
-    let size = reg(item_mut(r.game, gobj)
-        .vars
-        .zelda_din_fire_explode()
-        .size
-        .get());
-    let t = fp::fdivs(fp::fsubs(max, min), full);
-    let s = mem(fp::fmadds(size, t, min));
-    let j = jobj_of(r.game, gobj).expect("Din's Fire's explosion without a model");
-    jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
+    let s = steeredshot::blast_scale(r, gobj, &DINS_FIRE_BLAST);
     if item(r.game, gobj).hitboxes[0].hit.state != hitcapsule::DISABLED {
+        let size = reg(steeredshot::blast_vars(r, gobj, &DINS_FIRE_BLAST)
+            .charge
+            .get());
         let dmg = mem(fp::fmadds(size, growth, base));
         coll::set_hit_damage(
             r.game,
@@ -209,25 +155,9 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
             0,
             crate::ppc::cvt_fp2unsigned(reg(dmg)),
         );
-        let ip = item_mut(r.game, gobj);
-        let first = ip.hitboxes[0].hit.scale;
-        let v = ip.vars.zelda_din_fire_explode();
-        if v.first_scale.get() == 0.0 {
-            v.first_scale.set(first);
-        }
-        let k = v.first_scale.get();
-        ip.hitboxes[0].hit.scale = mem(fp::fmuls(reg(k), reg(s)));
+        steeredshot::blast_hit_scale(r, gobj, &DINS_FIRE_BLAST, s);
     }
     lib2725::tick_lifetime(r.game, gobj)
-}
-
-/// `itZeldadinfireexplode_UnkMotion0_Phys`: the vertical and depth speeds stopped (the
-/// original clears z twice and leaves x).
-#[doc(alias = "itZeldadinfireexplode_UnkMotion0_Phys")]
-pub fn physics(r: &mut Running, gobj: GObjId) {
-    let ip = item_mut(r.game, gobj);
-    ip.vel.z = 0.0;
-    ip.vel.y = 0.0;
 }
 
 /// Forgets a GObj the explosion points to, `itZeldaDinFireExplode_Logic66_EvtUnk`.

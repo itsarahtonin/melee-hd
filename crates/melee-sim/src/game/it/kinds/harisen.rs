@@ -1,14 +1,15 @@
 //! The fan, `melee/it/kinds/itharisen.c`: a swung item that falls, lands and is held; its
 //! swings play states 3 to 6 at the swing's speed and grow it while it hits
-//! (`ftCo_HarisenSwing_*`); thrown, it bounces off what it hits.
+//! (`ftCo_HarisenSwing_*`); thrown, it bounces off what it hits. Its callbacks are the held
+//! items' ([`super::held`]), but for its drop and the drop's landing.
 
 use gekko_fp as fp;
 
 use super::super::data::attr;
-use super::super::ground::{air, fall, ground_or_fall, ground_skid};
+use super::super::ground::{air, fall};
 use super::super::item::{apply_scale, article, attr_of, change, change_state};
-use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
-use super::falling_phys;
+use super::super::{item, item_mut, jobj_of, lib2725};
+use super::held::{self, Held};
 use crate::fpu::{mem, reg};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -41,18 +42,34 @@ pub const REFLECTED: u32 = 0x8029_2CAC;
 pub const HIT_SHIELD: u32 = 0x8029_2CCC;
 pub const SHIELD_BOUNCED: u32 = 0x8029_2D08;
 
+/// The Fan: thrown into state 7 and dropped into 8 (its own drop), skidding in 9, its hits
+/// bouncing it only once let go of.
+pub const FAN: Held = Held {
+    name: "fan",
+    charges: false,
+    on_spawn: None,
+    fell: held::fell,
+    dropped: 8,
+    thrown: 7,
+    drop_update: true,
+    skid: 9,
+    bounces_only_let_go: true,
+    hits_disarm: false,
+    skid_faces_motion: false,
+};
+
 /// Runs one of the fan's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM8 | ANIM6 | ANIM9 => still(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL1 | COLL7 => coll1(r, gobj),
+        ANIM0 | ANIM8 | ANIM6 | ANIM9 => held::still(r, gobj),
+        COLL0 => held::grounded(r, gobj, &FAN),
+        COLL1 | COLL7 => held::lands(r, gobj),
         COLL8 => coll8(r, gobj),
-        COLL9 => coll9(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD => dmg_dealt(r, gobj),
-        REFLECTED => reflected(r, gobj),
-        SHIELD_BOUNCED => shield_bounced(r, gobj),
+        COLL9 => held::skid(r, gobj, &FAN),
+        DMG_DEALT | CLANKED | HIT_SHIELD => held::bounce(r, gobj, &FAN),
+        REFLECTED => held::reflected(r, gobj, &FAN),
+        SHIELD_BOUNCED => held::shield_bounced(r, gobj, &FAN),
         _ => return None,
     })
 }
@@ -61,14 +78,14 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => fell(r, gobj),
-        PHYS0 | PHYS6 | PHYS9 => idle(r, gobj),
-        PHYS1 => gravity(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
+        SPAWNED => held::spawned(r, gobj, &FAN),
+        PHYS0 | PHYS6 | PHYS9 => held::idle(r, gobj),
+        PHYS1 => held::gravity(r, gobj),
+        PICKED_UP => held::picked_up(r, gobj),
         DROPPED => dropped(r, gobj),
-        THROWN => thrown(r, gobj),
-        PHYS8 => thrown_phys(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        THROWN => held::thrown(r, gobj, &FAN),
+        PHYS8 => held::thrown_phys(r, gobj),
+        ENTERED_AIR => held::entered_air(r, gobj, &FAN),
         _ => return false,
     }
     true
@@ -96,57 +113,6 @@ pub fn shrink(r: &mut Running, gobj: GObjId) {
     apply_scale(r.game, gobj);
 }
 
-/// Lands and lies still, `it_8029287C`.
-#[doc(alias = "it_8029287C")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib26b1::enable_pickup(r.game, gobj);
-    lib2725::clear_velocity(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The states that animate nothing, `itHarisen_UnkMotion0_Anim` (and 6, 8, 9).
-#[doc(alias = "itHarisen_UnkMotion0_Anim")]
-#[doc(alias = "itHarisen_UnkMotion6_Anim")]
-#[doc(alias = "itHarisen_UnkMotion8_Anim")]
-#[doc(alias = "itHarisen_UnkMotion9_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itHarisen_UnkMotion0_Phys` (and 6, 9).
-#[doc(alias = "itHarisen_UnkMotion0_Phys")]
-#[doc(alias = "itHarisen_UnkMotion6_Phys")]
-#[doc(alias = "itHarisen_UnkMotion9_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itHarisen_UnkMotion0_Coll`: falls off ledges.
-#[doc(alias = "itHarisen_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
-}
-
-/// Falls, `it_8029290C` (and `itHarisen_Logic24_Spawned`).
-#[doc(alias = "it_8029290C")]
-#[doc(alias = "itHarisen_Logic24_Spawned")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
-/// `itHarisen_UnkMotion1_Phys`: gravity.
-#[doc(alias = "itHarisen_UnkMotion1_Phys")]
-pub fn gravity(r: &mut Running, gobj: GObjId) {
-    super::gravity(r, gobj);
-}
-
-/// `itHarisen_UnkMotion1_Coll` (and 7's): lands.
-#[doc(alias = "itHarisen_UnkMotion1_Coll")]
-#[doc(alias = "itHarisen_UnkMotion7_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
-    false
-}
-
 /// A swing's state (3 to 5, the jab, tilt and smash) at `speed`: `it_80292998`,
 /// `it_802929C8`, `it_802929F8`.
 #[doc(alias = "it_80292998")]
@@ -162,12 +128,6 @@ pub fn swing(r: &mut Running, gobj: GObjId, msid: i32, speed: f32) {
 pub fn swing_dash(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).anim_speed = 1.0;
     change_state(r, gobj, 6, change::ANIM_UPDATE);
-}
-
-/// Held, `itHarisen_Logic24_PickedUp`.
-#[doc(alias = "itHarisen_Logic24_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
 }
 
 /// Let go of, at its own size and speed, it falls, `itHarisen_Logic24_Dropped`.
@@ -193,7 +153,7 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itHarisen_UnkMotion8_Coll")]
 pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
     if landing_word_set(r, gobj) {
-        fall(r, gobj, landed);
+        fall(r, gobj, held::landed);
         return false;
     }
     air(r, gobj)
@@ -246,53 +206,4 @@ fn landing_word_set(r: &Running, gobj: GObjId) -> bool {
         }
     }
     item(r.game, gobj).ammo != 0
-}
-
-/// Thrown, `itHarisen_Logic24_Thrown`.
-#[doc(alias = "itHarisen_Logic24_Thrown")]
-pub fn thrown(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 7, change::ANIM_UPDATE | change::DROP_UPDATE);
-}
-
-/// Thrown or dropped, gravity and the spin it slows, `itHarisen_UnkMotion8_Phys`.
-#[doc(alias = "itHarisen_UnkMotion8_Phys")]
-pub fn thrown_phys(r: &mut Running, gobj: GObjId) {
-    falling_phys(r, gobj);
-}
-
-/// Bounces off what it hit when thrown or dropped, a clank or a shield,
-/// `itHarisen_Logic24_DmgDealt` (and `Clanked`, `HitShield`).
-#[doc(alias = "itHarisen_Logic24_DmgDealt")]
-#[doc(alias = "itHarisen_Logic24_Clanked")]
-#[doc(alias = "itHarisen_Logic24_HitShield")]
-pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
-    if matches!(item(r.game, gobj).msid, 7 | 8) {
-        lib2725::bounce_off_victim(r.game, r.data, gobj);
-    }
-    false
-}
-
-/// Skidding off a slope, `itHarisen_Logic24_EnteredAir`.
-#[doc(alias = "itHarisen_Logic24_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 9, change::ANIM_UPDATE);
-}
-
-/// `itHarisen_UnkMotion9_Coll`: skidding, it stops or falls.
-#[doc(alias = "itHarisen_UnkMotion9_Coll")]
-pub fn coll9(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
-}
-
-/// Sent back by a reflection, `itHarisen_Logic24_Reflected`.
-#[doc(alias = "itHarisen_Logic24_Reflected")]
-pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::reflected_back(r.game, gobj)
-}
-
-/// Bounces off a shield, `itHarisen_Logic24_ShieldBounced`.
-#[doc(alias = "itHarisen_Logic24_ShieldBounced")]
-pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::bounce_off_shield(r.game, gobj)
 }

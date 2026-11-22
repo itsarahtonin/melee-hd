@@ -37,7 +37,7 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::kinds::{
-    flower, harisen, lipstick, lipstickspore, scball, starrod, starrodstar, tarucann,
+    flower, harisen, held, lipstick, lipstickspore, scball, starrod, starrodstar, tarucann,
 };
 use melee_sim::game::it::{self, CLASS_ITEM};
 use melee_sim::game::state::Running;
@@ -325,12 +325,12 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     match name.as_str() {
         // Items.
         "it_802923BC" => starrod::fire(g, gobj, vec_at(r(4)), f1(), r(5) as i32),
-        "it_802923F8" => starrod::landed(g, gobj),
-        "it_80292488" => starrod::fell(g, gobj),
+        "it_802923F8" => held::landed(g, gobj),
+        "it_80292488" => held::fell(g, gobj),
         "it_802927E8" => harisen::grow(g, gobj),
         "it_8029282C" => harisen::shrink(g, gobj),
-        "it_8029287C" => harisen::landed(g, gobj),
-        "it_8029290C" => harisen::fell(g, gobj),
+        "it_8029287C" => held::landed(g, gobj),
+        "it_8029290C" => held::fell(g, gobj),
         "it_80292998" => harisen::swing(g, gobj, 3, f1()),
         "it_802929C8" => harisen::swing(g, gobj, 4, f1()),
         "it_802929F8" => harisen::swing(g, gobj, 5, f1()),
