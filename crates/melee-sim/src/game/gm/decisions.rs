@@ -445,7 +445,7 @@ impl Game {
     #[doc(alias = "pl_80039418")]
     #[doc(alias = "fn_8016F160")]
     pub fn bonus_count(&self, player: i32, kind: i32) -> u32 {
-        self.player(player).stale_moves.x904[kind as usize]
+        self.player(player).stale_moves.bonuses[kind as usize]
     }
 
     /// The points decision `kind` gives `player` in the results `r`, `fn_8016FAD4`: by rank
@@ -489,11 +489,11 @@ impl Game {
     #[doc(alias = "pl_800407C8")]
     pub fn hit_rate_record(&self, slot: i32) -> f32 {
         let t = &self.player(slot).stale_moves;
-        if t.xCEC == 0 {
+        if t.mash_frames == 0 {
             return 0.0;
         }
-        let total = gekko_fp::frsp(f64::from(t.xCEC));
-        let val = gekko_fp::frsp(f64::from(t.xCF0));
+        let total = gekko_fp::frsp(f64::from(t.mash_frames));
+        let val = gekko_fp::frsp(f64::from(t.mashes));
         crate::fpu::mem(gekko_fp::fdivs(val, total))
     }
 
@@ -740,7 +740,7 @@ impl Running<'_> {
                 }
             }
             0xFD => {
-                let v = self.game.player(a).stale_moves.xCB4 as u32;
+                let v = self.game.player(a).stale_moves.up_kos as u32;
                 one(v != 0 && u32::from(r.x7) == v)
             }
             0xFE => {

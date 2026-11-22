@@ -1096,9 +1096,9 @@ impl Running<'_> {
         if !fp.is_sub_fighter {
             let slot = i32::from(fp.player_idx);
             let t = self.game.player_stale_moves(slot);
-            t.xCEC = t.xCEC.wrapping_add(1);
+            t.mash_frames = t.mash_frames.wrapping_add(1);
             if mashed {
-                t.xCF0 = t.xCF0.wrapping_add(1);
+                t.mashes = t.mashes.wrapping_add(1);
             }
         }
         mashed

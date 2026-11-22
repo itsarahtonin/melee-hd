@@ -794,7 +794,7 @@ impl Game {
     #[doc(alias("player_unk6a8"))]
     #[doc(alias = "Player_GetUnk6A8Ptr")]
     pub fn player_combos(&mut self, slot: i32) -> &mut pl_x5EC_t {
-        &mut self.player_mut(slot).stale_moves.x5EC
+        &mut self.player_mut(slot).stale_moves.combos
     }
 
     /// The current fighter's kind, or -1 without one, `Player_80036394`.

@@ -296,8 +296,8 @@ pub fn count_for_owner(r: &mut Running, gobj: GObjId) {
         return;
     }
     let slot = r.game.fighter(owner.expect("an owner")).player_idx as usize;
-    let n =
-        &mut r.game.players[slot].stale_moves.x848[(kind - ItKind::FIRST_POKEMON.id()) as usize];
+    let n = &mut r.game.players[slot].stale_moves.pokemon_released
+        [(kind - ItKind::FIRST_POKEMON.id()) as usize];
     *n = n.wrapping_add(1);
 }
 
@@ -323,8 +323,8 @@ pub fn count_attack(r: &mut Running, gobj: GObjId) {
         (0x08, &mut a.thrown_item_count),
         (0x04, &mut a.aerials_count),
         (0x01, &mut a.specials_count),
-        (0x02, &mut a.x1A0_count),
-        (0x10, &mut a.x1A4_count),
+        (0x02, &mut a.strikes_count),
+        (0x10, &mut a.reflectors_count),
     ] {
         if ev[2] & mask != 0 {
             *n = n.wrapping_add(1);

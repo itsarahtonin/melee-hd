@@ -42,8 +42,8 @@ fn count_stats(s: &mut plAttackStats, ev: [u8; 4]) {
         (0x08, &mut s.thrown_item_count),
         (0x04, &mut s.aerials_count),
         (0x01, &mut s.specials_count),
-        (0x02, &mut s.x1A0_count),
-        (0x10, &mut s.x1A4_count),
+        (0x02, &mut s.strikes_count),
+        (0x10, &mut s.reflectors_count),
     ] {
         if ev[2] & mask != 0 {
             *n = n.wrapping_add(1);
@@ -211,7 +211,7 @@ impl Running<'_> {
                 if self.game.vs_is_teams() && self.game.vs_friendly_fire() && ateam == vteam {
                     // `pl_80040D8C`.
                     let t = self.game.player_stale_moves(aslot);
-                    t.xCB0 = t.xCB0.wrapping_add(1);
+                    t.teammate_hits = t.teammate_hits.wrapping_add(1);
                 }
                 if id < 100 {
                     let percent = self.game.fighter(victim).dmg.percent;
@@ -281,7 +281,7 @@ impl Running<'_> {
             let s = &mut self.game.player_stale_moves(slot).total_attack_count_struct;
             count_stats(&mut s.hits, ev);
             if rec.spike {
-                s.hits.x1A8 = s.hits.x1A8.wrapping_add(1);
+                s.hits.spikes_count = s.hits.spikes_count.wrapping_add(1);
             }
             if id == 99 {
                 // `pl_8003FE40`.
@@ -289,8 +289,8 @@ impl Running<'_> {
             }
             let s = &mut self.game.player_stale_moves(slot).total_attack_count_struct;
             let best = s.attacks.by_attack_counts[usize::from(id)];
-            if !rec.landed && best > word_at(&s.x358, 4 + 4 * usize::from(id)) {
-                count_stats_bytes(&mut s.x358, ev, rec.spike);
+            if !rec.landed && best > word_at(&s.landed, 4 + 4 * usize::from(id)) {
+                count_stats_bytes(&mut s.landed, ev, rec.spike);
                 self.count_best_hit(slot, sub, i32::from(id));
             }
         }
@@ -319,7 +319,7 @@ impl Running<'_> {
             .total_attack_count_struct;
         count_stats(&mut s.hits, ev);
         if rec.spike {
-            s.hits.x1A8 = s.hits.x1A8.wrapping_add(1);
+            s.hits.spikes_count = s.hits.spikes_count.wrapping_add(1);
         }
         if id == 99 {
             // `pl_8003FE40`.
@@ -330,8 +330,8 @@ impl Running<'_> {
             .player_stale_moves(aslot)
             .total_attack_count_struct;
         let best = s.attacks.by_attack_counts[usize::from(id)];
-        if !rec.landed && best > word_at(&s.x358, 4 + 4 * usize::from(id)) {
-            count_stats_bytes(&mut s.x358, ev, rec.spike);
+        if !rec.landed && best > word_at(&s.landed, 4 + 4 * usize::from(id)) {
+            count_stats_bytes(&mut s.landed, ev, rec.spike);
             self.count_best_hit(aslot, asub, i32::from(id));
         }
         let s = &mut self
@@ -339,27 +339,27 @@ impl Running<'_> {
             .player_stale_moves(aslot)
             .total_attack_count_struct;
         if behind {
-            s.x56C = s.x56C.wrapping_add(1);
+            s.back_hits = s.back_hits.wrapping_add(1);
         } else {
-            s.x568 = s.x568.wrapping_add(1);
+            s.front_hits = s.front_hits.wrapping_add(1);
         }
         if id == 8 || id == 0xB {
-            s.x574 = s.x574.wrapping_add(1);
+            s.down_hits = s.down_hits.wrapping_add(1);
         } else {
-            s.x570 = s.x570.wrapping_add(1);
+            s.other_hits = s.other_hits.wrapping_add(1);
         }
         assert!((0..8).contains(&vslot), "0 <= h_player && h_player < 8");
         let s = &mut self
             .game
             .player_stale_moves(aslot)
             .total_attack_count_struct;
-        s.x504[usize::from(id)] |= 1 << (vslot as u8);
+        s.victims[usize::from(id)] |= 1 << (vslot as u8);
         self.first_hit_bonus(aslot);
         self.average_victim_percent(aslot, vslot, percent);
         self.self_hit_bonus(aslot, vslot, vsub, rec.item_thrower);
         if vsub == 0 && (84..=87).contains(&id) {
             // `pl_800403FC`.
-            self.game.player_stale_moves(vslot).xCAC = aslot as u32;
+            self.game.player_stale_moves(vslot).flowered_by = aslot as u32;
         }
         self.count_hits_on(aslot, vslot, vsub, i32::from(id));
     }
@@ -372,15 +372,15 @@ impl Running<'_> {
             return;
         }
         let limit = self.bonus_param(0x17C) as i32;
-        let e = &mut self.game.player_combos(vslot).x10[aslot as usize];
-        if e.xC != 0 && e.xC == id {
-            e.x8 = e.x8.wrapping_add(1);
-            if e.xC == 90 && i32::from(e.x8) >= limit {
+        let e = &mut self.game.player_combos(vslot).by_attacker[aslot as usize];
+        if e.attack != 0 && e.attack == id {
+            e.repeats = e.repeats.wrapping_add(1);
+            if e.attack == 90 && i32::from(e.repeats) >= limit {
                 self.set_flag(aslot, Flag::Bonus(195), 1);
             }
         } else {
-            e.x8 = 1;
-            e.xC = id;
+            e.repeats = 1;
+            e.attack = id;
         }
     }
 
@@ -393,14 +393,14 @@ impl Running<'_> {
         }
         let shielding = self.game.player_mut(vslot).ext_u32(0xD50) != 0;
         let limit = self.bonus_param(4) as i32;
-        let e = &mut self.game.player_combos(vslot).x10[aslot as usize];
+        let e = &mut self.game.player_combos(vslot).by_attacker[aslot as usize];
         if id == 1 && shielding {
-            e.x12_b0 = true;
+            e.shield_jabbed = true;
         }
         if !matches!(id, 76 | 90 | 91 | 92 | 96) {
-            e.x10 = e.x10.wrapping_add(1);
+            e.air_hits = e.air_hits.wrapping_add(1);
         }
-        if i32::from(e.x10) >= limit {
+        if i32::from(e.air_hits) >= limit {
             let same = self.game.vs_is_teams()
                 && self.game.player_team(aslot) == self.game.player_team(vslot);
             if !same {
@@ -412,7 +412,7 @@ impl Running<'_> {
     /// `pl_8003FE64`: the first hit of the match, bonus 26, if no player has it yet.
     #[doc(alias = "pl_8003FE64")]
     fn first_hit_bonus(&mut self, aslot: i32) {
-        if (0..6).any(|i| self.game.player_stale_moves(i).x904[26] != 0) {
+        if (0..6).any(|i| self.game.player_stale_moves(i).bonuses[26] != 0) {
             return;
         }
         self.set_flag(aslot, Flag::Bonus(26), 1);
@@ -429,10 +429,10 @@ impl Running<'_> {
             return;
         }
         let t = self.game.player_stale_moves(aslot);
-        t.xCA4 = t.xCA4.wrapping_add(1);
-        let n = t.xCA4;
+        t.victim_percent_count = t.victim_percent_count.wrapping_add(1);
+        let n = t.victim_percent_count;
         let sum = fp::fmadds(
-            reg(t.xCA0),
+            reg(t.victim_percent_sum),
             fp::frsp(f64::from(n.wrapping_sub(1))),
             reg(percent),
         );
@@ -441,7 +441,7 @@ impl Running<'_> {
             total != 0.0,
             "the original's assertion failed: total != 0.0F"
         );
-        t.xCA0 = mem(fp::fdivs(sum, total));
+        t.victim_percent_sum = mem(fp::fdivs(sum, total));
     }
 
     /// `pl_8003EA40`: bonus 155 when the record names the victim's own slot.
@@ -476,9 +476,9 @@ impl Running<'_> {
         // `pl_8003EAAC`.
         if sub == 0 && id == 0x59 {
             let t = self.game.player_stale_moves(slot);
-            t.xCA8 = t.xCA8.wrapping_add(1);
+            t.ray_gun_hits = t.ray_gun_hits.wrapping_add(1);
             let target = crate::game::it::kinds::lgun::shots_bonus(self.game, self.data);
-            if self.game.player_stale_moves(slot).xCA8 == target {
+            if self.game.player_stale_moves(slot).ray_gun_hits == target {
                 self.set_point(slot, 194, 1);
             }
         }
@@ -491,7 +491,7 @@ impl Running<'_> {
             return;
         }
         let t = self.game.player_stale_moves(slot);
-        let step = t.xC90;
+        let step = t.combo_step;
         let next = match step {
             0 => (1..=3).contains(&id),
             1 => (6..=8).contains(&id),
@@ -501,13 +501,13 @@ impl Running<'_> {
         };
         if next {
             if step == 3 {
-                t.xC90 = 0;
+                t.combo_step = 0;
                 self.count_bonus(slot, 0x56);
             } else {
-                t.xC90 = step.wrapping_add(1);
+                t.combo_step = step.wrapping_add(1);
             }
         } else {
-            t.xC90 = 0;
+            t.combo_step = 0;
         }
     }
 

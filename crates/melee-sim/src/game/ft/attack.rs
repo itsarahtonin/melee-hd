@@ -1082,16 +1082,16 @@ impl Running<'_> {
             return;
         }
         let t = &mut self.game.player_mut(slot).stale_moves;
-        t.xC6C = mem(fp::fadds(reg(t.xC6C), dmg));
+        t.damage_dealt = mem(fp::fadds(reg(t.damage_dealt), dmg));
         if kind == 52 {
-            t.xC70 = mem(fp::fadds(reg(t.xC70), dmg));
+            t.pummel_damage = mem(fp::fadds(reg(t.pummel_damage), dmg));
         }
         if (kind.wrapping_sub(92) as u32) <= 1 {
-            t.xC74 = mem(fp::fadds(reg(t.xC74), dmg));
+            t.scope_damage = mem(fp::fadds(reg(t.scope_damage), dmg));
         }
         if vslot != 6 {
             if vsub == 0 {
-                let v = &mut self.game.player_mut(vslot).stale_moves.xC78[slot as usize];
+                let v = &mut self.game.player_mut(vslot).stale_moves.damage_to[slot as usize];
                 *v = mem(fp::fadds(reg(*v), dmg));
             }
             self.count_damage_dealt(slot, sub, vslot, vsub, kind, dmg);
@@ -1118,20 +1118,21 @@ impl Running<'_> {
         }
         let counts = !matches!(kind, 76 | 90 | 91 | 92 | 96);
         if counts {
-            let first = self.game.player(vslot).stale_moves.x5EC.x10[slot as usize].x4 == 0;
-            let t = &mut self.game.player_mut(slot).stale_moves.x5EC;
-            t.x8 = t.x8.wrapping_add(1);
+            let first =
+                self.game.player(vslot).stale_moves.combos.by_attacker[slot as usize].hits == 0;
+            let t = &mut self.game.player_mut(slot).stale_moves.combos;
+            t.combo_hits = t.combo_hits.wrapping_add(1);
             if first {
-                t.xC = t.xC.wrapping_add(1);
+                t.combo_count = t.combo_count.wrapping_add(1);
             }
-            let e = &mut self.game.player_mut(vslot).stale_moves.x5EC.x10[slot as usize];
-            e.x4 = e.x4.wrapping_add(1);
+            let e = &mut self.game.player_mut(vslot).stale_moves.combos.by_attacker[slot as usize];
+            e.hits = e.hits.wrapping_add(1);
         }
-        let t = &mut self.game.player_mut(slot).stale_moves.x5EC;
-        t.x0 = vslot as u8;
-        t.x4 = mem(dmg);
-        let e = &mut self.game.player_mut(vslot).stale_moves.x5EC.x10[slot as usize];
-        e.x0 = mem(fp::fadds(reg(e.x0), dmg));
+        let t = &mut self.game.player_mut(slot).stale_moves.combos;
+        t.last_victim = vslot as u8;
+        t.last_damage = mem(dmg);
+        let e = &mut self.game.player_mut(vslot).stale_moves.combos.by_attacker[slot as usize];
+        e.damage = mem(fp::fadds(reg(e.damage), dmg));
     }
 
     /// A coin match's coin pickups, `ft_8007C77C`: on alternate frames by its player's port,
@@ -2117,7 +2118,7 @@ impl Running<'_> {
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
         if !sub && matches!(kind, 1 | 3) {
             let t = &mut self.game.player_mut(slot).stale_moves;
-            t.xC98 = mem(fp::fadds(reg(t.xC98), reg(f)));
+            t.stage_damage = mem(fp::fadds(reg(t.stage_damage), reg(f)));
         }
     }
 

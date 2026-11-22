@@ -512,21 +512,23 @@ impl Running<'_> {
     /// The hits in a row slot `slot`'s last attacker has on it, `pl_8004134C`.
     #[doc(alias = "pl_8004134C")]
     fn combo_count_on(&mut self, slot: i32) -> i32 {
-        let by = i32::from(self.game.player_combos(slot).x0);
-        i32::from(self.game.player_combos(by).x10[slot as usize].x4)
+        let by = i32::from(self.game.player_combos(slot).last_victim);
+        i32::from(self.game.player_combos(by).by_attacker[slot as usize].hits)
     }
 
     /// The damage of those hits, `pl_80041300`.
     #[doc(alias = "pl_80041300")]
     fn combo_damage_on(&mut self, slot: i32) -> i32 {
-        let by = i32::from(self.game.player_combos(slot).x0);
-        fp::fctiwz(reg(self.game.player_combos(by).x10[slot as usize].x0))
+        let by = i32::from(self.game.player_combos(slot).last_victim);
+        fp::fctiwz(reg(
+            self.game.player_combos(by).by_attacker[slot as usize].damage
+        ))
     }
 
     /// The slot's damage taken in the frame counters, `pl_800412D0`.
     #[doc(alias = "pl_800412D0")]
     fn frame_damage(&mut self, slot: i32) -> i32 {
-        fp::fctiwz(reg(self.game.player_combos(slot).x4))
+        fp::fctiwz(reg(self.game.player_combos(slot).last_damage))
     }
 
     /// `fn_80188738`: the damage counter's digits (at most 999).

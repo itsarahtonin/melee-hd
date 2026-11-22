@@ -212,7 +212,7 @@ pub fn stat_value(me: &MatchEnd, us: bool, getter: u32, slot: usize) -> i32 {
         0x8017_B6C4 => f(p.items_thrown),
         0x8017_B728 => f(p.grabs),
         0x8017_B78C => f(p.down_attacks),
-        0x8017_B7F0 => f(p.action_stat_112),
+        0x8017_B7F0 => f(p.ledge_catches),
         0x8017_B854 => f(p.specials),
         0x8017_B8B8 => f(p.items_picked_up),
         0x8017_B91C | 0x8017_B9F4 => {

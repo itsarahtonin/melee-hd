@@ -187,6 +187,6 @@ impl Running<'_> {
         if sub != 0 {
             return;
         }
-        self.game.player_stale_moves(slot).xCA8 = 0;
+        self.game.player_stale_moves(slot).ray_gun_hits = 0;
     }
 }

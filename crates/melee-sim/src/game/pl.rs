@@ -44,17 +44,17 @@ impl Running<'_> {
         }
         self.count_dominant_input(slot, sub);
         for i in 0..6 {
-            let e = &self.game.player_combos(slot).x10[i];
+            let e = &self.game.player_combos(slot).by_attacker[i];
             // Bonus 0x4C goes to the player the entry is for.
-            if e.x12_b0 && e.x4 == 1 {
+            if e.shield_jabbed && e.hits == 1 {
                 self.count_bonus(i as i32, 0x4C);
             }
-            let e = &mut self.game.player_combos(slot).x10[i];
-            e.x0 = 0.0;
-            e.x4 = 0;
-            e.x8 = 0;
-            e.xC = 0;
-            e.x12_b0 = false;
+            let e = &mut self.game.player_combos(slot).by_attacker[i];
+            e.damage = 0.0;
+            e.hits = 0;
+            e.repeats = 0;
+            e.attack = 0;
+            e.shield_jabbed = false;
         }
     }
 
@@ -64,8 +64,8 @@ impl Running<'_> {
         if sub == 1 {
             return;
         }
-        for e in &mut self.game.player_combos(slot).x10 {
-            e.x10 = 0;
+        for e in &mut self.game.player_combos(slot).by_attacker {
+            e.air_hits = 0;
         }
     }
 
@@ -78,7 +78,7 @@ impl Running<'_> {
         }
         let (mut total, mut best) = (0.0, 0.0);
         for i in 0..6 {
-            let v = crate::fpu::reg(self.game.player_combos(slot).x10[i].x0);
+            let v = crate::fpu::reg(self.game.player_combos(slot).by_attacker[i].damage);
             if best < v {
                 best = v;
             }
@@ -98,7 +98,7 @@ impl Running<'_> {
     #[doc(alias = "pl_80038824")]
     pub(crate) fn count_bonus(&mut self, slot: i32, kind: usize) {
         assert!((0..6).contains(&slot), "player slot {slot}");
-        let n = &mut self.game.players[slot as usize].stale_moves.x904[kind];
+        let n = &mut self.game.players[slot as usize].stale_moves.bonuses[kind];
         *n = n.wrapping_add(1);
     }
 
@@ -147,8 +147,8 @@ impl Running<'_> {
             (0x08, &mut a.thrown_item_count),
             (0x04, &mut a.aerials_count),
             (0x01, &mut a.specials_count),
-            (0x02, &mut a.x1A0_count),
-            (0x10, &mut a.x1A4_count),
+            (0x02, &mut a.strikes_count),
+            (0x10, &mut a.reflectors_count),
         ] {
             if ev[2] & mask != 0 {
                 *n = n.wrapping_add(1);
@@ -168,16 +168,16 @@ impl Running<'_> {
             .stale_moves
             .total_attack_count_struct;
         if cur[2] & 0x20 != 0 {
-            acp.x5BC_b0 = true;
+            acp.has_turned = true;
         }
         if cur[2] & 0x40 != 0 {
-            acp.x5BC_b1 = true;
+            acp.has_walked = true;
         }
         if cur[2] & 0x80 != 0 {
-            acp.x5BC_b2 = true;
+            acp.has_jumped = true;
         }
         if cur[1] & 0x01 != 0 {
-            acp.x5BC_b3 = true;
+            acp.has_air_jumped = true;
         }
         let id = cur[3];
         if id == 0 || id == prev[3] {
@@ -199,8 +199,8 @@ impl Running<'_> {
             (0x08, &mut a.thrown_item_count),
             (0x04, &mut a.aerials_count),
             (0x01, &mut a.specials_count),
-            (0x02, &mut a.x1A0_count),
-            (0x10, &mut a.x1A4_count),
+            (0x02, &mut a.strikes_count),
+            (0x10, &mut a.reflectors_count),
         ] {
             if cur[2] & mask != 0 {
                 *n = n.wrapping_add(1);
@@ -216,27 +216,27 @@ fn add_action_stat(s: &mut plActionStats, off: u32) {
         b[..4].copy_from_slice(&v.to_be_bytes());
     };
     match off {
-        0x358..0x504 => inc(&mut s.x358[(off - 0x358) as usize..]),
-        0x504..0x568 => inc(&mut s.x504[(off - 0x504) as usize..]),
+        0x358..0x504 => inc(&mut s.landed[(off - 0x358) as usize..]),
+        0x504..0x568 => inc(&mut s.victims[(off - 0x504) as usize..]),
         0x568..0x598 => {
             let w = match off {
-                0x568 => &mut s.x568,
-                0x56C => &mut s.x56C,
-                0x570 => &mut s.x570,
-                0x574 => &mut s.x574,
-                0x578 => &mut s.x578,
-                0x57C => &mut s.x57C,
-                0x580 => &mut s.x580,
-                0x584 => &mut s.x584,
-                0x588 => &mut s.x588,
-                0x58C => &mut s.x58C,
-                0x590 => &mut s.x590,
-                _ => &mut s.x594,
+                0x568 => &mut s.front_hits,
+                0x56C => &mut s.back_hits,
+                0x570 => &mut s.other_hits,
+                0x574 => &mut s.down_hits,
+                0x578 => &mut s.turns,
+                0x57C => &mut s.squats,
+                0x580 => &mut s.walks,
+                0x584 => &mut s.dashes,
+                0x588 => &mut s.runs,
+                0x58C => &mut s.jumps,
+                0x590 => &mut s.air_jumps,
+                _ => &mut s.wall_bounces,
             };
             *w = w.wrapping_add(1);
         }
         0x598..0x5B8 => {
-            let w = &mut s.x598[((off - 0x598) / 4) as usize];
+            let w = &mut s.more_actions[((off - 0x598) / 4) as usize];
             *w = w.wrapping_add(1);
         }
         _ => panic!("an attack statistic at {off:#x} isn't modeled"),

@@ -328,7 +328,8 @@ mod label_tests {
     #[test]
     fn step_3s_renamed_fields_label_gives_the_originals_name() {
         use crate::game::structs::{
-            _StaticPlayer, Camera, Ground, GroundParam, MatchPlayerData, StageInfo, StartMeleeRules,
+            _StaticPlayer, Camera, Ground, GroundParam, MatchPlayerData, StageInfo, StaleMoveTable,
+            StartMeleeRules,
         };
         assert_eq!(
             labels_after::<Fighter>("fighter", |fp| {
@@ -410,6 +411,18 @@ mod label_tests {
                 p.flags.rumbles = true;
             }),
             ["player.coins_lost (unk9C)", "player.flags.rumbles (b0)"]
+        );
+        assert_eq!(
+            labels_after::<StaleMoveTable>("stale_moves", |t| {
+                t.total_attack_count_struct.walks = 1;
+                t.combos.by_attacker[1].air_hits = 1;
+                t.ledge_catches = 1;
+            }),
+            [
+                "stale_moves.total_attack_count_struct.walks (x580)",
+                "stale_moves.combos (x5EC).by_attacker (x10)[1].air_hits (x10)",
+                "stale_moves.ledge_catches (xCE8)",
+            ]
         );
     }
 }

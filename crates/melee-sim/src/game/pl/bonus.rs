@@ -137,7 +137,7 @@ impl Running<'_> {
         }
         if reg(kb) >= reg(self.bonus_param_f32(0x98)) {
             let t = self.game.player_stale_moves(slot);
-            t.xCE4 = t.xCE4.wrapping_add(1);
+            t.strong_hits_taken = t.strong_hits_taken.wrapping_add(1);
         }
     }
 
@@ -166,7 +166,7 @@ impl Running<'_> {
     #[doc(alias = "pl_8003E150")]
     pub fn record_powershield(&mut self, slot: i32) {
         let t = self.game.player_stale_moves(slot);
-        t.xCD8 = t.xCD8.wrapping_add(1);
+        t.powershields = t.powershields.wrapping_add(1);
     }
 
     /// A throw that came within `pl_804D6470` x4C of the victim's mash timer sets the quick
@@ -182,19 +182,26 @@ impl Running<'_> {
     /// hit, counts in the bonuses (`fn_80041BC8`).
     #[doc(alias = "pl_800419AC")]
     pub fn bombhei_thrown(&mut self, slot: i32, _sub: i32, spawn: u16) {
-        let t = &self.game.player_stale_moves(slot).x8D8;
-        if t.x4.iter().any(|e| e.x4_b1 && u32::from(spawn) == e.x0) {
+        let t = &self.game.player_stale_moves(slot).bombhei_ring;
+        if t.entries
+            .iter()
+            .any(|e| e.used && u32::from(spawn) == e.spawn)
+        {
             return;
         }
-        let at = t.x0 as usize;
-        let (hit, used) = (t.x4[at].x4_b0, t.x4[at].x4_b1);
+        let at = t.next as usize;
+        let (hit, used) = (t.entries[at].hit, t.entries[at].used);
         self.count_missed_bombhei(slot, hit, used);
-        let t = &mut self.game.player_stale_moves(slot).x8D8;
-        let e = &mut t.x4[at];
-        e.x0 = u32::from(spawn);
-        e.x4_b0 = false;
-        e.x4_b1 = true;
-        t.x0 = if t.x0 == 4 { 0 } else { t.x0.wrapping_add(1) };
+        let t = &mut self.game.player_stale_moves(slot).bombhei_ring;
+        let e = &mut t.entries[at];
+        e.spawn = u32::from(spawn);
+        e.hit = false;
+        e.used = true;
+        t.next = if t.next == 4 {
+            0
+        } else {
+            t.next.wrapping_add(1)
+        };
     }
 
     /// A Bob-omb of the player's that never hit counts in the bonuses (0xC8), `fn_80041BC8`.
@@ -235,12 +242,12 @@ impl Running<'_> {
         }
         let run = self.bonus_param(0x138);
         for (i, &s) in seen.iter().enumerate() {
-            let t = &mut self.game.player_stale_moves(slot).x7AC[i];
+            let t = &mut self.game.player_stale_moves(slot).container_runs[i];
             if s {
                 *t = t.wrapping_add(1);
                 if *t as u32 == run {
                     self.set_point(slot, 0x9D, 1);
-                    self.game.player_stale_moves(slot).x7AC[i] = 0;
+                    self.game.player_stale_moves(slot).container_runs[i] = 0;
                 }
             } else {
                 *t = 0;
@@ -261,7 +268,7 @@ impl Running<'_> {
     fn flag(&mut self, slot: i32, flag: Flag) -> u32 {
         let p = self.game.player_mut(slot);
         match flag {
-            Flag::Bonus(kind) => p.stale_moves.x904[kind as usize],
+            Flag::Bonus(kind) => p.stale_moves.bonuses[kind as usize],
             Flag::Record(off) => p.ext_u32(off),
         }
     }
@@ -271,7 +278,7 @@ impl Running<'_> {
     pub(super) fn set_flag(&mut self, slot: i32, flag: Flag, v: u32) {
         let p = self.game.player_mut(slot);
         match flag {
-            Flag::Bonus(kind) => p.stale_moves.x904[kind as usize] = v,
+            Flag::Bonus(kind) => p.stale_moves.bonuses[kind as usize] = v,
             Flag::Record(off) => p.set_ext_u32(off, v),
         }
     }
@@ -368,11 +375,11 @@ impl Running<'_> {
             let n = self.game.vs_frame_count();
             let t = self.game.player_stale_moves(slot);
             let sum = fp::fmadds(
-                reg(t.xC9C),
+                reg(t.average_percent),
                 fp::frsp(f64::from(n.wrapping_sub(1))),
                 fp::frsp(f64::from(percent)),
             );
-            t.xC9C = average(sum, fp::frsp(f64::from(n)));
+            t.average_percent = average(sum, fp::frsp(f64::from(n)));
         }
     }
 
@@ -497,15 +504,22 @@ impl Running<'_> {
         let s = &self.game.player_stale_moves(slot).total_attack_count_struct;
         // `pl_800386D8`: `x358`'s `by_attack_hi`, at `0x3E8 + 4 * attack`, which runs past it
         // into the words that follow.
-        let (hi_107, hi_112, hi_111) = (s.x594, s.x598[4], s.x598[3]);
+        let (hi_107, hi_112, hi_111) = (s.wall_bounces, s.more_actions[4], s.more_actions[3]);
         // `pl_800386E8`: the words at 0x190, 0x5AC and 0x5B0.
         let e8 = s.attacks.by_attack_counts[99]
-            .wrapping_add(s.x598[5])
-            .wrapping_add(s.x598[6]);
+            .wrapping_add(s.more_actions[5])
+            .wrapping_add(s.more_actions[6]);
         let (hits, attacks) = (s.hits.total, s.attacks.total);
         let p = self.game.player_mut(slot);
-        let (xd70, xd34, xcd8) = (p.ext_u32(0xD70), p.ext_u32(0xD34), p.stale_moves.xCD8);
-        let (sdi_x, sdi_y) = (reg(p.stale_moves.xCDC), reg(p.stale_moves.xCE0));
+        let (xd70, xd34, xcd8) = (
+            p.ext_u32(0xD70),
+            p.ext_u32(0xD34),
+            p.stale_moves.powershields,
+        );
+        let (sdi_x, sdi_y) = (
+            reg(p.stale_moves.sdi_distance_x),
+            reg(p.stale_moves.sdi_distance_y),
+        );
         let presses = p.ext_u32(0xCF4);
         let windows = [
             (Flag::Bonus(0x3B), 0x70, hi_107, 0xD9C),

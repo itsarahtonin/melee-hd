@@ -6354,11 +6354,14 @@ pub struct plAttackStats {
     /// +0x19c
     pub specials_count: u32,
     /// +0x1a0
-    pub x1A0_count: u32,
+    #[doc(alias("x1A0_count"))]
+    pub strikes_count: u32,
     /// +0x1a4
-    pub x1A4_count: u32,
+    #[doc(alias("x1A4_count"))]
+    pub reflectors_count: u32,
     /// +0x1a8
-    pub x1A8: u32,
+    #[doc(alias("x1A8"))]
+    pub spikes_count: u32,
 }
 
 impl Default for plAttackStats {
@@ -6369,9 +6372,9 @@ impl Default for plAttackStats {
             thrown_item_count: 0,
             aerials_count: 0,
             specials_count: 0,
-            x1A0_count: 0,
-            x1A4_count: 0,
-            x1A8: 0,
+            strikes_count: 0,
+            reflectors_count: 0,
+            spikes_count: 0,
         }
     }
 }
@@ -6384,45 +6387,65 @@ pub struct plActionStats {
     /// +0x1ac
     pub hits: plAttackStats,
     /// +0x358
-    pub x358: [u8; 428],
+    #[doc(alias("x358"))]
+    pub landed: [u8; 428],
     /// +0x504
-    pub x504: [u8; 100],
+    #[doc(alias("x504"))]
+    pub victims: [u8; 100],
     /// +0x568
-    pub x568: u32,
+    #[doc(alias("x568"))]
+    pub front_hits: u32,
     /// +0x56c
-    pub x56C: u32,
+    #[doc(alias("x56C"))]
+    pub back_hits: u32,
     /// +0x570
-    pub x570: u32,
+    #[doc(alias("x570"))]
+    pub other_hits: u32,
     /// +0x574
-    pub x574: u32,
+    #[doc(alias("x574"))]
+    pub down_hits: u32,
     /// +0x578
-    pub x578: u32,
+    #[doc(alias("x578"))]
+    pub turns: u32,
     /// +0x57c
-    pub x57C: u32,
+    #[doc(alias("x57C"))]
+    pub squats: u32,
     /// +0x580
-    pub x580: u32,
+    #[doc(alias("x580"))]
+    pub walks: u32,
     /// +0x584
-    pub x584: u32,
+    #[doc(alias("x584"))]
+    pub dashes: u32,
     /// +0x588
-    pub x588: u32,
+    #[doc(alias("x588"))]
+    pub runs: u32,
     /// +0x58c
-    pub x58C: u32,
+    #[doc(alias("x58C"))]
+    pub jumps: u32,
     /// +0x590
-    pub x590: u32,
+    #[doc(alias("x590"))]
+    pub air_jumps: u32,
     /// +0x594
-    pub x594: u32,
+    #[doc(alias("x594"))]
+    pub wall_bounces: u32,
     /// +0x598
-    pub x598: [u32; 8],
+    #[doc(alias("x598"))]
+    pub more_actions: [u32; 8],
     /// +0x5b8
-    pub x5B8: [u8; 4],
+    #[doc(alias("x5B8"))]
+    pub unused_5b8: [u8; 4],
     /// +0x5bc (bits 0..+1)
-    pub x5BC_b0: bool,
+    #[doc(alias("x5BC_b0"))]
+    pub has_turned: bool,
     /// +0x5bc (bits 1..+1)
-    pub x5BC_b1: bool,
+    #[doc(alias("x5BC_b1"))]
+    pub has_walked: bool,
     /// +0x5bc (bits 2..+1)
-    pub x5BC_b2: bool,
+    #[doc(alias("x5BC_b2"))]
+    pub has_jumped: bool,
     /// +0x5bc (bits 3..+1)
-    pub x5BC_b3: bool,
+    #[doc(alias("x5BC_b3"))]
+    pub has_air_jumped: bool,
 }
 
 impl Default for plActionStats {
@@ -6430,26 +6453,26 @@ impl Default for plActionStats {
         plActionStats {
             attacks: Default::default(),
             hits: Default::default(),
-            x358: [0; 428],
-            x504: [0; 100],
-            x568: 0,
-            x56C: 0,
-            x570: 0,
-            x574: 0,
-            x578: 0,
-            x57C: 0,
-            x580: 0,
-            x584: 0,
-            x588: 0,
-            x58C: 0,
-            x590: 0,
-            x594: 0,
-            x598: [0; 8],
-            x5B8: [0; 4],
-            x5BC_b0: false,
-            x5BC_b1: false,
-            x5BC_b2: false,
-            x5BC_b3: false,
+            landed: [0; 428],
+            victims: [0; 100],
+            front_hits: 0,
+            back_hits: 0,
+            other_hits: 0,
+            down_hits: 0,
+            turns: 0,
+            squats: 0,
+            walks: 0,
+            dashes: 0,
+            runs: 0,
+            jumps: 0,
+            air_jumps: 0,
+            wall_bounces: 0,
+            more_actions: [0; 8],
+            unused_5b8: [0; 4],
+            has_turned: false,
+            has_walked: false,
+            has_jumped: false,
+            has_air_jumped: false,
         }
     }
 }
@@ -6458,31 +6481,38 @@ impl Default for plActionStats {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct pl_x5EC_t_x10 {
     /// +0x0
-    pub x0: f32,
+    #[doc(alias("x0"))]
+    pub damage: f32,
     /// +0x4
-    pub x4: i16,
+    #[doc(alias("x4"))]
+    pub hits: i16,
     /// +0x6
-    pub x6: u16,
+    #[doc(alias("x6"))]
+    pub unused_6: u16,
     /// +0x8
-    pub x8: i16,
+    #[doc(alias("x8"))]
+    pub repeats: i16,
     /// +0xc
-    pub xC: i32,
+    #[doc(alias("xC"))]
+    pub attack: i32,
     /// +0x10
-    pub x10: i16,
+    #[doc(alias("x10"))]
+    pub air_hits: i16,
     /// +0x12 (bits 0..+1)
-    pub x12_b0: bool,
+    #[doc(alias("x12_b0"))]
+    pub shield_jabbed: bool,
 }
 
 impl Default for pl_x5EC_t_x10 {
     fn default() -> Self {
         pl_x5EC_t_x10 {
-            x0: 0.0,
-            x4: 0,
-            x6: 0,
-            x8: 0,
-            xC: 0,
-            x10: 0,
-            x12_b0: false,
+            damage: 0.0,
+            hits: 0,
+            unused_6: 0,
+            repeats: 0,
+            attack: 0,
+            air_hits: 0,
+            shield_jabbed: false,
         }
     }
 }
@@ -6491,25 +6521,30 @@ impl Default for pl_x5EC_t_x10 {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct pl_x5EC_t {
     /// +0x0
-    pub x0: u8,
+    #[doc(alias("x0"))]
+    pub last_victim: u8,
     /// +0x4
-    pub x4: f32,
+    #[doc(alias("x4"))]
+    pub last_damage: f32,
     /// +0x8
-    pub x8: u32,
+    #[doc(alias("x8"))]
+    pub combo_hits: u32,
     /// +0xc
-    pub xC: u32,
+    #[doc(alias("xC"))]
+    pub combo_count: u32,
     /// +0x10
-    pub x10: [pl_x5EC_t_x10; 6],
+    #[doc(alias("x10"))]
+    pub by_attacker: [pl_x5EC_t_x10; 6],
 }
 
 impl Default for pl_x5EC_t {
     fn default() -> Self {
         pl_x5EC_t {
-            x0: 0,
-            x4: 0.0,
-            x8: 0,
-            xC: 0,
-            x10: core::array::from_fn(|_| Default::default()),
+            last_victim: 0,
+            last_damage: 0.0,
+            combo_hits: 0,
+            combo_count: 0,
+            by_attacker: core::array::from_fn(|_| Default::default()),
         }
     }
 }
@@ -6518,19 +6553,22 @@ impl Default for pl_x5EC_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct pl_x8C0_t_x4 {
     /// +0x0
-    pub x0: u16,
+    #[doc(alias("x0"))]
+    pub instance: u16,
     /// +0x2
-    pub x2: u8,
+    #[doc(alias("x2"))]
+    pub kos: u8,
     /// +0x3 (bits 0..+1)
-    pub x3_b0: bool,
+    #[doc(alias("x3_b0"))]
+    pub self_ko: bool,
 }
 
 impl Default for pl_x8C0_t_x4 {
     fn default() -> Self {
         pl_x8C0_t_x4 {
-            x0: 0,
-            x2: 0,
-            x3_b0: false,
+            instance: 0,
+            kos: 0,
+            self_ko: false,
         }
     }
 }
@@ -6539,16 +6577,18 @@ impl Default for pl_x8C0_t_x4 {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct pl_x8C0_t {
     /// +0x0
-    pub x0: i32,
+    #[doc(alias("x0"))]
+    pub next: i32,
     /// +0x4
-    pub x4: [pl_x8C0_t_x4; 5],
+    #[doc(alias("x4"))]
+    pub entries: [pl_x8C0_t_x4; 5],
 }
 
 impl Default for pl_x8C0_t {
     fn default() -> Self {
         pl_x8C0_t {
-            x0: 0,
-            x4: core::array::from_fn(|_| Default::default()),
+            next: 0,
+            entries: core::array::from_fn(|_| Default::default()),
         }
     }
 }
@@ -6557,19 +6597,22 @@ impl Default for pl_x8C0_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct pl_x8D8_t_x4 {
     /// +0x0
-    pub x0: u32,
+    #[doc(alias("x0"))]
+    pub spawn: u32,
     /// +0x4 (bits 0..+1)
-    pub x4_b0: bool,
+    #[doc(alias("x4_b0"))]
+    pub hit: bool,
     /// +0x4 (bits 1..+1)
-    pub x4_b1: bool,
+    #[doc(alias("x4_b1"))]
+    pub used: bool,
 }
 
 impl Default for pl_x8D8_t_x4 {
     fn default() -> Self {
         pl_x8D8_t_x4 {
-            x0: 0,
-            x4_b0: false,
-            x4_b1: false,
+            spawn: 0,
+            hit: false,
+            used: false,
         }
     }
 }
@@ -6578,16 +6621,18 @@ impl Default for pl_x8D8_t_x4 {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct pl_x8D8_t {
     /// +0x0
-    pub x0: i32,
+    #[doc(alias("x0"))]
+    pub next: i32,
     /// +0x4
-    pub x4: [pl_x8D8_t_x4; 5],
+    #[doc(alias("x4"))]
+    pub entries: [pl_x8D8_t_x4; 5],
 }
 
 impl Default for pl_x8D8_t {
     fn default() -> Self {
         pl_x8D8_t {
-            x0: 0,
-            x4: core::array::from_fn(|_| Default::default()),
+            next: 0,
+            entries: core::array::from_fn(|_| Default::default()),
         }
     }
 }
@@ -6602,77 +6647,113 @@ pub struct StaleMoveTable {
     /// +0x2c
     pub total_attack_count_struct: plActionStats,
     /// +0x5ec
-    pub x5EC: pl_x5EC_t,
+    #[doc(alias("x5EC"))]
+    pub combos: pl_x5EC_t,
     /// +0x674
-    pub x674: [u32; 39],
+    #[doc(alias("x674"))]
+    pub items_picked_up: [u32; 39],
     /// +0x710
-    pub x710: [i32; 39],
+    #[doc(alias("x710"))]
+    pub fresh_items_picked_up: [i32; 39],
     /// +0x7ac
-    pub x7AC: [i32; 39],
+    #[doc(alias("x7AC"))]
+    pub container_runs: [i32; 39],
     /// +0x848
-    pub x848: [i32; 30],
+    #[doc(alias("x848"))]
+    pub pokemon_released: [i32; 30],
     /// +0x8c0
-    pub x8C0: pl_x8C0_t,
+    #[doc(alias("x8C0"))]
+    pub ko_ring: pl_x8C0_t,
     /// +0x8d8
-    pub x8D8: pl_x8D8_t,
+    #[doc(alias("x8D8"))]
+    pub bombhei_ring: pl_x8D8_t,
     /// +0x904
-    pub x904: [u32; 215],
+    #[doc(alias("x904"))]
+    pub bonuses: [u32; 215],
     /// +0xc60
-    pub xC60: f32,
+    #[doc(alias("xC60"))]
+    pub damage_taken: f32,
     /// +0xc64
-    pub xC64: f32,
+    #[doc(alias("xC64"))]
+    pub peak_damage: f32,
     /// +0xc68
-    pub xC68: i32,
+    #[doc(alias("xC68"))]
+    pub damage_recovered: i32,
     /// +0xc6c
-    pub xC6C: f32,
+    #[doc(alias("xC6C"))]
+    pub damage_dealt: f32,
     /// +0xc70
-    pub xC70: f32,
+    #[doc(alias("xC70"))]
+    pub pummel_damage: f32,
     /// +0xc74
-    pub xC74: f32,
+    #[doc(alias("xC74"))]
+    pub scope_damage: f32,
     /// +0xc78
-    pub xC78: [f32; 6],
+    #[doc(alias("xC78"))]
+    pub damage_to: [f32; 6],
     /// +0xc90
-    pub xC90: u32,
+    #[doc(alias("xC90"))]
+    pub combo_step: u32,
     /// +0xc94
-    pub xC94: i32,
+    #[doc(alias("xC94"))]
+    pub star_falls: i32,
     /// +0xc98
-    pub xC98: f32,
+    #[doc(alias("xC98"))]
+    pub stage_damage: f32,
     /// +0xc9c
-    pub xC9C: f32,
+    #[doc(alias("xC9C"))]
+    pub average_percent: f32,
     /// +0xca0
-    pub xCA0: f32,
+    #[doc(alias("xCA0"))]
+    pub victim_percent_sum: f32,
     /// +0xca4
-    pub xCA4: i32,
+    #[doc(alias("xCA4"))]
+    pub victim_percent_count: i32,
     /// +0xca8
-    pub xCA8: u32,
+    #[doc(alias("xCA8"))]
+    pub ray_gun_hits: u32,
     /// +0xcac
-    pub xCAC: u32,
+    #[doc(alias("xCAC"))]
+    pub flowered_by: u32,
     /// +0xcb0
-    pub xCB0: i32,
+    #[doc(alias("xCB0"))]
+    pub teammate_hits: i32,
     /// +0xcb4
-    pub xCB4: i32,
+    #[doc(alias("xCB4"))]
+    pub up_kos: i32,
     /// +0xcb8
-    pub xCB8: i32,
+    #[doc(alias("xCB8"))]
+    pub last_ko_by: i32,
     /// +0xcbc
-    pub xCBC: [u8; 4],
+    #[doc(alias("xCBC"))]
+    pub last_ko_attack: [u8; 4],
     /// +0xcc0
-    pub xCC0: ft_800898B4_t,
+    #[doc(alias("xCC0"))]
+    pub last_ko_hit: ft_800898B4_t,
     /// +0xcd4
-    pub xCD4: u16,
+    #[doc(alias("xCD4"))]
+    pub last_ko_instance: u16,
     /// +0xcd8
-    pub xCD8: i32,
+    #[doc(alias("xCD8"))]
+    pub powershields: i32,
     /// +0xcdc
-    pub xCDC: f32,
+    #[doc(alias("xCDC"))]
+    pub sdi_distance_x: f32,
     /// +0xce0
-    pub xCE0: f32,
+    #[doc(alias("xCE0"))]
+    pub sdi_distance_y: f32,
     /// +0xce4
-    pub xCE4: u32,
+    #[doc(alias("xCE4"))]
+    pub strong_hits_taken: u32,
     /// +0xce8
-    pub xCE8: u32,
+    #[doc(alias("xCE8"))]
+    pub ledge_catches: u32,
     /// +0xcec
-    pub xCEC: i32,
+    #[doc(alias("xCEC"))]
+    pub mash_frames: i32,
     /// +0xcf0
-    pub xCF0: i32,
+    #[doc(alias("xCF0"))]
+    pub mashes: i32,
 }
 
 impl Default for StaleMoveTable {
@@ -6681,42 +6762,42 @@ impl Default for StaleMoveTable {
             current_index: 0,
             StaleMoves: core::array::from_fn(|_| Default::default()),
             total_attack_count_struct: Default::default(),
-            x5EC: Default::default(),
-            x674: [0; 39],
-            x710: [0; 39],
-            x7AC: [0; 39],
-            x848: [0; 30],
-            x8C0: Default::default(),
-            x8D8: Default::default(),
-            x904: [0; 215],
-            xC60: 0.0,
-            xC64: 0.0,
-            xC68: 0,
-            xC6C: 0.0,
-            xC70: 0.0,
-            xC74: 0.0,
-            xC78: [0.0; 6],
-            xC90: 0,
-            xC94: 0,
-            xC98: 0.0,
-            xC9C: 0.0,
-            xCA0: 0.0,
-            xCA4: 0,
-            xCA8: 0,
-            xCAC: 0,
-            xCB0: 0,
-            xCB4: 0,
-            xCB8: 0,
-            xCBC: [0; 4],
-            xCC0: Default::default(),
-            xCD4: 0,
-            xCD8: 0,
-            xCDC: 0.0,
-            xCE0: 0.0,
-            xCE4: 0,
-            xCE8: 0,
-            xCEC: 0,
-            xCF0: 0,
+            combos: Default::default(),
+            items_picked_up: [0; 39],
+            fresh_items_picked_up: [0; 39],
+            container_runs: [0; 39],
+            pokemon_released: [0; 30],
+            ko_ring: Default::default(),
+            bombhei_ring: Default::default(),
+            bonuses: [0; 215],
+            damage_taken: 0.0,
+            peak_damage: 0.0,
+            damage_recovered: 0,
+            damage_dealt: 0.0,
+            pummel_damage: 0.0,
+            scope_damage: 0.0,
+            damage_to: [0.0; 6],
+            combo_step: 0,
+            star_falls: 0,
+            stage_damage: 0.0,
+            average_percent: 0.0,
+            victim_percent_sum: 0.0,
+            victim_percent_count: 0,
+            ray_gun_hits: 0,
+            flowered_by: 0,
+            teammate_hits: 0,
+            up_kos: 0,
+            last_ko_by: 0,
+            last_ko_attack: [0; 4],
+            last_ko_hit: Default::default(),
+            last_ko_instance: 0,
+            powershields: 0,
+            sdi_distance_x: 0.0,
+            sdi_distance_y: 0.0,
+            strong_hits_taken: 0,
+            ledge_catches: 0,
+            mash_frames: 0,
+            mashes: 0,
         }
     }
 }
@@ -7312,7 +7393,7 @@ pub struct MatchPlayerData {
     pub down_attacks: u32,
     /// +0x8c
     #[doc(alias("x8C"))]
-    pub action_stat_112: u32,
+    pub ledge_catches: u32,
     /// +0x90
     #[doc(alias("x90"))]
     pub items_picked_up: u32,
@@ -7330,7 +7411,7 @@ pub struct MatchPlayerData {
     pub timed_stat_4: i32,
     /// +0xa4
     #[doc(alias("xA4"))]
-    pub last_attack_stat: u32,
+    pub teammate_hits: u32,
 }
 
 impl Default for MatchPlayerData {
@@ -7380,13 +7461,13 @@ impl Default for MatchPlayerData {
             specials: 0,
             grabs: 0,
             down_attacks: 0,
-            action_stat_112: 0,
+            ledge_catches: 0,
             items_picked_up: 0,
             timed_stat_1: 0,
             timed_stat_2: 0,
             timed_stat_3: 0,
             timed_stat_4: 0,
-            last_attack_stat: 0,
+            teammate_hits: 0,
         }
     }
 }

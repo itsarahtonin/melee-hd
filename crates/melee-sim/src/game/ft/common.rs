@@ -127,12 +127,14 @@ impl Running<'_> {
         {
             let t = self.game.player_stale_moves(slot);
             if !by(slot) {
-                t.x674[kind2 as usize] = t.x674[kind2 as usize].wrapping_add(1);
+                t.items_picked_up[kind2 as usize] =
+                    t.items_picked_up[kind2 as usize].wrapping_add(1);
             }
             if (0..6).any(by) {
                 return;
             }
-            t.x710[kind2 as usize] = t.x710[kind2 as usize].wrapping_add(1);
+            t.fresh_items_picked_up[kind2 as usize] =
+                t.fresh_items_picked_up[kind2 as usize].wrapping_add(1);
         }
     }
 
@@ -228,9 +230,9 @@ impl Running<'_> {
         // `pl_8003EC9C`: the damage taken and the highest percent.
         if sub == 0 {
             let t = self.game.player_stale_moves(slot);
-            t.xC60 = mem(fp::fadds(reg(t.xC60), amount));
-            if reg(t.xC64) < reg(percent) {
-                t.xC64 = percent;
+            t.damage_taken = mem(fp::fadds(reg(t.damage_taken), amount));
+            if reg(t.peak_damage) < reg(percent) {
+                t.peak_damage = percent;
             }
             self.game.player_mut(slot).set_ext_u32(0xD10, 0);
         }

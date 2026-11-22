@@ -413,7 +413,7 @@ impl Running<'_> {
                 fp.attack_record.flags[0] |= 0x80;
                 let slot = i32::from(fp.player_idx);
                 let stats = self.game.player_action_stats(slot);
-                stats.attacks.x1A8 = stats.attacks.x1A8.wrapping_add(1);
+                stats.attacks.spikes_count = stats.attacks.spikes_count.wrapping_add(1);
             }
         }
     }

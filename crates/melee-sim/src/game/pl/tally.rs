@@ -69,7 +69,7 @@ fn bit(b: u8, n: u8) -> bool {
 /// A word of the `x358_hits` statistics, which the mirror keeps as bytes.
 #[doc(alias("x358_word"))]
 fn hits_word(s: &plActionStats, off: usize) -> u32 {
-    u32::from_be_bytes(s.x358[off..off + 4].try_into().unwrap())
+    u32::from_be_bytes(s.landed[off..off + 4].try_into().unwrap())
 }
 
 /// `x358_hits.by_attack_counts[i]`.
@@ -95,14 +95,14 @@ impl Game {
             decision_type(kind) == DEC_FLAG,
             "the original's assertion failed: gmDecisionGetType(kind) == Gm_DecType_Flag"
         );
-        self.player_mut(player).stale_moves.x904[kind as usize] = 1;
+        self.player_mut(player).stale_moves.bonuses[kind as usize] = 1;
     }
 
     /// The flag bonuses cleared before the tally, `resetBonuses`.
     fn reset_bonus_flags(&mut self, player: i32) {
         for i in 0..215 {
             if decision_type(i) == DEC_FLAG {
-                self.player_mut(player).stale_moves.x904[i as usize] = 0;
+                self.player_mut(player).stale_moves.bonuses[i as usize] = 0;
             }
         }
     }
@@ -116,7 +116,7 @@ impl Game {
         );
         assert!(idx < 0x64, "pl_80037B2C past its table");
         let s = &self.player(player).stale_moves.total_attack_count_struct;
-        s.x504[idx as usize] & (1u8 << (h_player as u8)) != 0
+        s.victims[idx as usize] & (1u8 << (h_player as u8)) != 0
     }
 
     /// The sum of attack counts `from` to `to` in statistics laid out as `plAttackStats`,
@@ -130,9 +130,9 @@ impl Game {
     #[doc(alias("x5ec_average"))]
     #[doc(alias = "pl_800414C0")]
     fn combo_average(&self, player: i32) -> f64 {
-        let t = &self.player(player).stale_moves.x5EC;
-        if t.xC != 0 {
-            return fp::fdivs(single(t.x8), single(t.xC));
+        let t = &self.player(player).stale_moves.combos;
+        if t.combo_count != 0 {
+            return fp::fdivs(single(t.combo_hits), single(t.combo_count));
         }
         0.0
     }
@@ -144,7 +144,7 @@ impl Game {
             kind < 39,
             "the original's assertion failed: pl_itemlog_kind < Pl_ItemLog_Terminate"
         );
-        self.player(player).stale_moves.x674[kind]
+        self.player(player).stale_moves.items_picked_up[kind]
     }
 
     /// The item log's second count of kind `kind`, `pl_8003E334`.
@@ -154,7 +154,7 @@ impl Game {
             kind < 39,
             "the original's assertion failed: pl_itemlog_kind < Pl_ItemLog_Terminate"
         );
-        self.player(player).stale_moves.x710[kind] as u32
+        self.player(player).stale_moves.fresh_items_picked_up[kind] as u32
     }
 
     /// The item log's total, `pl_8003E39C`.
@@ -180,7 +180,7 @@ impl Game {
             (0xA1..0xBF).contains(&kind),
             "the original's assertion failed: It_PKind_Start <= kind && kind < It_PKind_Terminate"
         );
-        self.player(player).stale_moves.x848[(kind - 0xA1) as usize] as u32
+        self.player(player).stale_moves.pokemon_released[(kind - 0xA1) as usize] as u32
     }
 }
 
@@ -244,20 +244,21 @@ impl Running<'_> {
         let stats = &t.total_attack_count_struct;
         let aerials = stats.hits.aerials_count;
         let atk_thrown = stats.attacks.thrown_item_count;
-        let atk_x1a8 = stats.attacks.x1A8;
+        let atk_x1a8 = stats.attacks.spikes_count;
         let hit_counts = stats.hits.by_attack_counts;
         let atk_counts = stats.attacks.by_attack_counts;
         let hit_thrown = stats.hits.thrown_item_count;
         let hit_specials = stats.hits.specials_count;
-        let hit_x1a0 = stats.hits.x1A0_count;
-        let hit_x1a8 = stats.hits.x1A8;
+        let hit_x1a0 = stats.hits.strikes_count;
+        let hit_x1a8 = stats.hits.spikes_count;
         let x358_x1a8 = hits_word(stats, 0x1A8);
         let attacks_total = stats.attacks.total;
         let hits_total = stats.hits.total;
         let x358_total = hits_word(stats, 0);
         let x358_counts: [u32; 100] = core::array::from_fn(|i| hits_count(stats, i));
-        let (x56c, x574) = (stats.x56C, stats.x574);
-        let (xc60, xc64, xc74, xc94) = (t.xC60, t.xC64, t.xC74, t.xC94);
+        let (x56c, x574) = (stats.back_hits, stats.down_hits);
+        let (xc60, xc64, xc74, xc94) =
+            (t.damage_taken, t.peak_damage, t.scope_damage, t.star_falls);
         let (xd04, xd0c, xdc8, dd1) = (
             p.ext_u32(0xD04),
             p.ext_u32(0xD0C),
@@ -307,7 +308,7 @@ impl Running<'_> {
                 break;
             }
         }
-        if self.game.player(player).stale_moves.x904[0x11] == 0 {
+        if self.game.player(player).stale_moves.bonuses[0x11] == 0 {
             let low =
                 (1..=11).all(|k| hit_counts[k] != 0 || !self.has_normal_attack(gobj, k as i32));
             let high =
@@ -412,7 +413,7 @@ impl Running<'_> {
         }
         if atk_x1a8 != 0
             && atk_x1a8 == x358_x1a8
-            && hit_x1a8 == self.game.player(player).stale_moves.x904[6]
+            && hit_x1a8 == self.game.player(player).stale_moves.bonuses[6]
         {
             self.game.set_bonus_flag(player, 8);
         }
@@ -478,7 +479,7 @@ impl Running<'_> {
             let mut sum = 0.0f64;
             for i in 0..6 {
                 if i != player {
-                    let v = reg(self.game.player(i).stale_moves.xC78[player as usize]);
+                    let v = reg(self.game.player(i).stale_moves.damage_to[player as usize]);
                     if max < v {
                         max = v;
                     }
@@ -524,11 +525,17 @@ impl Running<'_> {
         let p = g.player(player);
         let t = &p.stale_moves;
         let s = &t.total_attack_count_struct;
-        let (b0, b2, b3) = (s.x5BC_b0, s.x5BC_b2, s.x5BC_b3);
+        let (b0, b2, b3) = (s.has_turned, s.has_jumped, s.has_air_jumped);
         let hi = |id| by_attack_hi(s, id);
         let (h65, h67, h68, h6c, h6d, h6e) =
             (hi(0x65), hi(0x67), hi(0x68), hi(0x6C), hi(0x6D), hi(0x6E));
-        let (xce4, xce8, xc60, xc98, xca0) = (t.xCE4, t.xCE8, t.xC60, t.xC98, t.xCA0);
+        let (xce4, xce8, xc60, xc98, xca0) = (
+            t.strong_hits_taken,
+            t.ledge_catches,
+            t.damage_taken,
+            t.stage_damage,
+            t.victim_percent_sum,
+        );
         let (xd14, xd2c, xd8c, xd94, dd0, dd1) = (
             p.ext_u32(0xD14),
             p.ext_u32(0xD2C),
@@ -586,7 +593,7 @@ impl Running<'_> {
             let mut n = 0i32;
             for i in 0..6 {
                 if self.game.player_awake(i) {
-                    sum = fp::fadds(sum, reg(self.game.player(i).stale_moves.xC9C));
+                    sum = fp::fadds(sum, reg(self.game.player(i).stale_moves.average_percent));
                     n = n.wrapping_add(1);
                 }
             }
@@ -632,7 +639,7 @@ impl Running<'_> {
         let s = &t.total_attack_count_struct;
         let attack = s.attacks.by_attack_counts;
         let hit = s.hits.by_attack_counts;
-        let (xc6c, xc70) = (t.xC6C, t.xC70);
+        let (xc6c, xc70) = (t.damage_dealt, t.pummel_damage);
         if attack[STATS_CATCH] != 0 {
             if attack[STATS_CATCH] >= self.plco_u32(0x3C) && hit[STATS_CATCH] == 0 {
                 self.game.set_bonus_flag(player, 0x26);
@@ -853,7 +860,7 @@ impl Running<'_> {
             self.game.set_bonus_flag(player, 0xA7);
         }
         for i in 0..6 {
-            if player as u32 == self.game.player(i).stale_moves.xCAC {
+            if player as u32 == self.game.player(i).stale_moves.flowered_by {
                 self.game.set_bonus_flag(player, 0xA8);
             }
         }
@@ -895,7 +902,7 @@ impl Running<'_> {
         if self.game.vs_single_button()
             || [0, 5, 0x15, 0x17, 0x18, 0x21, 0x22, 0x24, 0x96, 0x95, 0x94]
                 .iter()
-                .any(|&k| t.x904[k] != 0)
+                .any(|&k| t.bonuses[k] != 0)
         {
             return;
         }
@@ -913,9 +920,9 @@ impl Running<'_> {
     #[doc(alias = "pl_8004182C")]
     #[doc(alias = "fn_80041770")]
     fn count_streaks(&mut self, player: i32) {
-        let entries = self.game.player(player).stale_moves.x8C0.x4.clone();
+        let entries = self.game.player(player).stale_moves.ko_ring.entries.clone();
         for e in &entries {
-            let n = e.x2;
+            let n = e.kos;
             if n >= 5 {
                 self.count_bonus(player, 0x7D);
             } else if n >= 4 {
@@ -925,7 +932,7 @@ impl Running<'_> {
             } else if n >= 2 {
                 self.count_bonus(player, 0x7A);
             }
-            if e.x3_b0 && n != 0 {
+            if e.self_ko && n != 0 {
                 self.count_bonus(player, 0x78);
             }
         }
@@ -934,9 +941,15 @@ impl Running<'_> {
     /// Counts the Bob-ombs thrown and missed from the log, `pl_80041BFC`.
     #[doc(alias = "pl_80041BFC")]
     fn count_bombhei_misses(&mut self, player: i32) {
-        let entries = self.game.player(player).stale_moves.x8D8.x4.clone();
+        let entries = self
+            .game
+            .player(player)
+            .stale_moves
+            .bombhei_ring
+            .entries
+            .clone();
         for e in &entries {
-            self.count_missed_bombhei(player, e.x4_b0, e.x4_b1);
+            self.count_missed_bombhei(player, e.hit, e.used);
         }
     }
 }

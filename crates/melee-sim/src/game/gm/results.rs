@@ -193,13 +193,13 @@ impl Game {
             let ratio = self.hit_ratio(s);
             p.hit_percent = fp::fctiwz(fp::fmuls(100.0, ratio)) as i8 as u8;
             let st = self.player(s).stale_moves.total_attack_count_struct.clone();
-            p.attacks_hit = u32::from_be_bytes(st.x358[0..4].try_into().unwrap());
+            p.attacks_hit = u32::from_be_bytes(st.landed[0..4].try_into().unwrap());
             p.attacks_total = st.attacks.total;
             let t = &self.player(s).stale_moves;
-            p.damage_dealt = to_u32(t.xC6C);
-            p.damage_taken = to_u32(t.xC60);
-            p.damage_recovered = t.xC68 as u32;
-            p.peak_damage = to_u32(t.xC64);
+            p.damage_dealt = to_u32(t.damage_dealt);
+            p.damage_taken = to_u32(t.damage_taken);
+            p.damage_recovered = t.damage_recovered as u32;
+            p.peak_damage = to_u32(t.peak_damage);
             let pl = self.player(s);
             p.walk_distance = to_u32(pl.ext_f32(0xD74)).wrapping_mul(10);
             p.run_distance = to_u32(pl.ext_f32(0xD78)).wrapping_mul(10);
@@ -218,10 +218,10 @@ impl Game {
             p.grabs = st.attacks.by_attack_counts[STATS_CATCH];
             p.down_attacks = down_attacks(&st.attacks.by_attack_counts);
             // `pl_800386D8(stats, 112)`: past `x358`'s high attacks, the word at 0x5A8.
-            p.action_stat_112 = st.x598[4];
+            p.ledge_catches = st.more_actions[4];
             p.items_picked_up = pl
                 .stale_moves
-                .x674
+                .items_picked_up
                 .iter()
                 .fold(0u32, |a, &v| a.wrapping_add(v));
             let (d44, d68) = (pl.ext_f32(0xD84), pl.ext_f32(0xD88));
@@ -231,7 +231,7 @@ impl Game {
                 crate::ppc::cvt_fp2unsigned(fp::fmuls(60.0, fp::fmuls(10.0, reg(d68))));
             p.timed_stat_3 = (pl.ext_u32(0xD04) / 60) as i32;
             p.timed_stat_4 = (pl.ext_u32(0xD68) / 60) as i32;
-            p.last_attack_stat = pl.stale_moves.xCB0 as u32;
+            p.teammate_hits = pl.stale_moves.teammate_hits as u32;
             for (j, k) in row.iter_mut().enumerate() {
                 if r.player_standings[j].pkind != PKIND_NA {
                     *k = self.player_kos(s, j as i32) as u16;
@@ -313,7 +313,7 @@ impl Game {
     fn hit_ratio(&self, slot: i32) -> f64 {
         let st = &self.player(slot).stale_moves.total_attack_count_struct;
         let total = st.attacks.total;
-        let hits = u32::from_be_bytes(st.x358[0..4].try_into().unwrap());
+        let hits = u32::from_be_bytes(st.landed[0..4].try_into().unwrap());
         if total == 0 {
             return 0.0;
         }
