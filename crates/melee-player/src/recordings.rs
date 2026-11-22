@@ -6,13 +6,17 @@
 //!
 //! A file is read only when its row shows, on a thread of its own: the first few KB for its
 //! game start and its end for its metadata, never the frames between.
+//!
+//! A replay melee-hd refuses to play for its game start alone (one recorded on a modified Melee:
+//! `vs_match::retail_kinds`, the refusal's own rule) is marked on its row, and its Play does
+//! nothing: the panel says why without trying a boot.
 
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::time::Duration;
 
-use melee_sim::game::roster;
+use melee_sim::game::{roster, vs_match};
 
 use crate::front::Action;
 
@@ -42,6 +46,9 @@ pub struct Summary {
     pub stage: String,
     /// How long it plays, when the metadata says.
     pub length: Option<String>,
+    /// Why melee-hd can't play it, from its game start alone (`vs_match::retail_kinds`, as
+    /// `Settings::from_replay` refuses it): none when it may play.
+    pub refused: Option<String>,
 }
 
 /// A character's name by its `CharacterKind` (the roster has all 26).
@@ -91,6 +98,9 @@ pub fn summarize(head: &[u8], tail: &[u8]) -> Result<Summary, String> {
         .get(start + 1..start + 1 + size)
         .ok_or_else(|| "its game start is cut short".to_owned())?;
     let info = &payload[INFO_AT..INFO_AT + INFO_SIZE];
+    let refused = vs_match::retail_kinds(&vs_match::Settings::from_game_info(info, 0).start)
+        .err()
+        .map(|e| e.to_string());
     let players: Vec<String> = (0..4)
         .filter_map(|i| {
             let p = &info[0x60 + 0x24 * i..];
@@ -109,6 +119,7 @@ pub fn summarize(head: &[u8], tail: &[u8]) -> Result<Summary, String> {
             let s = (f - FIRST_FRAME + 1).max(0) / 60;
             format!("{}:{:02}", s / 60, s % 60)
         }),
+        refused,
     })
 }
 
@@ -280,9 +291,19 @@ impl Recordings {
         self.stale = true;
     }
 
-    /// The replay chosen to play.
+    /// The replay chosen to play: none while the chosen one is refused (`Recordings::refusal`).
     pub fn chosen(&self) -> Option<&Path> {
-        self.chosen.as_deref()
+        self.chosen.as_deref().filter(|_| self.refusal().is_none())
+    }
+
+    /// Why the chosen replay can't be played, once its row is read.
+    fn refusal(&self) -> Option<&str> {
+        let chosen = self.chosen.as_deref()?;
+        let e = self.entries.iter().find(|e| e.path == chosen)?;
+        match &e.summary {
+            State::Read(Ok(s)) => s.refused.as_deref(),
+            _ => None,
+        }
     }
 
     /// Whether a row that shows is still being read.
@@ -373,9 +394,13 @@ impl Recordings {
             action = action.or(self.rows(ui, busy));
         }
         ui.add_space(8.0);
+        if let Some(why) = self.refusal() {
+            ui.label(format!("This replay can't be played: {why}."));
+            ui.add_space(4.0);
+        }
         ui.horizontal(|ui| {
             let play = ui.add_enabled(
-                self.chosen.is_some() && !busy,
+                self.chosen().is_some() && !busy,
                 egui::Button::new("Play").min_size(egui::vec2(90.0, 26.0)),
             );
             if play.clicked() {
@@ -455,6 +480,11 @@ impl Recordings {
                         visuals.text_color()
                     };
                     let (players, stage, length) = match &e.summary {
+                        State::Read(Ok(s)) if s.refused.is_some() => (
+                            "Can't be played: recorded on a modified Melee",
+                            s.stage.as_str(),
+                            s.length.as_deref().unwrap_or(""),
+                        ),
                         State::Read(Ok(s)) => (
                             s.players.as_str(),
                             s.stage.as_str(),
@@ -464,14 +494,28 @@ impl Recordings {
                         _ => ("\u{2026}", "", ""),
                     };
                     row(ui, rect, [&e.date, players, stage, length], color);
-                    let resp = match &e.summary {
-                        State::Read(Err(why)) => resp.on_hover_text(format!("{}: {why}", e.shown)),
+                    let refused = match &e.summary {
+                        State::Read(Ok(s)) => s.refused.as_deref(),
+                        _ => None,
+                    };
+                    let resp = match (&e.summary, refused) {
+                        (State::Read(Err(why)), _) => {
+                            resp.on_hover_text(format!("{}: {why}", e.shown))
+                        }
+                        (_, Some(why)) => resp.on_hover_text(format!(
+                            "{}: can't be played: {why} ({})",
+                            e.shown,
+                            match &e.summary {
+                                State::Read(Ok(s)) => s.players.as_str(),
+                                _ => "",
+                            }
+                        )),
                         _ => resp.on_hover_text(e.shown.as_str()),
                     };
                     if resp.clicked() || resp.double_clicked() {
                         self.chosen = Some(e.path.clone());
                     }
-                    if resp.double_clicked() && !busy {
+                    if resp.double_clicked() && !busy && refused.is_none() {
                         action = Some(Action::Play);
                     }
                 }
@@ -496,6 +540,7 @@ mod tests {
                 players: "Fox vs Fox".into(),
                 stage: "Final Destination".into(),
                 length: None,
+                refused: None,
             }
         );
         // ssbm-rs played the computer players' inputs, but recorded human slots.
@@ -557,6 +602,61 @@ mod tests {
         .unwrap();
         let s = summarize(&head[..HEAD], &meta(b'l', &8906i32.to_be_bytes())).unwrap();
         assert_eq!(s.length.as_deref(), Some("2:30"));
+    }
+
+    /// A replay recorded on a modified Melee (Sarah's 31 of 2026-09-15 and 16: character kinds
+    /// 34 to 57, some stage kinds past 285) is marked by the refusal's own rule
+    /// (`vs_match::retail_kinds`), in its words, and the tab won't play it: Play stays off and
+    /// the chosen replay is none, so no boot is tried.
+    #[test]
+    fn a_modified_games_replay_is_marked_unplayable() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/bench");
+        let mut head = std::fs::read(dir.join("fox-fox-fd.slp")).unwrap();
+        head.truncate(HEAD);
+        assert_eq!(summarize(&head, b"").unwrap().refused, None);
+        let (at, _) = raw_of(&head).unwrap();
+        let info = at + 1 + usize::from(head[at + 1]) + 1 + INFO_AT;
+        // Port 1's character kind 49, as `Game_20260915T224214`'s.
+        let mut modded = head.clone();
+        modded[info + 0x60] = 49;
+        let s = summarize(&modded, b"").unwrap();
+        assert_eq!(
+            s.refused.as_deref(),
+            Some(
+                "recorded on a modified Melee: port 1's character (kind 49) isn't one of the game's"
+            )
+        );
+        assert_eq!(s.players, "character 49 vs Fox");
+        // A stage kind past the game's, as `Game_20260915T235145`'s 305.
+        let mut stage = head.clone();
+        stage[info + 0xE..info + 0x10].copy_from_slice(&305u16.to_be_bytes());
+        assert_eq!(
+            summarize(&stage, b"").unwrap().refused.as_deref(),
+            Some("recorded on a modified Melee: its stage (kind 305) isn't one of the game's")
+        );
+        // Chosen in the tab: refused, so nothing plays; the retail one plays.
+        let entry = |name: &str, summary: Summary| Entry {
+            path: PathBuf::from(name),
+            shown: name.into(),
+            date: String::new(),
+            summary: State::Read(Ok(summary)),
+        };
+        let mut tab = Recordings {
+            entries: vec![
+                entry("modded.slp", s),
+                entry("retail.slp", summarize(&head, b"").unwrap()),
+            ],
+            ..Default::default()
+        };
+        tab.chosen = Some(PathBuf::from("modded.slp"));
+        assert_eq!(tab.chosen(), None);
+        assert!(
+            tab.refusal()
+                .is_some_and(|w| w.starts_with("recorded on a modified Melee"))
+        );
+        tab.chosen = Some(PathBuf::from("retail.slp"));
+        assert_eq!(tab.chosen(), Some(Path::new("retail.slp")));
+        assert_eq!(tab.refusal(), None);
     }
 
     #[test]
