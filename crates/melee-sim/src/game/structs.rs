@@ -7164,32 +7164,37 @@ pub struct ifMagnify {
     /// +0x0
     pub model_desc: Option<DataRef>,
     /// +0x4
-    pub x4: _GXColor,
+    #[doc(alias("x4"))]
+    pub bubble_color_0: _GXColor,
     /// +0x8
-    pub x8: _GXColor,
+    #[doc(alias("x8"))]
+    pub bubble_color_2: _GXColor,
     /// +0xc
-    pub xC: _GXColor,
+    #[doc(alias("xC"))]
+    pub bubble_color_6: _GXColor,
     /// +0x10
-    pub x10: _GXColor,
+    #[doc(alias("x10"))]
+    pub bubble_color_8: _GXColor,
     /// +0x14
     pub player: [ifMagnifyPlayer; 6],
     /// +0x74
     pub image_descs: [HSD_ImageDesc; 5],
     /// +0xec
-    pub pad: [u8; 4],
+    #[doc(alias("pad"))]
+    pub pad_ec: [u8; 4],
 }
 
 impl Default for ifMagnify {
     fn default() -> Self {
         ifMagnify {
             model_desc: None,
-            x4: Default::default(),
-            x8: Default::default(),
-            xC: Default::default(),
-            x10: Default::default(),
+            bubble_color_0: Default::default(),
+            bubble_color_2: Default::default(),
+            bubble_color_6: Default::default(),
+            bubble_color_8: Default::default(),
             player: core::array::from_fn(|_| Default::default()),
             image_descs: core::array::from_fn(|_| Default::default()),
-            pad: [0; 4],
+            pad_ec: [0; 4],
         }
     }
 }
@@ -10847,13 +10852,15 @@ pub struct IfDamageFlags {
     /// +0x0 (bits 2..+1)
     pub force_digit_shake: bool,
     /// +0x0 (bits 3..+1)
-    pub unk10: bool,
+    #[doc(alias("unk10"))]
+    pub heal_anim: bool,
     /// +0x0 (bits 4..+1)
     pub hide_all_digits: bool,
     /// +0x0 (bits 5..+2)
     pub animation_status_id: u8,
     /// +0x0 (bits 7..+1)
-    pub unk1: bool,
+    #[doc(alias("unk1"))]
+    pub unused_b7: bool,
 }
 
 impl Default for IfDamageFlags {
@@ -10862,10 +10869,10 @@ impl Default for IfDamageFlags {
             explode_animation: false,
             randomize_velocity: false,
             force_digit_shake: false,
-            unk10: false,
+            heal_anim: false,
             hide_all_digits: false,
             animation_status_id: 0,
-            unk1: false,
+            unused_b7: false,
         }
     }
 }
@@ -10880,7 +10887,8 @@ pub struct IfDamageState {
     /// +0x8
     pub player_slot: u8,
     /// +0x9
-    pub unk9: u8,
+    #[doc(alias("unk9"))]
+    pub fade_frames: u8,
     /// +0xa
     pub damage_percent: i16,
     /// +0xc
@@ -10909,7 +10917,7 @@ impl Default for IfDamageState {
             HUD_parent_entity: None,
             next: None,
             player_slot: 0,
-            unk9: 0,
+            fade_frames: 0,
             damage_percent: 0,
             old_damage: 0,
             damage_from_last_attack: 0,
@@ -10964,88 +10972,111 @@ impl Default for HudIndex {
 }
 
 /// `Element_803F9628_x12`, 0x1 bytes.
+#[doc(alias("Element_803F9628_x12"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct Element_803F9628_x12 {
+pub struct AnnouncementFlags {
     /// +0x0 (bits 0..+1)
-    pub x0: bool,
+    #[doc(alias("x0"))]
+    pub sfx_1_played: bool,
     /// +0x0 (bits 1..+1)
-    pub x1: bool,
+    #[doc(alias("x1"))]
+    pub sfx_2_played: bool,
     /// +0x0 (bits 2..+1)
-    pub x2: bool,
+    #[doc(alias("x2"))]
+    pub started: bool,
     /// +0x0 (bits 3..+1)
-    pub x3: bool,
+    #[doc(alias("x3"))]
+    pub unused_3: bool,
     /// +0x0 (bits 4..+1)
-    pub x4: bool,
+    #[doc(alias("x4"))]
+    pub unused_4: bool,
     /// +0x0 (bits 5..+1)
-    pub x5: bool,
+    #[doc(alias("x5"))]
+    pub unused_5: bool,
     /// +0x0 (bits 6..+1)
-    pub x6: bool,
+    #[doc(alias("x6"))]
+    pub unused_6: bool,
     /// +0x0 (bits 7..+1)
-    pub x7: bool,
+    #[doc(alias("x7"))]
+    pub unused_7: bool,
 }
 
-impl Default for Element_803F9628_x12 {
+impl Default for AnnouncementFlags {
     fn default() -> Self {
-        Element_803F9628_x12 {
-            x0: false,
-            x1: false,
-            x2: false,
-            x3: false,
-            x4: false,
-            x5: false,
-            x6: false,
-            x7: false,
+        AnnouncementFlags {
+            sfx_1_played: false,
+            sfx_2_played: false,
+            started: false,
+            unused_3: false,
+            unused_4: false,
+            unused_5: false,
+            unused_6: false,
+            unused_7: false,
         }
     }
 }
 
 /// `Element_803F9628`, 0x28 bytes.
+#[doc(alias("Element_803F9628"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct Element_803F9628 {
+pub struct Announcement {
     /// +0x0
-    pub x0: Option<GObjId>,
+    #[doc(alias("x0"))]
+    pub gobj: Option<GObjId>,
     /// +0x4
-    pub x4: u32,
+    #[doc(alias("x4"))]
+    pub unread_4: u32,
     /// +0x8
-    pub x8: Option<CodeRef>,
+    #[doc(alias("x8"))]
+    pub proc: Option<CodeRef>,
     /// +0xc
-    pub xC: i32,
+    #[doc(alias("xC"))]
+    pub default_sfx: i32,
     /// +0x10
-    pub x10: u8,
+    #[doc(alias("x10"))]
+    pub sfx_frame: u8,
     /// +0x11
-    pub x11: u8,
+    #[doc(alias("x11"))]
+    pub sfx_2_frame: u8,
     /// +0x12
-    pub x12: Element_803F9628_x12,
+    #[doc(alias("x12"))]
+    pub flags: AnnouncementFlags,
     /// +0x13
-    pub x13: u8,
+    #[doc(alias("x13"))]
+    pub unused_13: u8,
     /// +0x14
-    pub x14: Option<DataRef>,
+    #[doc(alias("x14"))]
+    pub model: Option<DataRef>,
     /// +0x18
-    pub x18: Option<CodeRef>,
+    #[doc(alias("x18"))]
+    pub on_start: Option<CodeRef>,
     /// +0x1c
-    pub x1C: Option<CodeRef>,
+    #[doc(alias("x1C"))]
+    pub on_end: Option<CodeRef>,
     /// +0x20
-    pub x20: i32,
+    #[doc(alias("x20"))]
+    pub sfx_1: i32,
     /// +0x24
-    pub x24: i32,
+    #[doc(alias("x24"))]
+    pub sfx_2: i32,
 }
 
-impl Default for Element_803F9628 {
+impl Default for Announcement {
     fn default() -> Self {
-        Element_803F9628 {
-            x0: None,
-            x4: 0,
-            x8: None,
-            xC: 0,
-            x10: 0,
-            x11: 0,
-            x12: Default::default(),
-            x13: 0,
-            x14: None,
-            x18: None,
-            x1C: None,
-            x20: 0,
-            x24: 0,
+        Announcement {
+            gobj: None,
+            unread_4: 0,
+            proc: None,
+            default_sfx: 0,
+            sfx_frame: 0,
+            sfx_2_frame: 0,
+            flags: Default::default(),
+            unused_13: 0,
+            model: None,
+            on_start: None,
+            on_end: None,
+            sfx_1: 0,
+            sfx_2: 0,
         }
     }
 }
@@ -11117,83 +11148,101 @@ impl Default for ifTime_data {
 }
 
 /// `ifAll_804A0FD8_t`, 0x9c bytes.
+#[doc(alias("ifAll_804A0FD8_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct ifAll_804A0FD8_t {
+pub struct HudLayout {
     /// +0x0
     pub gobj: Option<GObjId>,
     /// +0x4
     pub gobj_2: Option<GObjId>,
     /// +0x8
-    pub x8: Option<JObjId>,
+    #[doc(alias("x8"))]
+    pub root: Option<JObjId>,
     /// +0xc
-    pub xC: Vec3,
+    #[doc(alias("xC"))]
+    pub timer_pos: Vec3,
     /// +0x18
-    pub x18: [Vec3; 6],
+    #[doc(alias("x18"))]
+    pub player_pos: [Vec3; 6],
     /// +0x60
-    pub x60: [Vec3; 3],
+    #[doc(alias("x60"))]
+    pub player_pos_3: [Vec3; 3],
     /// +0x84
-    pub x84: [Vec3; 2],
+    #[doc(alias("x84"))]
+    pub player_pos_2: [Vec3; 2],
 }
 
-impl Default for ifAll_804A0FD8_t {
+impl Default for HudLayout {
     fn default() -> Self {
-        ifAll_804A0FD8_t {
+        HudLayout {
             gobj: None,
             gobj_2: None,
-            x8: None,
-            xC: Default::default(),
-            x18: core::array::from_fn(|_| Default::default()),
-            x60: core::array::from_fn(|_| Default::default()),
-            x84: core::array::from_fn(|_| Default::default()),
+            root: None,
+            timer_pos: Default::default(),
+            player_pos: core::array::from_fn(|_| Default::default()),
+            player_pos_3: core::array::from_fn(|_| Default::default()),
+            player_pos_2: core::array::from_fn(|_| Default::default()),
         }
     }
 }
 
 /// `ifStock_804A1378_per_player`, 0x50 bytes.
+#[doc(alias("ifStock_804A1378_per_player"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct ifStock_804A1378_per_player {
+pub struct PlayerStocks {
     /// +0x0
-    pub x0: Option<GObjId>,
+    #[doc(alias("x0"))]
+    pub gobj: Option<GObjId>,
     /// +0x4
-    pub x4: [Option<JObjId>; 8],
+    #[doc(alias("x4"))]
+    pub joints: [Option<JObjId>; 8],
     /// +0x24
-    pub x24: Option<JObjId>,
+    #[doc(alias("x24"))]
+    pub joint_8: Option<JObjId>,
     /// +0x28
-    pub x28: Option<JObjId>,
+    #[doc(alias("x28"))]
+    pub joint_9: Option<JObjId>,
     /// +0x2c
-    pub x2C: Option<JObjId>,
+    #[doc(alias("x2C"))]
+    pub joint_10: Option<JObjId>,
     /// +0x30
-    pub x30: Option<JObjId>,
+    #[doc(alias("x30"))]
+    pub joint_11: Option<JObjId>,
     /// +0x34
-    pub x34: Option<JObjId>,
+    #[doc(alias("x34"))]
+    pub joint_12: Option<JObjId>,
     /// +0x38
-    pub x38: Option<JObjId>,
+    #[doc(alias("x38"))]
+    pub joint_13: Option<JObjId>,
     /// +0x3c
-    pub x3C: Option<JObjId>,
+    #[doc(alias("x3C"))]
+    pub joint_14: Option<JObjId>,
     /// +0x40
-    pub x40: Option<JObjId>,
+    #[doc(alias("x40"))]
+    pub joint_15: Option<JObjId>,
     /// +0x44
-    pub x44: Option<JObjId>,
+    #[doc(alias("x44"))]
+    pub joint_16: Option<JObjId>,
     /// +0x48
     pub coins: i32,
     /// +0x4c
     pub stocks: i32,
 }
 
-impl Default for ifStock_804A1378_per_player {
+impl Default for PlayerStocks {
     fn default() -> Self {
-        ifStock_804A1378_per_player {
-            x0: None,
-            x4: [None; 8],
-            x24: None,
-            x28: None,
-            x2C: None,
-            x30: None,
-            x34: None,
-            x38: None,
-            x3C: None,
-            x40: None,
-            x44: None,
+        PlayerStocks {
+            gobj: None,
+            joints: [None; 8],
+            joint_8: None,
+            joint_9: None,
+            joint_10: None,
+            joint_11: None,
+            joint_12: None,
+            joint_13: None,
+            joint_14: None,
+            joint_15: None,
+            joint_16: None,
             coins: 0,
             stocks: 0,
         }
@@ -11201,14 +11250,17 @@ impl Default for ifStock_804A1378_per_player {
 }
 
 /// `ifStock_804A1378`, 0x204 bytes.
+#[doc(alias("ifStock_804A1378"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct ifStock_804A1378 {
+pub struct HudStocks {
     /// +0x0
-    pub x0: Option<DataRef>,
+    #[doc(alias("x0"))]
+    pub models: Option<DataRef>,
     /// +0x4
-    pub x4: Option<DataRef>,
+    #[doc(alias("x4"))]
+    pub counter_model: Option<DataRef>,
     /// +0x8
-    pub player: [ifStock_804A1378_per_player; 6],
+    pub player: [PlayerStocks; 6],
     /// +0x1e8
     pub gobj: Option<GObjId>,
     /// +0x1ec
@@ -11225,11 +11277,11 @@ pub struct ifStock_804A1378 {
     pub jobj_d: Option<JObjId>,
 }
 
-impl Default for ifStock_804A1378 {
+impl Default for HudStocks {
     fn default() -> Self {
-        ifStock_804A1378 {
-            x0: None,
-            x4: None,
+        HudStocks {
+            models: None,
+            counter_model: None,
             player: core::array::from_fn(|_| Default::default()),
             gobj: None,
             jobj: None,
@@ -11273,7 +11325,8 @@ pub struct IfStockUserData {
     /// +0x2
     pub flag: u8,
     /// +0x3
-    pub x3: [u8; 2],
+    #[doc(alias("x3"))]
+    pub steal_takers: [u8; 2],
     /// +0x5
     pub anim: [u8; 7],
     /// +0xc
@@ -11286,7 +11339,7 @@ impl Default for IfStockUserData {
             player: 0,
             mode: 0,
             flag: 0,
-            x3: [0; 2],
+            steal_takers: [0; 2],
             anim: [0; 7],
             steal: core::array::from_fn(|_| Default::default()),
         }
@@ -11294,139 +11347,172 @@ impl Default for IfStockUserData {
 }
 
 /// `ifStock_804A1774`, 0x318 bytes.
+#[doc(alias("ifStock_804A1774"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct ifStock_804A1774 {
+pub struct JoinerTally {
     /// +0x0
-    pub x0: i8,
+    #[doc(alias("x0"))]
+    pub state: i8,
     /// +0x1
-    pub x1: [i8; 130],
+    #[doc(alias("x1"))]
+    pub costumes: [i8; 130],
     /// +0x83
-    pub x83: [i8; 133],
+    #[doc(alias("x83"))]
+    pub chars: [i8; 133],
     /// +0x108
-    pub x108: i32,
+    #[doc(alias("x108"))]
+    pub crowd_count: i32,
     /// +0x10c
-    pub x10C: [Option<GObjId>; 131],
+    #[doc(alias("x10C"))]
+    pub icons: [Option<GObjId>; 131],
 }
 
-impl Default for ifStock_804A1774 {
+impl Default for JoinerTally {
     fn default() -> Self {
-        ifStock_804A1774 {
-            x0: 0,
-            x1: [0; 130],
-            x83: [0; 133],
-            x108: 0,
-            x10C: [None; 131],
+        JoinerTally {
+            state: 0,
+            costumes: [0; 130],
+            chars: [0; 133],
+            crowd_count: 0,
+            icons: [None; 131],
         }
     }
 }
 
 /// `ifStock_804A1ACC`, 0x314 bytes.
+#[doc(alias("ifStock_804A1ACC"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct ifStock_804A1ACC {
+pub struct CharsLeftTally {
     /// +0x0
-    pub x0: i8,
+    #[doc(alias("x0"))]
+    pub state: i8,
     /// +0x1
-    pub x1: [i8; 130],
+    #[doc(alias("x1"))]
+    pub chars: [i8; 130],
     /// +0x83
-    pub x83: [i8; 133],
+    #[doc(alias("x83"))]
+    pub costumes: [i8; 133],
     /// +0x108
-    pub x108: Option<GObjId>,
+    #[doc(alias("x108"))]
+    pub unread_108: Option<GObjId>,
     /// +0x10c
-    pub x10C: [Option<GObjId>; 130],
+    #[doc(alias("x10C"))]
+    pub icons: [Option<GObjId>; 130],
 }
 
-impl Default for ifStock_804A1ACC {
+impl Default for CharsLeftTally {
     fn default() -> Self {
-        ifStock_804A1ACC {
-            x0: 0,
-            x1: [0; 130],
-            x83: [0; 133],
-            x108: None,
-            x10C: [None; 130],
+        CharsLeftTally {
+            state: 0,
+            chars: [0; 130],
+            costumes: [0; 133],
+            unread_108: None,
+            icons: [None; 130],
         }
     }
 }
 
 /// `un_804A1F10_t`, 0x38 bytes.
+#[doc(alias("un_804A1F10_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct un_804A1F10_t {
+pub struct OffscreenArrows {
     /// +0x0
-    pub x0: Option<DataRef>,
+    #[doc(alias("x0"))]
+    pub models: Option<DataRef>,
     /// +0x4
-    pub x4: [Option<GObjId>; 4],
+    #[doc(alias("x4"))]
+    pub gobjs: [Option<GObjId>; 4],
     /// +0x14
-    pub x14: [_GXColor; 4],
+    #[doc(alias("x14"))]
+    pub colors: [_GXColor; 4],
     /// +0x24
-    pub x24: [u8; 4],
+    #[doc(alias("x24"))]
+    pub shown: [u8; 4],
     /// +0x28
-    pub x28: [u8; 4],
+    #[doc(alias("x28"))]
+    pub sides: [u8; 4],
     /// +0x2c
-    pub x2C: [u8; 4],
+    #[doc(alias("x2C"))]
+    pub players: [u8; 4],
     /// +0x30
-    pub x30: u8,
+    #[doc(alias("x30"))]
+    pub silent: u8,
     /// +0x31
-    pub x31: i8,
+    #[doc(alias("x31"))]
+    pub sounding: i8,
     /// +0x32
-    pub x32: u8,
+    #[doc(alias("x32"))]
+    pub sound_timer: u8,
     /// +0x34
     pub pad_34: RawPtr,
 }
 
-impl Default for un_804A1F10_t {
+impl Default for OffscreenArrows {
     fn default() -> Self {
-        un_804A1F10_t {
-            x0: None,
-            x4: [None; 4],
-            x14: core::array::from_fn(|_| Default::default()),
-            x24: [0; 4],
-            x28: [0; 4],
-            x2C: [0; 4],
-            x30: 0,
-            x31: 0,
-            x32: 0,
+        OffscreenArrows {
+            models: None,
+            gobjs: [None; 4],
+            colors: core::array::from_fn(|_| Default::default()),
+            shown: [0; 4],
+            sides: [0; 4],
+            players: [0; 4],
+            silent: 0,
+            sounding: 0,
+            sound_timer: 0,
             pad_34: Default::default(),
         }
     }
 }
 
 /// `un_803F9E08_t`, 0x10 bytes.
+#[doc(alias("un_803F9E08_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct un_803F9E08_t {
+pub struct CoinCounter {
     /// +0x0 (bits 0..+1)
-    pub x0_b0: bool,
+    #[doc(alias("x0_b0"))]
+    pub unread_b0: bool,
     /// +0x0 (bits 1..+1)
-    pub x0_b1: bool,
+    #[doc(alias("x0_b1"))]
+    pub counting: bool,
     /// +0x0 (bits 2..+3)
-    pub x0_b234: u8,
+    #[doc(alias("x0_b234"))]
+    pub step: u8,
     /// +0x0 (bits 5..+3)
-    pub x0_b567: u8,
+    #[doc(alias("x0_b567"))]
+    pub step_timer: u8,
     /// +0x1
-    pub x1: u8,
+    #[doc(alias("x1"))]
+    pub count: u8,
     /// +0x2
-    pub x2: u8,
+    #[doc(alias("x2"))]
+    pub target: u8,
     /// +0x3
-    pub x3: u8,
+    #[doc(alias("x3"))]
+    pub unused_3: u8,
     /// +0x4
-    pub x4: i32,
+    #[doc(alias("x4"))]
+    pub pos_x: i32,
     /// +0x8
-    pub x8: i32,
+    #[doc(alias("x8"))]
+    pub pos_y: i32,
     /// +0xc
-    pub xC: Option<GObjId>,
+    #[doc(alias("xC"))]
+    pub gobj: Option<GObjId>,
 }
 
-impl Default for un_803F9E08_t {
+impl Default for CoinCounter {
     fn default() -> Self {
-        un_803F9E08_t {
-            x0_b0: false,
-            x0_b1: false,
-            x0_b234: 0,
-            x0_b567: 0,
-            x1: 0,
-            x2: 0,
-            x3: 0,
-            x4: 0,
-            x8: 0,
-            xC: None,
+        CoinCounter {
+            unread_b0: false,
+            counting: false,
+            step: 0,
+            step_timer: 0,
+            count: 0,
+            target: 0,
+            unused_3: 0,
+            pos_x: 0,
+            pos_y: 0,
+            gobj: None,
         }
     }
 }
@@ -11456,49 +11542,58 @@ impl Default for StaticModelDesc {
 }
 
 /// `un_804A1F58_x8_t`, 0x14 bytes.
+#[doc(alias("un_804A1F58_x8_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct un_804A1F58_x8_t {
+pub struct ScoreDisplay {
     /// +0x0
-    pub x0: Option<GObjId>,
+    #[doc(alias("x0"))]
+    pub gobj: Option<GObjId>,
     /// +0x4
-    pub x4: Option<TextId>,
+    #[doc(alias("x4"))]
+    pub text: Option<TextId>,
     /// +0x8
-    pub x8: u32,
+    #[doc(alias("x8"))]
+    pub string: u32,
     /// +0xc
-    pub xC: u32,
+    #[doc(alias("xC"))]
+    pub score: u32,
     /// +0x10
-    pub x10: u8,
+    #[doc(alias("x10"))]
+    pub hidden: u8,
 }
 
-impl Default for un_804A1F58_x8_t {
+impl Default for ScoreDisplay {
     fn default() -> Self {
-        un_804A1F58_x8_t {
-            x0: None,
-            x4: None,
-            x8: 0,
-            xC: 0,
-            x10: 0,
+        ScoreDisplay {
+            gobj: None,
+            text: None,
+            string: 0,
+            score: 0,
+            hidden: 0,
         }
     }
 }
 
 /// `un_804A1F58_t`, 0x80 bytes.
+#[doc(alias("un_804A1F58_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct un_804A1F58_t {
+pub struct ScoreDisplays {
     /// +0x0
-    pub x0: u32,
+    #[doc(alias("x0"))]
+    pub canvas: u32,
     /// +0x4
     pub pad_x4: [i8; 4],
     /// +0x8
-    pub x8: [un_804A1F58_x8_t; 6],
+    #[doc(alias("x8"))]
+    pub entries: [ScoreDisplay; 6],
 }
 
-impl Default for un_804A1F58_t {
+impl Default for ScoreDisplays {
     fn default() -> Self {
-        un_804A1F58_t {
-            x0: 0,
+        ScoreDisplays {
+            canvas: 0,
             pad_x4: [0; 4],
-            x8: core::array::from_fn(|_| Default::default()),
+            entries: core::array::from_fn(|_| Default::default()),
         }
     }
 }

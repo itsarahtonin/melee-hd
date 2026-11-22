@@ -1254,6 +1254,225 @@ DEBUG_PAUSE = {
     "unk_38_1": "unused_38_1",
 }
 
+# The HUD (the continuation's sixth group): the announcements (`Element_803F9628`), the layout
+# (`ifAll_804A0FD8_t`), the stock icons and the single-player tallies (`ifStock_*`), the
+# damage displays' flags, the magnifier's colors, the coin counter, the off-screen arrows and
+# the scores (`un_*`). Their address-named types are named too.
+ANNOUNCEMENT = {
+    "x0": "gobj",
+    "x4": "unread_4",
+    "x8": "proc",
+    # The announcement's own first line (the table's), played at `sfx_frame` unless a caller
+    # gave one; the caller's second line at `sfx_2_frame`.
+    "xC": "default_sfx",
+    "x10": "sfx_frame",
+    "x11": "sfx_2_frame",
+    "x12": "flags",
+    "x13": "unused_13",
+    "x14": "model",
+    "x18": "on_start",
+    "x1C": "on_end",
+    "x20": "sfx_1",
+    "x24": "sfx_2",
+}
+ANNOUNCEMENT_FLAGS = {
+    "x0": "sfx_1_played",
+    "x1": "sfx_2_played",
+    # The start callback ran.
+    "x2": "started",
+    **{f"x{i}": f"unused_{i}" for i in range(3, 8)},
+}
+# Anim 1 (the damage going the good way: down, or up in stamina) plays.
+IF_DAMAGE_FLAGS = {"unk10": "heal_anim", "unk1": "unused_b7"}
+# Frames since the display blew apart (to 0xC8, when it's freed).
+IF_DAMAGE_STATE = {"unk9": "fade_frames"}
+# The players the steal slots' stocks went to (slots 5 and 6).
+IF_STOCK_USER_DATA = {"x3": "steal_takers"}
+HUD_LAYOUT = {
+    "x8": "root",
+    "xC": "timer_pos",
+    # Each player's display's place, and the places for three and for two players.
+    "x18": "player_pos",
+    "x60": "player_pos_3",
+    "x84": "player_pos_2",
+}
+# The stage's bubble colors (`GroundParam`'s), for the magnifier.
+IF_MAGNIFY = {
+    "x4": "bubble_color_0",
+    "x8": "bubble_color_2",
+    "xC": "bubble_color_6",
+    "x10": "bubble_color_8",
+    "pad": "pad_ec",
+}
+HUD_STOCKS = {"x0": "models", "x4": "counter_model"}
+# A player's stock icons' model and its joints by index: 0 to 7 the icons; past them, by
+# mode, the coin counter's digits (9 to 13, 13 also its 0), the stock count's group (14), its
+# ones (15) and tens or only digit (16).
+PLAYER_STOCKS = {
+    "x0": "gobj",
+    "x4": "joints",
+    **{f"x{0x24 + 4 * i:X}": f"joint_{8 + i}" for i in range(9)},
+}
+# The joiners' tally: 0 to make, 1 made; the joiners' costumes and characters (-1 beaten, -2
+# the end), the crowd's count shown, the icons.
+JOINER_TALLY = {"x0": "state", "x1": "costumes", "x83": "chars", "x108": "crowd_count", "x10C": "icons"}
+# The characters-left tally (All-Star's rest area).
+CHARS_LEFT_TALLY = {"x0": "state", "x1": "chars", "x83": "costumes", "x108": "unread_108", "x10C": "icons"}
+COIN_COUNTER = {
+    "x0_b0": "unread_b0",
+    "x0_b1": "counting",
+    # A coin every `step` frames.
+    "x0_b234": "step",
+    "x0_b567": "step_timer",
+    "x1": "count",
+    "x2": "target",
+    "x3": "unused_3",
+    "x4": "pos_x",
+    "x8": "pos_y",
+    "xC": "gobj",
+}
+OFFSCREEN_ARROWS = {
+    "x0": "models",
+    "x4": "gobjs",
+    "x14": "colors",
+    # By slot: the player's arrow is out.
+    "x24": "shown",
+    # By arrow: its side (0 none, 1 left, 2 right) and its player.
+    "x28": "sides",
+    "x2C": "players",
+    # The rules' `arrows_flag`: no sound.
+    "x30": "silent",
+    # The arrow whose turn it is to sound, and the sound's timer (to 51).
+    "x31": "sounding",
+    "x32": "sound_timer",
+}
+SCORE_DISPLAYS = {"x0": "canvas", "x8": "entries"}
+SCORE_DISPLAY = {
+    "x0": "gobj",
+    "x4": "text",
+    "x8": "string",
+    "xC": "score",
+    # "-" shown in place of the score.
+    "x10": "hidden",
+}
+
+# The rest (the continuation's seventh group): the items' counts and limits by hold kind
+# (`HSD_ObjAllocUnk`), the screen flash (`BgFlashData`, `BgFlashUserData`), a swing chain's
+# link (`lb_00F9_UnkDesc0`, `DynamicsData`), an item's spawn (`SpawnItem`), a fighter's
+# shadow's holds (`LbShadow`) and the menus' key repeat (`ControllerMap`, `GmControllerMap`).
+# Each hold kind's items out and the most allowed (`Item_8026784C`, the common data's).
+ITEM_COUNTS = {
+    "x0": "common",
+    "x4": "common_limit",
+    # The common items' shots and parts.
+    "x8": "common_shots",
+    "xC": "common_shots_limit",
+    "x10": "food",
+    "x14": "food_limit",
+    "x18": "fighter_articles",
+    "x1C": "pokemon",
+    "x20": "pokemon_limit",
+    "x24": "pokemon_shots",
+    "x28": "pokemon_shots_limit",
+    # Goombas, ReDeads, Octoroks, and the Octorok's stones.
+    "x2C": "monsters",
+    "x30": "monsters_limit",
+    "x34": "monster_shots",
+    "x38": "monster_shots_limit",
+    # The stages' items (Targets to Klaptraps) and their shots (the Arwings', Birdo's eggs).
+    "x3C": "stage_items",
+    "x40": "stage_shots",
+    "x44": "stage_shots_limit",
+    "x48": "trophies",
+    "x4C": "trophies_limit",
+    "x50": "coins",
+    "x54": "coins_limit",
+    "x58": "stage_hurtboxes",
+    "x5C": "stage_hurtboxes_limit",
+    # Training mode's items out (`spawn_origin` 1).
+    "x60": "training_items",
+    "x64": "training_items_limit",
+}
+BG_FLASH_DATA = {
+    # The fade's colors, the color shown, each channel's value and step.
+    "x4": "from",
+    "x8": "to",
+    "xC": "color",
+    "x10": "channels",
+    "x20": "steps",
+    # The wipe (modes 3 and 4): held (nothing sets it), its step across, its strips' height,
+    # done, where it stands, its steps a frame.
+    "x30": "wipe_held",
+    "x31": "wipe_step",
+    "x32": "wipe_strip_height",
+    "x33": "wipe_done",
+    "x34": "wipe_x",
+    "x38": "wipe_y",
+    "x3C": "wipe_speed",
+    "x40": "gobj",
+    "x44": "camera",
+}
+BG_FLASH_USER_DATA = {"x0": "alpha", "x4": "overlay"}
+SWING_LINK = {
+    "unk_2C": "joint_pos",
+    # The spin left from the last frame: its axis, its angle and the angle it loses a frame.
+    "unk_38": "spin_axis",
+    "unk_44": "spin",
+    "unk_48": "length",
+    "unk_4C": "stiffness",
+    # The turn back toward the animation's direction a frame, the most it may be from it, and
+    # the most it swings in a frame.
+    "unk_50": "return_rate",
+    "unk_54": "ease_axis",
+    "unk_58": "rest_rotation",
+    "unk_68": "max_angle",
+    "unk_6C": "unread_6c",
+    "unk_78": "unread_78",
+    "unk_84": "spin_damping",
+    "unk_88": "max_swing",
+    "unk_8C": "gravity",
+}
+DYNAMICS_DATA = {"unk_94": "unread_94"}
+SPAWN_ITEM = {
+    "x0_parent_gobj": "owner",
+    # What made it (a fighter or an item), whose attack its hits count as.
+    "x4_parent_gobj2": "maker",
+    "x10": "origin",
+    "x3C_damage": "damage",
+    "x3E": "unused_3e",
+    "x40": "ignore_id",
+    # `b0`: placed against the stage at once.
+    "x44_flag": "flags",
+    "x45_flag": "unread_45",
+    "x46_flag": "unused_46",
+    "x47_flag": "unused_47",
+    "x48_ground_or_air": "ground_or_air",
+}
+# What holds a fighter's shadow off: no light, (nothing sets `b1`), past the fifth, nothing to
+# draw, the stage's surface, the debug menu.
+LB_SHADOW = {
+    "x0_b0": "off_no_light",
+    "x0_b1": "off_unset",
+    "x0_b2": "off_over_limit",
+    "x0_b3": "off_nothing_drawn",
+    "x0_b4": "off_by_stage",
+    "x0_b5": "off_by_debug",
+    "x0_b6": "unused_b6",
+    "x0_b7": "unused_b7",
+}
+CONTROLLER_MAP = {
+    "x0": "ports",
+    "xF0": "repeat_fn",
+    # The key repeat: the first delay; the delays after, by how long the buttons are held.
+    "xF4": "repeat_delay",
+    "xF6": "slow_repeat",
+    "xF8": "mid_after",
+    "xFA": "mid_repeat",
+    "xFC": "fast_after",
+    "xFE": "fast_repeat",
+}
+GM_CONTROLLER_MAP = {"x2C": "held_frames"}
+
 # The structs by step 3's commits, in order.
 GROUPS = [
     {"CollData": COLL_DATA, "HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
@@ -1341,6 +1560,23 @@ GROUPS = [
         "gm_80479D58_t": SCENE_LOOP,
         "gm_801677C0_s": DEBUG_PAUSE,
     },
+    {
+        "Element_803F9628": ANNOUNCEMENT,
+        "Element_803F9628_x12": ANNOUNCEMENT_FLAGS,
+        "IfDamageFlags": IF_DAMAGE_FLAGS,
+        "IfDamageState": IF_DAMAGE_STATE,
+        "IfStockUserData": IF_STOCK_USER_DATA,
+        "ifAll_804A0FD8_t": HUD_LAYOUT,
+        "ifMagnify": IF_MAGNIFY,
+        "ifStock_804A1378": HUD_STOCKS,
+        "ifStock_804A1378_per_player": PLAYER_STOCKS,
+        "ifStock_804A1774": JOINER_TALLY,
+        "ifStock_804A1ACC": CHARS_LEFT_TALLY,
+        "un_803F9E08_t": COIN_COUNTER,
+        "un_804A1F10_t": OFFSCREEN_ARROWS,
+        "un_804A1F58_t": SCORE_DISPLAYS,
+        "un_804A1F58_x8_t": SCORE_DISPLAY,
+    },
 ]
 
 # The port's names for the decomp's address-named structs (C name to Rust name), which
@@ -1360,6 +1596,17 @@ TYPE_NAMES = {
     "UnkResultPlayerData": "PlayerDecisions",
     "gm_80479D58_t": "SceneLoop",
     "gm_801677C0_s": "DebugPause",
+    "Element_803F9628": "Announcement",
+    "Element_803F9628_x12": "AnnouncementFlags",
+    "ifAll_804A0FD8_t": "HudLayout",
+    "ifStock_804A1378": "HudStocks",
+    "ifStock_804A1378_per_player": "PlayerStocks",
+    "ifStock_804A1774": "JoinerTally",
+    "ifStock_804A1ACC": "CharsLeftTally",
+    "un_803F9E08_t": "CoinCounter",
+    "un_804A1F10_t": "OffscreenArrows",
+    "un_804A1F58_t": "ScoreDisplays",
+    "un_804A1F58_x8_t": "ScoreDisplay",
 }
 
 STEP_3 = {}

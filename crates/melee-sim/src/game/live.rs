@@ -256,7 +256,7 @@ pub struct Carried {
 impl Carried {
     fn of(g: &Game) -> Self {
         Carried {
-            arrows: (g.hud.arrows.x14.clone(), g.hud.arrows.x2C),
+            arrows: (g.hud.arrows.colors.clone(), g.hud.arrows.players),
             ef_ids: g.ef.params.map(|p| p.gfx_id),
             start_points: g.gr.start_points,
             ft_track: g.it.ft_track.clone(),
@@ -265,7 +265,7 @@ impl Carried {
     }
 
     fn put(&self, g: &mut Game) {
-        (g.hud.arrows.x14, g.hud.arrows.x2C) = (self.arrows.0.clone(), self.arrows.1);
+        (g.hud.arrows.colors, g.hud.arrows.players) = (self.arrows.0.clone(), self.arrows.1);
         for (p, &id) in g.ef.params.iter_mut().zip(&self.ef_ids) {
             p.gfx_id = id;
         }
@@ -338,7 +338,17 @@ impl Game {
         self.it.clank_boxes = live.it.clank_boxes;
         self.camera.take_match(&live.camera);
         let (m, l) = (&mut self.magnify, &live.magnify);
-        (m.x4, m.x8, m.xC, m.x10) = (l.x4.clone(), l.x8.clone(), l.xC.clone(), l.x10.clone());
+        (
+            m.bubble_color_0,
+            m.bubble_color_2,
+            m.bubble_color_6,
+            m.bubble_color_8,
+        ) = (
+            l.bubble_color_0.clone(),
+            l.bubble_color_2.clone(),
+            l.bubble_color_6.clone(),
+            l.bubble_color_8.clone(),
+        );
         m.image_descs.clone_from(&l.image_descs);
         for (p, q) in m.player.iter_mut().zip(&l.player) {
             p.state.clone_from(&q.state);
@@ -350,16 +360,17 @@ impl Game {
         // slots (`un_802FE260` resets which are shown), the announcements' callbacks, lines
         // and marks; their models and GObjs stay the menus'.
         let (a, b) = (&mut self.hud.arrows, &live.hud.arrows);
-        (a.x24, a.x28, a.x30, a.x31, a.x32) = (b.x24, b.x28, b.x30, b.x31, b.x32);
+        (a.shown, a.sides, a.silent, a.sounding, a.sound_timer) =
+            (b.shown, b.sides, b.silent, b.sounding, b.sound_timer);
         for (e, l) in self
             .hud
             .announcements
             .iter_mut()
             .zip(&live.hud.announcements)
         {
-            let (gobj, model) = (e.x0, e.x14);
+            let (gobj, model) = (e.gobj, e.model);
             e.clone_from(l);
-            (e.x0, e.x14) = (gobj, model);
+            (e.gobj, e.model) = (gobj, model);
         }
         self.bgflash.scale = live.bgflash.scale;
         self.gm.pause.slot = live.gm.pause.slot;

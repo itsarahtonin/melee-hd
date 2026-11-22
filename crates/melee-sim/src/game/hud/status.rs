@@ -96,7 +96,7 @@ impl Game {
             p.flags.explode_animation = true;
             p.flags.randomize_velocity = true;
             if fade {
-                p.unk9 = 1;
+                p.fade_frames = 1;
             }
         }
     }
@@ -349,7 +349,7 @@ impl Running<'_> {
         }
         let animated = anim::any_animated(&self.game.objs, Some(root));
         let p = &self.game.hud.status.players[i];
-        if p.flags.unk10 && (p.flags.animation_status_id != 1 || !animated) {
+        if p.flags.heal_anim && (p.flags.animation_status_id != 1 || !animated) {
             self.game.hud.status.players[i].flags.animation_status_id = 1;
             let s = &self.game.hud.status;
             let (an, mat, shape) = (
@@ -415,9 +415,9 @@ impl Running<'_> {
             .display_of(gobj)
             .expect("the original reads a null display");
         let p = &mut self.game.hud.status.players[i];
-        if p.unk9 != 0 {
-            p.unk9 = p.unk9.wrapping_add(1);
-            if p.unk9 > 0xC8 {
+        if p.fade_frames != 0 {
+            p.fade_frames = p.fade_frames.wrapping_add(1);
+            if p.fade_frames > 0xC8 {
                 let slot = p.player_slot;
                 self.free_damage_display(slot);
                 return;
@@ -440,7 +440,7 @@ impl Running<'_> {
         let (old, now) = (p.old_damage, p.damage_percent);
         let (fell, rose) = (old != -1 && now < old, old != -1 && now > old);
         let (shake, animate) = if stamina { (fell, rose) } else { (rose, fell) };
-        p.flags.unk10 = animate;
+        p.flags.heal_anim = animate;
         p.flags.force_digit_shake = shake;
         if shake {
             p.damage_from_last_attack = (i32::from(old) - i32::from(now)).unsigned_abs() as u8;
@@ -586,9 +586,9 @@ impl Running<'_> {
         p.flags.explode_animation = false;
         p.flags.randomize_velocity = false;
         p.flags.force_digit_shake = false;
-        p.flags.unk10 = false;
+        p.flags.heal_anim = false;
         p.player_slot = slot as u8;
-        p.unk9 = 0;
+        p.fade_frames = 0;
         self.create_damage_mark(i, i as i32);
         self.create_damage_digits(i, i as i32);
         let rules = self.game.vs.start.clone();

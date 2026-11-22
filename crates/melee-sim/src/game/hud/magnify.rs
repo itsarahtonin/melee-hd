@@ -135,7 +135,12 @@ impl Running<'_> {
             p.bubble_color_8.clone(),
         );
         let m = &mut self.game.magnify;
-        (m.x4, m.x8, m.xC, m.x10) = colors;
+        (
+            m.bubble_color_0,
+            m.bubble_color_2,
+            m.bubble_color_6,
+            m.bubble_color_8,
+        ) = colors;
         let lupe = self
             .data
             .get(if_all)

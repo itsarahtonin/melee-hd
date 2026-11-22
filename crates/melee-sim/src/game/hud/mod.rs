@@ -26,9 +26,8 @@ use melee_data::archive::{ArchiveId, DataRef};
 
 use super::handles::CodeRef;
 use super::structs::{
-    Element_803F9628, HudIndex, IfStockUserData, ScInfStcModels, ifAll_804A0FD8_t,
-    ifStock_804A1ACC, ifStock_804A1378, ifStock_804A1774, ifTime_data, un_804A1F10_t,
-    un_804A1F58_t,
+    Announcement, CharsLeftTally, HudIndex, HudLayout, HudStocks, IfStockUserData, JoinerTally,
+    OffscreenArrows, ScInfStcModels, ScoreDisplays, ifTime_data,
 };
 use crate::hsd::gobj::GObjId;
 
@@ -69,7 +68,7 @@ pub struct Hud {
     /// name).
     pub debug: debug_menu::DebugVars,
     /// `ifAll_804A0FD8`: the HUD's camera and light and the places its parts go.
-    pub all: ifAll_804A0FD8_t,
+    pub all: HudLayout,
     /// `ifall.c`'s `hidden`.
     pub hidden: bool,
     /// `IfAll.dat` (`ifAll_GetArchive`'s static).
@@ -81,20 +80,20 @@ pub struct Hud {
     /// `ifStatus_804D6D61`: which way the next exploding digit flies.
     pub status_flip: i8,
     /// `ifStatus_803F9628`: the announcements (GAME!, TIME!, Ready GO! and the rest).
-    pub announcements: [Element_803F9628; 8],
+    pub announcements: [Announcement; 8],
     /// `scinfstc_models`: the marks a KO puts by a player's display.
     pub ko_marks: ScInfStcModels,
     /// `ifTime_data` and `ifTime_match_timer_models`.
     pub time: ifTime_data,
     pub timer_models: ModelDesc,
     /// `ifStock_804A1378` and `ifStock_804A157C`: each player's stock icons.
-    pub stock: ifStock_804A1378,
+    pub stock: HudStocks,
     pub stock_users: [IfStockUserData; 6],
     /// `ifStock_804A1774`, `ifStock_804A1A8C` and `ifStock_804A1ACC`: the single-player
     /// tallies.
-    pub stock_1774: ifStock_804A1774,
+    pub stock_1774: JoinerTally,
     pub stock_1a8c: [Option<GObjId>; 16],
-    pub stock_1acc: ifStock_804A1ACC,
+    pub stock_1acc: CharsLeftTally,
     /// The players' tags.
     pub nametags: nametag::NameTags,
     /// The hazard sign.
@@ -102,19 +101,19 @@ pub struct Hud {
     /// The coin counter.
     pub coins: small::Coins,
     /// `un_804A1F10` and `un_804D6D90`: the off-screen arrows, and whether they're hidden.
-    pub arrows: un_804A1F10_t,
+    pub arrows: OffscreenArrows,
     pub arrows_hidden: i32,
     /// `un_804A1F58`: the scores.
-    pub scores: un_804A1F58_t,
+    pub scores: ScoreDisplays,
 }
 
 impl Default for Hud {
     fn default() -> Self {
-        let e = |proc: u32, sfx: i32, frame: u8| Element_803F9628 {
-            x8: Some(CodeRef(proc)),
-            xC: sfx,
-            x10: frame,
-            ..Element_803F9628::default()
+        let e = |proc: u32, sfx: i32, frame: u8| Announcement {
+            proc: Some(CodeRef(proc)),
+            default_sfx: sfx,
+            sfx_frame: frame,
+            ..Announcement::default()
         };
         let (wait, once) = (announce::WAIT, announce::ONCE);
         Hud {

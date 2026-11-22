@@ -8,7 +8,7 @@ use melee_data::archive::{ArchiveId, DataRef};
 use super::super::gr::setup::load_light_list;
 use super::super::handles::CodeRef;
 use super::super::state::{Game, OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
-use super::super::structs::{_GXColor, un_803F9E08_t, un_804A1F10_t, un_804A1F58_t};
+use super::super::structs::{_GXColor, CoinCounter, OffscreenArrows, ScoreDisplays};
 use super::{CAMERA_RENDER, Draw, HIDDEN, JOBJ_RENDER, LIGHT_RENDER};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::{self, GObjId};
@@ -38,7 +38,7 @@ pub struct Hazard {
 /// The coin counter's statics.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Coins {
-    pub state: un_803F9E08_t,
+    pub state: CoinCounter,
     /// `un_804D6DA0` (`IfCoGet.dat`) and `un_804D6DA4` (its `ScInfCgt_scene_data`).
     pub archive: Option<ArchiveId>,
     pub scene: Option<DataRef>,
@@ -118,13 +118,13 @@ impl Game {
         let human = self.player_pkind(i32::from(slot)) != super::super::pl::player::PKIND_CPU;
         let p = &mut self.hud.arrows;
         for i in 0..4 {
-            if !human || p.x28[i] != 0 || p.x24[usize::from(slot)] != 0 {
+            if !human || p.sides[i] != 0 || p.shown[usize::from(slot)] != 0 {
                 continue;
             }
-            p.x24[usize::from(slot)] = 1;
-            p.x2C[i] = slot;
-            p.x28[i] = kind;
-            p.x14[i] = _GXColor {
+            p.shown[usize::from(slot)] = 1;
+            p.players[i] = slot;
+            p.sides[i] = kind;
+            p.colors[i] = _GXColor {
                 r: color[0],
                 g: color[1],
                 b: color[2],
@@ -139,9 +139,9 @@ impl Game {
     pub fn hide_arrow(&mut self, slot: u8) {
         let p = &mut self.hud.arrows;
         for i in 0..4 {
-            if p.x2C[i] == slot {
-                p.x24[usize::from(slot)] = 0;
-                p.x28[i] = 0;
+            if p.players[i] == slot {
+                p.shown[usize::from(slot)] = 0;
+                p.sides[i] = 0;
             }
         }
     }
@@ -155,8 +155,8 @@ impl Game {
     /// Ends the coin counter's run, `un_802FF128`'s undoing, `un_802FF190`.
     #[doc(alias = "un_802FF190")]
     pub fn stop_coin_counter(&mut self) {
-        self.hud.coins.state.x0_b0 = false;
-        self.hud.coins.state.x0_b1 = false;
+        self.hud.coins.state.unread_b0 = false;
+        self.hud.coins.state.counting = false;
     }
 
     /// Counts coins up to `target` (at most 100) at (`x`, `y`), a coin every `step`
@@ -165,22 +165,22 @@ impl Game {
     pub fn start_coin_counter(&mut self, x: i32, y: i32, target: i32, step: i32) {
         let step = step.max(1);
         let s = &mut self.hud.coins.state;
-        s.x0_b1 = true;
-        s.x0_b234 = step as u8 & 7;
-        s.x0_b567 = step as u8 & 7;
-        s.x1 = 0;
-        s.x2 = target.min(100) as u8;
-        s.x4 = x;
-        s.x8 = y.wrapping_neg();
+        s.counting = true;
+        s.step = step as u8 & 7;
+        s.step_timer = step as u8 & 7;
+        s.count = 0;
+        s.target = target.min(100) as u8;
+        s.pos_x = x;
+        s.pos_y = y.wrapping_neg();
     }
 
     /// Hides the scores, `un_802FF570`.
     #[doc(alias = "un_802FF570")]
     pub fn hide_scores(&mut self) {
         for i in 0..6 {
-            let e = &mut self.hud.scores.x8[i];
-            e.x10 = 1;
-            if let Some(t) = e.x4 {
+            let e = &mut self.hud.scores.entries[i];
+            e.hidden = 1;
+            if let Some(t) = e.text {
                 self.sis.text_mut(t).hidden = 1;
             }
         }
@@ -260,24 +260,24 @@ impl Running<'_> {
             panic!("the coin counter without its model");
         };
         let g = &mut *self.game;
-        if !g.hud.coins.state.x0_b1 {
+        if !g.hud.coins.state.counting {
             jobj::set_flags_all(&mut g.objs.jobjs, Some(j), HIDDEN);
             return;
         }
         let s = &mut g.hud.coins.state;
-        if s.x1 > s.x2 {
+        if s.count > s.target {
             return;
         }
         jobj::clear_flags_all(&mut g.objs.jobjs, Some(j), HIDDEN);
         let s = &mut g.hud.coins.state;
-        if s.x1 < s.x2 {
-            if s.x0_b567 != 0 {
-                s.x0_b567 -= 1;
+        if s.count < s.target {
+            if s.step_timer != 0 {
+                s.step_timer -= 1;
             }
-            if s.x0_b567 == 0 {
-                s.x0_b567 = s.x0_b234;
-                s.x1 = s.x1.wrapping_add(1);
-                let id = if s.x1 != 0 && s.x1.is_multiple_of(10) {
+            if s.step_timer == 0 {
+                s.step_timer = s.step;
+                s.count = s.count.wrapping_add(1);
+                let id = if s.count != 0 && s.count.is_multiple_of(10) {
                     0xB4
                 } else {
                     0xB3
@@ -288,11 +288,14 @@ impl Running<'_> {
         let g = &mut *self.game;
         let s = &g.hud.coins.state;
         let x = mem(fp::fsubs(
-            fp::fdivs(fp::frsp(f64::from(s.x4)), 10.958_900_451_660_156),
+            fp::fdivs(fp::frsp(f64::from(s.pos_x)), 10.958_900_451_660_156),
             29.200_000_762_939_453,
         ));
-        let y = mem(fp::fadds(24.0, fp::fdivs(fp::frsp(f64::from(s.x8)), 10.0)));
-        let n = s.x1;
+        let y = mem(fp::fadds(
+            24.0,
+            fp::fdivs(fp::frsp(f64::from(s.pos_y)), 10.0),
+        ));
+        let n = s.count;
         jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.x = x);
         jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.y = y);
         jobj::req_anim_all(&mut g.objs, Some(j), mem(fp::frsp(f64::from(n))));
@@ -340,7 +343,7 @@ impl Running<'_> {
             &mut crate::game::code::ParticleHooks,
             Some(j),
         );
-        g.hud.coins.state.xC = Some(ui);
+        g.hud.coins.state.gobj = Some(ui);
     }
 
     /// The coin counter at the HUD's setup, `IfCoGet.dat` loaded (`lbArchive_80016DBC`,
@@ -348,8 +351,8 @@ impl Running<'_> {
     #[doc(alias = "un_802FF1B4")]
     pub fn init_coin_counter(&mut self, if_coget: ArchiveId) {
         let s = &mut self.game.hud.coins;
-        s.state.x0_b0 = true;
-        s.state.x0_b1 = false;
+        s.state.unread_b0 = true;
+        s.state.counting = false;
         self.disc_load("IfCoGet.dat", crate::game::ft::data::MAIN_MEMORY);
         let s = &mut self.game.hud.coins;
         s.archive = Some(if_coget);
@@ -381,7 +384,7 @@ impl Running<'_> {
         let v = [0.0f32, -1.3, -2.6, -3.9].map(|x| mem(fp::frsp(f64::from(x))));
         let g = &mut *self.game;
         jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 0.0);
-        let c = g.hud.arrows.x14[s].clone();
+        let c = g.hud.arrows.colors[s].clone();
         let child = g.objs.jobjs[j].child.expect("jobj->child");
         let mut d = g.objs.jobjs[child].dobj();
         for _ in 0..3 {
@@ -395,27 +398,27 @@ impl Running<'_> {
             d = g.objs.dobjs[dd].next;
         }
         let p = &mut g.hud.arrows;
-        if p.x28.iter().all(|&k| k == 0) {
-            p.x31 = -1;
-            p.x32 = 0;
+        if p.sides.iter().all(|&k| k == 0) {
+            p.sounding = -1;
+            p.sound_timer = 0;
         }
-        let kind = p.x28[s];
+        let kind = p.sides[s];
         let mut sound = false;
         match kind {
             0 => {
                 jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0);
             }
             1 | 2 => {
-                if p.x31 == -1 {
-                    p.x31 = slot as i8;
-                } else if p.x28[p.x31 as u8 as usize] == kind {
-                    if p.x32 == 0 && p.x30 == 0 {
+                if p.sounding == -1 {
+                    p.sounding = slot as i8;
+                } else if p.sides[p.sounding as u8 as usize] == kind {
+                    if p.sound_timer == 0 && p.silent == 0 {
                         sound = true;
                     }
-                    p.x32 = ((u32::from(p.x32) + 1) % 51) as u8;
+                    p.sound_timer = ((u32::from(p.sound_timer) + 1) % 51) as u8;
                 }
-                let jn = (0..s).filter(|&i| p.x28[i] == kind).count() as u8;
-                let kn = (0..4).filter(|&i| p.x28[i] == kind).count() as u8;
+                let jn = (0..s).filter(|&i| p.sides[i] == kind).count() as u8;
+                let kn = (0..4).filter(|&i| p.sides[i] == kind).count() as u8;
                 let y = mem(fp::fmadds(
                     2.599_999_904_632_568_4,
                     fp::frsp(f64::from(jn)),
@@ -458,7 +461,7 @@ impl Running<'_> {
             archive: a,
             offset: at,
         };
-        self.game.hud.arrows.x0 = Some(list);
+        self.game.hud.arrows.models = Some(list);
         let model = data.ptr(list).expect("the arrows' model");
         for i in 0..4u8 {
             let g = &mut *self.game;
@@ -477,21 +480,21 @@ impl Running<'_> {
                 Some(j),
             );
             let p = &mut g.hud.arrows;
-            p.x24[usize::from(i)] = 0;
-            p.x28[usize::from(i)] = 0;
-            p.x4[usize::from(i)] = Some(o);
+            p.shown[usize::from(i)] = 0;
+            p.sides[usize::from(i)] = 0;
+            p.gobjs[usize::from(i)] = Some(o);
         }
         let g = &mut *self.game;
-        g.hud.arrows.x31 = -1;
-        g.hud.arrows.x32 = 0;
-        g.hud.arrows.x30 = u8::from(g.vs_arrows_flag());
+        g.hud.arrows.sounding = -1;
+        g.hud.arrows.sound_timer = 0;
+        g.hud.arrows.silent = u8::from(g.vs_arrows_flag());
     }
 
     /// Frees the arrows, `un_802FE390`.
     #[doc(alias = "un_802FE390")]
     pub fn free_arrows(&mut self) {
         for i in 0..4 {
-            if let Some(o) = self.game.hud.arrows.x4[i].take() {
+            if let Some(o) = self.game.hud.arrows.gobjs[i].take() {
                 gobj::free(self, o);
             }
         }
@@ -505,34 +508,35 @@ impl Running<'_> {
     /// A score's process, `fn_802FF218`: "-" while hidden, else the score when it changes.
     #[doc(alias = "fn_802FF218")]
     pub fn score_proc(&mut self, gobj: GObjId) {
-        let Some(slot) = (0..6).find(|&i| self.game.hud.scores.x8[i].x0 == Some(gobj)) else {
+        let Some(slot) = (0..6).find(|&i| self.game.hud.scores.entries[i].gobj == Some(gobj))
+        else {
             return;
         };
-        let e = self.game.hud.scores.x8[slot].clone();
-        let t = e.x4.expect("a score's text");
-        if e.x10 == 1 {
+        let e = self.game.hud.scores.entries[slot].clone();
+        let t = e.text.expect("a score's text");
+        if e.hidden == 1 {
             self.game
                 .sis
-                .replace_string(self.data, t, e.x8 as i32, Some(b"-"));
+                .replace_string(self.data, t, e.string as i32, Some(b"-"));
         } else {
             let score = self.score(slot as i32);
-            if e.xC != score as u32 {
+            if e.score != score as u32 {
                 let s = crate::hsd::sis::format(b"%d", &[score]);
                 self.game
                     .sis
-                    .replace_string(self.data, t, e.x8 as i32, Some(&s));
-                self.game.hud.scores.x8[slot].xC = score as u32;
+                    .replace_string(self.data, t, e.string as i32, Some(&s));
+                self.game.hud.scores.entries[slot].score = score as u32;
             }
         }
     }
 
     /// Frees a score's GObj and text (the inline `inl_freeEntry`).
     fn free_score(&mut self, slot: usize) {
-        let e = self.game.hud.scores.x8[slot].clone();
-        if let Some(o) = e.x0 {
+        let e = self.game.hud.scores.entries[slot].clone();
+        if let Some(o) = e.gobj {
             gobj::free(self, o);
         }
-        if let Some(t) = e.x4 {
+        if let Some(t) = e.text {
             self.destroy_text(t);
         }
     }
@@ -543,9 +547,9 @@ impl Running<'_> {
         let s = slot as usize;
         let pos = self.game.player_hud_position(slot);
         self.free_score(s);
-        let canvas = self.game.hud.scores.x0 as i32;
+        let canvas = self.game.hud.scores.canvas as i32;
         let t = self.create_text_buffer(2, canvas);
-        self.game.hud.scores.x8[s].x4 = Some(t);
+        self.game.hud.scores.entries[s].text = Some(t);
         let tx = self.game.sis.text_mut(t);
         tx.default_alignment = 1;
         tx.default_kerning = 1;
@@ -553,14 +557,14 @@ impl Running<'_> {
         let text = crate::hsd::sis::format(b"%d", &[score]);
         let y = fp::fadds(3.200_000_047_683_716, reg(pos.y));
         let k = self.game.sis.add_string(t, reg(pos.x), y, Some(&text));
-        self.game.hud.scores.x8[s].x8 = k as u32;
+        self.game.hud.scores.entries[s].string = k as u32;
         let d = self.data;
         self.game
             .sis
             .set_scale(d, t, k, 0.059_999_998_658_895_49, 0.059_999_998_658_895_49);
         self.game.sis.text_mut(t).render_callback = Some(SCORE_TEXT_RENDER);
         let o = self.game.world.create(14, 15, 0);
-        self.game.hud.scores.x8[s].x0 = Some(o);
+        self.game.hud.scores.entries[s].gobj = Some(o);
         self.game.world.setup_proc(o, CodeRef(SCORE_PROC), 17);
     }
 
@@ -575,7 +579,7 @@ impl Running<'_> {
         self.game.hud.scores = Default::default();
         let parent = self.game.hud_gobj();
         let n = self.add_canvas(2, parent, 14, 15, 0, 11, 0, 19);
-        self.game.hud.scores.x0 = n as u32;
+        self.game.hud.scores.canvas = n as u32;
     }
 
     /// Frees the scores, `un_802FF4FC`.
@@ -590,12 +594,12 @@ impl Running<'_> {
     #[doc(alias = "un_802FF620")]
     pub fn show_scores(&mut self) {
         for i in 0..6 {
-            self.game.hud.scores.x8[i].x10 = 0;
-            if let Some(t) = self.game.hud.scores.x8[i].x4 {
+            self.game.hud.scores.entries[i].hidden = 0;
+            if let Some(t) = self.game.hud.scores.entries[i].text {
                 self.create_score(i as i32);
                 self.game
                     .sis
-                    .text_mut(self.game.hud.scores.x8[i].x4.unwrap_or(t))
+                    .text_mut(self.game.hud.scores.entries[i].text.unwrap_or(t))
                     .hidden = 0;
             }
         }
@@ -603,9 +607,9 @@ impl Running<'_> {
 }
 
 /// The scores' statics' type.
-pub type Scores = un_804A1F58_t;
+pub type Scores = ScoreDisplays;
 /// The arrows' statics' type.
-pub type Arrows = un_804A1F10_t;
+pub type Arrows = OffscreenArrows;
 /// A score's text, for checks.
 pub type ScoreText = Option<TextId>;
 

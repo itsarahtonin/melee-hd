@@ -328,9 +328,9 @@ mod label_tests {
     #[test]
     fn step_3s_renamed_fields_label_gives_the_originals_name() {
         use crate::game::structs::{
-            _StaticPlayer, Camera, EventData, GameData, GmSaveData, Ground, GroundParam,
-            MatchPlayerData, PlayerInitData, SceneLoop, StageInfo, StaleMoveTable, StartMeleeRules,
-            VsSceneState,
+            _StaticPlayer, Announcement, Camera, EventData, GameData, GmSaveData, Ground,
+            GroundParam, JoinerTally, MatchPlayerData, OffscreenArrows, PlayerInitData, SceneLoop,
+            StageInfo, StaleMoveTable, StartMeleeRules, VsSceneState,
         };
         assert_eq!(
             labels_after::<Fighter>("fighter", |fp| {
@@ -480,6 +480,24 @@ mod label_tests {
                 "scene.ticks (unk_0)",
                 "scene.pause (unk_10).runs (unk_38_0)"
             ]
+        );
+        assert_eq!(
+            labels_after::<Announcement>("announcement", |a| {
+                a.sfx_frame = 1;
+                a.flags.started = true;
+            }),
+            [
+                "announcement.sfx_frame (x10)",
+                "announcement.flags (x12).started (x2)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<JoinerTally>("tally", |t| t.crowd_count = 1),
+            ["tally.crowd_count (x108)"]
+        );
+        assert_eq!(
+            labels_after::<OffscreenArrows>("arrows", |a| a.sides[1] = 1),
+            ["arrows.sides (x28)[1]"]
         );
     }
 }
