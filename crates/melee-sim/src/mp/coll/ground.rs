@@ -7,8 +7,8 @@ use super::{
     Coll, CollHooks, EDGE, FLOOR_PUSH, LEFT_EDGE, LEFT_LEDGE_SLIP, LEFT_WALL_MASK, Pass,
     RIGHT_EDGE, RIGHT_LEDGE_SLIP, RIGHT_WALL_MASK, add, point,
 };
-use crate::fpu::{mem, reg};
 use super::{CollData, Surface};
+use crate::fpu::{mem, reg};
 use crate::game::structs::ftCollisionBox;
 use crate::mp::{FLOOR, Kinds, LEFT_WALL, Probe, RIGHT_WALL};
 

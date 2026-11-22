@@ -20,9 +20,9 @@
 
 mod air;
 mod ceiling;
+mod data;
 mod ground;
 mod walls;
-mod data;
 
 pub use data::{CollData, Ecb, Surface};
 
