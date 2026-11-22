@@ -8,8 +8,8 @@ use gekko_fp as fp;
 use super::super::code::unported_call;
 use super::super::state::{Game, Running};
 use super::super::structs::MatchEnd;
-use super::GM_STAMINA_VS;
 use crate::fpu::reg;
+use crate::game::gm::GameMode;
 
 /// `Gm_PKind_NA`: no player in the slot.
 const PKIND_NA: u8 = 3;
@@ -115,7 +115,7 @@ impl Running<'_> {
         for i in 0..6 {
             if r.player_standings[i].pkind != PKIND_NA {
                 r.player_standings[i].score =
-                    if self.game.game_mode != GM_STAMINA_VS && r.match_kind == 3 {
+                    if self.game.game_mode != GameMode::Stamina && r.match_kind == 3 {
                         self.tally_bonuses(i as i32);
                         clamp_score(self.bonus_total(r, 2, i as u8))
                     } else {
@@ -326,7 +326,7 @@ impl Game {
     fn player_score(&self, r: &MatchEnd, i: usize) -> i32 {
         let p = &r.player_standings[i];
         let lasted = || (p.x28 / 60).wrapping_add(0xFF00_0001) as i32;
-        if self.game_mode == GM_STAMINA_VS {
+        if self.game_mode == GameMode::Stamina {
             let v = if p.x28 != 0 {
                 lasted()
             } else {
@@ -368,7 +368,7 @@ impl Game {
             let team = usize::from(r.player_standings[i].team);
             let score = r.player_standings[i].score;
             let x30 = r.player_standings[i].x30;
-            let stock = self.game_mode == GM_STAMINA_VS || r.match_kind == 1;
+            let stock = self.game_mode == GameMode::Stamina || r.match_kind == 1;
             let mut t = TeamStanding::of(r, team);
             if stock {
                 if score < 0 {

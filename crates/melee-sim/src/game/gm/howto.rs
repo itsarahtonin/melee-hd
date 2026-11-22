@@ -6,7 +6,7 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::{Obj, Running};
-use super::machine::GM_TITLE;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::sobj::{self, OBJ_SOBJ};
 
@@ -188,7 +188,7 @@ impl Running<'_> {
         }
         if pressed {
             self.lb_audio_call(1);
-            self.set_pending_game_mode(GM_TITLE);
+            self.set_pending_game_mode(GameMode::Title);
             self.set_new_game_mode_pending();
         } else if self.game.game_data.unk_1 != 5 {
             self.game.game_data.unk_1 = self.game.game_data.unk_1.wrapping_add(1);
@@ -216,7 +216,7 @@ impl Running<'_> {
             if !reset {
                 self.lb_audio_call(1);
             }
-            self.set_pending_game_mode(GM_TITLE);
+            self.set_pending_game_mode(GameMode::Title);
             self.set_new_game_mode_pending();
         }
     }

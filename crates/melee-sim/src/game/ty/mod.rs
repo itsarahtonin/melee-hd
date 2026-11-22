@@ -15,20 +15,12 @@ pub mod view;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::state::Running;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 
 /// `TY_TROPHY_COUNT`.
 pub const TROPHY_COUNT: usize = 293;
-
-/// `GM_TOY_GALLERY`, `GM_TOY_LOTTERY`, `GM_TOY_COLLECTION`.
-pub const GM_TOY_GALLERY: u8 = 0xB;
-pub const GM_TOY_LOTTERY: u8 = 0xC;
-pub const GM_TOY_COLLECTION: u8 = 0xD;
-/// `GS_TOY_GALLERY`, `GS_TOY_LOTTERY`, `GS_TOY_COLLECTION`.
-pub const GS_TOY_GALLERY: u8 = 0xB;
-pub const GS_TOY_LOTTERY: u8 = 0xC;
-pub const GS_TOY_COLLECTION: u8 = 0xD;
 
 /// `Toy_804A284C`: the trophy screens' table (`_Toy_804A26B8 + 0x194`), 0x25C bytes. In
 /// the single-player modes and the lottery its flags, categories and count stand in for the
@@ -188,7 +180,7 @@ impl Running<'_> {
     #[doc(alias = "gm_Is1PMode")]
     #[doc(alias = "gm_IsCurrently1PMode")]
     pub fn toy_own_table(&self) -> bool {
-        super::gm::is_1p_mode(self.game) || self.game.game_mode == GM_TOY_LOTTERY
+        super::gm::is_1p_mode(self.game) || self.game.game_mode == GameMode::TrophyLottery
     }
 
     /// The trophies' flags in play (`getTrophyFlags`).

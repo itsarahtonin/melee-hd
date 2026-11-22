@@ -21,6 +21,7 @@ use super::common::{
 };
 use super::main::{IN_BACK, PAD_CONFIRM};
 use super::rules::NAMES;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::JObjId;
 use crate::hsd::sis::TextId;
@@ -1341,13 +1342,13 @@ impl Running<'_> {
         if ok {
             self.card_game_mark_changes();
         }
-        match game_mode(self) {
-            super::common::GM_TOURNAMENT => {
+        match GameMode::of(game_mode(self)) {
+            GameMode::Tournament => {
                 self.sis_reset();
                 self.menu_free_gobjs();
                 self.tou_back_from_names(if ok { i32::from(index) } else { 0x78 });
             }
-            super::super::gm::machine::GM_MENU => {
+            GameMode::Menu => {
                 self.game.menu.cooldown = 5;
                 if ok && self.name_count() > 0x18 {
                     self.names_back(index / 6);

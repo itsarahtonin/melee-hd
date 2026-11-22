@@ -9,6 +9,7 @@ use melee_sim::hsd::sis::TextId;
 
 use crate::compare::Comparer;
 use crate::import::sym;
+use melee_sim::game::gm::GameMode;
 
 /// `HSD_Free`, the screens' user data release.
 const HSD_FREE: u32 = 0x8037_F1B0;
@@ -338,8 +339,7 @@ impl Comparer<'_> {
         self.check(path, "next", ours, theirs);
         // A later notice lives in the heap of the prize's scene, which goes with it: the
         // first's link names it after, a dangling pointer.
-        let live = self.game.machine.routing.curr_mode
-            == melee_sim::game::gm::machine::GM_CHALLENGER_APPROACH;
+        let live = self.game.machine.routing.curr_mode == GameMode::ChallengerApproach;
         if let Some(melee_sim::game::hud::prize::EntryRef::Heap(a)) = e.next
             && a == theirs
             && live

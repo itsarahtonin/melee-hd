@@ -170,6 +170,7 @@ pub const PATHS: &[Paths] = &[
             "it/forget",
             "gm/one_player",
             "gm/machine",
+            "gm/registry",
             "mn/charsel/one_door",
             "mn/stagesel",
             "gm/vs",
@@ -207,6 +208,7 @@ pub const PATHS: &[Paths] = &[
             "ft/sandbag",
             "gm/one_player",
             "gm/machine",
+            "gm/registry",
             "mn/charsel/one_door",
             "gm/vs",
             "gm/match_exit",
@@ -230,6 +232,7 @@ pub const PATHS: &[Paths] = &[
             "it/kinds/mato",
             "gm/one_player",
             "gm/machine",
+            "gm/registry",
             "mn/charsel/one_door",
             "gm/vs",
             "gm/match_exit",
@@ -266,6 +269,7 @@ pub const PATHS: &[Paths] = &[
             "it/forget",
             "gm/one_player",
             "gm/machine",
+            "gm/registry",
             "mn/charsel/one_door",
             "gm/vs",
             "gm/match_exit",
@@ -432,7 +436,7 @@ pub const PATHS: &[Paths] = &[
         unreached: &[
             (
                 "the cutscene scene",
-                "Adventure's states (gm_Mode_Adventure_States, gm/machine.rs's ADVENTURE) name only the cutscene scenes 0x11 to 0x1B, each entered and its files read by vi/mod.rs's own case (vi0102 to vi1202); the stops are for any other scene, which only the debug cutscene mode's numbers could name",
+                "Adventure's states (gm_Mode_Adventure_States, gm/registry.rs's ADVENTURE) name only the cutscene scenes 0x11 to 0x1B, each entered and its files read by vi/mod.rs's own case (vi0102 to vi1202); the stops are for any other scene, which only the debug cutscene mode's numbers could name",
             ),
             ("a car out with all thirty out", ALL_CARS_OUT),
         ],
@@ -501,14 +505,6 @@ const ALL_CARS_OUT: &str = "the F-Zero race's spawns stop once 31 are made ((f32
 /// but a cutscene, and the contest's entry clears `x4_2` and `x4_4`.
 const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
     (
-        "game mode {m:#x}'s states",
-        "the contest's states (gm_Mode_Homerun_States: the select, the match) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode's notices (0x14, after a trophy the distance earns: gm_80173754 with no challenger), which go back to it (onExitPrize)",
-    ),
-    (
-        "game mode {m:#x}'s loading",
-        "the contest's load (gm_Mode_Homerun_OnLoad) is in the scene machine, and so are the main menu's and the challenger approach mode's",
-    ),
-    (
         "the mode override",
         "the game installs one override, the boot's card check, ported",
     ),
@@ -517,11 +513,11 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the contest's match enters with VS mode's start data (uses_vs_melee)",
     ),
     (
-        "game scene {k:#x}",
+        "game scene {k:?}",
         "the contest's scenes are the one-door select and the VS scene, and the notices' prize scene, each in the scene machine",
     ),
     (
-        "Hook::Unported1P(name)",
+        "unported_call($name)",
         "the contest's states hook its select's and its match's entries and exits (HomeRunEnterCss, HomeRunExitCss, HomeRunEnterVs, HomeRunExitVs), none unported",
     ),
     (
@@ -562,14 +558,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
 /// and the mode's entry clears `x4_4`.
 const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
     (
-        "game mode {m:#x}'s states",
-        "the mode's states (its select and its match) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode (0x14) after a clear that earns Mr. Game & Watch's challenge or a notice (gm_801B65D4), which comes back to it (onExitVs@801BFBA8 after the challenger's match, onExitPrize after the notices)",
-    ),
-    (
-        "game mode {m:#x}'s loading",
-        "the mode's load is in the scene machine, and so are the main menu's and the challenger approach mode's",
-    ),
-    (
         "the mode override",
         "the game installs one override, the boot's card check, ported",
     ),
@@ -578,11 +566,11 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "the mode's match enters with its own start data (gm_801B6428's), in the scene machine",
     ),
     (
-        "game scene {k:#x}",
+        "game scene {k:?}",
         "the mode's scenes are the one-door select and the VS scene, and the challenger approach mode's (the approach, the challenger's match, the notices' prize scene), each in the scene machine",
     ),
     (
-        "Hook::Unported1P(name)",
+        "unported_call($name)",
         "the mode's states hook its select's and its match's entries and exits, none unported",
     ),
     (
@@ -624,14 +612,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
 /// (`gm.opponents`) or a player's leaving flag but a cutscene.
 const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
     (
-        "game mode {m:#x}'s states",
-        "each mode's states (its select and its match: gm_Mode_10ManVs_States to gm_Mode_CruelVs_States) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode (0x14) after a won 100-Man Melee that earns Falco's challenge or a notice (gm_801B688C), which comes back to it (onExitVs@801BFBA8 after the challenger's match, onExitPrize after the notices)",
-    ),
-    (
-        "game mode {m:#x}'s loading",
-        "the six modes' load (gm_Mode_10ManVs_OnLoad) is in the scene machine, and so are the main menu's and the challenger approach mode's",
-    ),
-    (
         "the mode override",
         "the game installs one override, the boot's card check, ported",
     ),
@@ -640,11 +620,11 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
         "the modes' matches enter with their own start data (gm_80495238), in the scene machine",
     ),
     (
-        "game scene {k:#x}",
+        "game scene {k:?}",
         "the mode's scenes are the one-door select and the VS scene, and the challenger approach mode's (the approach, the challenger's match, the notices' prize scene), each in the scene machine",
     ),
     (
-        "Hook::Unported1P(name)",
+        "unported_call($name)",
         "the modes' states hook their selects' and matches' entries and exits (MultiManEnterCss, MultiManExitCss, MultiManEnterMatch, MultiManExitMatch), none unported",
     ),
     (
@@ -702,14 +682,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
 /// to the notices.
 const TRAINING_UNREACHED: &[(&str, &str)] = &[
     (
-        "game mode {m:#x}'s states",
-        "Training's states (gm_Mode_Training_States: the select, the stage select, the match) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode's notices (0x14, after a trophy its exit gives: gm_801B2204's gm_80173754 with no challenger), which go back to it (onExitPrize)",
-    ),
-    (
-        "game mode {m:#x}'s loading",
-        "Training's load (gm_Mode_Training_OnLoad) is in the scene machine, and so are the main menu's and the challenger approach mode's",
-    ),
-    (
         "the mode override",
         "the game installs one override, the boot's card check, ported",
     ),
@@ -718,11 +690,11 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "Training's match enters with its own start data (gm_801B1F70's), in the scene machine",
     ),
     (
-        "game scene {k:#x}",
+        "game scene {k:?}",
         "Training's scenes are the one-door select, the stage select, its own match scene (GS_TRAINING) and the notices' prize scene, each in the scene machine with its exit",
     ),
     (
-        "Hook::Unported1P(name)",
+        "unported_call($name)",
         "Training's states hook its select's, stage select's and match's entries and exits (TrainingEnterCss to TrainingExitVs), none unported",
     ),
     (
@@ -790,34 +762,29 @@ pub const MISSING: &[Gap] = &[
     // The way in: the main menu's modes, their scenes and the matches' setup.
     Gap {
         what: "the single-player modes' scenes and states",
-        covers: &[
-            "Hook::Unported1P(name)",
-            "game mode {m:#x}'s states",
-            "game mode {m:#x}'s loading",
-            "game scene {k:#x}",
-        ],
+        covers: &["unported_call($name)", "game scene {k:?}"],
         // Not Event Match: the modes it enters (its own 0x2B with the one-door select and the
         // VS scene; 0x14 after a won event, for a trophy's notice or a challenger and its
-        // match; the main menu) each have their states, loads and scenes (gm/machine.rs's
+        // match; the main menu) each have their states, loads and scenes (gm/registry.rs's
         // EVENT, CHALLENGER, MENU), checked by its sessions (docs/oracle.md); the
-        // `Hook::Unported1P` hooks are Classic's, All-Star's and Adventure's coming soon. Not
+        // unported handlers (`u!`) are Classic's, All-Star's and Adventure's coming soon. Not
         // All-Star (task 23's third round): its modes (0x05 with the one-door select, the VS
         // scene for its rounds and rest areas and its game over 0x69; 0x17 after a clear, the
         // trophy fall, staff roll and congratulations; 0x14 after it; the main menu) each have
-        // their states, loads and scenes (gm/machine.rs's ALLSTAR, GOVER, CHALLENGER, MENU),
+        // their states, loads and scenes (gm/registry.rs's ALLSTAR, GOVER, CHALLENGER, MENU),
         // checked by its sessions (recordings/allstar-clear, m6-allstar-3/as-vh-clear,
         // m6-1p-setups/as-over), and its one unported hook is its coming soon state's exit
         // gm_801B607C, which ledger/dead.txt shows never runs. Not Adventure (task 24's debug
         // route): its modes (0x04 with the one-door select, the stage intros, the VS scene for
         // its matches, the cutscenes 0x11 to 0x1B and its game over 0x69; 0x16 after a clear,
         // the trophy fall, staff roll and congratulations; 0x14 after it; the main menu) each
-        // have their states, loads and scenes (gm/machine.rs's ADVENTURE, GOVER, CHALLENGER,
+        // have their states, loads and scenes (gm/registry.rs's ADVENTURE, GOVER, CHALLENGER,
         // MENU), checked by its sessions (recordings/2026-10-06_12-04-48, m6-intros/adv-*,
         // m6-adventure-dbg/adv-giga-vh), and its one unported hook is its coming soon state's
         // exit gm_801B4408, which ledger/dead.txt shows never runs. Not Classic (task 22's debug round): its modes (0x03 with the one-door select, the
         // intros, the VS scene for its stages and its game over 105; 0x15 after a clear, the
         // trophy fall, staff roll, ending movie and congratulations; 0x14 after it; the main
-        // menu) each have their states, loads and scenes (gm/machine.rs's CLASSIC, GOVER,
+        // menu) each have their states, loads and scenes (gm/registry.rs's CLASSIC, GOVER,
         // CHALLENGER, MENU), checked by its sessions (recordings/classic-clear,
         // m6-classic-dbg/cl-vh-ch, m6-intros/classic-easy, classic-no), and its one unported
         // hook is its coming soon state's exit gmClassic_801B3F18, which ledger/dead.txt shows

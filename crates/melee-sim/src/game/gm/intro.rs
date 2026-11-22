@@ -15,13 +15,10 @@ use super::super::state::{Game, OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, R
 use super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::{GameMode, GameScene};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
-
-/// `GS_INTRO_NORMAL`, Adventure's intro, and `GS_INTRO_EASY`, Classic's.
-pub const GS_INTRO_NORMAL: u8 = 0x0E;
-pub const GS_INTRO_EASY: u8 = 0x20;
 
 /// The scenes' entries and frame functions (`gmscdata.c`'s table).
 pub const EASY_ON_ENTER: CodeRef = CodeRef(0x8018_6E30);
@@ -239,8 +236,8 @@ pub struct Intros {
 }
 
 /// Whether `scene` is an intro this module ports.
-pub fn is_intro(scene: u8) -> bool {
-    scene == GS_INTRO_EASY || scene == GS_INTRO_NORMAL
+pub fn is_intro(scene: GameScene) -> bool {
+    scene == GameScene::ClassicIntro || scene == GameScene::AdventureIntro
 }
 
 /// `gm_1832_NormalArchiveNames`, `gm_1832_NormalBgmIds`, `gm_1832_NormalAudioMasks`: each
@@ -319,7 +316,7 @@ impl Running<'_> {
 
     /// The scene's enter data, Classic's (`gmClassicIntroDataBuffer`) or the debug mode's.
     fn intro_easy_enter(&self) -> [u8; 0x20] {
-        if self.game.game_mode == super::one_player::GM_CLASSIC {
+        if self.game.game_mode == GameMode::Classic {
             return self.game.one_player.classic_intro;
         }
         assert!(
@@ -1466,7 +1463,7 @@ impl Running<'_> {
             return None;
         }
         let mut f = super::super::vi::SceneFiles::default();
-        if scene == GS_INTRO_NORMAL {
+        if scene == GameScene::AdventureIntro {
             // Adventure's: `IrNml`, the stage's file and the intro's song.
             f.names.push(self.intro_file_name(NORMAL_ARCHIVE));
             let stkind = i32::from(self.game.one_player.adventure_intro.stkind);

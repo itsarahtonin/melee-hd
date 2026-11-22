@@ -4,7 +4,8 @@
 //! opening mode's first state, which the boot sets.
 
 use super::super::state::Running;
-use super::machine::{DECIDE_GAME_MODE, GM_OPENING_MV, GM_TITLE};
+use super::machine::DECIDE_GAME_MODE;
+use crate::game::gm::GameMode;
 
 /// The Pikmin trophy (`TROPHY_PIKMIN`).
 const TROPHY_PIKMIN: usize = 275;
@@ -54,10 +55,10 @@ impl Running<'_> {
         b.load_channel = 0;
         b.load_question = 0;
         if self.game.main_lib.skip_intro {
-            b.load_mode = GM_TITLE;
+            b.load_mode = GameMode::Title.id();
         } else {
             b.opening_state = 0;
-            b.load_mode = GM_OPENING_MV;
+            b.load_mode = GameMode::Opening.id();
         }
     }
 
@@ -79,7 +80,7 @@ impl Running<'_> {
         }
         self.set_game_mode_override(Some(DECIDE_GAME_MODE));
         let mode = self.game.boot_mode.leave_mode;
-        self.change_game_mode_after_scene(mode);
+        self.change_game_mode_after_scene(GameMode::of(mode));
     }
 
     /// `memcardOnLoad`: the card scene asks the player about the card.

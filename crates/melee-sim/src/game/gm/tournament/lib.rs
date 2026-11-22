@@ -10,9 +10,10 @@ use super::super::super::handles::CodeRef;
 use super::super::super::render::{CAMERA_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
 use super::super::super::structs::{MatchEnd, StartMeleeData};
-use super::{GM_TOURNAMENT, TmData};
+use super::TmData;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use crate::hsd::cobj;
 use crate::hsd::display::{Draw, Quad};
 use crate::hsd::gobj::{self, GObjId};
@@ -1573,7 +1574,7 @@ impl Running<'_> {
 
     /// Whether the tournament is the mode running.
     pub fn tou_running(&self) -> bool {
-        self.game.machine.routing.curr_mode == GM_TOURNAMENT
+        self.game.machine.routing.curr_mode == GameMode::Tournament
     }
 }
 

@@ -7,17 +7,15 @@ use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
 use super::super::state::{OBJ_JOBJ, Obj, Running};
-use super::machine::GM_MENU;
 use super::vs_mode;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::{SisPtr, TextId};
 use crate::vec::Vec3;
 
 /// `GM_CAMERA_MODE`.
-pub const GM_CAMERA_MODE: u8 = 0x0A;
 /// `GS_CAMERA_VS`, the card check's scene.
-pub const GS_CAMERA_VS: u8 = 0x2C;
 /// `GmVsMode_Camera`, Camera Mode's entry of the modes table.
 const TABLE: usize = 3;
 /// `VS_CAMERA`, the character select's match type for Camera Mode.
@@ -275,7 +273,7 @@ impl Running<'_> {
     /// refreshed (`lbDvd_80018254`).
     fn camera_preload(&mut self) {
         self.setup_vs_preload_cache();
-        self.dvd_mut().cache.scene.game_cache.mode_kind = GM_CAMERA_MODE;
+        self.dvd_mut().cache.scene.game_cache.mode_kind = GameMode::CameraMode.id();
         self.preload_refresh();
     }
 
@@ -291,7 +289,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B2510")]
     pub fn camera_exit_check(&mut self) {
         if matches!(self.game.camera_mode.check_exit, 1 | 2) {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
         }
     }
 
@@ -312,7 +310,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B25D4")]
     pub fn camera_exit_css(&mut self) {
         if self.game.vs_melee.css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let vs = self.game.vs_melee.css.vs.clone();

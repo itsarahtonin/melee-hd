@@ -16,6 +16,7 @@ use super::common::{
 };
 use super::main::{IN_A, IN_BACK, IN_DOWN, IN_START, IN_UP};
 use super::rules::{MODEL_CON_RL, MODEL_CURSOR_RL, MODEL_NM_RL, MODEL_TR01, RULES_PLUS};
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::JObjId;
 use crate::hsd::sis::TextId;
@@ -157,8 +158,8 @@ impl Running<'_> {
         } else if buttons & IN_START != 0 {
             self.lb_audio_call(1);
             self.plus_save();
-            if game_mode(self) == super::super::gm::machine::GM_MENU {
-                self.menu_exit_to(super::super::gm::GM_VS);
+            if game_mode(self) == GameMode::Menu {
+                self.menu_exit_to(GameMode::Vs);
                 return;
             }
             self.rules_leave();

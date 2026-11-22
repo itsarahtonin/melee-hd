@@ -122,6 +122,7 @@ use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
 use melee_render::predict::{Cost, Predictor};
 use melee_sim::audio::clock::{DiscSpeed, TB_HZ};
+use melee_sim::game::gm::GameMode;
 use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules, Special};
 use melee_sim::game::roster;
 use melee_sim::game::special_audit;
@@ -639,7 +640,7 @@ impl Platform {
     /// instead (Sudden Death and the others design call 6 of `docs/slippi-ruleset.md` names)
     /// saves none. Under Vanilla no recorder waits: the session's recording is its exact record.
     fn replay(&mut self, s: &mut melee_sim::game::session::Session) {
-        use melee_sim::game::gm::machine::{GM_OPENING_MV, GM_TITLE, Phase};
+        use melee_sim::game::gm::machine::Phase;
         use melee_sim::game::record::{Recorder, Setup};
         let unrebuilt = !s.in_live_match();
         let saves = saves_replays(s.setup.ruleset);
@@ -667,7 +668,7 @@ impl Platform {
                     // Dolphin plays every replay back as a debug VS match, which can't set up
                     // the mode; the session's recording has it.
                     let attract = matches!(g.machine.phase, Phase::Scene { mode, .. }
-                        if mode == GM_TITLE || mode == GM_OPENING_MV);
+                        if mode == GameMode::Title || mode == GameMode::Opening);
                     let single_player = melee_sim::game::gm::is_1p_mode(g);
                     if single_player {
                         eprintln!("a single-player mode's match isn't saved as a replay");
@@ -1443,14 +1444,13 @@ fn give_snapshot(
     s: &Session,
     draws: &[melee_sim::hsd::display::Draw],
 ) {
-    use melee_sim::game::gm::camera_mode::GM_CAMERA_MODE;
     use melee_sim::game::gm::machine::Phase;
     use melee_sim::hsd::display::Draw;
     use melee_sim::lb::snap_write::{IMAGE_SIZE, give_frame, will_give_frames};
     // Every snapshot's frame is this view's, the first too: no copy takes the buffer's bytes.
     will_give_frames();
     let camera =
-        matches!(s.game().machine.phase, Phase::Scene { mode, .. } if mode == GM_CAMERA_MODE);
+        matches!(s.game().machine.phase, Phase::Scene { mode, .. } if mode == GameMode::CameraMode);
     if !camera {
         *view = None;
         return;

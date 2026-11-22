@@ -10,8 +10,9 @@
 //! console's on which nobody confirmed there: no game code changes, and a session the player
 //! records is still a console's.
 
-use super::gm::machine::{GM_MENU, Phase};
+use super::gm::machine::Phase;
 use super::state::Game;
+use crate::game::gm::GameMode;
 
 /// A menu entry the player doesn't let a player confirm.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,7 +42,7 @@ pub fn gate_in(game: &Game, gates: &'static [Gate]) -> Option<&'static Gate> {
     let Phase::Scene { mode, .. } = game.machine.phase else {
         return None;
     };
-    if mode != GM_MENU {
+    if mode != GameMode::Menu {
         return None;
     }
     let f = &game.menu.flow;
@@ -116,7 +117,7 @@ pub const STOPS: &[(&str, &str)] = &[
         "the album loads its model anew, so slot A's joint's texture is the file's blank image when its setup reads it",
     ),
     (
-        "Hook::Unported1P(name)",
+        "unported_call($name)",
         "the single-player modes', which only the entries behind GATES lead to: each mode's states past its select (gm::one_player), its own task's",
     ),
     (
@@ -168,15 +169,7 @@ pub const STOPS: &[(&str, &str)] = &[
         "the game installs one override, the boot's card check (`bootOnLeave`'s `lbCardGame_DecideGameMode`), ported",
     ),
     (
-        "game mode {m:#x}'s states",
-        "every mode the menus reach is in the scene machine; the rest are the single-player modes behind GATES (their game overs and endings with them) and the debug modes (ledger/deferred.txt)",
-    ),
-    (
-        "game mode {m:#x}'s loading",
-        "every mode the menus reach is in the scene machine; the rest are the single-player modes behind GATES and the debug modes (ledger/deferred.txt)",
-    ),
-    (
-        "game scene {k:#x}",
+        "game scene {k:?}",
         "every scene the menus' modes run is in the scene machine; the rest are the single-player modes' and the debug modes'",
     ),
     (

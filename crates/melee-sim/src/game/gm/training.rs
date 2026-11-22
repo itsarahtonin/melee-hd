@@ -14,6 +14,7 @@ use super::super::state::{OBJ_JOBJ, Obj, Running};
 use super::super::structs::{PlayerInitData, StartMeleeData};
 use super::match_exit::MatchExitInfo;
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -21,7 +22,6 @@ use crate::vec::Vec3;
 use gekko_fp as fp;
 
 /// `GS_TRAINING`, Training's match scene.
-pub const GS_TRAINING: u8 = 0x04;
 /// The scene's functions: `gm_Scene_Training_OnEnter`, `gm_Scene_Training_OnFrame`.
 pub const ON_ENTER: CodeRef = CodeRef(0x8016_EC28);
 pub const ON_FRAME: CodeRef = CodeRef(0x8016_D32C);
@@ -235,7 +235,7 @@ impl Running<'_> {
         self.training_combo_trophies(p.ckind);
         self.trophy_unlocks();
         let slot = self.game.one_player.training_slot;
-        if !self.challenger_check(super::one_player::GM_TRAINING, slot) {
+        if !self.challenger_check(GameMode::Training, slot) {
             self.set_next_game_mode_state_id(0);
         }
         self.lb_audio_call(SFX_FORWARD);
@@ -295,7 +295,7 @@ impl Running<'_> {
     /// (`fn_8018A000`).
     #[doc(alias = "gm_Scene_Training_OnEnter")]
     pub fn training_on_enter(&mut self) {
-        let (start, files) = self.vs_scene_files(super::one_player::GM_TRAINING);
+        let (start, files) = self.vs_scene_files(GameMode::Training.id());
         self.game.gm.on_frame = Some(ON_FRAME);
         self.start_vs(&start, files, None);
         self.vs_ready(0);

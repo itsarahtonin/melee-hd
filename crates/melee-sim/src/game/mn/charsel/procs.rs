@@ -4,6 +4,7 @@
 use super::setup::counts_kos;
 use super::*;
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 
 /// `mnCharSel_804DC560`, `804DC564`: a name list's white and the gray of names taken.
 const WHITE: [u8; 3] = [255, 255, 255];
@@ -938,7 +939,7 @@ impl Running<'_> {
             self.free_gobj_links(1, 8);
             self.sis_reset();
             self.game.game_data.x1850.force_main_menu = 1;
-            self.change_game_mode_after_scene(super::super::super::gm::machine::GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             self.game.end_scene();
             return;
         }

@@ -15,6 +15,7 @@ use super::hud::devtext::DevText;
 use super::state::{Game, Running};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::gm::GameMode;
 use crate::game::it::ItKind;
 use crate::hsd::cobj;
 use crate::hsd::gobj::GObjId;
@@ -810,9 +811,7 @@ impl Running<'_> {
     fn db_check_camera(&mut self, port: i32, down: u32, pressed: u32, cx: f64, cy: f64) {
         let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
         let threshold = reg(0.6);
-        if !super::gm::is_training(self.game)
-            && self.game.game_mode != super::gm::camera_mode::GM_CAMERA_MODE
-        {
+        if !super::gm::is_training(self.game) && self.game.game_mode != GameMode::CameraMode {
             let c = &self.game.camera;
             if !c.is_debug_free()
                 && !c.is_debug_follow()

@@ -30,6 +30,7 @@ use melee_sim::state_eq::StateEq;
 
 use crate::diff::panic_text;
 use crate::session::{Console, Recording};
+use melee_sim::game::gm::{GameMode, GameScene};
 
 /// One tick and its frame's display pass when it's due: the tick's output.
 fn step(s: &mut Session, console: &mut Console) -> Frame {
@@ -324,10 +325,10 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
         if shortcut
             && now_match
             && in_scene == 1
-            && s.game.machine.routing.curr_mode == melee_sim::game::gm::GM_VS
+            && s.game.machine.routing.curr_mode == GameMode::Vs
             // The VS scene's match, not Sudden Death's or the results screen's fighters.
             && melee_sim::game::gm::machine::scene_kind(s.game.machine.scene_info)
-                == Some(melee_sim::game::gm::machine::GS_VS)
+                == Some(GameScene::Vs)
             && !check_shortcut(tick - 1, &s, ring[slot].game.objs.rng.seed, &disc)
         {
             shortcut_failed = true;

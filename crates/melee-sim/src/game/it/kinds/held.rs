@@ -389,7 +389,10 @@ pub fn entered_air(r: &mut Running, gobj: GObjId, h: &Held) {
     change_state(r, gobj, h.skid, change::ANIM_UPDATE);
     if h.skid_faces_motion {
         let ip = item_mut(r.game, gobj);
-        let v = fp::fadds(fp::fadds(reg(ip.vel.x), reg(ip.skid_vel.x)), reg(ip.slide_vel.x));
+        let v = fp::fadds(
+            fp::fadds(reg(ip.vel.x), reg(ip.skid_vel.x)),
+            reg(ip.slide_vel.x),
+        );
         ip.facing_dir = if v >= 0.0 { 1.0 } else { -1.0 };
         let dir = if -1.0 == ip.facing_dir { -1 } else { 1 };
         ip.coll.set_facing_dir(dir);

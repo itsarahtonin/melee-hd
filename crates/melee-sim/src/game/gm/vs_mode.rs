@@ -8,6 +8,7 @@ use gekko_fp as fp;
 use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
 use crate::game::pl::player::{PKIND_HUMAN, PKIND_NONE};
@@ -516,17 +517,17 @@ impl Special {
     ];
 
     /// Its game mode.
-    pub fn game_mode(self) -> u8 {
+    pub fn game_mode(self) -> GameMode {
         match self {
-            Special::SuperSuddenDeath => 0x10,
-            Special::Invisible => 0x11,
-            Special::SlowMo => 0x12,
-            Special::Lightning => 0x13,
-            Special::Tiny => 0x1D,
-            Special::Giant => 0x1E,
-            Special::Stamina => 0x1F,
-            Special::FixedCamera => 0x2A,
-            Special::SingleButton => 0x2C,
+            Special::SuperSuddenDeath => GameMode::SuperSuddenDeath,
+            Special::Invisible => GameMode::Invisible,
+            Special::SlowMo => GameMode::SlowMo,
+            Special::Lightning => GameMode::Lightning,
+            Special::Tiny => GameMode::Tiny,
+            Special::Giant => GameMode::Giant,
+            Special::Stamina => GameMode::Stamina,
+            Special::FixedCamera => GameMode::FixedCamera,
+            Special::SingleButton => GameMode::SingleButton,
         }
     }
 

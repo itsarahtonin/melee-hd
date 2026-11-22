@@ -11,6 +11,7 @@ use super::super::handles::CodeRef;
 use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use super::super::structs::MatchEnd;
 use crate::fpu::mem;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -219,24 +220,24 @@ impl Running<'_> {
     /// (`gmVsMelee_ResultsEnterData`, which the modes kept with it share).
     #[doc(alias = "gm_GetGameModeStateEnterData")]
     pub fn results_enter(&self) -> &ResultsMatchInfo {
-        match self.game.machine.routing.curr_mode {
-            super::tournament::GM_TOURNAMENT => &self.game.tou.results_enter,
-            super::GM_DEBUG if self.game.machine.routing.curr_state_id == 11 => {
+        match GameMode::of(self.game.machine.routing.curr_mode) {
+            GameMode::Tournament => &self.game.tou.results_enter,
+            GameMode::Debug if self.game.machine.routing.curr_state_id == 11 => {
                 &self.game.debug_mode.results1
             }
-            super::GM_DEBUG => &self.game.debug_mode.results0,
+            GameMode::Debug => &self.game.debug_mode.results0,
             _ => &self.game.vs_melee.results_enter,
         }
     }
 
     /// [`Running::results_enter`], to write.
     pub fn results_enter_mut(&mut self) -> &mut ResultsMatchInfo {
-        match self.game.machine.routing.curr_mode {
-            super::tournament::GM_TOURNAMENT => &mut self.game.tou.results_enter,
-            super::GM_DEBUG if self.game.machine.routing.curr_state_id == 11 => {
+        match GameMode::of(self.game.machine.routing.curr_mode) {
+            GameMode::Tournament => &mut self.game.tou.results_enter,
+            GameMode::Debug if self.game.machine.routing.curr_state_id == 11 => {
                 &mut self.game.debug_mode.results1
             }
-            super::GM_DEBUG => &mut self.game.debug_mode.results0,
+            GameMode::Debug => &mut self.game.debug_mode.results0,
             _ => &mut self.game.vs_melee.results_enter,
         }
     }

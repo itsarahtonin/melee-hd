@@ -3,13 +3,12 @@
 
 use crate::compare::Comparer;
 use crate::import::sym;
+use melee_sim::game::gm::GameMode;
 use melee_sim::game::mirror::Cx;
 use melee_sim::hsd::sis::TextWord;
 
 /// `HSD_Free`, the screens' user data release.
 const HSD_FREE: u32 = 0x8037_F1B0;
-/// `GM_TOURNAMENT`.
-const GM_TOURNAMENT: u8 = 0x1B;
 
 impl Comparer<'_> {
     /// A user data block's address and release, as ours has them.
@@ -105,7 +104,7 @@ impl Comparer<'_> {
                 ud + 0xC + 4 * i as u32,
             );
         }
-        let tournament = self.game.machine.routing.curr_mode == GM_TOURNAMENT;
+        let tournament = self.game.machine.routing.curr_mode == GameMode::Tournament;
         const KEPT: [usize; 5] = [2, 9, 2, 4, 2];
         for (i, &n) in KEPT.iter().enumerate() {
             if tournament && i == 4 {
@@ -158,7 +157,7 @@ impl Comparer<'_> {
                 ud + 0xC + 4 * i as u32,
             );
         }
-        let tournament = self.game.machine.routing.curr_mode == GM_TOURNAMENT;
+        let tournament = self.game.machine.routing.curr_mode == GameMode::Tournament;
         let x186c = self.game.game_data.thing.save_data.x186C;
         const KEPT: [usize; 5] = [7, 2, 2, 2, 2];
         for (i, &n) in KEPT.iter().enumerate() {

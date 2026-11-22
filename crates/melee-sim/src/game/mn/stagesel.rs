@@ -15,6 +15,7 @@ use super::super::handles::CodeRef;
 use super::super::render::{JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::hsd::cobj;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId, type_mask};
@@ -658,11 +659,11 @@ impl Running<'_> {
     /// The stage select's enter and exit data (`gm_GetGameModeStateEnterData`): Tournament
     /// mode's own (`gm_8048BD20`), Training's (`sss_data`), else VS mode's (the modes kept with it share it).
     fn sss_data(&self) -> &super::super::gm::vs_melee::SssData {
-        if super::common::game_mode(self) == super::common::GM_TOURNAMENT {
+        if super::common::game_mode(self) == GameMode::Tournament {
             &self.game.tou.sss
-        } else if super::common::game_mode(self) == crate::game::gm::GM_HANYU_SSS {
+        } else if super::common::game_mode(self) == GameMode::HanyuSss {
             &self.game.debug_mode.hanyu_sss
-        } else if super::common::game_mode(self) == crate::game::gm::one_player::GM_TRAINING {
+        } else if super::common::game_mode(self) == GameMode::Training {
             &self.game.one_player.training_sss
         } else {
             &self.game.vs_melee.sss
@@ -670,11 +671,11 @@ impl Running<'_> {
     }
 
     fn sss_data_mut(&mut self) -> &mut super::super::gm::vs_melee::SssData {
-        if super::common::game_mode(self) == super::common::GM_TOURNAMENT {
+        if super::common::game_mode(self) == GameMode::Tournament {
             &mut self.game.tou.sss
-        } else if super::common::game_mode(self) == crate::game::gm::GM_HANYU_SSS {
+        } else if super::common::game_mode(self) == GameMode::HanyuSss {
             &mut self.game.debug_mode.hanyu_sss
-        } else if super::common::game_mode(self) == crate::game::gm::one_player::GM_TRAINING {
+        } else if super::common::game_mode(self) == GameMode::Training {
             &mut self.game.one_player.training_sss
         } else {
             &mut self.game.vs_melee.sss
@@ -915,7 +916,7 @@ impl Running<'_> {
                 crate::hsd::gobj::free(self, c);
             }
             self.game.game_data.x1850.force_main_menu = 1;
-            self.change_game_mode_after_scene(super::super::gm::machine::GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             self.game.end_scene();
             return;
         }

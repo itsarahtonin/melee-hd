@@ -140,19 +140,9 @@ fn forgotten(r: &mut Running, _: GObjId, zelda: GObjId) {
 
 /// Its effect ended, if one is on (`xDF4`).
 fn end_effects(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj)
-        .vars
-        .zelda_din_fire()
-        .started
-        .get()
-        != 0
-    {
+    if item_mut(r.game, gobj).vars.zelda_din_fire().started.get() != 0 {
         crate::game::ef::eflib::destroy_all(r, gobj);
-        item_mut(r.game, gobj)
-            .vars
-            .zelda_din_fire()
-            .started
-            .set(0);
+        item_mut(r.game, gobj).vars.zelda_din_fire().started.set(0);
     }
 }
 
@@ -182,11 +172,7 @@ fn fly(r: &mut Running, gobj: GObjId) {
     v.rot.set(rot);
     v.speed.set(speed);
     ef::spawn(r, GFX_FLY, Some(gobj), &[Arg::JObj(j)]);
-    item_mut(r.game, gobj)
-        .vars
-        .zelda_din_fire()
-        .started
-        .set(1);
+    item_mut(r.game, gobj).vars.zelda_din_fire().started.set(1);
     set_velocity(r, gobj);
 }
 
@@ -216,11 +202,7 @@ fn burst(r: &mut Running, gobj: GObjId) {
     end_effects(r, gobj);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     ef::spawn(r, GFX_BURST, Some(gobj), &[Arg::JObj(j)]);
-    item_mut(r.game, gobj)
-        .vars
-        .zelda_din_fire()
-        .started
-        .set(1);
+    item_mut(r.game, gobj).vars.zelda_din_fire().started.set(1);
     let life = attr_f32(r, gobj, attr::BURST);
     item_mut(r.game, gobj).life_timer = life;
 }

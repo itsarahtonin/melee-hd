@@ -8,7 +8,7 @@ use melee_data::archive::{ArchiveId, DataRef};
 use super::super::handles::CodeRef;
 use super::super::render::{CAMERA_CALLBACK, JOBJ_CALLBACK};
 use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, Obj, Running};
-use super::machine::GM_BOOT;
+use crate::game::gm::GameMode;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
 
@@ -235,7 +235,7 @@ impl Running<'_> {
     /// `gm_801BF920`: the boot mode follows.
     #[doc(alias = "gm_801BF920")]
     pub fn prog_scan_mode_on_exit(&mut self) {
-        self.change_game_mode_after_scene(GM_BOOT);
+        self.change_game_mode_after_scene(GameMode::Boot);
     }
 
     /// `gmMainLib_8015F588`: the video mode with or without deflicker, interlaced or

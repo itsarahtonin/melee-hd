@@ -15,6 +15,7 @@ use super::super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, 
 use super::super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sobj::{self, OBJ_SOBJ};
@@ -60,11 +61,6 @@ const SCALES: [f32; crate::game::ft::CharacterKind::COUNT] = [
 
 /// `gm_804D4278`: the tinted copy's color.
 const TINT: [u8; 3] = [0xAA, 0xAA, 0xFF];
-
-/// The game over modes' modes and their own.
-const GM_CLASSIC: u8 = 3;
-const GM_ADVENTURE: u8 = 4;
-const GM_ALLSTAR: u8 = 5;
 
 /// The copies' images: `gm_804808F8.x0[i][j]` at `2i + j` (the fighter's color and depth,
 /// two of each), `gm_804809D0[i]` at `4 + i` (the frame), and `gm_80480964.x0[i][j]` at
@@ -171,12 +167,15 @@ fn scene_model(r: &Running, scene: DataRef) -> DataRef {
 impl Running<'_> {
     /// The trophy fall's mode for `gm_80160474`: Classic's, Adventure's, the debug one's
     /// stand-in (`gm_801BF050`), else All-Star's, `gm_801A659C`'s switch.
-    fn toy_fall_mode(&self) -> u8 {
-        match super::super::super::mn::common::game_mode(self) {
-            super::GM_CLASSIC_GOVER => GM_CLASSIC,
-            super::GM_ADVENTURE_GOVER => GM_ADVENTURE,
-            super::GM_DEBUG_GOVER => self.game.endings.gover.mode(),
-            _ => GM_ALLSTAR,
+    fn toy_fall_mode(&self) -> GameMode {
+        match GameMode::of(super::super::super::mn::common::game_mode(self)) {
+            GameMode::ClassicEnding => GameMode::Classic,
+            GameMode::AdventureEnding => GameMode::Adventure,
+            // A number no mode has takes All-Star's, as `gm_80160474`'s switch does.
+            GameMode::DebugEnding => {
+                GameMode::from_id(self.game.endings.gover.mode()).unwrap_or(GameMode::AllStar)
+            }
+            _ => GameMode::AllStar,
         }
     }
 
@@ -1179,10 +1178,10 @@ fn toy_fall_archive_name(us: bool) -> &'static str {
 }
 
 /// The mode's trophy stands (`TyMcCmDs.dat`, `TyMcR1Ds.dat`, `TyMcR2Ds.dat`).
-fn stands_file(mode: u8) -> &'static str {
+fn stands_file(mode: GameMode) -> &'static str {
     match mode {
-        super::GM_CLASSIC_GOVER | GM_CLASSIC => "TyMcCmDs.dat",
-        super::GM_ADVENTURE_GOVER | GM_ADVENTURE => "TyMcR1Ds.dat",
+        GameMode::ClassicEnding | GameMode::Classic => "TyMcCmDs.dat",
+        GameMode::AdventureEnding | GameMode::Adventure => "TyMcR1Ds.dat",
         _ => "TyMcR2Ds.dat",
     }
 }

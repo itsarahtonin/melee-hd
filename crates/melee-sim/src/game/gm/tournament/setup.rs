@@ -16,6 +16,7 @@ use super::lib::{
 };
 use super::{Loaded, MATCH_TYPE, STATE_ALT, STATE_BRACKET};
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::game::state::{OBJ_FOG, Obj, Running};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -103,9 +104,6 @@ const PAD_Y: u32 = 0x800;
 const PAD_START: u32 = 0x1000;
 const PAD_R: u32 = 0x20;
 const PAD_L: u32 = 0x40;
-
-/// `GM_MENU`.
-const GM_MENU: u8 = 1;
 
 /// `lbl_804DA78C`: the list's second name's color.
 const GREEN: [u8; 4] = [0x46, 0xDC, 0x46, 0xFF];
@@ -1233,7 +1231,7 @@ impl Running<'_> {
             }
         } else if t & PAD_B != 0 {
             self.lb_audio_call(0);
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             self.game.end_scene();
         }
         if t != 0 {
@@ -2108,7 +2106,7 @@ impl Running<'_> {
             self.free_gobj_links(0x12, 0x15);
             self.game.game_data.x1850.force_main_menu = 1;
             self.game.end_scene();
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         if self.game.tou.tm.in_name_entry != 0 {

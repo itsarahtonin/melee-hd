@@ -2,6 +2,7 @@
 //! Greens at 0.7 its scale, a Kirby facing it whose start point the scene measures from its
 //! animation's frame 120.
 
+use crate::game::gm::GameScene;
 use melee_data::archive::DataRef;
 
 use super::super::state::Running;
@@ -105,7 +106,7 @@ impl Running<'_> {
     #[doc(alias = "vi0502_GObj_OnRender")]
     #[doc(alias = "vi0502_8031E304")]
     pub fn vi0502_on_enter(&mut self) {
-        let desc = super::enter_desc(self.game, 0x15);
+        let desc = super::enter_desc(self.game, GameScene::CutsceneGiantKirby);
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);

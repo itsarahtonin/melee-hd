@@ -8,6 +8,7 @@ use super::super::render::JOBJ_CALLBACK;
 use super::super::state::{OBJ_JOBJ, Obj, Running, UserData};
 use super::main::{IN_BACK, IN_CONFIRM, IN_LEFT, IN_RIGHT, STADIUM};
 use super::options::{EXIT_TO, MOBJ_MASK, OptionMenu, SFX_BACK, SFX_FORWARD, SFX_MOVE, al};
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::{self, JObjId};
 
@@ -89,7 +90,7 @@ impl Running<'_> {
             self.note_confirm_port();
             let cursor = self.option_menu(g).1.cursor;
             if cursor < 6 {
-                self.menu_exit_to(super::super::gm::GM_10MAN_VS + cursor);
+                self.menu_exit_to(GameMode::of(GameMode::TenMan.id() + cursor));
             }
             return;
         }

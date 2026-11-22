@@ -13,10 +13,11 @@ use super::super::handles::CodeRef;
 use super::super::render::JOBJ_CALLBACK;
 use super::super::state::{Game, OBJ_JOBJ, Obj, Running, UserData};
 use super::common::{
-    GM_TOURNAMENT, add_child, al, anim, anim_all, child, frame_of, game_mode, hide, load_model,
-    node, req_all, set_frame, set_frame_all, show,
+    add_child, al, anim, anim_all, child, frame_of, game_mode, hide, load_model, node, req_all,
+    set_frame, set_frame_all, show,
 };
 use super::main::{IN_A, IN_BACK, IN_DOWN, IN_START, IN_UP};
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::JObjId;
 use crate::hsd::sis::TextId;
@@ -147,14 +148,14 @@ pub struct RulesData {
 
 /// Whether the rules' option `i` is shown: all but the stage selection in Tournament mode.
 pub(crate) fn rules_shown(game: &Game, i: u8) -> bool {
-    !(game.machine.routing.curr_mode == GM_TOURNAMENT && i == 4)
+    !(game.machine.routing.curr_mode == GameMode::Tournament && i == 4)
 }
 
 /// Whether the extra rules' option `i` is shown: friendly fire but in Tournament mode, the
 /// score display and the random stage switch once unlocked.
 pub(crate) fn rule_plus_shown(game: &Game, i: u8) -> bool {
     let x186c = game.features();
-    if game.machine.routing.curr_mode == GM_TOURNAMENT && i == 1 {
+    if game.machine.routing.curr_mode == GameMode::Tournament && i == 1 {
         return false;
     }
     match i {
@@ -291,8 +292,8 @@ impl Running<'_> {
         } else if buttons & IN_START != 0 {
             self.lb_audio_call(1);
             self.rules_save();
-            if game_mode(self) == super::super::gm::machine::GM_MENU {
-                self.menu_exit_to(super::super::gm::GM_VS);
+            if game_mode(self) == GameMode::Menu {
+                self.menu_exit_to(GameMode::Vs);
                 return;
             }
             self.rules_leave();
@@ -339,7 +340,7 @@ impl Running<'_> {
         } else {
             LIMITS[usize::from(h)]
         };
-        let tournament = game_mode(self) == GM_TOURNAMENT;
+        let tournament = game_mode(self) == GameMode::Tournament;
         let auto = self.game.vs_menus.auto_handicap;
         if buttons & (IN_LEFT | IN_RIGHT) == 0 {
             return;
@@ -389,13 +390,13 @@ impl Running<'_> {
     /// Tournament's setup or the character select's screen (`mnCharSel_802640A0`).
     #[doc(alias = "mn_8022F4CC")]
     pub(crate) fn rules_leave(&mut self) {
-        match game_mode(self) {
-            GM_TOURNAMENT => {
+        match GameMode::of(game_mode(self)) {
+            GameMode::Tournament => {
                 self.sis_reset();
                 self.menu_free_gobjs();
                 self.tou_back_from_rules();
             }
-            super::super::gm::machine::GM_MENU => self.go_to_list(2, 3, 3),
+            GameMode::Menu => self.go_to_list(2, 3, 3),
             _ => {
                 self.sis_reset();
                 self.menu_free_gobjs();
@@ -826,7 +827,7 @@ impl Running<'_> {
             handicap = 0;
         }
         let mut time_limit = r.time_limit;
-        if game_mode(self) == GM_TOURNAMENT && time_limit == 0 {
+        if game_mode(self) == GameMode::Tournament && time_limit == 0 {
             time_limit = 0x63;
         }
         let mut d = RulesData {

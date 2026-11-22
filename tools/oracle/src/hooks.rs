@@ -265,7 +265,7 @@ fn hook(game: &mut Game, at: Entry) {
                 let routing = &mut game.machine.routing;
                 if let Some(mode) = s.hooks.mode
                     && s.first
-                    && routing.curr_mode == 0
+                    && routing.curr_mode == melee_sim::game::gm::GameMode::Title
                 {
                     s.first = false;
                     routing.curr_mode = mode;

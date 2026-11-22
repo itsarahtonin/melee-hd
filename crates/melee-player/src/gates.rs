@@ -67,14 +67,15 @@ pub fn note_text(g: &Gate) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use melee_sim::game::gm::machine::{GM_MENU, Phase};
+    use melee_sim::game::gm::GameMode;
+    use melee_sim::game::gm::machine::Phase;
     use melee_sim::input::pad::PadStatus;
 
     fn menu(list: u8, entry: u16) -> Game {
         let mut g = Game::default();
         g.machine.phase = Phase::Scene {
-            mode: GM_MENU,
-            scene_mode: 1,
+            mode: GameMode::Menu.id(),
+            scene_mode: GameMode::Menu.id(),
             state: 0,
             overridden: false,
         };

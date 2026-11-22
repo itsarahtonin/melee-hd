@@ -13,8 +13,8 @@ use melee_data::archive::DataRef;
 use super::super::handles::CodeRef;
 use super::super::render::{FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
-use super::machine::{GM_MENU, GM_OPENING_MV, GM_TITLE};
-use super::{DB_DEBUG_ROM, GM_DEBUG, GM_DEBUG_SOUND_TEST, GM_DEBUG_VS};
+use super::DB_DEBUG_ROM;
+use crate::game::gm::GameMode;
 use crate::hsd::fog;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -283,7 +283,8 @@ impl Running<'_> {
     #[doc(alias = "gm_GetCurrentSceneIndex")]
     fn title_active(&self) -> bool {
         let r = &self.game.machine.routing;
-        !(r.curr_mode == GM_TITLE || (r.curr_mode == GM_OPENING_MV && r.curr_state_id == 2))
+        !(r.curr_mode == GameMode::Title
+            || (r.curr_mode == GameMode::Opening && r.curr_state_id == 2))
     }
 
     /// `gmTitle_801A146C`, the background's process.
@@ -576,7 +577,7 @@ impl Running<'_> {
     #[doc(alias = "gm_GetCurrentSceneExitData")]
     fn title_exit_data(&mut self) -> &mut i32 {
         match self.game.machine.scene_info {
-            Some((GM_OPENING_MV, _)) => &mut self.game.title.opening_exit_buttons,
+            Some((m, _)) if m == GameMode::Opening => &mut self.game.title.opening_exit_buttons,
             _ => &mut self.game.title.exit_buttons,
         }
     }
@@ -590,13 +591,13 @@ impl Running<'_> {
         if self.game.gm.db_level >= DB_DEBUG_ROM {
             // A debug level's exits, Start to the main menu with no unlocks' checks.
             let mode = if b & i32::from(BUTTON_A) != 0 {
-                GM_DEBUG_VS
+                GameMode::DebugVs
             } else if b & i32::from(BUTTON_START) != 0 {
-                GM_MENU
+                GameMode::Menu
             } else if b & i32::from(BUTTON_X) != 0 {
-                GM_DEBUG_SOUND_TEST
+                GameMode::DebugSoundTest
             } else if b & i32::from(BUTTON_Y) != 0 {
-                GM_DEBUG
+                GameMode::Debug
             } else {
                 return;
             };
@@ -640,16 +641,16 @@ impl Running<'_> {
         let b = self.game.title.exit_buttons;
         let debug = self.game.gm.db_level >= DB_DEBUG_ROM;
         if debug && b & i32::from(BUTTON_A) != 0 {
-            self.set_pending_game_mode(GM_DEBUG_VS);
+            self.set_pending_game_mode(GameMode::DebugVs);
         } else if b & i32::from(BUTTON_START) != 0 {
             self.menu_entry_unlocks();
         } else if debug && b & i32::from(BUTTON_X) != 0 {
-            self.set_pending_game_mode(GM_DEBUG_SOUND_TEST);
+            self.set_pending_game_mode(GameMode::DebugSoundTest);
         } else if debug && b & i32::from(BUTTON_Y) != 0 {
-            self.set_pending_game_mode(GM_DEBUG);
+            self.set_pending_game_mode(GameMode::Debug);
         } else {
             self.game.boot_mode.opening_state = 1;
-            self.set_pending_game_mode(GM_OPENING_MV);
+            self.set_pending_game_mode(GameMode::Opening);
         }
         self.set_new_game_mode_pending();
     }

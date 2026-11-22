@@ -35,6 +35,7 @@ use crate::vec::Vec3;
 use gekko_fp as fp;
 
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 pub use cursor::CURSOR_THINK;
 
 /// The scene's entry, frame and exit (`mnCharSel_Scene_OnEnter`, `_OnFrame`, `_OnExit`).
@@ -812,7 +813,7 @@ impl Running<'_> {
     /// A single-player mode's own (`gm::one_player`).
     pub(crate) fn css(&self) -> &super::super::gm::vs_melee::CssData {
         let mode = super::common::game_mode(self);
-        if mode == crate::game::gm::GM_HANYU_CSS {
+        if mode == GameMode::HanyuCss {
             &self.game.debug_mode.hanyu_css
         } else if let Some(c) = self.one_player_css(mode) {
             c
@@ -823,7 +824,7 @@ impl Running<'_> {
 
     pub(crate) fn css_mut(&mut self) -> &mut super::super::gm::vs_melee::CssData {
         let mode = super::common::game_mode(self);
-        if mode == crate::game::gm::GM_HANYU_CSS {
+        if mode == GameMode::HanyuCss {
             &mut self.game.debug_mode.hanyu_css
         } else if self.one_player_css(mode).is_some() {
             self.one_player_css_mut(mode)

@@ -10,6 +10,7 @@ use super::super::state::{Game, Running};
 use super::super::structs::plActionStats;
 use crate::fpu::reg;
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 
 /// `pl_803BCE70`: the animation each normal attack needs for its own count (-1 none), by
 /// attack from 1.
@@ -976,12 +977,11 @@ impl Game {
     /// The running 1P run's state, `fn_8017DF28`: Classic's, Adventure's or All-Star's.
     #[doc(alias = "fn_8017DF28")]
     pub fn one_player_run(&self) -> Option<&super::super::gm::one_player::OnePlayerRun> {
-        use super::super::gm::{GM_ADVENTURE, GM_ALLSTAR, GM_CLASSIC};
         let o = &self.one_player;
-        match self.game_mode {
-            GM_CLASSIC => Some(&o.classic.base),
-            GM_ADVENTURE => Some(&o.adventure.base),
-            GM_ALLSTAR => Some(&o.allstar.base),
+        match GameMode::of(self.game_mode) {
+            GameMode::Classic => Some(&o.classic.base),
+            GameMode::Adventure => Some(&o.adventure.base),
+            GameMode::AllStar => Some(&o.allstar.base),
             _ => None,
         }
     }

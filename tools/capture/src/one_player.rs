@@ -10,6 +10,7 @@ use melee_sim::game::structs::PlayerInitData;
 
 use crate::compare::Comparer;
 use crate::import::sym;
+use melee_sim::game::gm::GameScene;
 
 /// `gmClassic_80470708`, `gm_80490960`, `gm_80490AA8`, and Training's `css_data` and
 /// `sss_data` (`gmtrainingmode.c`'s).
@@ -494,7 +495,7 @@ impl Comparer<'_> {
         // its freed heap in both, which nothing reads until the next match's menu sets them
         // again (`fn_8018A000`, `fn_80189B88`).
         let live = melee_sim::game::gm::machine::scene_kind(self.game.machine.scene_info)
-            == Some(melee_sim::game::gm::training::GS_TRAINING);
+            == Some(GameScene::Training);
         if live {
             self.compare_handle(
                 "gm_80473814.gobj",

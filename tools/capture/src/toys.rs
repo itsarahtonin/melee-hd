@@ -7,12 +7,11 @@
 use melee_data::archive::DataRef;
 use melee_sim::game::gm::machine::scene_kind;
 use melee_sim::game::mirror::Cx;
-use melee_sim::game::ty::{
-    GS_TOY_COLLECTION, GS_TOY_GALLERY, GS_TOY_LOTTERY, Loaded, TROPHY_COUNT,
-};
+use melee_sim::game::ty::{Loaded, TROPHY_COUNT};
 
 use crate::compare::Comparer;
 use crate::import::sym;
+use melee_sim::game::gm::GameScene;
 
 impl Comparer<'_> {
     fn toy_gobj(&mut self, path: &str, ours: Option<melee_sim::hsd::gobj::GObjId>, at: u32) {
@@ -183,12 +182,12 @@ impl Comparer<'_> {
             self.check(name, "block", ours, self.u32(sym(name)));
         }
         match scene_kind(game.machine.scene_info) {
-            Some(GS_TOY_GALLERY) => {
+            Some(GameScene::TrophyGallery) => {
                 self.toy_gallery_blocks();
                 self.toy_list();
             }
-            Some(GS_TOY_LOTTERY) => self.toy_lottery(),
-            Some(GS_TOY_COLLECTION) => self.toy_collection(),
+            Some(GameScene::TrophyLottery) => self.toy_lottery(),
+            Some(GameScene::TrophyCollection) => self.toy_collection(),
             _ => {}
         }
         let c = &game.toys.collection;

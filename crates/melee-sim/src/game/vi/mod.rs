@@ -25,16 +25,11 @@ use super::handles::CodeRef;
 use super::render::{FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use crate::fpu::{mem, reg};
+use crate::game::gm::{GameMode, GameScene};
 use crate::hsd::fog;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use gekko_fp as fp;
-
-/// `GM_DEBUG_CUTSCENE`.
-pub const GM_DEBUG_CUTSCENE: u8 = 0x19;
-
-/// `GS_REGEND_CONGRATS`, the scene after the last cutscene.
-pub const GS_REGEND_CONGRATS: u8 = 0x10;
 
 /// `HSD_GOBJ_CLASS_UI`, `HSD_GOBJ_CLASS_CAMERA`, `HSD_GOBJ_CLASS_LIGHT` (the fog's too).
 const CLASS_UI: u16 = 0xE;
@@ -43,41 +38,41 @@ const CLASS_LIGHT: u16 = 0xB;
 
 /// Each cutscene's scene (`GS_CUTSCENE_LUIGI` to `GS_CUTSCENE_GIGADEFEATED`) and its entry
 /// and frame functions (`gmscdata.c`'s table).
-pub const SCENES: [(u8, u32, u32); 11] = [
-    (0x11, 0x8031_CD94, 0x8031_D000),
-    (0x12, 0x8031_D288, 0x8031_D698),
-    (0x13, 0x8031_D858, 0x8031_D9C4),
-    (0x14, 0x8031_DE58, 0x8031_E0F0),
-    (0x15, 0x8031_E444, 0x8031_E6CC),
-    (0x16, 0x8031_EBBC, 0x8031_ED50),
-    (0x17, 0x8031_F07C, 0x8031_F274),
-    (0x18, 0x8031_F714, 0x8031_F960),
-    (0x19, 0x8031_FD18, 0x8032_0490),
-    (0x1A, 0x8032_0A40, 0x8032_10EC),
-    (0x1B, 0x8032_1300, 0x8032_18E0),
+pub const SCENES: [(GameScene, u32, u32); 11] = [
+    (GameScene::CutsceneLuigi, 0x8031_CD94, 0x8031_D000),
+    (GameScene::CutsceneBrinstar, 0x8031_D288, 0x8031_D698),
+    (GameScene::CutsceneExplosion, 0x8031_D858, 0x8031_D9C4),
+    (GameScene::CutsceneThreeKirbys, 0x8031_DE58, 0x8031_E0F0),
+    (GameScene::CutsceneGiantKirby, 0x8031_E444, 0x8031_E6CC),
+    (GameScene::CutsceneStarFox, 0x8031_EBBC, 0x8031_ED50),
+    (GameScene::CutsceneFZero, 0x8031_F07C, 0x8031_F274),
+    (GameScene::CutsceneMetal, 0x8031_F714, 0x8031_F960),
+    (GameScene::CutsceneBowserTrophy, 0x8031_FD18, 0x8032_0490),
+    (GameScene::CutsceneGigaTransform, 0x8032_0A40, 0x8032_10EC),
+    (GameScene::CutsceneGigaDefeated, 0x8032_1300, 0x8032_18E0),
 ];
 
 /// A cutscene scene's enter data (`ViCharaDesc`'s first eight bytes): Adventure's
 /// (`gm_804D68D8`, every cutscene's) in Adventure, else the debug cutscene mode's own.
-pub fn enter_desc(game: &super::state::Game, scene: u8) -> [u8; 8] {
-    if game.game_mode == super::gm::one_player::GM_ADVENTURE {
+pub fn enter_desc(game: &super::state::Game, scene: GameScene) -> [u8; 8] {
+    if game.game_mode == GameMode::Adventure {
         return game.one_player.adventure_cutscene;
     }
     let v = &game.vi;
     match scene {
-        0x11 => v.desc_0102,
-        0x12 => v.desc_0401,
-        0x14 => v.desc_0501,
-        0x15 => v.desc_0502,
-        0x18 => v.desc_1101,
-        0x19 => v.desc_1201v1,
-        0x1A => v.desc_1201v2,
+        GameScene::CutsceneLuigi => v.desc_0102,
+        GameScene::CutsceneBrinstar => v.desc_0401,
+        GameScene::CutsceneThreeKirbys => v.desc_0501,
+        GameScene::CutsceneGiantKirby => v.desc_0502,
+        GameScene::CutsceneMetal => v.desc_1101,
+        GameScene::CutsceneBowserTrophy => v.desc_1201v1,
+        GameScene::CutsceneGigaTransform => v.desc_1201v2,
         _ => [0; 8],
     }
 }
 
 /// A cutscene scene's entry and frame functions.
-pub fn scene_handlers(scene: u8) -> Option<(CodeRef, CodeRef)> {
+pub fn scene_handlers(scene: GameScene) -> Option<(CodeRef, CodeRef)> {
     SCENES
         .iter()
         .find(|s| s.0 == scene)
@@ -635,30 +630,30 @@ impl Running<'_> {
     }
 
     /// A cutscene scene's entry.
-    pub fn vi_on_enter(&mut self, scene: u8) {
+    pub fn vi_on_enter(&mut self, scene: GameScene) {
         // The scene takes the files the preload cache holds (`lbArchive_80017040`): the
         // common effects and items.
         self.game.ft.data.files.from_cache = true;
         match scene {
-            0x11 => self.vi0102_on_enter(),
-            0x12 => self.vi0401_on_enter(),
-            0x13 => self.vi0402_on_enter(),
-            0x14 => self.vi0501_on_enter(),
-            0x15 => self.vi0502_on_enter(),
-            0x16 => self.vi0601_on_enter(),
-            0x17 => self.vi0801_on_enter(),
-            0x18 => self.vi1101_on_enter(),
-            0x19 => self.vi1201v1_on_enter(),
-            0x1A => self.vi1201v2_on_enter(),
-            0x1B => self.vi1202_on_enter(),
-            s => super::code::unported_call(&format!("the cutscene scene {s:#x}'s entry")),
+            GameScene::CutsceneLuigi => self.vi0102_on_enter(),
+            GameScene::CutsceneBrinstar => self.vi0401_on_enter(),
+            GameScene::CutsceneExplosion => self.vi0402_on_enter(),
+            GameScene::CutsceneThreeKirbys => self.vi0501_on_enter(),
+            GameScene::CutsceneGiantKirby => self.vi0502_on_enter(),
+            GameScene::CutsceneStarFox => self.vi0601_on_enter(),
+            GameScene::CutsceneFZero => self.vi0801_on_enter(),
+            GameScene::CutsceneMetal => self.vi1101_on_enter(),
+            GameScene::CutsceneBowserTrophy => self.vi1201v1_on_enter(),
+            GameScene::CutsceneGigaTransform => self.vi1201v2_on_enter(),
+            GameScene::CutsceneGigaDefeated => self.vi1202_on_enter(),
+            s => super::code::unported_call(&format!("the cutscene scene {s:?}'s entry")),
         }
     }
 
     /// The debug cutscene mode's last state's exit, `onExitRegendCongrats`: the title next.
     #[doc(alias = "onExitRegendCongrats")]
     pub fn debug_cutscene_exit(&mut self) {
-        self.set_pending_game_mode(super::gm::machine::GM_TITLE);
+        self.set_pending_game_mode(GameMode::Title);
         self.set_new_game_mode_pending();
     }
 
@@ -849,16 +844,16 @@ impl Running<'_> {
     /// The files the cutscene scene about to enter reads, none for another scene.
     pub fn vi_scene_files(&self) -> Option<SceneFiles> {
         let scene = self.entering_scene()?;
-        if scene == super::gm::endings::GS_REGEND_TOYFALL {
+        if scene == GameScene::TrophyFall {
             return Some(self.toy_fall_scene_files());
         }
-        if scene == GS_REGEND_CONGRATS {
+        if scene == GameScene::Congratulations {
             return Some(self.congrats_scene_files());
         }
-        if scene == super::gm::endings::GS_STAFFROLL {
+        if scene == GameScene::StaffRoll {
             return Some(self.staff_roll_scene_files());
         }
-        if scene == super::gm::endings::GS_MOVIE_END {
+        if scene == GameScene::EndingMovie {
             return Some(self.movie_end_scene_files());
         }
         scene_handlers(scene)?;
@@ -872,7 +867,7 @@ impl Running<'_> {
         };
         let d = enter_desc(self.game, scene);
         match scene {
-            0x11 => {
+            GameScene::CutsceneLuigi => {
                 f.names.push("Vi0102.dat".into());
                 f.songs.push(0x56);
                 stage(&mut f, 4);
@@ -881,7 +876,7 @@ impl Running<'_> {
                 f.anims("Vi0102.dat", 8, 4, 9);
                 f.anims("Vi0102.dat", 7, 4, 9);
             }
-            0x12 => {
+            GameScene::CutsceneBrinstar => {
                 let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names
                     .extend(["Vi0401.dat", "IfAll.dat", waits].map(String::from));
@@ -889,11 +884,11 @@ impl Running<'_> {
                 f.player(0, ck, d[1]);
                 f.anims(waits, ck, 3, 8);
             }
-            0x13 => {
+            GameScene::CutsceneExplosion => {
                 f.names.push("Vi0402.dat".into());
                 f.songs.push(0x58);
             }
-            0x14 => {
+            GameScene::CutsceneThreeKirbys => {
                 let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names.extend(["Vi0501.dat", waits].map(String::from));
                 stage(&mut f, 17);
@@ -907,7 +902,7 @@ impl Running<'_> {
                     f.copies.push((usize::from(d[i]), usize::from(d[3])));
                 }
             }
-            0x15 => {
+            GameScene::CutsceneGiantKirby => {
                 let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names
                     .extend(["Vi0502.dat", waits, "IrAls.dat"].map(String::from));
@@ -917,17 +912,17 @@ impl Running<'_> {
                 f.anims(waits, ck, 3, 8);
                 f.anims("Vi0502.dat", 4, 7, 14);
             }
-            0x16 => {
+            GameScene::CutsceneStarFox => {
                 f.names.push("Vi0601.dat".into());
                 f.songs.push(0x57);
                 stage(&mut f, 7);
             }
-            0x17 => {
+            GameScene::CutsceneFZero => {
                 f.names.push("Vi0801.dat".into());
                 f.songs.push(0x5B);
                 stage(&mut f, 73);
             }
-            0x18 => {
+            GameScene::CutsceneMetal => {
                 let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names.extend(["Vi1101.dat", waits].map(String::from));
                 f.songs.push(0x55);
@@ -941,7 +936,7 @@ impl Running<'_> {
                     f.anims("Vi1101.dat", 7, 5, 10);
                 }
             }
-            0x19 => {
+            GameScene::CutsceneBowserTrophy => {
                 let ck = i32::from(d[0]);
                 let results = super::gm::results_stats::results_file(ck)
                     .expect("the character's results animations");
@@ -954,7 +949,7 @@ impl Running<'_> {
                 f.player(0, ck, d[1]);
                 f.anims(results, ck, 0, 1);
             }
-            0x1A => {
+            GameScene::CutsceneGigaTransform => {
                 let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names
                     .extend(["Vi1201v2.dat", "TyKoopa.dat", "GmRgStnd.dat"].map(String::from));
@@ -967,13 +962,13 @@ impl Running<'_> {
                 f.player(1, 0x1D, 0);
                 f.anims("Vi1201v2.dat", 0x1D, 8, 15);
             }
-            0x1B => {
+            GameScene::CutsceneGigaDefeated => {
                 f.names
                     .extend(["Vi1202.dat", "TyKoopaR.dat", "GmRgStnd.dat"].map(String::from));
                 f.names.push(trophy_data(us).into());
                 f.songs.push(0x5A);
             }
-            s => super::code::unported_call(&format!("the cutscene scene {s:#x}'s files")),
+            s => super::code::unported_call(&format!("the cutscene scene {s:?}'s files")),
         }
         Some(f)
     }

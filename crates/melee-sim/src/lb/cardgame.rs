@@ -9,6 +9,7 @@ use melee_data::archive::DataRef;
 use super::super::game::handles::CodeRef;
 use super::super::game::state::{OBJ_CAMERA, OBJ_JOBJ, Obj, Running};
 use super::save::result;
+use crate::game::gm::GameMode;
 use crate::hsd::{cobj, jobj};
 
 /// `LbCardStatus`: 0 the card holds the save as the game knows it; 1 the card was swapped
@@ -118,9 +119,9 @@ impl Running<'_> {
     pub fn card_decide_game_mode(&mut self) -> u8 {
         let status = self.update_card_status();
         if status != STATUS_OK && status != STATUS_NO_CARD {
-            super::super::game::gm::machine::GM_MEMCARD
+            GameMode::MemCard.id()
         } else {
-            super::super::game::gm::machine::GM_COUNT
+            GameMode::NONE
         }
     }
 

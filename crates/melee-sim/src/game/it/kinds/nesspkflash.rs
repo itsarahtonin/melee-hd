@@ -220,13 +220,8 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
     let delay = attr_f32(r, gobj, attr::EXPLOSION_DELAY);
     let ip = item_mut(r.game, gobj);
     ip.cmd_var0 = ip.cmd_var0.wrapping_add(1);
-    let (owner, n, pos, facing, kind) = (
-        ip.owner,
-        ip.cmd_var0 as i32,
-        ip.pos,
-        ip.facing_dir,
-        ip.kind,
-    );
+    let (owner, n, pos, facing, kind) =
+        (ip.owner, ip.cmd_var0 as i32, ip.pos, ip.facing_dir, ip.kind);
     let v = steeredshot::vars(r, gobj, &PK_FLASH);
     if v.reflected.get() == 0
         && let Some(ness) = v.owner.get()

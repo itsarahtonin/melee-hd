@@ -11,9 +11,6 @@ pub(crate) const HIDDEN: u32 = 1 << 4;
 /// `TOBJ_MASK`.
 pub(crate) const TOBJ_MASK: u32 = jobj::type_mask::TOBJ;
 
-/// `GM_TOURNAMENT`.
-pub(crate) const GM_TOURNAMENT: u8 = 0x1B;
-
 pub(crate) const fn al(start: f32, end: f32, loop_frame: f32) -> AnimLoop {
     AnimLoop {
         start,

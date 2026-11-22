@@ -17,10 +17,10 @@ use super::super::handles::CodeRef;
 use super::super::pl::player::{PKIND_HUMAN, PKIND_NONE};
 use super::super::state::{Event, Game, Running};
 use super::super::structs::{MatchEnd, PlayerInitData, StartMeleeData};
-use super::{GM_ADVENTURE, GM_ALLSTAR, GM_CHALLENGER_APPROACH, GM_CLASSIC, GM_VS};
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
 use crate::hsd::Objects;
 use crate::hsd::jobj::{self, JObjId};
@@ -334,7 +334,10 @@ impl Game {
     /// Whether a single-player stage run is on (Classic, Adventure, All-Star), `gm_8016B3D8`.
     #[doc(alias = "gm_8016B3D8")]
     pub fn is_1p_run(&self) -> bool {
-        matches!(self.game_mode, GM_CLASSIC | GM_ADVENTURE | GM_ALLSTAR)
+        matches!(
+            GameMode::from_id(self.game_mode),
+            Some(GameMode::Classic | GameMode::Adventure | GameMode::AllStar)
+        )
     }
 
     /// How many slots play, `gm_8016B558`.
@@ -393,8 +396,8 @@ impl Game {
     #[doc(alias = "gm_DefaultVSGetPauser")]
     pub fn vs_pauser(&self) -> i32 {
         if super::is_1p_mode(self)
-            || self.game_mode == GM_CHALLENGER_APPROACH
-            || (self.game_mode == GM_VS && self.machine.routing.curr_state_id == 0x81)
+            || self.game_mode == GameMode::ChallengerApproach
+            || (self.game_mode == GameMode::Vs && self.machine.routing.curr_state_id == 0x81)
         {
             let port = self.player_port(0);
             return if self.start_pressed(usize::from(port as u8)) {
@@ -966,20 +969,20 @@ impl Running<'_> {
         let g = &*self.game;
         let mode = g.game_mode;
         let stkind = g.vs.start.stkind;
-        if mode == super::GM_TARGET_TEST {
+        if mode == GameMode::TargetTest {
             let ckind = self.game.game_data.vs.unk_530.unk_584.unk_584 as u8;
             self.target_test_score(ckind);
-        } else if mode == GM_CLASSIC && (0x21..=0x3A).contains(&stkind) {
+        } else if mode == GameMode::Classic && (0x21..=0x3A).contains(&stkind) {
             let ckind = self.game.one_player.classic.base.player.ckind as u8;
             self.target_test_score(ckind);
         }
         // An event cleared with a new best: the first player's rumble.
-        if mode == super::GM_EVENT && self.game.vs.state.unk_10 == 0x9C41 {
+        if mode == GameMode::Event && self.game.vs.state.unk_10 == 0x9C41 {
             let port = self.game.player_port(0) as usize;
             let tag = self.game.player_nametag(0);
             self.tou_rumble(port, tag, 0xD, 0x5A);
         }
-        if (super::GM_10MAN_VS..=super::GM_CRUEL_VS).contains(&mode) {
+        if super::multi_man::is_multi_man(mode) {
             code::call(self, addr::MULTI_MAN_MATCH_END, &[]);
         }
     }
@@ -1167,9 +1170,9 @@ impl Running<'_> {
         let g = &*self.game;
         let mut result = true;
         if g.is_1p_run() {
-            let run = match g.game_mode {
-                GM_CLASSIC => 1,
-                GM_ADVENTURE => 0,
+            let run = match GameMode::of(g.game_mode) {
+                GameMode::Classic => 1,
+                GameMode::Adventure => 0,
                 _ => 2,
             };
             if !(run == 0 && g.gm.scene_index == 0x49)
@@ -2165,15 +2168,16 @@ fn item_weight(g: &Game) -> f32 {
 mod c_stick_rule_tests {
     use super::super::super::camera::{self, Bounds, Which};
     use super::super::super::state::Game;
-    use super::super::{GM_CLASSIC, GM_VS, is_1p_mode_for_c_stick};
+    use super::super::is_1p_mode_for_c_stick;
     use super::item_weight;
+    use crate::game::gm::GameMode;
 
     /// Classic (or `mode`) with three players, the camera's zoom allowed, the first player's
     /// C-stick held up and a quake pending, under the Slippi ruleset's C-stick rule or not.
     /// Boxed: a game is too big for a test thread's stack several times over.
-    fn game(mode: u8, c_stick: bool) -> Box<Game> {
+    fn game(mode: GameMode, c_stick: bool) -> Box<Game> {
         let mut g = Box::<Game>::default();
-        g.game_mode = mode;
+        g.game_mode = mode.id();
         g.rules = g.rules.clone().with_c_stick_1p(c_stick);
         for p in &mut g.players[3..] {
             p.pkind = crate::game::pl::player::PKIND_NONE;
@@ -2211,41 +2215,41 @@ mod c_stick_rule_tests {
     /// single-player modes' answers.
     #[test]
     fn the_c_stick_rule_reaches_only_the_c_stick() {
-        assert!(is_1p_mode_for_c_stick(&game(GM_CLASSIC, false)));
-        assert!(!is_1p_mode_for_c_stick(&game(GM_CLASSIC, true)));
+        assert!(is_1p_mode_for_c_stick(&game(GameMode::Classic, false)));
+        assert!(!is_1p_mode_for_c_stick(&game(GameMode::Classic, true)));
 
         assert_ne!(
-            zoom(game(GM_CLASSIC, false)),
+            zoom(game(GameMode::Classic, false)),
             1.0,
             "Vanilla's C-stick zooms in Classic"
         );
         assert_eq!(
-            zoom(game(GM_CLASSIC, true)),
+            zoom(game(GameMode::Classic, true)),
             1.0,
             "the rule's C-stick doesn't"
         );
 
-        let classic = quake(game(GM_CLASSIC, false));
-        assert_eq!(classic, quake(game(GM_CLASSIC, true)));
+        let classic = quake(game(GameMode::Classic, false));
+        assert_eq!(classic, quake(game(GameMode::Classic, true)));
         assert_ne!(
             classic,
-            quake(game(GM_VS, false)),
+            quake(game(GameMode::Vs, false)),
             "the quake tells the modes apart"
         );
 
-        assert_eq!(item_weight(&game(GM_CLASSIC, false)), 1.0);
-        assert_eq!(item_weight(&game(GM_CLASSIC, true)), 1.0);
+        assert_eq!(item_weight(&game(GameMode::Classic, false)), 1.0);
+        assert_eq!(item_weight(&game(GameMode::Classic, true)), 1.0);
         assert_eq!(
-            item_weight(&game(GM_VS, true)),
+            item_weight(&game(GameMode::Vs, true)),
             1.1,
             "three players weigh the table outside 1P"
         );
 
         // Target Test: a single-player mode with no run, so 1 (Classic's run starts at 0).
-        let target = super::super::one_player::GM_TARGET_TEST;
+        let target = GameMode::TargetTest;
         let progress = game(target, true).single_player_progress();
         assert_eq!(game(target, false).single_player_progress(), progress);
         assert_eq!(progress, 1);
-        assert_eq!(game(GM_VS, true).single_player_progress(), 0);
+        assert_eq!(game(GameMode::Vs, true).single_player_progress(), 0);
     }
 }

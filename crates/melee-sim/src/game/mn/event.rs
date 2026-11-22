@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use gekko_fp as fp;
 
-use super::super::gm::event::{EVENTS, GM_EVENT, event_name, event_place};
+use super::super::gm::event::{EVENTS, event_name, event_place};
 use super::super::gm::title::{AnimLoop, ModelDesc};
 use super::super::handles::CodeRef;
 use super::super::render::JOBJ_CALLBACK;
@@ -18,6 +18,7 @@ use super::data::digits;
 use super::main::{IN_BACK, IN_CONFIRM, IN_DOWN, IN_UP, IN_X, IN_Y};
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj;
 use crate::hsd::sis::TextId;
@@ -372,7 +373,7 @@ impl Running<'_> {
             self.lb_audio_call(1);
             self.set_event(d.first_event.wrapping_add(i32::from(d.page)) as u8);
             self.note_confirm_port();
-            self.menu_exit_to(GM_EVENT);
+            self.menu_exit_to(GameMode::Event);
             return;
         }
         let first = d.first_event;

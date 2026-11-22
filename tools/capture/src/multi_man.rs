@@ -5,6 +5,7 @@ use melee_sim::game::mirror::{Cx, Mirror};
 use melee_sim::game::structs::PlayerInitData;
 
 use crate::compare::Comparer;
+use melee_sim::game::gm::GameScene;
 
 /// `gm_804950F0`, `gm_80495238`, `gm_80495370`: the select's data, the match's start and its
 /// exit data; `gm_804D68F0` and `gm_804D68F1`.
@@ -74,7 +75,7 @@ impl Comparer<'_> {
         // The tables live in `GmKumite.dat`, which the match's scene loads: past it the words
         // name its freed heap in both, and only the next match's start sets them again.
         let live = melee_sim::game::gm::machine::scene_kind(self.game.machine.scene_info)
-            == Some(melee_sim::game::gm::machine::GS_VS)
+            == Some(GameScene::Vs)
             && melee_sim::game::gm::multi_man::is_multi_man(self.game.game_mode);
         if live && mm.tables[0].is_some() {
             for (i, t) in mm.tables.into_iter().enumerate() {

@@ -10,6 +10,7 @@ use gekko_fp as fp;
 use super::lib::{ckind_of, f, icon_frame, scene_model};
 use super::{Loaded, STATE_SSS, STATE_VS};
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -90,7 +91,6 @@ const PAD_X: u32 = 0x400;
 const PAD_START: u32 = 0x1000;
 const PAD_UP: u32 = 0x0001_0008;
 const PAD_DOWN: u32 = 0x0002_0004;
-const GM_MENU: u8 = 1;
 
 /// What the bracket's players' screen (`gmtou_1.c`) and winner-out's and loser-out's
 /// match-up screen (`gmtou_2.c`) each have their own in the processes they share, one copy in
@@ -1244,7 +1244,7 @@ impl Running<'_> {
             self.free_gobj_links(0x12, 0x15);
             self.game.game_data.x1850.force_main_menu = 1;
             self.game.end_scene();
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         if ready == n as i32 {
@@ -1438,7 +1438,7 @@ impl Running<'_> {
         if self.game.tou.tm.cur_option == 0x27 && self.br().step_frames >= 0xFA {
             if self.game.tou.tm.rank == 6 {
                 if self.br().step_frames >= 0x1C20 || buttons & (PAD_A | PAD_START) != 0 {
-                    self.change_game_mode_after_scene(GM_MENU);
+                    self.change_game_mode_after_scene(GameMode::Menu);
                     self.game.end_scene();
                 }
             } else {

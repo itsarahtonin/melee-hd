@@ -9,8 +9,8 @@
 
 use super::super::state::{Game, Running};
 use super::code;
-use super::machine::GM_CHALLENGER_APPROACH;
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 
 /// A selectable character's kind, `gm_SelKindToCKind` (`selkind_to_ckind_map`).
 pub fn selkind_to_ckind(selkind: u8) -> u8 {
@@ -38,21 +38,16 @@ const ALL_STAR: [i16; 34] = [
     0x0B, 0x0E, 0x29, 0x2C, 0x44, 0x47, 0x3E, 0x4D, 0x4A, 0x41, -1, -1, -1, -1, -1, -1, 0, 0,
 ];
 
-/// `GM_CLASSIC`, `GM_ADVENTURE`, `GM_ALLSTAR` and their game overs.
-const GM_CLASSIC: u8 = 3;
-const GM_ADVENTURE: u8 = 4;
-const GM_ALLSTAR: u8 = 5;
-
 /// `CKind_Zelda`, `CKind_Seak`.
 const ZELDA: u8 = 0x12;
 const SEAK: u8 = 0x13;
 
 /// `gm_80160474`: a character's trophy for clearing a mode (Classic, Adventure, or All-Star).
 #[doc(alias = "gm_80160474")]
-pub(crate) fn mode_trophy(ckind: u8, mode: u8) -> i32 {
+pub(crate) fn mode_trophy(ckind: u8, mode: GameMode) -> i32 {
     let t = match mode {
-        0x15 | GM_CLASSIC => &CLASSIC,
-        0x16 | GM_ADVENTURE => &ADVENTURE,
+        GameMode::ClassicEnding | GameMode::Classic => &CLASSIC,
+        GameMode::AdventureEnding | GameMode::Adventure => &ADVENTURE,
         _ => &ALL_STAR,
     };
     i32::from(t[usize::from(ckind)])
@@ -235,7 +230,11 @@ impl Running<'_> {
         self.game.sync_unlocks();
         for (selkind, &ck) in SELKIND_TO_CKIND.iter().enumerate().take(25) {
             let n = self.game.game_data.thing.save_data.unk_30.x18[selkind];
-            for (min, mode) in [(100, GM_CLASSIC), (200, GM_ADVENTURE), (300, GM_ALLSTAR)] {
+            for (min, mode) in [
+                (100, GameMode::Classic),
+                (200, GameMode::Adventure),
+                (300, GameMode::AllStar),
+            ] {
                 if n >= min {
                     self.give_record_trophy(mode_trophy(ck, mode));
                     if ck == ZELDA {
@@ -454,15 +453,15 @@ impl Running<'_> {
     #[doc(alias = "gm_801721EC")]
     #[doc(alias = "gmMainLib_8015D8D8")]
     #[doc(alias = "gmMainLib_8015DA1C")]
-    pub fn challenger_check(&mut self, mode: u8, slot: u8) -> bool {
+    pub fn challenger_check(&mut self, mode: GameMode, slot: u8) -> bool {
         if self.notice_waits() {
             self.game.gm.challenger = ChallengerData {
                 human_ckind: CharacterKind::NONE,
                 human_slot: slot,
-                curr_mode: mode,
+                curr_mode: mode.id(),
                 ..ChallengerData::default()
             };
-            self.set_pending_game_mode(GM_CHALLENGER_APPROACH);
+            self.set_pending_game_mode(GameMode::ChallengerApproach);
             self.set_new_game_mode_pending();
             // The unlock-all code's answer is 0 with the scene set up all the same.
             return !self.game.unlock_code(code::NO_APPROACH);

@@ -10,6 +10,7 @@ use melee_data::archive::ArchiveId;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::{Obj, Running};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::sobj::{self, GxTexObj, OBJ_SOBJ, SObjId};
 
@@ -99,7 +100,7 @@ pub struct Congrats {
 /// own.
 fn picture_mode(r: &Running) -> u8 {
     let m = super::super::super::mn::common::game_mode(r);
-    if m == super::GM_DEBUG_GOVER {
+    if m == GameMode::DebugEnding {
         r.game.endings.gover.mode()
     } else {
         m
@@ -108,9 +109,9 @@ fn picture_mode(r: &Running) -> u8 {
 
 /// The picture's file for character `ckind` in game over mode `mode`.
 fn picture_file(mode: u8, ckind: u8) -> String {
-    let kind = match mode {
-        super::GM_CLASSIC_GOVER => "Simple",
-        super::GM_ADVENTURE_GOVER => "Adventure",
+    let kind = match GameMode::of(mode) {
+        GameMode::ClassicEnding => "Simple",
+        GameMode::AdventureEnding => "Adventure",
         _ => "Allstar",
     };
     format!("GmRegend{kind}{}.thp", NAMES[usize::from(ckind)])
@@ -359,9 +360,9 @@ impl Running<'_> {
         o.y = 240.0;
         o.flags |= 2;
         let o1 = &self.game.one_player;
-        let level = match super::super::super::mn::common::game_mode(self) {
-            super::GM_CLASSIC_GOVER => o1.classic.base.player.cpu_level,
-            super::GM_ADVENTURE_GOVER => o1.adventure.base.player.cpu_level,
+        let level = match GameMode::of(super::super::super::mn::common::game_mode(self)) {
+            GameMode::ClassicEnding => o1.classic.base.player.cpu_level,
+            GameMode::AdventureEnding => o1.adventure.base.player.cpu_level,
             _ => o1.allstar.base.player.cpu_level,
         };
         let sfx = if level == 4 { 0x9C45 } else { 0x9C41 };
@@ -379,7 +380,7 @@ impl Running<'_> {
         } else if c.exit_wait != 0 {
             c.exit_wait -= 1;
             if c.exit_wait == 0 {
-                let v = if super::super::super::mn::common::game_mode(self) == super::GM_DEBUG_GOVER
+                let v = if super::super::super::mn::common::game_mode(self) == GameMode::DebugEnding
                 {
                     6
                 } else {
@@ -402,9 +403,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801A6630")]
     #[doc(alias = "gm_GetCurrentSceneExitData")]
     fn regend_exit(&mut self, v: u8) {
-        if super::super::super::mn::common::game_mode(self)
-            == super::super::super::vi::GM_DEBUG_CUTSCENE
-        {
+        if super::super::super::mn::common::game_mode(self) == GameMode::DebugCutscenes {
             self.game.endings.congrats_exit[0] = v;
         } else {
             self.game.endings.gover_exit[0] = v;
@@ -496,7 +495,7 @@ impl Running<'_> {
     /// `fn_80173834`: character `ckind`'s trophy for mode `major` given anew (with `again`,
     /// its record mark cleared first), and with Zelda's or Sheik's the other's.
     #[doc(alias = "fn_80173834")]
-    fn give_mode_trophy(&mut self, ckind: u8, major: u8, again: bool) {
+    fn give_mode_trophy(&mut self, ckind: u8, major: GameMode, again: bool) {
         let give = |r: &mut Self, ck: u8| {
             let t = super::super::unlocks::mode_trophy(ck, major);
             if again {
@@ -529,7 +528,7 @@ impl Running<'_> {
                 }
                 if clear {
                     let b = a.base;
-                    self.give_mode_trophy(b.player.ckind as u8, 4, true);
+                    self.give_mode_trophy(b.player.ckind as u8, GameMode::Adventure, true);
                     if b.counters[1] == 0 && a.feats[3] != 0 {
                         self.give_record_trophy(0x51);
                     }
@@ -543,7 +542,7 @@ impl Running<'_> {
             }
             1 if clear => {
                 let b = self.game.one_player.classic.base;
-                self.give_mode_trophy(b.player.ckind as u8, 3, true);
+                self.give_mode_trophy(b.player.ckind as u8, GameMode::Classic, true);
                 if b.counters[1] == 0 && b.player.cpu_level >= 3 {
                     self.give_record_trophy(0x52);
                 }
@@ -553,7 +552,7 @@ impl Running<'_> {
             }
             2 if clear => {
                 let b = self.game.one_player.allstar.base;
-                self.give_mode_trophy(b.player.ckind as u8, 5, true);
+                self.give_mode_trophy(b.player.ckind as u8, GameMode::AllStar, true);
                 self.give_record_trophy(0xBE);
                 if b.counters[1] == 0 {
                     self.give_record_trophy(0xCC);
@@ -582,12 +581,12 @@ impl Running<'_> {
         self.trophy_unlocks();
         self.special_unlocks(0x40);
         if ckind == CharacterKind::NONE {
-            if !self.challenger_check(1, g.color()) {
-                self.set_pending_game_mode(next);
+            if !self.challenger_check(GameMode::Menu, g.color()) {
+                self.set_pending_game_mode(GameMode::of(next));
             }
         } else {
             self.init_challenger(g.ckind(), g.color(), g.port(), g.tag(), ckind, next);
-            self.set_pending_game_mode(super::super::machine::GM_CHALLENGER_APPROACH);
+            self.set_pending_game_mode(GameMode::ChallengerApproach);
         }
         self.set_new_game_mode_pending();
     }

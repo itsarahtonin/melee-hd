@@ -9,8 +9,8 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::{OBJ_CAMERA, Obj, Running};
-use super::machine::{GM_MENU, GM_TITLE};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use crate::hsd::cobj;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::sobj::{self, OBJ_SOBJ};
@@ -277,7 +277,7 @@ impl Running<'_> {
             self.lb_audio_music_stop();
             self.sfx_stop_all();
             self.game.end_scene_now();
-            self.set_pending_game_mode(GM_TITLE);
+            self.set_pending_game_mode(GameMode::Title);
             self.set_new_game_mode_pending();
         } else if o.clock > 0x157C {
             if triggered & start != 0 {
@@ -294,7 +294,7 @@ impl Running<'_> {
             self.sfx_stop_all();
             self.lb_audio_call(1);
             self.game.end_scene();
-            self.set_pending_game_mode(GM_TITLE);
+            self.set_pending_game_mode(GameMode::Title);
             self.set_new_game_mode_pending();
         }
     }
@@ -304,8 +304,8 @@ impl Running<'_> {
     pub fn menu_entry_unlocks(&mut self) {
         self.trophy_unlocks();
         self.special_unlocks(0x100);
-        if !self.challenger_check(GM_MENU, 0) {
-            self.set_pending_game_mode(GM_MENU);
+        if !self.challenger_check(GameMode::Menu, 0) {
+            self.set_pending_game_mode(GameMode::Menu);
         }
     }
 

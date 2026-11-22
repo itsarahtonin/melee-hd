@@ -9,7 +9,6 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::Running;
-use super::machine::GM_MENU;
 use super::match_exit::{MatchExitInfo, selkind};
 use super::vs_melee::CssData;
 use crate::game::structs::{PlayerInitData, StartMeleeData};
@@ -18,14 +17,8 @@ use melee_data::archive::DataRef;
 
 use super::results_scene::PKIND_NA;
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
-
-pub const GM_10MAN: u8 = 0x21;
-pub const GM_100MAN: u8 = 0x22;
-pub const GM_3MIN: u8 = 0x23;
-pub const GM_15MIN: u8 = 0x24;
-pub const GM_ENDLESS: u8 = 0x25;
-pub const GM_CRUEL: u8 = 0x26;
 
 /// The Multi-Man stage.
 pub const STKIND: StKind = StKind::MultiMan;
@@ -194,14 +187,14 @@ impl Default for MultiMan {
 /// `gm_IsMultimanSmashMode`.
 #[doc(alias = "gm_IsMultimanSmashMode")]
 pub fn is_multi_man(mode: u8) -> bool {
-    (GM_10MAN..=GM_CRUEL).contains(&mode)
+    (GameMode::TenMan.id()..=GameMode::Cruel.id()).contains(&mode)
 }
 
 /// A mode's block in `lbl_803D8D08`, none for another mode.
 fn block_index(mode: i32) -> Option<usize> {
-    (GM_10MAN as i32..=GM_CRUEL as i32)
+    (GameMode::TenMan as i32..=GameMode::Cruel as i32)
         .contains(&mode)
-        .then(|| (mode - GM_10MAN as i32) as usize)
+        .then(|| (mode - GameMode::TenMan as i32) as usize)
 }
 
 impl MultiMan {
@@ -293,7 +286,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B7B74")]
     #[doc(alias = "gm_801B8110")]
     #[doc(alias = "gm_801B863C")]
-    pub fn multi_man_enter_css(&mut self, mode: u8) {
+    pub fn multi_man_enter_css(&mut self, mode: GameMode) {
         let p = &mut self.game.game_data.modes.table[VS_MODE].start.players[0];
         p.stocks = 1;
         p.attack_ratio = 1.0;
@@ -302,7 +295,7 @@ impl Running<'_> {
         let slot = self.game.multi_man.slot;
         super::setup_players::css_one_player(
             &mut self.game.multi_man.css,
-            0x11 + (mode - GM_10MAN),
+            0x11 + (mode.id() - GameMode::TenMan.id()),
             p.ckind,
             1,
             p.color as i8,
@@ -333,7 +326,7 @@ impl Running<'_> {
     pub fn multi_man_exit_css(&mut self) {
         let css = &self.game.multi_man.css;
         if css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let (ckind, _, color, nametag, _) = super::setup_players::css_one_player_choice(css);
@@ -429,20 +422,24 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D7A4")]
     #[doc(alias = "gmMainLib_8015D7BC")]
     #[doc(alias = "gmMainLib_8015D7D4")]
-    pub fn multi_man_enter_match(&mut self, mode: u8) {
+    pub fn multi_man_enter_match(&mut self, mode: GameMode) {
         let rules = self.multi_man_data().start.rules.clone();
         let s = &mut self.game.multi_man.start;
         s.rules.clone_from(&rules);
         Self::multi_man_rules(s);
         match mode {
-            GM_3MIN | GM_15MIN => {
+            GameMode::ThreeMinute | GameMode::FifteenMinute => {
                 let r = &mut s.rules;
                 r.timer_enabled = true;
                 r.timer_counts_up = false;
-                r.time_limit = if mode == GM_3MIN { 0xB4 } else { 0x384 };
+                r.time_limit = if mode == GameMode::ThreeMinute {
+                    0xB4
+                } else {
+                    0x384
+                };
             }
-            GM_ENDLESS | GM_CRUEL => {
-                if mode == GM_CRUEL {
+            GameMode::Endless | GameMode::Cruel => {
+                if mode == GameMode::Cruel {
                     s.rules.item_freq = -1;
                 }
                 let r = &mut s.rules;
@@ -454,17 +451,17 @@ impl Running<'_> {
             }
             _ => {}
         }
-        self.multi_man_players(mode == GM_CRUEL, mode != GM_10MAN);
+        self.multi_man_players(mode == GameMode::Cruel, mode != GameMode::TenMan);
         let ckind = i32::from(self.game.multi_man.start.players[0].ckind);
         let mm = &mut self.game.multi_man;
-        mm.start_record(ckind, i32::from(mode));
+        mm.start_record(ckind, i32::from(mode.id()));
         let own = i32::from(self.multi_man_data().start.players[0].ckind);
         let rec = self.mm_record_1p(own as i8).clone();
         let mm = &mut self.game.multi_man;
-        let m = i32::from(mode);
+        let m = i32::from(mode.id());
         match mode {
-            GM_10MAN | GM_100MAN => {
-                let (saved, won) = if mode == GM_10MAN {
+            GameMode::TenMan | GameMode::HundredMan => {
+                let (saved, won) = if mode == GameMode::TenMan {
                     (rec.x98, rec.b1)
                 } else {
                     (rec.x9C, rec.b2)
@@ -483,8 +480,12 @@ impl Running<'_> {
                     mm.set_score(own, m, 0x0FFF_FFFF);
                 }
             }
-            GM_3MIN | GM_15MIN => {
-                let saved = if mode == GM_3MIN { rec.xA0 } else { rec.xA2 };
+            GameMode::ThreeMinute | GameMode::FifteenMinute => {
+                let saved = if mode == GameMode::ThreeMinute {
+                    rec.xA0
+                } else {
+                    rec.xA2
+                };
                 let mut r = mm.record_of(own, m);
                 let won = saved != 0;
                 r.set_won(won);
@@ -494,7 +495,11 @@ impl Running<'_> {
                 mm.set_time(own, m, r.kos);
             }
             _ => {
-                let saved = if mode == GM_ENDLESS { rec.xA4 } else { rec.xA8 };
+                let saved = if mode == GameMode::Endless {
+                    rec.xA4
+                } else {
+                    rec.xA8
+                };
                 let mut r = mm.record_of(own, m);
                 r.kos = saved as u16;
                 mm.result = r;
@@ -518,7 +523,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B8AF8")]
     #[doc(alias = "gmMainLib_8015D6D8")]
     #[doc(alias = "gmMainLib_8015D72C")]
-    pub fn multi_man_exit_match(&mut self, mode: u8) {
+    pub fn multi_man_exit_match(&mut self, mode: GameMode) {
         let end = self.game.multi_man.exit.match_end.clone();
         if end.outcome == super::match_exit::OUTCOME_RETRY {
             self.set_next_game_mode_state_id(1);
@@ -529,13 +534,13 @@ impl Running<'_> {
         self.results_add_coins(i32::from(end.player_standings[0].xE));
         self.multi_man_store_result();
         let own = self.multi_man_data().start.players[0].ckind;
-        let m = i32::from(mode);
+        let m = i32::from(mode.id());
         let r = self.game.multi_man.record_of(i32::from(own), m);
         let rec = self.mm_record_1p(own);
         match mode {
-            GM_10MAN | GM_100MAN => {
+            GameMode::TenMan | GameMode::HundredMan => {
                 let v = if r.won() { r.score } else { i32::from(r.kos) };
-                if mode == GM_10MAN {
+                if mode == GameMode::TenMan {
                     rec.b1 = r.won();
                     rec.x98 = v;
                 } else {
@@ -543,9 +548,9 @@ impl Running<'_> {
                     rec.x9C = v;
                 }
             }
-            GM_3MIN | GM_15MIN => {
+            GameMode::ThreeMinute | GameMode::FifteenMinute => {
                 let v = if r.won() { r.kos } else { 0 };
-                if mode == GM_3MIN {
+                if mode == GameMode::ThreeMinute {
                     rec.xA0 = v;
                 } else {
                     rec.xA2 = v;
@@ -555,7 +560,7 @@ impl Running<'_> {
                 }
             }
             _ => {
-                if mode == GM_ENDLESS {
+                if mode == GameMode::Endless {
                     rec.xA4 = i32::from(r.kos);
                 } else {
                     rec.xA8 = i32::from(r.kos);
@@ -576,13 +581,13 @@ impl Running<'_> {
     #[doc(alias = "gm_80181A24")]
     #[doc(alias = "gm_80181A34")]
     #[doc(alias = "gm_80173460")]
-    fn multi_man_unlocks(&mut self, mode: u8) -> bool {
+    fn multi_man_unlocks(&mut self, mode: GameMode) -> bool {
         self.card_alloc_work_area();
         self.card_game_load_archive(0);
         self.card_game_save_changes();
         let rec = self.game.multi_man.record;
         let won = rec.won != 0;
-        if won && mode == GM_15MIN {
+        if won && mode == GameMode::FifteenMinute {
             let stage = self.multi_man_15min_stage();
             if stage != 0x148 {
                 self.unlock_stage(stage);
@@ -595,7 +600,7 @@ impl Running<'_> {
         // `gm_80173460`: Falco while he's locked.
         self.game.sync_unlocks();
         if won
-            && mode == GM_100MAN
+            && mode == GameMode::HundredMan
             && !self
                 .game
                 .gm
@@ -609,9 +614,9 @@ impl Running<'_> {
                 slot,
                 p.nametag,
                 CharacterKind::Falco as u8,
-                mode,
+                mode.id(),
             );
-            self.change_game_mode_after_scene(super::machine::GM_CHALLENGER_APPROACH);
+            self.change_game_mode_after_scene(GameMode::ChallengerApproach);
             return true;
         }
         let slot = self.game.multi_man.slot;
@@ -633,22 +638,22 @@ impl Running<'_> {
     /// 100-Man Melee won in four minutes (0x4E), 100 KOs in Endless Melee (0x4F) and 5 in
     /// Cruel Melee (0x10E).
     #[doc(alias = "gm_80173C70")]
-    fn multi_man_trophies(&mut self, mode: u8, kos: u32, frames: u32, won: bool) {
+    fn multi_man_trophies(&mut self, mode: GameMode, kos: u32, frames: u32, won: bool) {
         if won {
-            if mode == GM_15MIN {
+            if mode == GameMode::FifteenMinute {
                 self.give_record_trophy(0x50);
             }
-            if mode == GM_100MAN && frames <= 0x3840 {
+            if mode == GameMode::HundredMan && frames <= 0x3840 {
                 self.give_record_trophy(0x4E);
             }
-            if mode == GM_15MIN {
+            if mode == GameMode::FifteenMinute {
                 self.give_record_trophy(0x50);
             }
         }
-        if mode == GM_ENDLESS && kos >= 100 {
+        if mode == GameMode::Endless && kos >= 100 {
             self.give_record_trophy(0x4F);
         }
-        if mode == GM_CRUEL && kos >= 5 {
+        if mode == GameMode::Cruel && kos >= 5 {
             self.give_record_trophy(0x10E);
         }
     }
@@ -669,10 +674,14 @@ impl Running<'_> {
         let time = i32::from(self.game.multi_man.blocks[b].times[k]);
         let score = self.game.multi_man.blocks[b].scores[k];
         let mm_mode = mode as u8;
-        if mm_mode == GM_10MAN || mm_mode == GM_100MAN {
+        if mm_mode == GameMode::TenMan || mm_mode == GameMode::HundredMan {
             let sel = usize::from(selkind(idx as u8));
             let x7c = &self.game.game_data.thing.save_data.x1F2C[sel].x7C;
-            let cleared = if mm_mode == GM_10MAN { x7c.b1 } else { x7c.b2 };
+            let cleared = if mm_mode == GameMode::TenMan {
+                x7c.b1
+            } else {
+                x7c.b2
+            };
             let blk = &mut self.game.multi_man.blocks[b];
             if r.won != 0 {
                 if (r.frames as u32) < score {
@@ -683,7 +692,7 @@ impl Running<'_> {
             } else if i32::from(r.kos) > time && !cleared {
                 blk.times[k] = r.kos;
             }
-        } else if mm_mode == GM_3MIN || mm_mode == GM_15MIN {
+        } else if mm_mode == GameMode::ThreeMinute || mm_mode == GameMode::FifteenMinute {
             if r.won != 0 && i32::from(r.kos) > time {
                 let blk = &mut self.game.multi_man.blocks[b];
                 blk.icons[k] = r.won;
@@ -711,8 +720,8 @@ impl Running<'_> {
             }
             None => (0, 0),
         };
-        let record = match mode as u8 {
-            GM_10MAN | GM_100MAN => {
+        let record = match GameMode::from_id(mode as u8) {
+            Some(GameMode::TenMan | GameMode::HundredMan) => {
                 if r.won != 0 {
                     (r.frames as u32) < score
                 } else {
@@ -721,8 +730,10 @@ impl Running<'_> {
                     false
                 }
             }
-            GM_3MIN | GM_15MIN => r.won != 0 && i32::from(r.kos) > time,
-            GM_ENDLESS | GM_CRUEL => i32::from(r.kos) > time,
+            Some(GameMode::ThreeMinute | GameMode::FifteenMinute) => {
+                r.won != 0 && i32::from(r.kos) > time
+            }
+            Some(GameMode::Endless | GameMode::Cruel) => i32::from(r.kos) > time,
             _ => false,
         };
         if record {
@@ -852,10 +863,10 @@ impl Running<'_> {
 
     /// `ifStock_802FA2D0`'s argument for the mode: the opponents left of 10 or 100, else
     /// the KOs.
-    fn multi_man_counter(&mut self, mode: u8, kos: i32) {
+    fn multi_man_counter(&mut self, mode: GameMode, kos: i32) {
         let n = match mode {
-            GM_10MAN => 10 - kos,
-            GM_100MAN => 100 - kos,
+            GameMode::TenMan => 10 - kos,
+            GameMode::HundredMan => 100 - kos,
             _ => kos,
         };
         self.set_multi_man_counter(n);
@@ -870,19 +881,19 @@ impl Running<'_> {
     /// it waits for are taken as knocked out and that one joins.
     #[doc(alias = "fn_80181E18")]
     pub fn multi_man_proc(&mut self, _gobj: GObjId) {
-        let mode = self.game.game_mode;
+        let mode = GameMode::of(self.game.game_mode);
         if self.game.multi_man.start_frames <= 0x5A {
             self.game.multi_man.start_frames += 1;
         }
         match mode {
-            GM_3MIN | GM_15MIN
+            GameMode::ThreeMinute | GameMode::FifteenMinute
                 if self.game.vs_timer_seconds() == 0 && self.game.vs_timer_frames() == 0x3B =>
             {
                 self.game.multi_man.record.won = 1;
                 self.game.vs_set_end_kind(7);
                 self.game.vs_terminate();
             }
-            GM_ENDLESS | GM_CRUEL if self.game.player_falls(0) != 0 => {
+            GameMode::Endless | GameMode::Cruel if self.game.player_falls(0) != 0 => {
                 self.game.vs_set_end_kind(5);
                 self.game.vs_terminate();
             }
@@ -892,7 +903,9 @@ impl Running<'_> {
             return;
         };
         let rmode = self.game.multi_man.record.mode;
-        if rmode == i32::from(GM_10MAN) || rmode == i32::from(GM_100MAN) {
+        if rmode == i32::from(GameMode::TenMan.id())
+            || rmode == i32::from(GameMode::HundredMan.id())
+        {
             self.game.multi_man.record.frames = self.game.vs_frame_count() as i32;
         }
         let kos = |r: &Running| {

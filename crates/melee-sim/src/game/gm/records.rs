@@ -5,11 +5,10 @@
 use super::super::state::Game;
 use super::super::structs::{GmStats, MatchEnd};
 use super::match_exit::selkind;
+use crate::game::gm::GameMode;
 
 /// `Gm_PKind_Human`.
 const PKIND_HUMAN: u8 = 0;
-/// `GM_STAMINA_VS`.
-const GM_STAMINA_VS: u8 = super::GM_STAMINA_VS;
 
 /// A 16-bit counter one more, held at 0xFFFF.
 fn bump16(v: u16) -> u16 {
@@ -46,7 +45,7 @@ impl Game {
     #[doc(alias = "gmMainLib_GetCoinMatchTotal")]
     #[doc(alias = "gmMainLib_GetBonusMatchTotal")]
     pub fn count_match_kind(&mut self, match_kind: u8, outcome: u8) {
-        let stamina = self.game_mode == GM_STAMINA_VS;
+        let stamina = self.game_mode == GameMode::Stamina;
         let s = &mut self.game_data.thing.save_data;
         if outcome.wrapping_sub(7) <= 1 {
             s.match_resets = s.match_resets.wrapping_add(1);

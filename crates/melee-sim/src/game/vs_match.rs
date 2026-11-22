@@ -8,7 +8,7 @@
 
 use melee_data::archive::{Archive, ArchiveId, Archives};
 
-use super::gm::{self, scene, vs, vs_mode};
+use super::gm::{scene, vs, vs_mode};
 use super::handles::CodeRef;
 use super::hud;
 use super::mirror::{Cx, Mem, Mirror};
@@ -21,6 +21,7 @@ use crate::audio::clock::DiscSpeed;
 use crate::audio::dsp::DspModel;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::gm::GameMode;
 use crate::game::it::ItKind;
 use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
@@ -229,7 +230,9 @@ impl Settings {
         Settings {
             start,
             seed: 0,
-            game_mode: special.map_or(gm::GM_VS, vs_mode::Special::game_mode),
+            game_mode: special
+                .map_or(GameMode::Vs, vs_mode::Special::game_mode)
+                .id(),
             rules: Rules::default(),
             // A player hears the match: the voices play through their samples, and the music
             // needs a drive's pace to keep playing.
@@ -271,7 +274,7 @@ impl Settings {
         let mut s = Settings::from_game_info(&info, r.seed);
         retail_kinds(&s.start)?;
         // Playback boots into the debug VS mode, whose scene runs the match.
-        s.game_mode = gm::GM_DEBUG_VS;
+        s.game_mode = GameMode::DebugVs.id();
         s.rules = Rules::from_codes(&codes)?;
         // Marth's trail colors read his costume a fixed distance before his attribute block,
         // wherever the heap put it (`game::player_codes`): a match with Marth is refused.
@@ -369,7 +372,7 @@ impl Settings {
         Settings {
             start,
             seed,
-            game_mode: gm::GM_VS,
+            game_mode: GameMode::Vs.id(),
             rules: Rules::default(),
             ucf: ucf::Pads::default(),
             playback: false,
@@ -1504,7 +1507,7 @@ mod tests {
             rules: crate::game::state::Rules::slippi_online(),
             ..Default::default()
         };
-        g.machine.routing.curr_mode = 2;
+        g.machine.routing.curr_mode = crate::game::gm::GameMode::Vs.id();
         // Character kind 16 is Samus; 2 Fox, 14 the Ice Climbers.
         for (players, on) in [
             ([player(16, 0), player(2, 1)], true),
@@ -1594,7 +1597,7 @@ mod tests {
             rules: crate::game::state::Rules::slippi_online(),
             ..Default::default()
         };
-        g.machine.routing.curr_mode = 2;
+        g.machine.routing.curr_mode = crate::game::gm::GameMode::Vs.id();
         let start = Settings::vs(32, &[player(2, 0), player(14, 1)], 4, 8).start;
         let (r, _) = crate::game::record::live_start(&g, &start);
         assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, None);
