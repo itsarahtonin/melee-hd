@@ -463,11 +463,13 @@ pub fn trail(
 /// position ([`Strand::on_link`] after it), along the line from the next link out (or the
 /// hand's point `at`) to the one before (or itself; the yo-yo facing its way,
 /// [`Strand::tip_faces`]), its matrix's axes scaled ([`Strand::length`], copied out and back,
-/// [`Strand::copies`]). Whether a link was out.
+/// [`Strand::copies`]). The originals look for the first link out without a null test, so with
+/// every link in they read through a null link; none of their states lines up then, and this
+/// stops by name (docs/melee-bugs.md, latent defects).
 #[doc(alias = "it_802BCB88")]
 #[doc(alias = "it_802C3520")]
 #[doc(alias = "it_802BFAFC")]
-pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3, s: &Strand) -> bool {
+pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3, s: &Strand) {
     let mut l = vars(r, gobj, s).hand.get();
     while let Some(k) = l {
         if lk(r.game, k).x2C_b0 {
@@ -475,9 +477,7 @@ pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3, s: &Strand) -> bool {
         }
         l = lk(r.game, k).prev;
     }
-    if l.is_none() {
-        return false;
-    }
+    assert!(l.is_some(), "a strand's line-up with no link out");
     let mut count = 0;
     while let Some(k) = l {
         let link_ = lk(r.game, k);
@@ -522,7 +522,6 @@ pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3, s: &Strand) -> bool {
         *jm = if s.copies { m.copied() } else { m };
         l = lk(r.game, k).prev;
     }
-    true
 }
 
 /// Forgets a GObj going away, as every item does, and its fighter if it's him.

@@ -677,10 +677,7 @@ fn hitboxes_along(r: &mut Running, gobj: GObjId, l: ItemLinkId, at: Vec3, count:
 /// The links' models lined up between their neighbours, scaled to the link length, and Sheik's
 /// hitboxes along it.
 pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3) {
-    assert!(
-        strand::line_up(r, gobj, at, &CHAIN),
-        "a chain with no link out"
-    );
+    strand::line_up(r, gobj, at, &CHAIN);
 }
 
 /// Hanging at the hand, `it_2725_Logic54_PickedUp` (and the pull's end).
