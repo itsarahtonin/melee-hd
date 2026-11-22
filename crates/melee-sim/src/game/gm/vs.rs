@@ -133,7 +133,7 @@ impl Game {
     #[doc(alias("vs_unk34"))]
     #[doc(alias = "gm_8016AE94")]
     pub fn vs_item_weight(&self) -> f32 {
-        self.vs.state.unk_34
+        self.vs.state.item_weight
     }
 
     /// The match's frame count, `gm_GetFrameCount`.
@@ -150,7 +150,7 @@ impl Game {
     /// The timer's frames within its second (`state.unk_2C`), `gm_8016AEFC`.
     #[doc(alias = "gm_8016AEFC")]
     pub fn vs_timer_frames(&self) -> u16 {
-        self.vs.state.unk_2C
+        self.vs.state.timer_frames
     }
 
     /// The match's time, `GetMatchTimer`: with the timer on, the seconds left (gone, for a
@@ -268,7 +268,7 @@ impl Game {
     /// Whether the match is still on, `gm_8016B1EC`.
     #[doc(alias = "gm_8016B1EC")]
     pub fn vs_in_play(&self) -> bool {
-        self.vs.state.unk_0 == 0
+        self.vs.state.phase == 0
     }
 
     /// Whether the match has no time limit, `gm_8016B204`.
@@ -294,7 +294,7 @@ impl Game {
     #[doc(alias("vs_fighter_x4_b3"))]
     #[doc(alias = "gm_8016B258")]
     pub fn vs_fighter_shows_hearts(&self, slot: i32) -> bool {
-        self.vs.state.fighters[slot as usize].x4[0] & 0x10 != 0
+        self.vs.state.fighters[slot as usize].flags[0] & 0x10 != 0
     }
 
     /// Ends the match from outside (`terminate_match`), `gm_8016B328`.
@@ -307,7 +307,7 @@ impl Game {
     /// shows), `gm_8016B33C`.
     #[doc(alias = "gm_8016B33C")]
     pub fn vs_set_end_kind(&mut self, kind: i32) {
-        self.vs.state.unk_B = (kind + 1) as u8;
+        self.vs.state.end_kind = (kind + 1) as u8;
     }
 
     /// The game's speed, `gm_SetGameSpeed`: the game clock's period
@@ -328,7 +328,7 @@ impl Game {
 
     #[doc(alias = "fn_8016B388")]
     pub fn vs_set_respawn_damage(&mut self, slot: i32, damage: i32) {
-        self.vs.state.fighters[slot as usize].x6 = damage as u16;
+        self.vs.state.fighters[slot as usize].respawn_damage = damage as u16;
     }
 
     /// Whether a single-player stage run is on (Classic, Adventure, All-Star), `gm_8016B3D8`.
@@ -349,7 +349,7 @@ impl Game {
     #[doc(alias("vs_unk_c"))]
     #[doc(alias = "fn_8016B728")]
     pub fn vs_joiners(&self) -> u8 {
-        self.vs.state.unk_C
+        self.vs.state.joiners
     }
 
     /// Whether the rules come with a challenger's record (`x58`), `gm_8016A944`.
@@ -363,8 +363,8 @@ impl Game {
     #[doc(alias = "fn_8016758C")]
     pub fn vs_tick_platforms(&mut self) {
         for f in &mut self.vs.state.fighters {
-            if f.x8 != 0 {
-                f.x8 -= 1;
+            if f.platform_timer != 0 {
+                f.platform_timer -= 1;
             }
         }
     }
@@ -534,9 +534,9 @@ impl Game {
         }
         if s.start.timer_enabled {
             let up = if s.start.timer_counts_up {
-                s.state.timer_seconds == s.start.time_limit && s.state.unk_2C == 0
+                s.state.timer_seconds == s.start.time_limit && s.state.timer_frames == 0
             } else {
-                s.state.timer_seconds == 0 && s.state.unk_2C == 0x3B
+                s.state.timer_seconds == 0 && s.state.timer_frames == 0x3B
             };
             if up {
                 return OUTCOME_TIMEOUT;
@@ -580,7 +580,7 @@ impl Game {
     /// The match's results so far (`state.x24C`), `gm_8016B774`.
     #[doc(alias = "gm_8016B774")]
     pub fn vs_results(&self) -> &MatchEnd {
-        &self.vs.state.x24C
+        &self.vs.state.match_end
     }
 
     /// Forgets the live standings, `fn_80171AD4`.
@@ -672,7 +672,7 @@ impl Game {
     /// leads and who trails; afterwards, who still does.
     #[doc(alias = "fn_80171DC4")]
     pub fn update_ranks(&mut self) {
-        let res = &self.vs.state.x24C;
+        let res = &self.vs.state.match_end;
         let (is_teams, penalty) = (res.is_teams, res.sd_penalty);
         let pkinds: [u8; 6] = core::array::from_fn(|i| res.player_standings[i].pkind);
         self.rank_players(is_teams, penalty);
@@ -718,7 +718,7 @@ impl Game {
             if f.respawn_timer != 0 {
                 f.respawn_timer -= 1;
                 if f.respawn_timer == 0 {
-                    due.push((i as i32, i32::from(f.xB)));
+                    due.push((i as i32, i32::from(f.respawn_sub)));
                 }
             }
         }
@@ -731,7 +731,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8016B8D4")]
     pub fn vs_announce_entry(&mut self, slot: i32, pkind: u8) {
         let f = &mut self.game.vs.state.fighters[slot as usize];
-        f.x1 = 0x82;
+        f.entry_timer = 0x82;
         f.slot_type = pkind;
         self.stadium_entrance(slot, pkind.into());
     }
@@ -794,15 +794,18 @@ impl Running<'_> {
         let s = &mut g.vs.state;
         s.frame_count = s.frame_count.saturating_add(1);
         if g.vs.start.timer_enabled {
-            s.unk_2C = s.unk_2C.wrapping_add(1);
-            if s.unk_2C >= 60 {
-                s.unk_2C = 0;
+            s.timer_frames = s.timer_frames.wrapping_add(1);
+            if s.timer_frames >= 60 {
+                s.timer_frames = 0;
                 if g.vs.start.timer_counts_up {
                     s.timer_seconds = s.timer_seconds.saturating_add(1);
                 } else if s.timer_seconds != 0 {
                     if s.timer_seconds < 6 && !self.game.is_timer_hidden() {
                         let g = &mut *self.game;
-                        assert_eq!(g.vs.state.unk_1C.0, COUNTDOWN.0, "the countdown's sounds");
+                        assert_eq!(
+                            g.vs.state.countdown_sfx.0, COUNTDOWN.0,
+                            "the countdown's sounds"
+                        );
                         let id = COUNTDOWN.1[g.vs.state.timer_seconds as usize] as i32;
                         if id >= 0 {
                             self.sfx_play(id, 0x7F, 0x40);
@@ -817,15 +820,18 @@ impl Running<'_> {
         let mut sounds = Vec::new();
         for i in 0..4 {
             let f = &mut g.vs.state.fighters[i];
-            if f.x1 == 0 {
+            if f.entry_timer == 0 {
                 continue;
             }
-            f.x1 -= 1;
-            let left = f.x1;
+            f.entry_timer -= 1;
+            let left = f.entry_timer;
             let human = i32::from(f.slot_type) == PKIND_HUMAN;
             if left == 0x50 {
                 let id = if human {
-                    assert_eq!(g.vs.state.unk_20.0, ENTRY_VOICES.0, "the entry voices");
+                    assert_eq!(
+                        g.vs.state.entry_voices.0, ENTRY_VOICES.0,
+                        "the entry voices"
+                    );
                     ENTRY_VOICES.1[i] as i32
                 } else {
                     0x7C865
@@ -967,14 +973,14 @@ impl Running<'_> {
         let mode = g.game_mode;
         let stkind = g.vs.start.stkind;
         if mode == super::GM_TARGET_TEST {
-            let ckind = self.game.game_data.vs.unk_530.target_test.ckind as u8;
+            let ckind = self.game.game_data.vs.event.target_test.ckind as u8;
             self.target_test_score(ckind);
         } else if mode == GM_CLASSIC && (0x21..=0x3A).contains(&stkind) {
             let ckind = self.game.one_player.classic.base.player.ckind as u8;
             self.target_test_score(ckind);
         }
         // An event cleared with a new best: the first player's rumble.
-        if mode == super::GM_EVENT && self.game.vs.state.unk_10 == 0x9C41 {
+        if mode == super::GM_EVENT && self.game.vs.state.end_sfx_1 == 0x9C41 {
             let port = self.game.player_port(0) as usize;
             let tag = self.game.player_nametag(0);
             self.tou_rumble(port, tag, 0xD, 0x5A);
@@ -1001,13 +1007,13 @@ impl Running<'_> {
             left == 0 && best > self.game.vs.state.frame_count
         };
         if new {
-            self.game.vs.state.unk_10 = 0x9C41;
-            self.game.vs.state.unk_14 = 0x145;
+            self.game.vs.state.end_sfx_1 = 0x9C41;
+            self.game.vs.state.end_sfx_2 = 0x145;
             let (port, tag) = (self.game.player_port(0), self.game.player_nametag(0));
             self.tou_rumble(port as usize, tag, 13, 90);
         } else if left > 0 {
-            self.game.vs.state.unk_14 = 0x149;
-            self.game.vs.state.unk_18 = 40;
+            self.game.vs.state.end_sfx_2 = 0x149;
+            self.game.vs.state.end_sfx_2_frame = 40;
         }
     }
 
@@ -1022,12 +1028,12 @@ impl Running<'_> {
             self.game.clear_db_pause_flag(1);
             let xd = self.game.vs.start.end_wait;
             if xd > 1 {
-                self.game.vs.state.unk_30 = xd - 1;
+                self.game.vs.state.end_frames = xd - 1;
             }
             self.vs_end();
             self.lb_audio_reset_flush();
             self.game.set_db_pause_flag(4);
-            self.game.vs.state.unk_0 = 1;
+            self.game.vs.state.phase = 1;
             return;
         }
         self.vs_end();
@@ -1063,7 +1069,7 @@ impl Running<'_> {
             };
             let s = &self.game.vs;
             let pauser = s.state.pauser as u8;
-            if s.start.pause_lras_quits && s.state.pause_timer == 0 && s.state.unk_3 == 0 {
+            if s.start.pause_lras_quits && s.state.pause_timer == 0 && s.state.photo_mode == 0 {
                 let g = &*self.game;
                 if quit & g.buttons_triggered(pauser) != 0
                     && quit & g.buttons_pressed(pauser) == quit
@@ -1075,7 +1081,7 @@ impl Running<'_> {
             let s = &self.game.vs;
             if s.start.pause_z_retries
                 && s.state.pause_timer == 0
-                && s.state.unk_3 == 0
+                && s.state.photo_mode == 0
                 && self.game.buttons_triggered(pauser) & 0x10 != 0
             {
                 self.vs_quit(unpauser, OUTCOME_RETRY);
@@ -1126,20 +1132,20 @@ impl Running<'_> {
         self.announce_match_end(Some(CodeRef(addr::GAME_END)));
         self.lb_audio_reset_flush();
         self.game.set_db_pause_flag(4);
-        self.game.vs.state.unk_0 = 1;
+        self.game.vs.state.phase = 1;
     }
 
     /// The frozen frames after GAME! or TIME!, then the results' setup, `fn_8016D634`.
     #[doc(alias = "fn_8016D634")]
     pub fn vs_after_end(&mut self) {
         let s = &mut self.game.vs.state;
-        let wait = s.unk_30;
-        s.unk_30 = s.unk_30.wrapping_add(1);
+        let wait = s.end_frames;
+        s.end_frames = s.end_frames.wrapping_add(1);
         if wait <= self.game.vs.start.end_wait {
             return;
         }
         if self.game.is_1p_run() {
-            let ko = i32::from(self.game.vs.state.unk_D);
+            let ko = i32::from(self.game.vs.state.last_ko);
             let rivals = self.stage_rival_bonuses();
             self.stage_bonuses(0, ko, rivals);
         }
@@ -1151,9 +1157,9 @@ impl Running<'_> {
             && (s.start.run_kind == 1 || g.player_stocks(0) > 0)
         {
             self.clear_start();
-            self.game.vs.state.unk_0 = 2;
+            self.game.vs.state.phase = 2;
         } else {
-            self.game.vs.state.unk_0 = 3;
+            self.game.vs.state.phase = 3;
         }
     }
 
@@ -1190,12 +1196,12 @@ impl Running<'_> {
         if let Some(f) = self.game.vs.start.on_frame_start {
             code::call(self, f.0, &[]);
         }
-        match self.game.vs.state.unk_0 {
+        match self.game.vs.state.phase {
             0 => self.vs_frame(),
             1 => self.vs_after_end(),
             2 => {
                 if self.clear_done() {
-                    self.game.vs.state.unk_0 = 3;
+                    self.game.vs.state.phase = 3;
                 }
             }
             3 => self.game.end_scene(),
@@ -1264,7 +1270,10 @@ impl Running<'_> {
     pub fn respawn_point(&mut self, slot: i32) -> (i32, Vec3, Vec3) {
         // `get_idx`: the first platform place not in use.
         let fighters = &self.game.vs.state.fighters;
-        let idx = fighters.iter().position(|f| f.x8 == 0).unwrap_or(0);
+        let idx = fighters
+            .iter()
+            .position(|f| f.platform_timer == 0)
+            .unwrap_or(0);
         let chr = self.game.player_ckind(slot) as i8;
         let own = self.game.stage_info.bits.own_entry_points;
         let point = if own { slot } else { 0 };
@@ -1276,8 +1285,8 @@ impl Running<'_> {
         const PLACES: [f32; 6] = [0.0, 1.0, -1.0, 2.0, 0.0, 0.0];
         let off = Vec3::new(mem(fp::fmuls(16.0, reg(PLACES[idx]))), 0.0, 0.0);
         let f = &mut self.game.vs.state.fighters[idx];
-        f.x8 = 0x90;
-        f.x9 = chr as u8;
+        f.platform_timer = 0x90;
+        f.unread_9 = chr as u8;
         (point, pos, off)
     }
 
@@ -1365,12 +1374,12 @@ impl Running<'_> {
         pos.y = super::super::gr::stage::cam_top(g);
         g.set_player_pos(slot, pos);
         g.set_player_facing(slot, if pos.x >= 0.0 { -1.0 } else { 1.0 });
-        let damage = i32::from(g.vs.state.fighters[slot as usize].x6);
+        let damage = i32::from(g.vs.state.fighters[slot as usize].respawn_damage);
         g.set_player_damage_at(slot, sub, damage);
         self.player_next_stock(slot, sub != 0);
         if sub != 1 {
             self.show_damage_display(slot);
-            if self.game.vs.state.fighters[slot as usize].xC & 0x8000 != 0 {
+            if self.game.vs.state.fighters[slot as usize].respawn_flags & 0x8000 != 0 {
                 self.game.camera.show_all_layers();
             }
         }
@@ -1623,7 +1632,7 @@ impl Running<'_> {
         );
         g.set_player_effect_color(0, i32::from(cap_color(color as u8)));
         self.player_create_fighters(0);
-        if self.game.vs.state.fighters[0].x4[0] & 0x08 != 0 {
+        if self.game.vs.state.fighters[0].flags[0] & 0x08 != 0 {
             self.sfx_play(0x41F4E, 0x7F, 0x40);
         }
         let (ckind, costume) = (self.game.player_ckind(0), self.game.player_costume(0));
@@ -1780,7 +1789,7 @@ impl Running<'_> {
             );
             g.set_player_effect_color(i, i32::from(cap_color(color as u8)));
             self.player_create_fighters(i);
-            if self.game.vs.state.fighters[i as usize].x4[0] & 0x08 != 0 {
+            if self.game.vs.state.fighters[i as usize].flags[0] & 0x08 != 0 {
                 self.sfx_play(0x41F4E, 0x7F, 0x40);
             }
         }
@@ -1796,7 +1805,7 @@ impl Game {
         self.set_player_pkind(slot, i32::from(d.slot_type));
         self.set_player_ckind(slot, i32::from(d.ckind));
         let f = &mut self.vs.state.fighters[slot as usize];
-        f.x0 = d.ckind as u8;
+        f.ckind = d.ckind as u8;
         self.set_player_stocks(slot, i32::from(d.stocks));
         self.set_player_costume(slot, i32::from(d.color));
         self.set_player_sub_color(slot, d.sub_color as i8);
@@ -1822,17 +1831,17 @@ impl Game {
                     CharacterKind::Zelda.id()
                 },
             );
-            self.vs.state.fighters[slot as usize].x4[0] |= 0x08;
+            self.vs.state.fighters[slot as usize].flags[0] |= 0x08;
         }
         self.vs.state.fighters[slot as usize].spawn_point = d.spawn_pos;
         self.set_player_handicap(slot, d.handicap);
         self.set_player_team(slot, d.team as i8);
         self.set_player_rumble(slot, d.rumble_enabled);
         self.set_player_nametag(slot, i32::from(d.nametag));
-        if d.xC_b1 {
-            self.vs.state.unk_A = self.vs.state.unk_A.wrapping_add(5);
+        if d.enters {
+            self.vs.state.entry_delay = self.vs.state.entry_delay.wrapping_add(5);
             self.set_player_flags_bit3(slot, 1);
-            let a = self.vs.state.unk_A;
+            let a = self.vs.state.entry_delay;
             self.set_player_entry_delay(slot, a);
         }
         // `Player_SetPlayerAndEntityCpuType` and `...CpuLevel`: the slot has no fighters yet.
@@ -1844,14 +1853,14 @@ impl Game {
         for which in 0..2 {
             self.set_player_damage_at(slot, which, i32::from(damage));
         }
-        self.vs.state.fighters[slot as usize].x6 = d.damage1;
-        self.set_player_more_flags_bit2(slot, u8::from(d.xC_b7));
+        self.vs.state.fighters[slot as usize].respawn_damage = d.damage1;
+        self.set_player_more_flags_bit2(slot, u8::from(d.stamina));
         self.set_player_stamina(slot, i32::from(d.hp));
         self.set_player_model_scale(slot, d.model_scale);
         self.set_player_attack_ratio(slot, d.attack_ratio);
         self.set_player_defense_ratio(slot, d.defense_ratio);
-        self.set_player_more_flags_bit1(slot, u8::from(d.xC_b6));
-        let x4 = &mut self.vs.state.fighters[slot as usize].x4[0];
+        self.set_player_more_flags_bit1(slot, u8::from(d.voice_muted));
+        let x4 = &mut self.vs.state.fighters[slot as usize].flags[0];
         let set = |x4: &mut u8, bit: u8, on: bool| {
             if on {
                 *x4 |= bit;
@@ -1859,23 +1868,23 @@ impl Game {
                 *x4 &= !bit;
             }
         };
-        set(x4, 0x40, d.xC_b3);
+        set(x4, 0x40, d.unread_c_b3);
         set(x4, 0x80, d.vs_metal);
         self.set_player_is_metal(slot, u8::from(d.vs_metal));
-        let x4 = &mut self.vs.state.fighters[slot as usize].x4[0];
+        let x4 = &mut self.vs.state.fighters[slot as usize].flags[0];
         set(x4, 0x20, d.vs_invisible);
         self.set_player_flags_bit6(slot, u8::from(d.vs_invisible));
         self.set_player_flags_bit7(slot, 0);
-        self.set_player_flags_ae_bit0(slot, u8::from(d.xC_b5));
-        self.set_player_more_flags_bit3(slot, u8::from(!d.xD_b2));
-        self.set_player_more_flags_bit4(slot, u8::from(d.xD_b3));
-        self.set_player_more_flags_bit5(slot, u8::from(d.xD_b4));
-        let x4 = &mut self.vs.state.fighters[slot as usize].x4[0];
-        set(x4, 0x10, d.xD_b1);
-        self.set_player_more_flags_bit6(slot, d.xB);
+        self.set_player_flags_ae_bit0(slot, u8::from(d.attrs_scaled));
+        self.set_player_more_flags_bit3(slot, u8::from(!d.no_offscreen_damage));
+        self.set_player_more_flags_bit4(slot, u8::from(d.no_magnifier));
+        self.set_player_more_flags_bit5(slot, u8::from(d.dies_up));
+        let x4 = &mut self.vs.state.fighters[slot as usize].flags[0];
+        set(x4, 0x10, d.shows_hearts);
+        self.set_player_more_flags_bit6(slot, d.sfx_size);
         self.set_player_facing(slot, crate::fpu::mem(f64::from(d.spawn_dir)));
-        let x4 = &mut self.vs.state.fighters[slot as usize].x4[0];
-        set(x4, 0x04, d.xD_b0);
+        let x4 = &mut self.vs.state.fighters[slot as usize].flags[0];
+        set(x4, 0x04, d.hp_explodes);
     }
 
     /// The match's state from its `StartMeleeData`, `fn_8016DCC0`: the rules, the clock,
@@ -1884,24 +1893,24 @@ impl Game {
     pub fn init_vs(&mut self, d: &StartMeleeData) {
         let s = &mut self.vs.state;
         *s = Default::default();
-        s.unk_D = 6;
-        s.unk_1C = super::super::handles::RawPtr(COUNTDOWN.0);
-        s.unk_20 = super::super::handles::RawPtr(ENTRY_VOICES.0);
-        s.unk_0 = 0;
+        s.last_ko = 6;
+        s.countdown_sfx = super::super::handles::RawPtr(COUNTDOWN.0);
+        s.entry_voices = super::super::handles::RawPtr(ENTRY_VOICES.0);
+        s.phase = 0;
         let r = &d.rules;
         self.vs.start = r.clone();
         let s = &mut self.vs.state;
-        s.x24C.match_kind = r.match_kind;
-        s.x24C.is_teams = r.is_teams;
+        s.match_end.match_kind = r.match_kind;
+        s.match_end.is_teams = r.is_teams;
         if r.end_kind != 0 {
-            s.unk_B = r.end_kind;
+            s.end_kind = r.end_kind;
         }
-        s.x24C.sd_penalty = r.sd_penalty;
+        s.match_end.sd_penalty = r.sd_penalty;
         self.camera.set_quake_scale(r.quake_scale);
         let s = &mut self.vs.state;
         if self.vs.start.timer_enabled {
             if self.vs.start.timer_counts_up {
-                s.unk_2C = if r.start_frame != 0 {
+                s.timer_frames = if r.start_frame != 0 {
                     u16::from(r.start_frame) - 1
                 } else {
                     0
@@ -1914,7 +1923,7 @@ impl Game {
                 } else {
                     r.time_limit
                 };
-                s.unk_2C = if r.start_frame != 0 {
+                s.timer_frames = if r.start_frame != 0 {
                     u16::from(r.start_frame) - 1
                 } else {
                     0x3B
@@ -1922,7 +1931,7 @@ impl Game {
             }
         } else if self.vs.start.exact_start_frame {
             s.timer_seconds = r.time_limit;
-            s.unk_2C = u16::from(r.start_frame);
+            s.timer_frames = u16::from(r.start_frame);
         }
         s.is_singleplayer = u8::from(r.opponent_list.0 != 0);
         self.init_all_players();
@@ -2039,7 +2048,7 @@ impl Running<'_> {
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
         super::super::gr::setup::select(self, i32::from(d.rules.stkind), files.stage);
-        self.game.vs.state.unk_34 = item_weight(self.game);
+        self.game.vs.state.item_weight = item_weight(self.game);
         // `Item_80266F70`'s `lbArchive_80017040`: the common items from the preload cache.
         let kept = self.take_cached_named("ItCo.usd");
         super::super::it::item::load_common_data(self.game, self.data, files.it_co, kept);

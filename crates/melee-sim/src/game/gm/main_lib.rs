@@ -5,7 +5,7 @@
 
 use super::super::state::{Game, Running};
 use super::super::structs::{
-    FighterData, GamePrefs, GameRules, GmSaveData, GmStats, NameTagData, gmm_x0,
+    FighterData, GameData, GamePrefs, GameRules, GmSaveData, GmStats, NameTagData,
 };
 
 /// `LANG_JP`, `LANG_US`.
@@ -63,15 +63,15 @@ fn default_rules() -> GameRules {
         friendly_fire: 0,
         pause: 1,
         score_display: 0,
-        unk_xc: 0,
-        xD: 0,
-        xE: 8,
-        xF: 8,
-        unk_x10: 0,
-        x11: 0,
-        x12: 8,
-        x13: 0,
-        unk_14: -1,
+        sd_penalty: 0,
+        diagram_name_mode: 0,
+        fighter_cursor_hi: 8,
+        fighter_cursor_lo: 8,
+        name_cursor_hi: 0,
+        name_cursor_lo: 0,
+        diagram2_fighter: 8,
+        diagram2_name: 0,
+        gallery_song: -1,
     }
 }
 
@@ -88,7 +88,7 @@ fn default_prefs() -> GamePrefs {
     }
 }
 
-impl gmm_x0 {
+impl GameData {
     /// `lbLang_IsSettingJP`, of the language the boot set from the disc.
     pub fn language_setting_jp(&self) -> bool {
         self.language == LANG_JP
@@ -157,7 +157,7 @@ pub(crate) fn clear_name_tag(d: &mut NameTagData) {
     d.vs_kos = [0; NAMETAG_COUNT];
     clear_stats(&mut d.stats);
     d.play_time_by_fighter = [0; SELKIND_COUNT];
-    d.x1A2 = 5;
+    d.handicap = 5;
 }
 
 /// `ResetPersistentFighterData`: a character's KOs and statistics cleared.
@@ -192,11 +192,11 @@ impl Running<'_> {
     /// The data `gmMainLib_8015FBA4` resets: all of it cleared, the language from the disc,
     /// the VS rules' defaults and every logical file of the card's data reset.
     fn reset_game_data_fields(&mut self) {
-        *self.game.game_data = gmm_x0::default();
+        *self.game.game_data = GameData::default();
         let d = &mut self.game.game_data;
         d.set_language_setting(LANG_US);
         d.set_saved_language(LANG_US);
-        d.x1850 = default_rules();
+        d.rules = default_rules();
         for i in 1..9 {
             self.reset_card_file(i, true);
         }

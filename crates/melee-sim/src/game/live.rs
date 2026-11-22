@@ -122,7 +122,7 @@ impl Running<'_> {
             played: self.game.characters_played(),
             seed: self.game.objs.rng.seed,
             ucf: self.game.ucf,
-            end: self.game.scene.unk_C,
+            end: self.game.scene.ending,
         }
     }
 }
@@ -158,7 +158,7 @@ impl Game {
         self.mark_played(&back.played);
         self.objs.rng.seed = back.seed;
         self.ucf = back.ucf;
-        self.scene.unk_C = back.end;
+        self.scene.ending = back.end;
     }
 }
 
@@ -329,8 +329,8 @@ impl Game {
         self.vs.clone_from(&live.vs);
         // The players as the console's entry made them (Zelda held A), the match's since.
         for (f, c) in self.vs.state.fighters.iter_mut().zip(&entry.vs_fighters) {
-            f.x0 = c.x0;
-            f.x4[0] = (f.x4[0] & !ZELDA_HELD_A) | (c.x4[0] & ZELDA_HELD_A);
+            f.ckind = c.ckind;
+            f.flags[0] = (f.flags[0] & !ZELDA_HELD_A) | (c.flags[0] & ZELDA_HELD_A);
         }
         self.gm.ranks.clone_from(&live.gm.ranks);
         self.crowd = live.crowd;
@@ -832,7 +832,7 @@ impl Game {
         let paused = self.camera.mode() == super::camera::PAUSE;
         if self.keeps_display_views() {
             let due = super::camera::pass_view(self);
-            let tick = self.scene.unk_0;
+            let tick = self.scene.ticks;
             self.display_phase.tick_end(tick, due);
             if !self.camera.is_following() {
                 self.display_phase.followed_views = [None; 2];
@@ -927,7 +927,7 @@ impl Game {
                 .followed_transform()
                 .is_some_and(|t| theirs(g, t) != *ours);
         if differs {
-            let tick = self.scene.unk_8;
+            let tick = self.scene.game_ticks;
             self.display_phase.note(tick);
         }
     }
@@ -952,7 +952,7 @@ impl Game {
             return None;
         }
         let held = super::camera::View::of_camera(self, data);
-        let now = self.scene.unk_0;
+        let now = self.scene.ticks;
         let d = &self.display_phase;
         if d.view_tick != now {
             return Some([None; 2]);
@@ -1180,7 +1180,7 @@ impl Game {
 
     /// One tick counted at most once.
     fn haze_note(&mut self) {
-        let tick = self.scene.unk_8;
+        let tick = self.scene.game_ticks;
         if self.haze.counted != Some(tick) {
             self.haze.counted = Some(tick);
             self.display_phase.note(tick);
@@ -1346,7 +1346,7 @@ mod tests {
         g.rules = crate::game::state::Rules::VANILLA
             .with_fixes(Some(crate::game::slippi::CodeSet::V3_19));
         let tick = |g: &mut Game, t: u32, before: u32, step: bool, during: u32, after: u32| {
-            g.scene.unk_8 = t;
+            g.scene.game_ticks = t;
             g.haze_frame_start();
             for _ in 0..before {
                 g.objs.rng.draw();
@@ -1382,7 +1382,7 @@ mod tests {
         tick(&mut g, 6, 0, false, 0, 0);
         assert_eq!(g.display_phase.differing, 3);
         // Kraid restarts it: the tick still counts, then it's back on course.
-        g.scene.unk_8 = 7;
+        g.scene.game_ticks = 7;
         g.haze_frame_start();
         g.haze_restarted();
         g.objs.rng.draw();

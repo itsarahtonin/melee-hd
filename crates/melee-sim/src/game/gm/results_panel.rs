@@ -823,7 +823,12 @@ impl Running<'_> {
         let n = &self.game.game_data.thing.nametag_banks[s / NAMETAG_BANK_SIZE].inner
             [s % NAMETAG_BANK_SIZE];
         let mut b: Vec<u8> = n.namedata.iter().map(|&c| c as u8).collect();
-        b.extend([n.x1A0 as u8, n.rumble_enabled, n.x1A2 as u8, n.padding_x1A2]);
+        b.extend([
+            n.name_end as u8,
+            n.rumble_enabled,
+            n.handicap as u8,
+            n.pad_1a3,
+        ]);
         let end = b.iter().position(|&c| c == 0).unwrap_or_else(|| {
             super::super::code::unported_call("a name tag's name running past its block")
         });
@@ -949,7 +954,7 @@ impl Running<'_> {
         let mut label_id = -1;
         let mut value_id = -1;
         let entry = (list.mode != 2).then(|| list.entries[idx as usize]);
-        let me_x44c = |r: &Self| r.results_end().x44C[slot].clone();
+        let me_x44c = |r: &Self| r.results_end().decisions[slot].clone();
         let nth = |values: &[u8], n: i32| -> usize {
             let mut n = n;
             let mut i = 0;
@@ -970,7 +975,7 @@ impl Running<'_> {
             }
         } else if idx & 1 == 1 && idx < i32::from(list.count) {
             let x = me_x44c(self);
-            let i = nth(&x.x0, idx / 2 + 1);
+            let i = nth(&x.earned, idx / 2 + 1);
             let kind = super::decisions::decision_kind(i as i32);
             let us = super::super::gm::language_setting_is_us();
             let name = (super::decisions::decision_text(kind, us) - 2) as u16;
@@ -988,8 +993,8 @@ impl Running<'_> {
                     let pair = idx / 2 - 1;
                     if pair >= 0 {
                         let x = me_x44c(self);
-                        let i = nth(&x.x0, pair + 1);
-                        let v = x.x104[i];
+                        let i = nth(&x.earned, pair + 1);
+                        let v = x.points[i];
                         value_id = if v < 0 {
                             add(
                                 self,

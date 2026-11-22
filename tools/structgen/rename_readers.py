@@ -119,7 +119,9 @@ def check(args):
 def fix(found):
     by_file = {}
     for f, a, b, old, struct, code in found:
-        by_file.setdefault(f, set()).add((a, b, old, struct, code))
+        # rustc spells one file's path two ways across targets (`tools\oracle\src\boot.rs`
+        # and `tools/oracle/src/boot.rs`): one key, or the second rewrite meets stale spans.
+        by_file.setdefault(os.path.normcase(os.path.normpath(f)), set()).add((a, b, old, struct, code))
     n = 0
     for f, spans in by_file.items():
         # A type's span inside another (an import list's item and the list) is renamed by the

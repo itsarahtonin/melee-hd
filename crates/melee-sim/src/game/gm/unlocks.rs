@@ -190,8 +190,8 @@ impl Running<'_> {
         }
         let now = self.clock_seconds();
         let g = &mut self.game.game_data;
-        g.unk_44.times[n as usize] = now;
-        g.unk_44.flags[(n / 32) as usize] |= 1 << (n % 32);
+        g.trophy_notices.times[n as usize] = now;
+        g.trophy_notices.flags[(n / 32) as usize] |= 1 << (n % 32);
         let s = &mut g.thing.save_data;
         s.trophies[(n / 32) as usize] |= 1 << (n % 32);
         s.trophies[(n / 32) as usize] &= !(1 << (n % 32));
@@ -211,8 +211,8 @@ impl Running<'_> {
         }
         let now = self.clock_seconds();
         let g = &mut self.game.game_data;
-        g.unk_44.times[n as usize] = now;
-        g.unk_44.flags[w] |= b;
+        g.trophy_notices.times[n as usize] = now;
+        g.trophy_notices.flags[w] |= b;
         g.thing.save_data.trophies[w] |= b;
     }
 
@@ -442,7 +442,7 @@ impl Running<'_> {
         let message =
             (0..0x42).any(|i| self.game.message_noted(i) && bit(&s.messages_pending, &[], i));
         let trophy =
-            (0..super::trophies::TROPHY_COUNT as u32).any(|j| bit(&g.unk_44.flags, &[], j));
+            (0..super::trophies::TROPHY_COUNT as u32).any(|j| bit(&g.trophy_notices.flags, &[], j));
         message || trophy
     }
 

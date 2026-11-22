@@ -1242,7 +1242,7 @@ impl Running<'_> {
             self.sis_reset();
             self.free_gobj_links(0x19, 0x1C);
             self.free_gobj_links(0x12, 0x15);
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.game.end_scene();
             self.change_game_mode_after_scene(GM_MENU);
             return;

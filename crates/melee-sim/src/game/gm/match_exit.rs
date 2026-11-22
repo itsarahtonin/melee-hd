@@ -145,7 +145,7 @@ impl Running<'_> {
     /// player's bonuses, and the match marked over; then the exit data's run value, timer and
     /// stage flag.
     pub fn vs_scene_exit_info(&mut self) -> MatchExitInfo {
-        let mut r = self.game.vs.state.x24C.clone();
+        let mut r = self.game.vs.state.match_end.clone();
         if self.game.vs.state.match_over == 0 {
             r.is_teams = self.game.vs.start.is_teams;
             r.outcome = self.game.vs.state.match_result;
@@ -175,7 +175,7 @@ impl Running<'_> {
     /// All-Star's, when the match counts for them (`state.unk_9`).
     #[doc(alias = "fn_8016C46C")]
     pub(crate) fn single_player_results_into(&mut self, r: &mut MatchEnd) {
-        if self.game.vs.state.unk_9 == 0 {
+        if self.game.vs.state.cleared == 0 {
             return;
         }
         match self.game.game_mode {
@@ -202,42 +202,42 @@ impl Running<'_> {
             .map(|t| i32::from(t.1))
             .sum();
         if trophies > 0 {
-            r._x448[2] |= 0x08;
+            r.mode_bonuses[2] |= 0x08;
         }
         if !g.vs.start.allows_continue {
             return;
         }
         let a = &g.one_player.allstar.base;
         let total = a.frames.wrapping_add(g.vs_frame_count());
-        r._x448[0] |= 0x20;
+        r.mode_bonuses[0] |= 0x20;
         if a.player.cpu_level == 4 {
-            r._x448[0] |= 0x04;
+            r.mode_bonuses[0] |= 0x04;
         }
         if total < 0x6270 {
-            r._x448[2] |= 0x40;
+            r.mode_bonuses[2] |= 0x40;
         } else if total < 0x9AB0 {
-            r._x448[2] |= 0x80;
+            r.mode_bonuses[2] |= 0x80;
         }
         if a.damage_taken == 0 && r.player_standings[0].damage_taken == 0 {
-            r._x448[1] |= 0x02;
+            r.mode_bonuses[1] |= 0x02;
         }
         if a.counters[2] != 0 {
-            r._x448[2] |= 0x20;
+            r.mode_bonuses[2] |= 0x20;
         }
         if a.counters[3] != 0 {
-            r._x448[2] |= 0x10;
+            r.mode_bonuses[2] |= 0x10;
         }
         if (a.damage_taken as u32).wrapping_add(r.player_standings[0].damage_taken)
             == g.player_damage(0) as u32
         {
-            r._x448[0] |= 0x02;
+            r.mode_bonuses[0] |= 0x02;
         }
         if a.counters[1] != 0 {
-            r._x448[1] |= 0x01;
+            r.mode_bonuses[1] |= 0x01;
             return;
         }
-        if r.player_standings[0].stocks as i32 == i32::from(g.game_data.vs.unk_528.stocks) {
-            r._x448[1] |= 0x04;
+        if r.player_standings[0].stocks as i32 == i32::from(g.game_data.vs.all_star.stocks) {
+            r.mode_bonuses[1] |= 0x04;
         }
     }
 
@@ -258,35 +258,35 @@ impl Running<'_> {
             .map(|t| i32::from(t.1))
             .sum();
         if trophies > 0 {
-            r._x448[2] |= 0x08;
+            r.mode_bonuses[2] |= 0x08;
         }
         if g.vs.start.allows_continue {
             let a = &g.one_player.adventure.base;
             let total = a.frames.wrapping_add(g.vs_frame_count());
-            r._x448[0] |= 0x40;
+            r.mode_bonuses[0] |= 0x40;
             if a.player.cpu_level == 4 {
-                r._x448[0] |= 0x08;
+                r.mode_bonuses[0] |= 0x08;
             }
             if total < 0xC4E0 {
-                r._x448[2] |= 0x40;
+                r.mode_bonuses[2] |= 0x40;
             } else if total < 0x13560 {
-                r._x448[2] |= 0x80;
+                r.mode_bonuses[2] |= 0x80;
             }
             if a.damage_taken == 0 && r.player_standings[0].damage_taken == 0 {
-                r._x448[1] |= 0x02;
+                r.mode_bonuses[1] |= 0x02;
             }
             if a.counters[2] != 0 {
-                r._x448[2] |= 0x20;
+                r.mode_bonuses[2] |= 0x20;
             }
             if a.counters[3] != 0 {
-                r._x448[2] |= 0x10;
+                r.mode_bonuses[2] |= 0x10;
             }
             if a.counters[1] != 0 {
-                r._x448[1] |= 0x01;
+                r.mode_bonuses[1] |= 0x01;
             } else if r.player_standings[0].stocks as i32
-                == i32::from(g.game_data.vs.unk_522.stocks)
+                == i32::from(g.game_data.vs.adventure.stocks)
             {
-                r._x448[1] |= 0x04;
+                r.mode_bonuses[1] |= 0x04;
             }
         }
         let id = super::adventure::stage_entry(g.machine.routing.curr_state_id)
@@ -299,22 +299,22 @@ impl Running<'_> {
             })
         };
         if id == 0x03 && cpu_luigi(g) {
-            r._x448[1] |= 0x80;
+            r.mode_bonuses[1] |= 0x80;
             return;
         }
-        if id == 0x11 && g.vs.state.unk_C >= 5 {
-            r._x448[1] |= 0x40;
+        if id == 0x11 && g.vs.state.joiners >= 5 {
+            r.mode_bonuses[1] |= 0x40;
             return;
         }
         if id == 0x25 {
-            r._x448[1] |= 0x20;
+            r.mode_bonuses[1] |= 0x20;
             return;
         } else if id == 0x53 && cpu_luigi(g) {
-            r._x448[1] |= 0x10;
+            r.mode_bonuses[1] |= 0x10;
             return;
         }
         if id == 0x5C {
-            r._x448[1] |= 0x08;
+            r.mode_bonuses[1] |= 0x08;
         }
     }
 
@@ -334,42 +334,42 @@ impl Running<'_> {
             .map(|t| i32::from(t.1))
             .sum();
         if trophies > 0 {
-            r._x448[2] |= 0x08;
+            r.mode_bonuses[2] |= 0x08;
         }
         if g.vs.start.allows_continue {
             let a = &g.one_player.classic.base;
             let total = a.frames.wrapping_add(g.vs_frame_count());
-            r._x448[0] |= 0x80;
+            r.mode_bonuses[0] |= 0x80;
             if a.player.cpu_level == 4 {
-                r._x448[0] |= 0x10;
+                r.mode_bonuses[0] |= 0x10;
             }
             if total < 0x3840 {
-                r._x448[2] |= 0x40;
+                r.mode_bonuses[2] |= 0x40;
             } else if total < 0x5460 {
-                r._x448[2] |= 0x80;
+                r.mode_bonuses[2] |= 0x80;
             }
             if a.damage_taken == 0 && r.player_standings[0].damage_taken == 0 {
-                r._x448[1] |= 0x02;
+                r.mode_bonuses[1] |= 0x02;
             }
             if a.counters[2] != 0 {
-                r._x448[2] |= 0x20;
+                r.mode_bonuses[2] |= 0x20;
             }
             if a.counters[3] != 0 {
-                r._x448[2] |= 0x10;
+                r.mode_bonuses[2] |= 0x10;
             }
             if a.counters[1] != 0 {
-                r._x448[1] |= 0x01;
+                r.mode_bonuses[1] |= 0x01;
             } else if r.player_standings[0].stocks as i32
-                == i32::from(g.game_data.vs.unk_51C.stocks)
+                == i32::from(g.game_data.vs.classic.stocks)
             {
-                r._x448[1] |= 0x04;
+                r.mode_bonuses[1] |= 0x04;
             }
         }
         for i in 0..6 {
             if self.game.player_pkind(i) == super::super::pl::player::PKIND_CPU
                 && self.game.player_ckind(i) == CharacterKind::CrazyHand
             {
-                r._x448[0] |= 0x01;
+                r.mode_bonuses[0] |= 0x01;
                 return;
             }
         }
@@ -392,9 +392,9 @@ impl Running<'_> {
                 } else {
                     0
                 };
-                let d = &mut r.x44C[i];
-                d.x0[j as usize] = earned;
-                d.x104[j as usize] = points;
+                let d = &mut r.decisions[i];
+                d.earned[j as usize] = earned;
+                d.points[j as usize] = points;
             }
         }
     }
@@ -427,7 +427,7 @@ mod tests {
             }
             .classic_results(&mut r);
             assert_eq!(
-                r._x448[0] & 1,
+                r.mode_bonuses[0] & 1,
                 flag,
                 "character kind {ckind:#x}, kind {pkind}"
             );

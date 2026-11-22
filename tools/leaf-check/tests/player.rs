@@ -855,7 +855,7 @@ fn gm_step(ctx: &Ctx, game: &mut Game, rand: &mut Rand) -> (String, Got, Got) {
         26 => (i(game.player_count()), i(fns::gm_8016B558(ctx))),
         27 => (u(game.vs_joiners().into()), u(fns::fn_8016B728(ctx).into())),
         28 => {
-            let ours = std::ptr::eq(game.vs_results(), &game.vs.state.x24C);
+            let ours = std::ptr::eq(game.vs_results(), &game.vs.state.match_end);
             (
                 b(ours),
                 b(fns::gm_8016B774(ctx).addr() == sym("controller") + 0x24C),
@@ -1003,7 +1003,7 @@ fn gm_step(ctx: &Ctx, game: &mut Game, rand: &mut Rand) -> (String, Got, Got) {
             game.vs_set_end_kind(kind);
             fns::gm_8016B33C(ctx, kind);
             (
-                u(game.vs.state.unk_B.into()),
+                u(game.vs.state.end_kind.into()),
                 u(ctx.read_u8(sym("controller") + 0xB).into()),
             )
         }

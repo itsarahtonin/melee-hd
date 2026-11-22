@@ -939,7 +939,7 @@ impl Game {
     pub fn vs_add_score(&mut self, player: i32, points: i32) {
         if player == 0 {
             let s = &mut self.vs.state;
-            s.unk_2E = time_add(u32::from(s.unk_2E), points) as u16;
+            s.score = time_add(u32::from(s.score), points) as u16;
         }
     }
 }

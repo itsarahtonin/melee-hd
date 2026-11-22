@@ -177,8 +177,8 @@ impl Running<'_> {
         super::vs_mode::all_player_defaults(&mut data.players);
         for i in 0..4 {
             data.players[i].clone_from(&vs.players[i]);
-            data.players[i].xC_b1 = false;
-            data.players[i].xD_b2 = true;
+            data.players[i].enters = false;
+            data.players[i].no_offscreen_damage = true;
         }
         let p0 = &vs.players[0];
         super::setup_players::setup_human(&mut data.players[0], p0.ckind as u8, p0.color, 1, slot);
@@ -991,7 +991,7 @@ impl Running<'_> {
         );
         g.set_player_effect_color(slot, i32::from(super::vs::cap_color(color as u8)));
         self.player_create_fighters(slot);
-        if self.game.vs.state.fighters[slot as usize].x4[0] & 0x08 != 0 {
+        if self.game.vs.state.fighters[slot as usize].flags[0] & 0x08 != 0 {
             self.sfx_play(0x41F4E, 0x7F, 0x40);
         }
         self.kirby_costumes();

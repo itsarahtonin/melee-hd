@@ -606,7 +606,7 @@ impl Running<'_> {
             c.stand_timer -= 1;
         }
         // `gm_8016C75C`: the player's standing.
-        if self.game.vs.state.x24C.x0 != self.game.scene_ticks() {
+        if self.game.vs.state.match_end.standings_tick != self.game.scene_ticks() {
             r5 = Leftover::Word(MATCH_END_X30);
         }
         let standing = self.cpu_standing(slot);
@@ -1129,11 +1129,11 @@ impl Running<'_> {
     #[doc(alias = "gm_8016C75C")]
     pub(super) fn cpu_standing(&mut self, slot: i32) -> u32 {
         let tick = self.game.scene_ticks();
-        if self.game.vs.state.x24C.x0 != tick {
-            self.game.vs.state.x24C.x0 = tick;
+        if self.game.vs.state.match_end.standings_tick != tick {
+            self.game.vs.state.match_end.standings_tick = tick;
             self.compile_results();
         }
-        self.game.vs.state.x24C.player_standings[slot as usize].kos
+        self.game.vs.state.match_end.player_standings[slot as usize].kos
     }
 
     /// Whether the fighter holds someone, `ftCo_IsGrabbing`: its catch wait, Donkey Kong's

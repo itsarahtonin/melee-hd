@@ -1002,7 +1002,7 @@ impl Running<'_> {
                 .is_some_and(|e| e.stage == 0xD)
         {
             // `gm_8017CBAC` with Classic's run and stocks (`gmMainLib_8015CDC8`).
-            let stocks = self.game.game_data.vs.unk_51C.stocks;
+            let stocks = self.game.game_data.vs.classic.stocks;
             self.one_player_clear(&run, stocks, super::endings::GM_CLASSIC_GOVER);
         }
         if entry.flags == 0x80 && entry.bonus == 1 {

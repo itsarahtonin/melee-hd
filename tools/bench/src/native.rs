@@ -931,10 +931,10 @@ mod tests {
                         p.model_scale.to_bits(),
                         p.attack_ratio.to_bits(),
                         p.defense_ratio.to_bits(),
-                        p.xB,
+                        p.sfx_size,
                         p.damage1,
                         p.vs_invisible,
-                        p.xC_b7,
+                        p.stamina,
                         p.hp,
                         if s.stamina && i < 4 { p.stocks } else { 0 },
                     )

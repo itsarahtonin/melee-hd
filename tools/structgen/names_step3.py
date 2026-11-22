@@ -1105,6 +1105,155 @@ EVENT_DATA = {
 }
 TARGET_TEST_CHOICE = {"unk_584": "ckind", "unk_585": "color", "unk_586": "nametag", "unk_587": "unused_587"}
 
+# The modes (the continuation's fifth group): the VS scene's state and its fighters
+# (`VsSceneState`, `VsSceneFighter`), a slot's start data (`PlayerInitData`), the match's end
+# (`MatchEnd`, `UnkResultPlayerData`), the game's data (`gmm_x0` and its parts), the saved
+# rules (`GameRules`), the VS modes' data (`VsModeData`), a name tag (`NameTagData`) and the
+# scene loop (`gm_80479D58_t`, `gm_801677C0_s`). Their address-named types are named too.
+VS_SCENE_STATE = {
+    # 0 playing, 1 the frames after GAME!, 2 the clear screen, 3 leaving (the VS scene's
+    # frame function, `gm_Scene_Vs_OnFrame`, switches on it).
+    "unk_0": "phase",
+    # Camera mode's shot: the HUD off, the pause's quit buttons ignored.
+    "unk_3": "photo_mode",
+    # A single-player match cleared (`clear_start`): its mode's own results count.
+    "unk_9": "cleared",
+    # The staggered entries' delay, 5 frames more for each slot that enters.
+    "unk_A": "entry_delay",
+    # One more than the GAME! announcement's kind (0 the outcome's own).
+    "unk_B": "end_kind",
+    # The opponents that joined (`fn_8016B728`).
+    "unk_C": "joiners",
+    # The slot of the last KO (6 none), for the stage bonuses.
+    "unk_D": "last_ko",
+    "unk_F": "unused_f",
+    # The GAME! announcement's lines, one more than each sound (0 none), and the frame of the
+    # second.
+    "unk_10": "end_sfx_1",
+    "unk_14": "end_sfx_2",
+    "unk_18": "end_sfx_2_frame",
+    # The countdown's sounds (`lbl_803D5630`) and the entries' voices (`lbl_803D5620`).
+    "unk_1C": "countdown_sfx",
+    "unk_20": "entry_voices",
+    "unk_2C": "timer_frames",
+    # The first player's score (`gm_8016B6E8`).
+    "unk_2E": "score",
+    # The frames after GAME!, counted to the rules' `end_wait`.
+    "unk_30": "end_frames",
+    # The weight on each item kind's count in the random items' table.
+    "unk_34": "item_weight",
+    "x24C": "match_end",
+}
+VS_SCENE_FIGHTER = {
+    "x0": "ckind",
+    # The entry's countdown (0x82 at entry): the announcer's line at 0x50.
+    "x1": "entry_timer",
+    # `b0` metal, `b1` (`PlayerInitData`'s `unread_c_b3`), `b2` invisible, `b3` shows the
+    # team's hearts, `b4` Zelda and Sheik swapped on load, `b5` the stamina display explodes.
+    "x4": "flags",
+    "x5": "unused_5",
+    "x6": "respawn_damage",
+    # A respawn platform's place in use (counts down from 0x90), and the character on it.
+    "x8": "platform_timer",
+    "x9": "unread_9",
+    # The fighter that respawns (0 the first), and `0x8000` to show every camera layer on
+    # respawning; nothing sets either.
+    "xB": "respawn_sub",
+    "xC": "respawn_flags",
+}
+PLAYER_INIT_DATA = {
+    # The player's `more_flags.sfx_size`.
+    "xB": "sfx_size",
+    # The fighter comes in through the entry state, staggered (`entry_delay`).
+    "xC_b1": "enters",
+    # Copied to the VS fighter's flag `b1`, which nothing reads.
+    "xC_b3": "unread_c_b3",
+    # The player's `attrs_scaled`, `voice_muted` and `stamina`.
+    "xC_b5": "attrs_scaled",
+    "xC_b6": "voice_muted",
+    "xC_b7": "stamina",
+    # The stamina display explodes at 0 HP (the hands).
+    "xD_b0": "hp_explodes",
+    # The fighter shows its team's hearts.
+    "xD_b1": "shows_hearts",
+    # The player takes no offscreen damage, has no magnifier bubble, is KO'd upward.
+    "xD_b2": "no_offscreen_damage",
+    "xD_b3": "no_magnifier",
+    "xD_b4": "dies_up",
+    "xD_b5": "unused_d_b5",
+    "xD_b6": "unused_d_b6",
+    "xD_b7": "unused_d_b7",
+}
+MATCH_END = {
+    # The scene tick the standings were last worked out (`gm_8016C75C`).
+    "x0": "standings_tick",
+    "x7": "joiners",
+    # A single-player mode's bonuses' bits (Classic's, Adventure's, All-Star's results).
+    "_x448": "mode_bonuses",
+    # Each player's decisions: earned and their points (`fn_8016C4F4`).
+    "x44C": "decisions",
+}
+PLAYER_DECISIONS = {"x0": "earned", "x104": "points"}
+GAME_DATA = {
+    # The attract loop's and the how-to's rounds.
+    "unk_1": "demo_count",
+    # The attract loop's history (`gm_random_history`): how often each character (from here)
+    # and each stage (from byte 0x1C) has played; the C splits the array.
+    "unk_2": "attract_history",
+    "pad_3": "attract_history_rest",
+    # Matches lost to each challenger since power-on (`gmMainLib_8015DB6C`).
+    "x39": "challenger_losses",
+    "unk_44": "trophy_notices",
+    "x1850": "rules",
+}
+GAME_RULES = {
+    "unk_xc": "sd_penalty",
+    # The diagrams' names mode and cursors, saved for the screens' next entry.
+    "xD": "diagram_name_mode",
+    "xE": "fighter_cursor_hi",
+    "xF": "fighter_cursor_lo",
+    "unk_x10": "name_cursor_hi",
+    "x11": "name_cursor_lo",
+    "x12": "diagram2_fighter",
+    "x13": "diagram2_name",
+    # The sound test's song, the gallery's music.
+    "unk_14": "gallery_song",
+}
+ONE_PLAYER_MODES = {"unk_51C": "classic", "unk_522": "adventure", "unk_528": "all_star", "unk_530": "event"}
+# The run's round to resume.
+ONE_PLAYER_CHOICE = {"x5": "round"}
+VS_MODE_DATA = {f"unk_0x{i}": f"unused_{i}" for i in range(3, 8)}
+NAME_TAG_DATA = {
+    # The byte a four-letter name ends at; the handicap; a name read past its end reaches the
+    # padding.
+    "x1A0": "name_end",
+    "x1A2": "handicap",
+    "padding_x1A2": "pad_1a3",
+}
+SCENE_LOOP = {
+    "unk_0": "ticks",
+    "unk_4": "frames_drawn",
+    # Ticks the game clock was due.
+    "unk_8": "game_ticks",
+    # 1 ends the scene after the frame, 2 at once.
+    "unk_C": "ending",
+    "unk_10": "pause",
+}
+DEBUG_PAUSE = {
+    # The debug pause's bits, a frame step's, each as last applied.
+    "x0": "pause_bits",
+    "x1": "applied_pause_bits",
+    "x2": "step_bits",
+    "x3": "applied_step_bits",
+    # The process links the pause stops, and those the scheduler skips this tick.
+    "unk_20": "paused_links",
+    "unk_28": "skip_links",
+    "unk_34": "clock_mask",
+    # The tick runs the game (no debug pause, or a frame step).
+    "unk_38_0": "runs",
+    "unk_38_1": "unused_38_1",
+}
+
 # The structs by step 3's commits, in order.
 GROUPS = [
     {"CollData": COLL_DATA, "HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
@@ -1177,6 +1326,21 @@ GROUPS = [
         "EventData": EVENT_DATA,
         "gmm_x0_584_t": TARGET_TEST_CHOICE,
     },
+    {
+        "VsSceneState": VS_SCENE_STATE,
+        "VsSceneFighter": VS_SCENE_FIGHTER,
+        "PlayerInitData": PLAYER_INIT_DATA,
+        "MatchEnd": MATCH_END,
+        "UnkResultPlayerData": PLAYER_DECISIONS,
+        "gmm_x0": GAME_DATA,
+        "GameRules": GAME_RULES,
+        "gmm_x0_vsdata": ONE_PLAYER_MODES,
+        "gmm_x0_528_t": ONE_PLAYER_CHOICE,
+        "VsModeData": VS_MODE_DATA,
+        "NameTagData": NAME_TAG_DATA,
+        "gm_80479D58_t": SCENE_LOOP,
+        "gm_801677C0_s": DEBUG_PAUSE,
+    },
 ]
 
 # The port's names for the decomp's address-named structs (C name to Rust name), which
@@ -1188,6 +1352,14 @@ TYPE_NAMES = {
     "gmm_retval_EDBC": "TrophyRecords",
     "gmm_x1868_1A8_t": "MessageRecords",
     "gmm_x0_584_t": "TargetTestChoice",
+    "gmm_x0": "GameData",
+    "gmm_x0_44_t": "TrophyNotices",
+    "gmm_x0_vsdata": "OnePlayerModes",
+    "gmm_x0_528_t": "OnePlayerChoice",
+    "gmm_x0_vsmodes": "VsModes",
+    "UnkResultPlayerData": "PlayerDecisions",
+    "gm_80479D58_t": "SceneLoop",
+    "gm_801677C0_s": "DebugPause",
 }
 
 STEP_3 = {}

@@ -742,7 +742,7 @@ impl<'a> Comparer<'a> {
             "gm",
             "pause flags, debug level, develop.ini found, trophies' data loaded",
             (
-                game.scene.unk_10.x0,
+                game.scene.pause.pause_bits,
                 g.db_level,
                 g.develop_ini,
                 g.trophy_data,

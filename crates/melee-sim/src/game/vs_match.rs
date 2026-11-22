@@ -496,9 +496,9 @@ impl Match {
             // state) last until the loop's setup clears them, after the scene's entry. The
             // sound log takes their game ticks for the frame of a sound the entry starts (Big
             // Blue's first cars' engines): 1, past the last frame logged, the current slot.
-            game.scene.unk_0 = 1;
-            game.scene.unk_8 = 1;
-            game.scene.unk_C = 1;
+            game.scene.ticks = 1;
+            game.scene.game_ticks = 1;
+            game.scene.ending = 1;
         }
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         game.gm.unlocks = settings.unlocks;

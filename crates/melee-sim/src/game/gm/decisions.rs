@@ -601,7 +601,7 @@ impl Running<'_> {
         };
         let p = &r.player_standings;
         let au = a as usize;
-        let flags = &r._x448;
+        let flags = &r.mode_bonuses;
         let bit = |b: u8, n: u32| (b >> n) & 1 != 0;
         let others = |f: &dyn Fn(usize) -> bool| (0..4).any(|i| p[i].pkind != 3 && i != au && f(i));
         let one = |c: bool| i32::from(c);
@@ -741,7 +741,7 @@ impl Running<'_> {
             }
             0xFD => {
                 let v = self.game.player(a).stale_moves.up_kos as u32;
-                one(v != 0 && u32::from(r.x7) == v)
+                one(v != 0 && u32::from(r.joiners) == v)
             }
             0xFE => {
                 let mine = self.game.player(a).ext_u32(0xD48);
@@ -799,6 +799,6 @@ impl Game {
     #[doc(alias = "gm_80172174")]
     #[doc(alias = "gmMainLib_8015CCE4")]
     pub fn clear_trophy_notices(&mut self) {
-        self.game_data.unk_44 = Default::default();
+        self.game_data.trophy_notices = Default::default();
     }
 }

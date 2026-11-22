@@ -1256,7 +1256,7 @@ impl Run<'_> {
         s.live_model = self.live_model;
         s.follow_playback_camera = true;
         match self.mutation {
-            Some(Mutation::SceneTicks) => s.game.scene.unk_0 = s.game.scene.unk_0.wrapping_add(1),
+            Some(Mutation::SceneTicks) => s.game.scene.ticks = s.game.scene.ticks.wrapping_add(1),
             Some(Mutation::Seed) => s.game.objs.rng.seed = s.game.objs.rng.seed.wrapping_add(1),
             Some(Mutation::CStick1P) => s.game.rules = s.game.rules.clone().with_c_stick_1p(false),
             _ => {}
@@ -1279,7 +1279,7 @@ impl Run<'_> {
             ..Default::default()
         };
         // A state taken up at a tick's end has that frame's display pass still to run.
-        let mut render_due = self.from.is_some() && s.game.scene.unk_C != 2;
+        let mut render_due = self.from.is_some() && s.game.scene.ending != 2;
         let mut tick = next;
         // The tick a live match of the Slippi ruleset started in, and the tick it handed the
         // menus' session back before: its ticks compare as a live match's ([`live_named`],
@@ -1997,7 +1997,8 @@ fn past_named(d: &str, live: bool) -> Option<&'static str> {
         return Some(PAST_PLAYBACK_HEAP);
     }
     if live
-        && (d.starts_with("vs.state.fighters[") && (d.contains("].x0: ") || d.contains("].x4: ")))
+        && (d.starts_with("vs.state.fighters[")
+            && (d.contains("].ckind (x0): ") || d.contains("].flags (x4): ")))
     {
         return Some(PAST_PLAYBACK_START);
     }

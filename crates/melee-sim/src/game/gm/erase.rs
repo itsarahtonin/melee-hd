@@ -223,7 +223,7 @@ impl Running<'_> {
         self.game.sync_unlocks();
         self.relock_messages();
         self.card_game_mark_changes();
-        self.game.game_data.x39 = [0; 11];
+        self.game.game_data.challenger_losses = [0; 11];
     }
 
     /// `mnDataDel_8024E940`'s erase: the stages locked (`gm_801647D0`), their records cleared

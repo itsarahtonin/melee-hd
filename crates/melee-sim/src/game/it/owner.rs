@@ -338,7 +338,7 @@ fn nearest_by_bone(
                     nearest_of(pos, &other[..n], facing_dir) != result
                 }
         }) {
-            let tick = game.scene.unk_8;
+            let tick = game.scene.game_ticks;
             game.display_phase.note(tick);
         }
     }

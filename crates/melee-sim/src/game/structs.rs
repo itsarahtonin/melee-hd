@@ -7198,46 +7198,55 @@ impl Default for ifMagnify {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct VsSceneFighter {
     /// +0x0
-    pub x0: u8,
+    #[doc(alias("x0"))]
+    pub ckind: u8,
     /// +0x1
-    pub x1: u8,
+    #[doc(alias("x1"))]
+    pub entry_timer: u8,
     /// +0x2
     pub slot_type: u8,
     /// +0x3
     pub spawn_point: i8,
     /// +0x4
-    pub x4: [u8; 1],
+    #[doc(alias("x4"))]
+    pub flags: [u8; 1],
     /// +0x5
-    pub x5: u8,
+    #[doc(alias("x5"))]
+    pub unused_5: u8,
     /// +0x6
-    pub x6: u16,
+    #[doc(alias("x6"))]
+    pub respawn_damage: u16,
     /// +0x8
-    pub x8: u8,
+    #[doc(alias("x8"))]
+    pub platform_timer: u8,
     /// +0x9
-    pub x9: u8,
+    #[doc(alias("x9"))]
+    pub unread_9: u8,
     /// +0xa
     pub respawn_timer: u8,
     /// +0xb
-    pub xB: u8,
+    #[doc(alias("xB"))]
+    pub respawn_sub: u8,
     /// +0xc
-    pub xC: u16,
+    #[doc(alias("xC"))]
+    pub respawn_flags: u16,
 }
 
 impl Default for VsSceneFighter {
     fn default() -> Self {
         VsSceneFighter {
-            x0: 0,
-            x1: 0,
+            ckind: 0,
+            entry_timer: 0,
             slot_type: 0,
             spawn_point: 0,
-            x4: [0; 1],
-            x5: 0,
-            x6: 0,
-            x8: 0,
-            x9: 0,
+            flags: [0; 1],
+            unused_5: 0,
+            respawn_damage: 0,
+            platform_timer: 0,
+            unread_9: 0,
             respawn_timer: 0,
-            xB: 0,
-            xC: 0,
+            respawn_sub: 0,
+            respawn_flags: 0,
         }
     }
 }
@@ -7475,19 +7484,22 @@ impl Default for MatchPlayerData {
 }
 
 /// `UnkResultPlayerData`, 0x508 bytes.
+#[doc(alias("UnkResultPlayerData"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct UnkResultPlayerData {
+pub struct PlayerDecisions {
     /// +0x0
-    pub x0: [u8; 257],
+    #[doc(alias("x0"))]
+    pub earned: [u8; 257],
     /// +0x104
-    pub x104: [i32; 257],
+    #[doc(alias("x104"))]
+    pub points: [i32; 257],
 }
 
-impl Default for UnkResultPlayerData {
+impl Default for PlayerDecisions {
     fn default() -> Self {
-        UnkResultPlayerData {
-            x0: [0; 257],
-            x104: [0; 257],
+        PlayerDecisions {
+            earned: [0; 257],
+            points: [0; 257],
         }
     }
 }
@@ -7496,7 +7508,8 @@ impl Default for UnkResultPlayerData {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct MatchEnd {
     /// +0x0
-    pub x0: u32,
+    #[doc(alias("x0"))]
+    pub standings_tick: u32,
     /// +0x4
     pub outcome: u8,
     /// +0x5
@@ -7504,7 +7517,8 @@ pub struct MatchEnd {
     /// +0x6
     pub is_teams: u8,
     /// +0x7
-    pub x7: u8,
+    #[doc(alias("x7"))]
+    pub joiners: u8,
     /// +0x8
     pub frame_count: u32,
     /// +0xc
@@ -7524,19 +7538,21 @@ pub struct MatchEnd {
     /// +0x58
     pub player_standings: [MatchPlayerData; 6],
     /// +0x448
-    pub _x448: [u8; 4],
+    #[doc(alias("_x448"))]
+    pub mode_bonuses: [u8; 4],
     /// +0x44c
-    pub x44C: [UnkResultPlayerData; 6],
+    #[doc(alias("x44C"))]
+    pub decisions: [PlayerDecisions; 6],
 }
 
 impl Default for MatchEnd {
     fn default() -> Self {
         MatchEnd {
-            x0: 0,
+            standings_tick: 0,
             outcome: 0,
             match_kind: 0,
             is_teams: 0,
-            x7: 0,
+            joiners: 0,
             frame_count: 0,
             sd_penalty: 0,
             n_winners: 0,
@@ -7546,8 +7562,8 @@ impl Default for MatchEnd {
             team_winners: [0; 5],
             team_standings: core::array::from_fn(|_| Default::default()),
             player_standings: core::array::from_fn(|_| Default::default()),
-            _x448: [0; 4],
-            x44C: core::array::from_fn(|_| Default::default()),
+            mode_bonuses: [0; 4],
+            decisions: core::array::from_fn(|_| Default::default()),
         }
     }
 }
@@ -7556,13 +7572,15 @@ impl Default for MatchEnd {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct VsSceneState {
     /// +0x0
-    pub unk_0: u8,
+    #[doc(alias("unk_0"))]
+    pub phase: u8,
     /// +0x1
     pub pauser: i8,
     /// +0x2
     pub pause_timer: u8,
     /// +0x3
-    pub unk_3: u8,
+    #[doc(alias("unk_3"))]
+    pub photo_mode: u8,
     /// +0x4
     pub unpause_timer: u8,
     /// +0x5
@@ -7574,82 +7592,98 @@ pub struct VsSceneState {
     /// +0x8
     pub match_result: u8,
     /// +0x9
-    pub unk_9: u8,
+    #[doc(alias("unk_9"))]
+    pub cleared: u8,
     /// +0xa
-    pub unk_A: u8,
+    #[doc(alias("unk_A"))]
+    pub entry_delay: u8,
     /// +0xb
-    pub unk_B: u8,
+    #[doc(alias("unk_B"))]
+    pub end_kind: u8,
     /// +0xc
-    pub unk_C: u8,
+    #[doc(alias("unk_C"))]
+    pub joiners: u8,
     /// +0xd
-    pub unk_D: u8,
+    #[doc(alias("unk_D"))]
+    pub last_ko: u8,
     /// +0xe
     pub match_over: u8,
     /// +0xf
-    pub unk_F: u8,
+    #[doc(alias("unk_F"))]
+    pub unused_f: u8,
     /// +0x10
-    pub unk_10: i32,
+    #[doc(alias("unk_10"))]
+    pub end_sfx_1: i32,
     /// +0x14
-    pub unk_14: i32,
+    #[doc(alias("unk_14"))]
+    pub end_sfx_2: i32,
     /// +0x18
-    pub unk_18: u8,
+    #[doc(alias("unk_18"))]
+    pub end_sfx_2_frame: u8,
     /// +0x1c
-    pub unk_1C: RawPtr,
+    #[doc(alias("unk_1C"))]
+    pub countdown_sfx: RawPtr,
     /// +0x20
-    pub unk_20: RawPtr,
+    #[doc(alias("unk_20"))]
+    pub entry_voices: RawPtr,
     /// +0x24
     pub frame_count: u32,
     /// +0x28
     pub timer_seconds: u32,
     /// +0x2c
-    pub unk_2C: u16,
+    #[doc(alias("unk_2C"))]
+    pub timer_frames: u16,
     /// +0x2e
-    pub unk_2E: u16,
+    #[doc(alias("unk_2E"))]
+    pub score: u16,
     /// +0x30
-    pub unk_30: u8,
+    #[doc(alias("unk_30"))]
+    pub end_frames: u8,
     /// +0x34
-    pub unk_34: f32,
+    #[doc(alias("unk_34"))]
+    pub item_weight: f32,
     /// +0x38
     pub fighters: [VsSceneFighter; 6],
     /// +0x8c
     pub pad_8C: [i8; 448],
     /// +0x24c
-    pub x24C: MatchEnd,
+    #[doc(alias("x24C"))]
+    pub match_end: MatchEnd,
 }
 
 impl Default for VsSceneState {
     fn default() -> Self {
         VsSceneState {
-            unk_0: 0,
+            phase: 0,
             pauser: 0,
             pause_timer: 0,
-            unk_3: 0,
+            photo_mode: 0,
             unpause_timer: 0,
             hud_enabled: 0,
             terminate_match: 0,
             is_singleplayer: 0,
             match_result: 0,
-            unk_9: 0,
-            unk_A: 0,
-            unk_B: 0,
-            unk_C: 0,
-            unk_D: 0,
+            cleared: 0,
+            entry_delay: 0,
+            end_kind: 0,
+            joiners: 0,
+            last_ko: 0,
             match_over: 0,
-            unk_F: 0,
-            unk_10: 0,
-            unk_14: 0,
-            unk_18: 0,
-            unk_1C: Default::default(),
-            unk_20: Default::default(),
+            unused_f: 0,
+            end_sfx_1: 0,
+            end_sfx_2: 0,
+            end_sfx_2_frame: 0,
+            countdown_sfx: Default::default(),
+            entry_voices: Default::default(),
             frame_count: 0,
             timer_seconds: 0,
-            unk_2C: 0,
-            unk_2E: 0,
-            unk_30: 0,
-            unk_34: 0.0,
+            timer_frames: 0,
+            score: 0,
+            end_frames: 0,
+            item_weight: 0.0,
             fighters: core::array::from_fn(|_| Default::default()),
             pad_8C: [0; 448],
-            x24C: Default::default(),
+            match_end: Default::default(),
         }
     }
 }
@@ -8063,39 +8097,53 @@ pub struct PlayerInitData {
     /// +0xa
     pub nametag: u8,
     /// +0xb
-    pub xB: u8,
+    #[doc(alias("xB"))]
+    pub sfx_size: u8,
     /// +0xc (bits 0..+1)
     pub rumble_enabled: bool,
     /// +0xc (bits 1..+1)
-    pub xC_b1: bool,
+    #[doc(alias("xC_b1"))]
+    pub enters: bool,
     /// +0xc (bits 2..+1)
     pub vs_metal: bool,
     /// +0xc (bits 3..+1)
-    pub xC_b3: bool,
+    #[doc(alias("xC_b3"))]
+    pub unread_c_b3: bool,
     /// +0xc (bits 4..+1)
     pub vs_invisible: bool,
     /// +0xc (bits 5..+1)
-    pub xC_b5: bool,
+    #[doc(alias("xC_b5"))]
+    pub attrs_scaled: bool,
     /// +0xc (bits 6..+1)
-    pub xC_b6: bool,
+    #[doc(alias("xC_b6"))]
+    pub voice_muted: bool,
     /// +0xc (bits 7..+1)
-    pub xC_b7: bool,
+    #[doc(alias("xC_b7"))]
+    pub stamina: bool,
     /// +0xd (bits 0..+1)
-    pub xD_b0: bool,
+    #[doc(alias("xD_b0"))]
+    pub hp_explodes: bool,
     /// +0xd (bits 1..+1)
-    pub xD_b1: bool,
+    #[doc(alias("xD_b1"))]
+    pub shows_hearts: bool,
     /// +0xd (bits 2..+1)
-    pub xD_b2: bool,
+    #[doc(alias("xD_b2"))]
+    pub no_offscreen_damage: bool,
     /// +0xd (bits 3..+1)
-    pub xD_b3: bool,
+    #[doc(alias("xD_b3"))]
+    pub no_magnifier: bool,
     /// +0xd (bits 4..+1)
-    pub xD_b4: bool,
+    #[doc(alias("xD_b4"))]
+    pub dies_up: bool,
     /// +0xd (bits 5..+1)
-    pub xD_b5: bool,
+    #[doc(alias("xD_b5"))]
+    pub unused_d_b5: bool,
     /// +0xd (bits 6..+1)
-    pub xD_b6: bool,
+    #[doc(alias("xD_b6"))]
+    pub unused_d_b6: bool,
     /// +0xd (bits 7..+1)
-    pub xD_b7: bool,
+    #[doc(alias("xD_b7"))]
+    pub unused_d_b7: bool,
     /// +0xe
     pub cpu_kind: u8,
     /// +0xf
@@ -8128,23 +8176,23 @@ impl Default for PlayerInitData {
             handicap: 0,
             team: 0,
             nametag: 0,
-            xB: 0,
+            sfx_size: 0,
             rumble_enabled: false,
-            xC_b1: false,
+            enters: false,
             vs_metal: false,
-            xC_b3: false,
+            unread_c_b3: false,
             vs_invisible: false,
-            xC_b5: false,
-            xC_b6: false,
-            xC_b7: false,
-            xD_b0: false,
-            xD_b1: false,
-            xD_b2: false,
-            xD_b3: false,
-            xD_b4: false,
-            xD_b5: false,
-            xD_b6: false,
-            xD_b7: false,
+            attrs_scaled: false,
+            voice_muted: false,
+            stamina: false,
+            hp_explodes: false,
+            shows_hearts: false,
+            no_offscreen_damage: false,
+            no_magnifier: false,
+            dies_up: false,
+            unused_d_b5: false,
+            unused_d_b6: false,
+            unused_d_b7: false,
             cpu_kind: 0,
             cpu_level: 0,
             damage: 0,
@@ -8194,73 +8242,89 @@ impl Default for gm_DbPauseInputHandlers {
 }
 
 /// `gm_801677C0_s`, 0x30 bytes.
+#[doc(alias("gm_801677C0_s"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gm_801677C0_s {
+pub struct DebugPause {
     /// +0x0
-    pub x0: u8,
+    #[doc(alias("x0"))]
+    pub pause_bits: u8,
     /// +0x1
-    pub x1: u8,
+    #[doc(alias("x1"))]
+    pub applied_pause_bits: u8,
     /// +0x2
-    pub x2: u8,
+    #[doc(alias("x2"))]
+    pub step_bits: u8,
     /// +0x3
-    pub x3: u8,
+    #[doc(alias("x3"))]
+    pub applied_step_bits: u8,
     /// +0x4
     pub db_input: gm_DbPauseInputHandlers,
     /// +0x10
-    pub unk_20: u64,
+    #[doc(alias("unk_20"))]
+    pub paused_links: u64,
     /// +0x18
-    pub unk_28: u64,
+    #[doc(alias("unk_28"))]
+    pub skip_links: u64,
     /// +0x20
     pub pre_gobj_proc: Option<CodeRef>,
     /// +0x24
-    pub unk_34: i32,
+    #[doc(alias("unk_34"))]
+    pub clock_mask: i32,
     /// +0x28 (bits 0..+1)
-    pub unk_38_0: bool,
+    #[doc(alias("unk_38_0"))]
+    pub runs: bool,
     /// +0x28 (bits 1..+1)
-    pub unk_38_1: bool,
+    #[doc(alias("unk_38_1"))]
+    pub unused_38_1: bool,
 }
 
-impl Default for gm_801677C0_s {
+impl Default for DebugPause {
     fn default() -> Self {
-        gm_801677C0_s {
-            x0: 0,
-            x1: 0,
-            x2: 0,
-            x3: 0,
+        DebugPause {
+            pause_bits: 0,
+            applied_pause_bits: 0,
+            step_bits: 0,
+            applied_step_bits: 0,
             db_input: Default::default(),
-            unk_20: 0,
-            unk_28: 0,
+            paused_links: 0,
+            skip_links: 0,
             pre_gobj_proc: None,
-            unk_34: 0,
-            unk_38_0: false,
-            unk_38_1: false,
+            clock_mask: 0,
+            runs: false,
+            unused_38_1: false,
         }
     }
 }
 
 /// `gm_80479D58_t`, 0x40 bytes.
+#[doc(alias("gm_80479D58_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gm_80479D58_t {
+pub struct SceneLoop {
     /// +0x0
-    pub unk_0: u32,
+    #[doc(alias("unk_0"))]
+    pub ticks: u32,
     /// +0x4
-    pub unk_4: u32,
+    #[doc(alias("unk_4"))]
+    pub frames_drawn: u32,
     /// +0x8
-    pub unk_8: u32,
+    #[doc(alias("unk_8"))]
+    pub game_ticks: u32,
     /// +0xc
-    pub unk_C: i32,
+    #[doc(alias("unk_C"))]
+    pub ending: i32,
     /// +0x10
-    pub unk_10: gm_801677C0_s,
+    #[doc(alias("unk_10"))]
+    pub pause: DebugPause,
 }
 
-impl Default for gm_80479D58_t {
+impl Default for SceneLoop {
     fn default() -> Self {
-        gm_80479D58_t {
-            unk_0: 0,
-            unk_4: 0,
-            unk_8: 0,
-            unk_C: 0,
-            unk_10: Default::default(),
+        SceneLoop {
+            ticks: 0,
+            frames_drawn: 0,
+            game_ticks: 0,
+            ending: 0,
+            pause: Default::default(),
         }
     }
 }
@@ -13356,8 +13420,9 @@ impl Default for BgFlashUserData {
 }
 
 /// `gmm_x0_44_t`, 0x4d8 bytes.
+#[doc(alias("gmm_x0_44_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_x0_44_t {
+pub struct TrophyNotices {
     /// +0x0
     pub flags: [u32; 10],
     /// +0x28
@@ -13366,9 +13431,9 @@ pub struct gmm_x0_44_t {
     pub pad_500: [i8; 28],
 }
 
-impl Default for gmm_x0_44_t {
+impl Default for TrophyNotices {
     fn default() -> Self {
-        gmm_x0_44_t {
+        TrophyNotices {
             flags: [0; 10],
             times: [0; 293],
             pad_500: [0; 28],
@@ -13377,8 +13442,9 @@ impl Default for gmm_x0_44_t {
 }
 
 /// `gmm_x0_528_t`, 0x6 bytes.
+#[doc(alias("gmm_x0_528_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_x0_528_t {
+pub struct OnePlayerChoice {
     /// +0x0
     pub c_kind: i8,
     /// +0x1
@@ -13390,18 +13456,19 @@ pub struct gmm_x0_528_t {
     /// +0x4
     pub nametag: u8,
     /// +0x5
-    pub x5: u8,
+    #[doc(alias("x5"))]
+    pub round: u8,
 }
 
-impl Default for gmm_x0_528_t {
+impl Default for OnePlayerChoice {
     fn default() -> Self {
-        gmm_x0_528_t {
+        OnePlayerChoice {
             c_kind: 0,
             stocks: 0,
             color: 0,
             cpu_level: 0,
             nametag: 0,
-            x5: 0,
+            round: 0,
         }
     }
 }
@@ -13603,25 +13670,30 @@ impl Default for EventData {
 }
 
 /// `gmm_x0_vsdata`, 0x6c bytes.
+#[doc(alias("gmm_x0_vsdata"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_x0_vsdata {
+pub struct OnePlayerModes {
     /// +0x0
-    pub unk_51C: gmm_x0_528_t,
+    #[doc(alias("unk_51C"))]
+    pub classic: OnePlayerChoice,
     /// +0x6
-    pub unk_522: gmm_x0_528_t,
+    #[doc(alias("unk_522"))]
+    pub adventure: OnePlayerChoice,
     /// +0xc
-    pub unk_528: gmm_x0_528_t,
+    #[doc(alias("unk_528"))]
+    pub all_star: OnePlayerChoice,
     /// +0x14
-    pub unk_530: EventData,
+    #[doc(alias("unk_530"))]
+    pub event: EventData,
 }
 
-impl Default for gmm_x0_vsdata {
+impl Default for OnePlayerModes {
     fn default() -> Self {
-        gmm_x0_vsdata {
-            unk_51C: Default::default(),
-            unk_522: Default::default(),
-            unk_528: Default::default(),
-            unk_530: Default::default(),
+        OnePlayerModes {
+            classic: Default::default(),
+            adventure: Default::default(),
+            all_star: Default::default(),
+            event: Default::default(),
         }
     }
 }
@@ -13636,15 +13708,20 @@ pub struct VsModeData {
     /// +0x2
     pub winner: i8,
     /// +0x3
-    pub unk_0x3: u8,
+    #[doc(alias("unk_0x3"))]
+    pub unused_3: u8,
     /// +0x4
-    pub unk_0x4: u8,
+    #[doc(alias("unk_0x4"))]
+    pub unused_4: u8,
     /// +0x5
-    pub unk_0x5: u8,
+    #[doc(alias("unk_0x5"))]
+    pub unused_5: u8,
     /// +0x6
-    pub unk_0x6: u8,
+    #[doc(alias("unk_0x6"))]
+    pub unused_6: u8,
     /// +0x7
-    pub unk_0x7: u8,
+    #[doc(alias("unk_0x7"))]
+    pub unused_7: u8,
     /// +0x8
     pub start: StartMeleeData,
 }
@@ -13655,28 +13732,29 @@ impl Default for VsModeData {
             loser: 0,
             ordered_stage_index: 0,
             winner: 0,
-            unk_0x3: 0,
-            unk_0x4: 0,
-            unk_0x5: 0,
-            unk_0x6: 0,
-            unk_0x7: 0,
+            unused_3: 0,
+            unused_4: 0,
+            unused_5: 0,
+            unused_6: 0,
+            unused_7: 0,
             start: Default::default(),
         }
     }
 }
 
 /// `gmm_x0_vsmodes`, 0x12c8 bytes.
+#[doc(alias("gmm_x0_vsmodes"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_x0_vsmodes {
+pub struct VsModes {
     /// +0x0
     pub nametags: [i8; 4],
     /// +0x8
     pub table: [VsModeData; 15],
 }
 
-impl Default for gmm_x0_vsmodes {
+impl Default for VsModes {
     fn default() -> Self {
-        gmm_x0_vsmodes {
+        VsModes {
             nametags: [0; 4],
             table: core::array::from_fn(|_| Default::default()),
         }
@@ -13711,23 +13789,32 @@ pub struct GameRules {
     /// +0xb
     pub score_display: u8,
     /// +0xc
-    pub unk_xc: u8,
+    #[doc(alias("unk_xc"))]
+    pub sd_penalty: u8,
     /// +0xd
-    pub xD: u8,
+    #[doc(alias("xD"))]
+    pub diagram_name_mode: u8,
     /// +0xe
-    pub xE: u8,
+    #[doc(alias("xE"))]
+    pub fighter_cursor_hi: u8,
     /// +0xf
-    pub xF: u8,
+    #[doc(alias("xF"))]
+    pub fighter_cursor_lo: u8,
     /// +0x10
-    pub unk_x10: u8,
+    #[doc(alias("unk_x10"))]
+    pub name_cursor_hi: u8,
     /// +0x11
-    pub x11: u8,
+    #[doc(alias("x11"))]
+    pub name_cursor_lo: u8,
     /// +0x12
-    pub x12: u8,
+    #[doc(alias("x12"))]
+    pub diagram2_fighter: u8,
     /// +0x13
-    pub x13: u8,
+    #[doc(alias("x13"))]
+    pub diagram2_name: u8,
     /// +0x14
-    pub unk_14: i32,
+    #[doc(alias("unk_14"))]
+    pub gallery_song: i32,
 }
 
 impl Default for GameRules {
@@ -13745,15 +13832,15 @@ impl Default for GameRules {
             friendly_fire: 0,
             pause: 0,
             score_display: 0,
-            unk_xc: 0,
-            xD: 0,
-            xE: 0,
-            xF: 0,
-            unk_x10: 0,
-            x11: 0,
-            x12: 0,
-            x13: 0,
-            unk_14: 0,
+            sd_penalty: 0,
+            diagram_name_mode: 0,
+            fighter_cursor_hi: 0,
+            fighter_cursor_lo: 0,
+            name_cursor_hi: 0,
+            name_cursor_lo: 0,
+            diagram2_fighter: 0,
+            diagram2_name: 0,
+            gallery_song: 0,
         }
     }
 }
@@ -14360,13 +14447,16 @@ pub struct NameTagData {
     /// +0x198
     pub namedata: [i8; 8],
     /// +0x1a0
-    pub x1A0: i8,
+    #[doc(alias("x1A0"))]
+    pub name_end: i8,
     /// +0x1a1
     pub rumble_enabled: u8,
     /// +0x1a2
-    pub x1A2: i8,
+    #[doc(alias("x1A2"))]
+    pub handicap: i8,
     /// +0x1a3
-    pub padding_x1A2: u8,
+    #[doc(alias("padding_x1A2"))]
+    pub pad_1a3: u8,
 }
 
 impl Default for NameTagData {
@@ -14376,10 +14466,10 @@ impl Default for NameTagData {
             stats: Default::default(),
             play_time_by_fighter: [0; 25],
             namedata: [0; 8],
-            x1A0: 0,
+            name_end: 0,
             rumble_enabled: 0,
-            x1A2: 0,
-            padding_x1A2: 0,
+            handicap: 0,
+            pad_1a3: 0,
         }
     }
 }
@@ -14418,42 +14508,49 @@ impl Default for GmCardData {
 }
 
 /// `gmm_x0`, 0x10a30 bytes.
+#[doc(alias("gmm_x0"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct gmm_x0 {
+pub struct GameData {
     /// +0x0
     pub language: u8,
     /// +0x1
-    pub unk_1: u8,
+    #[doc(alias("unk_1"))]
+    pub demo_count: u8,
     /// +0x2
-    pub unk_2: u8,
+    #[doc(alias("unk_2"))]
+    pub attract_history: u8,
     /// +0x3
-    pub pad_3: [i8; 54],
+    #[doc(alias("pad_3"))]
+    pub attract_history_rest: [i8; 54],
     /// +0x39
-    pub x39: [u8; 11],
+    #[doc(alias("x39"))]
+    pub challenger_losses: [u8; 11],
     /// +0x44
-    pub unk_44: gmm_x0_44_t,
+    #[doc(alias("unk_44"))]
+    pub trophy_notices: TrophyNotices,
     /// +0x51c
-    pub vs: gmm_x0_vsdata,
+    pub vs: OnePlayerModes,
     /// +0x588
-    pub modes: gmm_x0_vsmodes,
+    pub modes: VsModes,
     /// +0x1850
-    pub x1850: GameRules,
+    #[doc(alias("x1850"))]
+    pub rules: GameRules,
     /// +0x1868
     pub thing: GmCardData,
 }
 
-impl Default for gmm_x0 {
+impl Default for GameData {
     fn default() -> Self {
-        gmm_x0 {
+        GameData {
             language: 0,
-            unk_1: 0,
-            unk_2: 0,
-            pad_3: [0; 54],
-            x39: [0; 11],
-            unk_44: Default::default(),
+            demo_count: 0,
+            attract_history: 0,
+            attract_history_rest: [0; 54],
+            challenger_losses: [0; 11],
+            trophy_notices: Default::default(),
             vs: Default::default(),
             modes: Default::default(),
-            x1850: Default::default(),
+            rules: Default::default(),
             thing: Default::default(),
         }
     }

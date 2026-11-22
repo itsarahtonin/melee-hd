@@ -995,7 +995,7 @@ impl Running<'_> {
         let stick = super::view::dead_zone(self.toy_axis(1));
         if self.game.buttons_triggered(4) & super::super::mn::main::PAD_LR_START != 0 {
             self.lb_audio_call(0);
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.game.toys.table.exit = 1;
             return;
         }

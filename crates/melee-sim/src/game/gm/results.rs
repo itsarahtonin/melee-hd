@@ -40,7 +40,7 @@ impl Running<'_> {
     #[doc(alias = "gm_GetMatchEndPlayerScore")]
     pub fn match_end_score(&mut self, slot: i32) -> i32 {
         self.results_up_to_date();
-        self.game.vs.state.x24C.player_standings[slot as usize].score
+        self.game.vs.state.match_end.player_standings[slot as usize].score
     }
 
     /// A fighter's player's rank in the results as they stand, `gm_8016C6C0`.
@@ -57,7 +57,7 @@ impl Running<'_> {
     pub fn player_rank(&mut self, slot: i32) -> i32 {
         self.results_up_to_date();
         let g = &*self.game;
-        let r = &g.vs.state.x24C;
+        let r = &g.vs.state.match_end;
         let p = &r.player_standings[slot as usize];
         if g.vs.start.is_teams == 0 {
             i32::from(p.is_big_loser)
@@ -69,8 +69,8 @@ impl Running<'_> {
     /// The results brought up to date once a tick (`x24C.x0` the tick they were).
     pub(crate) fn results_up_to_date(&mut self) {
         let tick = self.game.scene_ticks();
-        if self.game.vs.state.x24C.x0 != tick {
-            self.game.vs.state.x24C.x0 = tick;
+        if self.game.vs.state.match_end.standings_tick != tick {
+            self.game.vs.state.match_end.standings_tick = tick;
             self.compile_results();
         }
     }
@@ -103,9 +103,9 @@ impl Running<'_> {
     #[doc(alias = "fn_80166A8C")]
     #[doc(alias = "gm_80166378")]
     pub(crate) fn compile_results(&mut self) {
-        let mut r = std::mem::take(&mut self.game.vs.state.x24C);
+        let mut r = std::mem::take(&mut self.game.vs.state.match_end);
         self.compile_results_into(&mut r);
-        self.game.vs.state.x24C = r;
+        self.game.vs.state.match_end = r;
     }
 
     /// `gm_80166378` on results `r`: a bonus match's scores tally each player's bonuses
@@ -132,7 +132,7 @@ impl Game {
     /// `gm_80166378` on a copy of the game's results, where no bonus match's tally can
     /// run (the Slippi recorder's).
     pub(crate) fn compile_results(&mut self) {
-        let mut r = std::mem::take(&mut self.vs.state.x24C);
+        let mut r = std::mem::take(&mut self.vs.state.match_end);
         self.fill_standings(&mut r);
         for i in 0..6 {
             if r.player_standings[i].pkind != PKIND_NA {
@@ -141,7 +141,7 @@ impl Game {
             }
         }
         self.rank_results(&mut r);
-        self.vs.state.x24C = r;
+        self.vs.state.match_end = r;
     }
 
     /// `gm_80166378`'s standings before the scores: every player's fields from the player
@@ -153,9 +153,9 @@ impl Game {
         for t in &mut r.team_standings {
             *t = Default::default();
         }
-        r._x448 = [0; 4];
+        r.mode_bonuses = [0; 4];
         r.frame_count = self.vs_frame_count();
-        r.x7 = self.vs_joiners();
+        r.joiners = self.vs_joiners();
         // `kills` holds four; the fifth and sixth land in `x18` and the padding after it.
         let mut kills = [[0u16; 6]; 6];
         for (i, row) in kills.iter_mut().enumerate() {
@@ -290,7 +290,7 @@ impl Game {
         if super::is_1p_mode(self) {
             let mut v = 3.0;
             let st = &self.vs.state;
-            if st.unk_0 != 0
+            if st.phase != 0
                 && (st.match_result == OUTCOME_TIMEOUT || st.match_result == OUTCOME_1P_GAME_OVER)
             {
                 v = fp::fmuls(v, f64::from(1.1_f32));
@@ -419,7 +419,7 @@ impl<'a> TeamStanding<'a> {
             within >= 0x104 && (within - 0x104) % 4 == 0 && (within - 0x104) / 4 + 2 < 257,
             "fn_80165E7C: team {team:#x}'s standing past the teams isn't modeled"
         );
-        TeamStanding::Past(&mut r.x44C[p].x104, (within - 0x104) / 4)
+        TeamStanding::Past(&mut r.decisions[p].points, (within - 0x104) / 4)
     }
 
     fn score(&self) -> i32 {

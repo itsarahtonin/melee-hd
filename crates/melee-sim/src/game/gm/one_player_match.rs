@@ -43,48 +43,53 @@ impl super::super::state::Game {
         let s = &self.vs.state;
         let mut st = [0u8; 0x38 + 6 * 0xE];
         st[..0x10].copy_from_slice(&[
-            s.unk_0,
+            s.phase,
             s.pauser as u8,
             s.pause_timer,
-            s.unk_3,
+            s.photo_mode,
             s.unpause_timer,
             s.hud_enabled,
             s.terminate_match,
             s.is_singleplayer,
             s.match_result,
-            s.unk_9,
-            s.unk_A,
-            s.unk_B,
-            s.unk_C,
-            s.unk_D,
+            s.cleared,
+            s.entry_delay,
+            s.end_kind,
+            s.joiners,
+            s.last_ko,
             s.match_over,
-            s.unk_F,
+            s.unused_f,
         ]);
-        st[0x10..0x14].copy_from_slice(&s.unk_10.to_be_bytes());
-        st[0x14..0x18].copy_from_slice(&s.unk_14.to_be_bytes());
-        st[0x18] = s.unk_18;
+        st[0x10..0x14].copy_from_slice(&s.end_sfx_1.to_be_bytes());
+        st[0x14..0x18].copy_from_slice(&s.end_sfx_2.to_be_bytes());
+        st[0x18] = s.end_sfx_2_frame;
         // 0x19 to 0x1B and 0x31 to 0x33 are padding nothing writes: zero, as the .bss starts.
-        st[0x1C..0x20].copy_from_slice(&s.unk_1C.0.to_be_bytes());
-        st[0x20..0x24].copy_from_slice(&s.unk_20.0.to_be_bytes());
+        st[0x1C..0x20].copy_from_slice(&s.countdown_sfx.0.to_be_bytes());
+        st[0x20..0x24].copy_from_slice(&s.entry_voices.0.to_be_bytes());
         st[0x24..0x28].copy_from_slice(&s.frame_count.to_be_bytes());
         st[0x28..0x2C].copy_from_slice(&s.timer_seconds.to_be_bytes());
-        st[0x2C..0x2E].copy_from_slice(&s.unk_2C.to_be_bytes());
-        st[0x2E..0x30].copy_from_slice(&s.unk_2E.to_be_bytes());
-        st[0x30] = s.unk_30;
-        st[0x34..0x38].copy_from_slice(&s.unk_34.to_bits().to_be_bytes());
+        st[0x2C..0x2E].copy_from_slice(&s.timer_frames.to_be_bytes());
+        st[0x2E..0x30].copy_from_slice(&s.score.to_be_bytes());
+        st[0x30] = s.end_frames;
+        st[0x34..0x38].copy_from_slice(&s.item_weight.to_bits().to_be_bytes());
         for (k, f) in s.fighters.iter().enumerate() {
             let o = 0x38 + k * 0xE;
             st[o..o + 6].copy_from_slice(&[
-                f.x0,
-                f.x1,
+                f.ckind,
+                f.entry_timer,
                 f.slot_type,
                 f.spawn_point as u8,
-                f.x4[0],
-                f.x5,
+                f.flags[0],
+                f.unused_5,
             ]);
-            st[o + 6..o + 8].copy_from_slice(&f.x6.to_be_bytes());
-            st[o + 8..o + 12].copy_from_slice(&[f.x8, f.x9, f.respawn_timer, f.xB]);
-            st[o + 12..o + 14].copy_from_slice(&f.xC.to_be_bytes());
+            st[o + 6..o + 8].copy_from_slice(&f.respawn_damage.to_be_bytes());
+            st[o + 8..o + 12].copy_from_slice(&[
+                f.platform_timer,
+                f.unread_9,
+                f.respawn_timer,
+                f.respawn_sub,
+            ]);
+            st[o + 12..o + 14].copy_from_slice(&f.respawn_flags.to_be_bytes());
         }
         b[0x38..].copy_from_slice(&st[..LEFT_LIST_READ - 0x38]);
         b.map(|v| v as i8)
@@ -129,7 +134,7 @@ impl Running<'_> {
     pub fn one_player_trophies_end(&mut self) {
         self.game.bgflash.fade_to_black(0x30);
         let snagged = crate::game::gr::ground::flags(self.game, 0x100) != 0;
-        self.game.vs.state.unk_10 = if snagged { 0x7C85E + 1 } else { 0x9C48 + 1 };
+        self.game.vs.state.end_sfx_1 = if snagged { 0x7C85E + 1 } else { 0x9C48 + 1 };
     }
 
     /// A 1P run's `u8` getter (`Unk1PData::x48` to `x60`) for a round, level and index:
@@ -268,7 +273,7 @@ impl Running<'_> {
                     r.on_pause_override = Some(CodeRef(FIXED_CAMERA));
                     r.run_kind = 1;
                     r.pause_shows_stick = false;
-                    start.players[0].xC_b1 = false;
+                    start.players[0].enters = false;
                 }
                 2 => {
                     r.run_kind = 3;
@@ -325,9 +330,9 @@ impl Running<'_> {
             p.cpu_level = a.cpu_level;
             p.attack_ratio = a.attack_ratio;
             p.defense_ratio = a.defense_ratio;
-            p.xD_b1 = true;
+            p.shows_hearts = true;
             if p.ckind == CharacterKind::GKoopa {
-                p.xC_b1 = false;
+                p.enters = false;
             }
             idx += 1;
         }
@@ -393,7 +398,7 @@ impl Running<'_> {
             }
             if special_mode == 1 {
                 self.game.gm.opponents.set_flag_ae0();
-                start.players[0].xC_b5 = true;
+                start.players[0].attrs_scaled = true;
             }
         } else if x8 & 8 != 0 {
             super::opponents::point_rules(&mut start.rules);
@@ -433,23 +438,23 @@ impl Running<'_> {
                 p.color = colors[i];
                 if x8 & 2 != 0 {
                     p.model_scale = 2.0;
-                    p.xB = 2;
+                    p.sfx_size = 2;
                 } else {
                     p.model_scale = 1.0;
-                    p.xB = 0;
+                    p.sfx_size = 0;
                 }
                 if x8 & 4 != 0 {
                     p.vs_metal = true;
                     p.cpu_kind = 0x1B;
                 }
                 if p.ckind == CharacterKind::GKoopa {
-                    p.xC_b1 = false;
+                    p.enters = false;
                 }
                 if p.ckind == CharacterKind::MasterHand || p.ckind == CharacterKind::CrazyHand {
-                    p.xC_b7 = true;
+                    p.stamina = true;
                     p.hp = 0x12C;
-                    p.xD_b2 = true;
-                    p.xD_b0 = true;
+                    p.no_offscreen_damage = true;
+                    p.hp_explodes = true;
                     p.spawn_dir = -1;
                     if p.ckind == CharacterKind::CrazyHand {
                         p.slot_type = 3;
@@ -535,7 +540,7 @@ impl Running<'_> {
         r.time_limit = (a.frames as i32 / 60) as u32;
         r.start_frame = ((a.frames as i32 % 60) + 1) as u8;
         r.item_switch &= 0xFFFF_FFFF_FFFB_FCFF;
-        start.players[0].xC_b1 = id == 0;
+        start.players[0].enters = id == 0;
         if id == 0x60 {
             let level = a.base.player.cpu_level;
             let defense = Self::one_player_ratio(Some(CodeRef(0x8018_A1D8)), 0xC, level);
@@ -712,7 +717,7 @@ impl Running<'_> {
         if on && id == 0x60 {
             // `gm_8017CBAC` with All-Star's run and stocks (`gmMainLib_8015CDE0`).
             let run = self.game.one_player.allstar.base;
-            let stocks = self.game.game_data.vs.unk_528.stocks;
+            let stocks = self.game.game_data.vs.all_star.stocks;
             self.one_player_clear(&run, stocks, super::endings::GM_ALLSTAR_GOVER);
         }
     }
@@ -759,7 +764,7 @@ impl Running<'_> {
         r.start_frame = (a.frames as i32 % 60) as u8;
         r.end_wait = 120;
         start.players[0].damage = a.damage;
-        start.players[0].xD_b2 = true;
+        start.players[0].no_offscreen_damage = true;
         start.rules.end_kind = 9;
         for i in 0..count {
             let slot = loop {
@@ -777,7 +782,7 @@ impl Running<'_> {
         }
         a.rest_counts[1] = next_count as u8;
         a.rest_counts[0] = (round + 1) as u8;
-        start.players[0].xC_b1 = false;
+        start.players[0].enters = false;
         start.rules.long_countdown = true;
         start.rules.alt_go = true;
         start.rules.clear_scores = false;
@@ -824,7 +829,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B5EE4")]
     pub fn allstar_exit_game_over(&mut self) {
         let mut run = self.game.one_player.allstar.base;
-        let stocks = self.game.game_data.vs.unk_528.stocks;
+        let stocks = self.game.game_data.vs.all_star.stocks;
         self.one_player_game_over_exit(&mut run, stocks);
         self.game.one_player.allstar.base = run;
         if self.game.one_player.game_over.result != 0 {
@@ -837,7 +842,7 @@ impl Running<'_> {
     #[doc(alias = "gmClassic_801B3D84")]
     pub fn classic_exit_game_over(&mut self) {
         let mut run = self.game.one_player.classic.base;
-        let stocks = self.game.game_data.vs.unk_51C.stocks;
+        let stocks = self.game.game_data.vs.classic.stocks;
         self.one_player_game_over_exit(&mut run, stocks);
         self.game.one_player.classic.base = run;
     }
@@ -847,7 +852,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B4294")]
     pub fn adventure_exit_game_over(&mut self) {
         let mut run = self.game.one_player.adventure.base;
-        let stocks = self.game.game_data.vs.unk_522.stocks;
+        let stocks = self.game.game_data.vs.adventure.stocks;
         self.one_player_game_over_exit(&mut run, stocks);
         self.game.one_player.adventure.base = run;
     }

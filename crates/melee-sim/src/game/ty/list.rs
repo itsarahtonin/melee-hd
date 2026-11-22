@@ -763,7 +763,7 @@ impl Running<'_> {
             self.game.world.remove_proc(p);
             self.toy_gallery_leave(false);
             self.toy_list_close(false);
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.game.toys.table.exit = 1;
             return;
         }

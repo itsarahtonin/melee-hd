@@ -1292,7 +1292,7 @@ impl Running<'_> {
         };
         // `HSD_VIWaitXFBFlush`, the scene loop's end on the timeline: the last round's frame
         // is rendered unless the scene ended at once.
-        let copied = self.game.scene.unk_C != 2;
+        let copied = self.game.scene.ending != 2;
         self.game.audio.end_scene_loop_after(self.data, copied);
         let resetting = self.game.main_lib.resetting;
         assert!(!resetting, "a reset (gm_801A4014's) isn't ported");

@@ -126,8 +126,8 @@ impl Running<'_> {
         r.end_kind = 9;
         for (p, v) in start.players.iter_mut().zip(&vs.players) {
             p.clone_from(v);
-            p.xC_b1 = false;
-            p.xD_b3 = true;
+            p.enters = false;
+            p.no_magnifier = true;
         }
         let p0 = &vs.players[0];
         super::setup_players::setup_human(
@@ -137,7 +137,7 @@ impl Running<'_> {
             1,
             self.game.one_player.homerun_slot,
         );
-        start.players[0].xD_b2 = true;
+        start.players[0].no_offscreen_damage = true;
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
         super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);

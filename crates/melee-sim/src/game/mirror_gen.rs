@@ -13588,34 +13588,34 @@ impl Mirror for VsSceneFighter {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         VsSceneFighter {
-            x0: m.u8(at + 0x0),
-            x1: m.u8(at + 0x1),
+            ckind: m.u8(at + 0x0),
+            entry_timer: m.u8(at + 0x1),
             slot_type: m.u8(at + 0x2),
             spawn_point: m.u8(at + 0x3) as i8,
-            x4: m.bytes(at + 0x4),
-            x5: m.u8(at + 0x5),
-            x6: m.u16(at + 0x6),
-            x8: m.u8(at + 0x8),
-            x9: m.u8(at + 0x9),
+            flags: m.bytes(at + 0x4),
+            unused_5: m.u8(at + 0x5),
+            respawn_damage: m.u16(at + 0x6),
+            platform_timer: m.u8(at + 0x8),
+            unread_9: m.u8(at + 0x9),
             respawn_timer: m.u8(at + 0xa),
-            xB: m.u8(at + 0xb),
-            xC: m.u16(at + 0xc),
+            respawn_sub: m.u8(at + 0xb),
+            respawn_flags: m.u16(at + 0xc),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x0 != m.u8(at + 0x0) {
+        if self.ckind != m.u8(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.x0"),
-                format!("{:?}", self.x0),
+                &format!("{path}.ckind (x0)"),
+                format!("{:?}", self.ckind),
                 format!("{:?}", m.u8(at + 0x0)),
             );
         }
-        if self.x1 != m.u8(at + 0x1) {
+        if self.entry_timer != m.u8(at + 0x1) {
             cx.mismatch(
-                &format!("{path}.x1"),
-                format!("{:?}", self.x1),
+                &format!("{path}.entry_timer (x1)"),
+                format!("{:?}", self.entry_timer),
                 format!("{:?}", m.u8(at + 0x1)),
             );
         }
@@ -13633,38 +13633,38 @@ impl Mirror for VsSceneFighter {
                 format!("{:?}", m.u8(at + 0x3) as i8),
             );
         }
-        if self.x4 != m.bytes::<1>(at + 0x4) {
+        if self.flags != m.bytes::<1>(at + 0x4) {
             cx.mismatch(
-                &format!("{path}.x4"),
-                format!("{:02x?}", self.x4),
+                &format!("{path}.flags (x4)"),
+                format!("{:02x?}", self.flags),
                 format!("{:02x?}", m.bytes::<1>(at + 0x4)),
             );
         }
-        if self.x5 != m.u8(at + 0x5) {
+        if self.unused_5 != m.u8(at + 0x5) {
             cx.mismatch(
-                &format!("{path}.x5"),
-                format!("{:?}", self.x5),
+                &format!("{path}.unused_5 (x5)"),
+                format!("{:?}", self.unused_5),
                 format!("{:?}", m.u8(at + 0x5)),
             );
         }
-        if self.x6 != m.u16(at + 0x6) {
+        if self.respawn_damage != m.u16(at + 0x6) {
             cx.mismatch(
-                &format!("{path}.x6"),
-                format!("{:?}", self.x6),
+                &format!("{path}.respawn_damage (x6)"),
+                format!("{:?}", self.respawn_damage),
                 format!("{:?}", m.u16(at + 0x6)),
             );
         }
-        if self.x8 != m.u8(at + 0x8) {
+        if self.platform_timer != m.u8(at + 0x8) {
             cx.mismatch(
-                &format!("{path}.x8"),
-                format!("{:?}", self.x8),
+                &format!("{path}.platform_timer (x8)"),
+                format!("{:?}", self.platform_timer),
                 format!("{:?}", m.u8(at + 0x8)),
             );
         }
-        if self.x9 != m.u8(at + 0x9) {
+        if self.unread_9 != m.u8(at + 0x9) {
             cx.mismatch(
-                &format!("{path}.x9"),
-                format!("{:?}", self.x9),
+                &format!("{path}.unread_9 (x9)"),
+                format!("{:?}", self.unread_9),
                 format!("{:?}", m.u8(at + 0x9)),
             );
         }
@@ -13675,17 +13675,17 @@ impl Mirror for VsSceneFighter {
                 format!("{:?}", m.u8(at + 0xa)),
             );
         }
-        if self.xB != m.u8(at + 0xb) {
+        if self.respawn_sub != m.u8(at + 0xb) {
             cx.mismatch(
-                &format!("{path}.xB"),
-                format!("{:?}", self.xB),
+                &format!("{path}.respawn_sub (xB)"),
+                format!("{:?}", self.respawn_sub),
                 format!("{:?}", m.u8(at + 0xb)),
             );
         }
-        if self.xC != m.u16(at + 0xc) {
+        if self.respawn_flags != m.u16(at + 0xc) {
             cx.mismatch(
-                &format!("{path}.xC"),
-                format!("{:?}", self.xC),
+                &format!("{path}.respawn_flags (xC)"),
+                format!("{:?}", self.respawn_flags),
                 format!("{:?}", m.u16(at + 0xc)),
             );
         }
@@ -14172,33 +14172,33 @@ impl Mirror for MatchPlayerData {
     }
 }
 
-impl Mirror for UnkResultPlayerData {
+impl Mirror for PlayerDecisions {
     const SIZE: u32 = 0x508;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        UnkResultPlayerData {
-            x0: core::array::from_fn(|i0| m.u8(at + 0x0 + i0 as u32 * 0x1)),
-            x104: core::array::from_fn(|i0| m.u32(at + 0x104 + i0 as u32 * 0x4) as i32),
+        PlayerDecisions {
+            earned: core::array::from_fn(|i0| m.u8(at + 0x0 + i0 as u32 * 0x1)),
+            points: core::array::from_fn(|i0| m.u32(at + 0x104 + i0 as u32 * 0x4) as i32),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
         for i0 in 0..257 {
-            if self.x0[i0] != m.u8(at + 0x0 + i0 as u32 * 0x1) {
+            if self.earned[i0] != m.u8(at + 0x0 + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.x0"), i0),
-                    format!("{:?}", self.x0[i0]),
+                    &format!("{}[{}]", format!("{path}.earned (x0)"), i0),
+                    format!("{:?}", self.earned[i0]),
                     format!("{:?}", m.u8(at + 0x0 + i0 as u32 * 0x1)),
                 );
             }
         }
         for i0 in 0..257 {
-            if self.x104[i0] != m.u32(at + 0x104 + i0 as u32 * 0x4) as i32 {
+            if self.points[i0] != m.u32(at + 0x104 + i0 as u32 * 0x4) as i32 {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.x104"), i0),
-                    format!("{:?}", self.x104[i0]),
+                    &format!("{}[{}]", format!("{path}.points (x104)"), i0),
+                    format!("{:?}", self.points[i0]),
                     format!("{:?}", m.u32(at + 0x104 + i0 as u32 * 0x4) as i32),
                 );
             }
@@ -14212,11 +14212,11 @@ impl Mirror for MatchEnd {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         MatchEnd {
-            x0: m.u32(at + 0x0),
+            standings_tick: m.u32(at + 0x0),
             outcome: m.u8(at + 0x4),
             match_kind: m.u8(at + 0x5),
             is_teams: m.u8(at + 0x6),
-            x7: m.u8(at + 0x7),
+            joiners: m.u8(at + 0x7),
             frame_count: m.u32(at + 0x8),
             sd_penalty: m.u8(at + 0xc) as i8,
             n_winners: m.u8(at + 0xd),
@@ -14230,19 +14230,19 @@ impl Mirror for MatchEnd {
             player_standings: core::array::from_fn(|i0| {
                 MatchPlayerData::import(m, at + 0x58 + i0 as u32 * 0xa8, cx)
             }),
-            _x448: core::array::from_fn(|i0| m.u8(at + 0x448 + i0 as u32 * 0x1)),
-            x44C: core::array::from_fn(|i0| {
-                UnkResultPlayerData::import(m, at + 0x44c + i0 as u32 * 0x508, cx)
+            mode_bonuses: core::array::from_fn(|i0| m.u8(at + 0x448 + i0 as u32 * 0x1)),
+            decisions: core::array::from_fn(|i0| {
+                PlayerDecisions::import(m, at + 0x44c + i0 as u32 * 0x508, cx)
             }),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x0 != m.u32(at + 0x0) {
+        if self.standings_tick != m.u32(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.x0"),
-                format!("{:?}", self.x0),
+                &format!("{path}.standings_tick (x0)"),
+                format!("{:?}", self.standings_tick),
                 format!("{:?}", m.u32(at + 0x0)),
             );
         }
@@ -14267,10 +14267,10 @@ impl Mirror for MatchEnd {
                 format!("{:?}", m.u8(at + 0x6)),
             );
         }
-        if self.x7 != m.u8(at + 0x7) {
+        if self.joiners != m.u8(at + 0x7) {
             cx.mismatch(
-                &format!("{path}.x7"),
-                format!("{:?}", self.x7),
+                &format!("{path}.joiners (x7)"),
+                format!("{:?}", self.joiners),
                 format!("{:?}", m.u8(at + 0x7)),
             );
         }
@@ -14344,19 +14344,19 @@ impl Mirror for MatchEnd {
             );
         }
         for i0 in 0..4 {
-            if self._x448[i0] != m.u8(at + 0x448 + i0 as u32 * 0x1) {
+            if self.mode_bonuses[i0] != m.u8(at + 0x448 + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}._x448"), i0),
-                    format!("{:?}", self._x448[i0]),
+                    &format!("{}[{}]", format!("{path}.mode_bonuses (_x448)"), i0),
+                    format!("{:?}", self.mode_bonuses[i0]),
                     format!("{:?}", m.u8(at + 0x448 + i0 as u32 * 0x1)),
                 );
             }
         }
         for i0 in 0..6 {
-            self.x44C[i0].compare(
+            self.decisions[i0].compare(
                 m,
                 at + 0x44c + i0 as u32 * 0x508,
-                &format!("{}[{}]", format!("{path}.x44C"), i0),
+                &format!("{}[{}]", format!("{path}.decisions (x44C)"), i0),
                 cx,
             );
         }
@@ -14369,47 +14369,47 @@ impl Mirror for VsSceneState {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         VsSceneState {
-            unk_0: m.u8(at + 0x0),
+            phase: m.u8(at + 0x0),
             pauser: m.u8(at + 0x1) as i8,
             pause_timer: m.u8(at + 0x2),
-            unk_3: m.u8(at + 0x3),
+            photo_mode: m.u8(at + 0x3),
             unpause_timer: m.u8(at + 0x4),
             hud_enabled: m.u8(at + 0x5),
             terminate_match: m.u8(at + 0x6),
             is_singleplayer: m.u8(at + 0x7),
             match_result: m.u8(at + 0x8),
-            unk_9: m.u8(at + 0x9),
-            unk_A: m.u8(at + 0xa),
-            unk_B: m.u8(at + 0xb),
-            unk_C: m.u8(at + 0xc),
-            unk_D: m.u8(at + 0xd),
+            cleared: m.u8(at + 0x9),
+            entry_delay: m.u8(at + 0xa),
+            end_kind: m.u8(at + 0xb),
+            joiners: m.u8(at + 0xc),
+            last_ko: m.u8(at + 0xd),
             match_over: m.u8(at + 0xe),
-            unk_F: m.u8(at + 0xf),
-            unk_10: m.u32(at + 0x10) as i32,
-            unk_14: m.u32(at + 0x14) as i32,
-            unk_18: m.u8(at + 0x18),
-            unk_1C: RawPtr(m.u32(at + 0x1c)),
-            unk_20: RawPtr(m.u32(at + 0x20)),
+            unused_f: m.u8(at + 0xf),
+            end_sfx_1: m.u32(at + 0x10) as i32,
+            end_sfx_2: m.u32(at + 0x14) as i32,
+            end_sfx_2_frame: m.u8(at + 0x18),
+            countdown_sfx: RawPtr(m.u32(at + 0x1c)),
+            entry_voices: RawPtr(m.u32(at + 0x20)),
             frame_count: m.u32(at + 0x24),
             timer_seconds: m.u32(at + 0x28),
-            unk_2C: m.u16(at + 0x2c),
-            unk_2E: m.u16(at + 0x2e),
-            unk_30: m.u8(at + 0x30),
-            unk_34: f32::from_bits(m.u32(at + 0x34)),
+            timer_frames: m.u16(at + 0x2c),
+            score: m.u16(at + 0x2e),
+            end_frames: m.u8(at + 0x30),
+            item_weight: f32::from_bits(m.u32(at + 0x34)),
             fighters: core::array::from_fn(|i0| {
                 VsSceneFighter::import(m, at + 0x38 + i0 as u32 * 0xe, cx)
             }),
             pad_8C: core::array::from_fn(|i0| m.u8(at + 0x8c + i0 as u32 * 0x1) as i8),
-            x24C: MatchEnd::import(m, at + 0x24c, cx),
+            match_end: MatchEnd::import(m, at + 0x24c, cx),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.unk_0 != m.u8(at + 0x0) {
+        if self.phase != m.u8(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.unk_0"),
-                format!("{:?}", self.unk_0),
+                &format!("{path}.phase (unk_0)"),
+                format!("{:?}", self.phase),
                 format!("{:?}", m.u8(at + 0x0)),
             );
         }
@@ -14427,10 +14427,10 @@ impl Mirror for VsSceneState {
                 format!("{:?}", m.u8(at + 0x2)),
             );
         }
-        if self.unk_3 != m.u8(at + 0x3) {
+        if self.photo_mode != m.u8(at + 0x3) {
             cx.mismatch(
-                &format!("{path}.unk_3"),
-                format!("{:?}", self.unk_3),
+                &format!("{path}.photo_mode (unk_3)"),
+                format!("{:?}", self.photo_mode),
                 format!("{:?}", m.u8(at + 0x3)),
             );
         }
@@ -14469,38 +14469,38 @@ impl Mirror for VsSceneState {
                 format!("{:?}", m.u8(at + 0x8)),
             );
         }
-        if self.unk_9 != m.u8(at + 0x9) {
+        if self.cleared != m.u8(at + 0x9) {
             cx.mismatch(
-                &format!("{path}.unk_9"),
-                format!("{:?}", self.unk_9),
+                &format!("{path}.cleared (unk_9)"),
+                format!("{:?}", self.cleared),
                 format!("{:?}", m.u8(at + 0x9)),
             );
         }
-        if self.unk_A != m.u8(at + 0xa) {
+        if self.entry_delay != m.u8(at + 0xa) {
             cx.mismatch(
-                &format!("{path}.unk_A"),
-                format!("{:?}", self.unk_A),
+                &format!("{path}.entry_delay (unk_A)"),
+                format!("{:?}", self.entry_delay),
                 format!("{:?}", m.u8(at + 0xa)),
             );
         }
-        if self.unk_B != m.u8(at + 0xb) {
+        if self.end_kind != m.u8(at + 0xb) {
             cx.mismatch(
-                &format!("{path}.unk_B"),
-                format!("{:?}", self.unk_B),
+                &format!("{path}.end_kind (unk_B)"),
+                format!("{:?}", self.end_kind),
                 format!("{:?}", m.u8(at + 0xb)),
             );
         }
-        if self.unk_C != m.u8(at + 0xc) {
+        if self.joiners != m.u8(at + 0xc) {
             cx.mismatch(
-                &format!("{path}.unk_C"),
-                format!("{:?}", self.unk_C),
+                &format!("{path}.joiners (unk_C)"),
+                format!("{:?}", self.joiners),
                 format!("{:?}", m.u8(at + 0xc)),
             );
         }
-        if self.unk_D != m.u8(at + 0xd) {
+        if self.last_ko != m.u8(at + 0xd) {
             cx.mismatch(
-                &format!("{path}.unk_D"),
-                format!("{:?}", self.unk_D),
+                &format!("{path}.last_ko (unk_D)"),
+                format!("{:?}", self.last_ko),
                 format!("{:?}", m.u8(at + 0xd)),
             );
         }
@@ -14511,45 +14511,45 @@ impl Mirror for VsSceneState {
                 format!("{:?}", m.u8(at + 0xe)),
             );
         }
-        if self.unk_F != m.u8(at + 0xf) {
+        if self.unused_f != m.u8(at + 0xf) {
             cx.mismatch(
-                &format!("{path}.unk_F"),
-                format!("{:?}", self.unk_F),
+                &format!("{path}.unused_f (unk_F)"),
+                format!("{:?}", self.unused_f),
                 format!("{:?}", m.u8(at + 0xf)),
             );
         }
-        if self.unk_10 != m.u32(at + 0x10) as i32 {
+        if self.end_sfx_1 != m.u32(at + 0x10) as i32 {
             cx.mismatch(
-                &format!("{path}.unk_10"),
-                format!("{:?}", self.unk_10),
+                &format!("{path}.end_sfx_1 (unk_10)"),
+                format!("{:?}", self.end_sfx_1),
                 format!("{:?}", m.u32(at + 0x10) as i32),
             );
         }
-        if self.unk_14 != m.u32(at + 0x14) as i32 {
+        if self.end_sfx_2 != m.u32(at + 0x14) as i32 {
             cx.mismatch(
-                &format!("{path}.unk_14"),
-                format!("{:?}", self.unk_14),
+                &format!("{path}.end_sfx_2 (unk_14)"),
+                format!("{:?}", self.end_sfx_2),
                 format!("{:?}", m.u32(at + 0x14) as i32),
             );
         }
-        if self.unk_18 != m.u8(at + 0x18) {
+        if self.end_sfx_2_frame != m.u8(at + 0x18) {
             cx.mismatch(
-                &format!("{path}.unk_18"),
-                format!("{:?}", self.unk_18),
+                &format!("{path}.end_sfx_2_frame (unk_18)"),
+                format!("{:?}", self.end_sfx_2_frame),
                 format!("{:?}", m.u8(at + 0x18)),
             );
         }
-        if self.unk_1C.0 != m.u32(at + 0x1c) {
+        if self.countdown_sfx.0 != m.u32(at + 0x1c) {
             cx.mismatch(
-                &format!("{path}.unk_1C"),
-                format!("{:#x}", self.unk_1C.0),
+                &format!("{path}.countdown_sfx (unk_1C)"),
+                format!("{:#x}", self.countdown_sfx.0),
                 format!("{:#x}", m.u32(at + 0x1c)),
             );
         }
-        if self.unk_20.0 != m.u32(at + 0x20) {
+        if self.entry_voices.0 != m.u32(at + 0x20) {
             cx.mismatch(
-                &format!("{path}.unk_20"),
-                format!("{:#x}", self.unk_20.0),
+                &format!("{path}.entry_voices (unk_20)"),
+                format!("{:#x}", self.entry_voices.0),
                 format!("{:#x}", m.u32(at + 0x20)),
             );
         }
@@ -14567,31 +14567,31 @@ impl Mirror for VsSceneState {
                 format!("{:?}", m.u32(at + 0x28)),
             );
         }
-        if self.unk_2C != m.u16(at + 0x2c) {
+        if self.timer_frames != m.u16(at + 0x2c) {
             cx.mismatch(
-                &format!("{path}.unk_2C"),
-                format!("{:?}", self.unk_2C),
+                &format!("{path}.timer_frames (unk_2C)"),
+                format!("{:?}", self.timer_frames),
                 format!("{:?}", m.u16(at + 0x2c)),
             );
         }
-        if self.unk_2E != m.u16(at + 0x2e) {
+        if self.score != m.u16(at + 0x2e) {
             cx.mismatch(
-                &format!("{path}.unk_2E"),
-                format!("{:?}", self.unk_2E),
+                &format!("{path}.score (unk_2E)"),
+                format!("{:?}", self.score),
                 format!("{:?}", m.u16(at + 0x2e)),
             );
         }
-        if self.unk_30 != m.u8(at + 0x30) {
+        if self.end_frames != m.u8(at + 0x30) {
             cx.mismatch(
-                &format!("{path}.unk_30"),
-                format!("{:?}", self.unk_30),
+                &format!("{path}.end_frames (unk_30)"),
+                format!("{:?}", self.end_frames),
                 format!("{:?}", m.u8(at + 0x30)),
             );
         }
-        if self.unk_34.to_bits() != m.u32(at + 0x34) {
+        if self.item_weight.to_bits() != m.u32(at + 0x34) {
             cx.mismatch(
-                &format!("{path}.unk_34"),
-                format!("{:?}", self.unk_34),
+                &format!("{path}.item_weight (unk_34)"),
+                format!("{:?}", self.item_weight),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x34))),
             );
         }
@@ -14612,8 +14612,8 @@ impl Mirror for VsSceneState {
                 );
             }
         }
-        self.x24C
-            .compare(m, at + 0x24c, &format!("{path}.x24C"), cx);
+        self.match_end
+            .compare(m, at + 0x24c, &format!("{path}.match_end (x24C)"), cx);
     }
 }
 
@@ -15398,23 +15398,23 @@ impl Mirror for PlayerInitData {
             handicap: m.u8(at + 0x8) as i8,
             team: m.u8(at + 0x9),
             nametag: m.u8(at + 0xa),
-            xB: m.u8(at + 0xb),
+            sfx_size: m.u8(at + 0xb),
             rumble_enabled: m.bits(at, 96, 1) != 0,
-            xC_b1: m.bits(at, 97, 1) != 0,
+            enters: m.bits(at, 97, 1) != 0,
             vs_metal: m.bits(at, 98, 1) != 0,
-            xC_b3: m.bits(at, 99, 1) != 0,
+            unread_c_b3: m.bits(at, 99, 1) != 0,
             vs_invisible: m.bits(at, 100, 1) != 0,
-            xC_b5: m.bits(at, 101, 1) != 0,
-            xC_b6: m.bits(at, 102, 1) != 0,
-            xC_b7: m.bits(at, 103, 1) != 0,
-            xD_b0: m.bits(at, 104, 1) != 0,
-            xD_b1: m.bits(at, 105, 1) != 0,
-            xD_b2: m.bits(at, 106, 1) != 0,
-            xD_b3: m.bits(at, 107, 1) != 0,
-            xD_b4: m.bits(at, 108, 1) != 0,
-            xD_b5: m.bits(at, 109, 1) != 0,
-            xD_b6: m.bits(at, 110, 1) != 0,
-            xD_b7: m.bits(at, 111, 1) != 0,
+            attrs_scaled: m.bits(at, 101, 1) != 0,
+            voice_muted: m.bits(at, 102, 1) != 0,
+            stamina: m.bits(at, 103, 1) != 0,
+            hp_explodes: m.bits(at, 104, 1) != 0,
+            shows_hearts: m.bits(at, 105, 1) != 0,
+            no_offscreen_damage: m.bits(at, 106, 1) != 0,
+            no_magnifier: m.bits(at, 107, 1) != 0,
+            dies_up: m.bits(at, 108, 1) != 0,
+            unused_d_b5: m.bits(at, 109, 1) != 0,
+            unused_d_b6: m.bits(at, 110, 1) != 0,
+            unused_d_b7: m.bits(at, 111, 1) != 0,
             cpu_kind: m.u8(at + 0xe),
             cpu_level: m.u8(at + 0xf),
             damage: m.u16(at + 0x10),
@@ -15505,10 +15505,10 @@ impl Mirror for PlayerInitData {
                 format!("{:?}", m.u8(at + 0xa)),
             );
         }
-        if self.xB != m.u8(at + 0xb) {
+        if self.sfx_size != m.u8(at + 0xb) {
             cx.mismatch(
-                &format!("{path}.xB"),
-                format!("{:?}", self.xB),
+                &format!("{path}.sfx_size (xB)"),
+                format!("{:?}", self.sfx_size),
                 format!("{:?}", m.u8(at + 0xb)),
             );
         }
@@ -15519,10 +15519,10 @@ impl Mirror for PlayerInitData {
                 format!("{:?}", m.bits(at, 96, 1)),
             );
         }
-        if (self.xC_b1 as u32) != m.bits(at, 97, 1) {
+        if (self.enters as u32) != m.bits(at, 97, 1) {
             cx.mismatch(
-                &format!("{path}.xC_b1"),
-                format!("{:?}", self.xC_b1),
+                &format!("{path}.enters (xC_b1)"),
+                format!("{:?}", self.enters),
                 format!("{:?}", m.bits(at, 97, 1)),
             );
         }
@@ -15533,10 +15533,10 @@ impl Mirror for PlayerInitData {
                 format!("{:?}", m.bits(at, 98, 1)),
             );
         }
-        if (self.xC_b3 as u32) != m.bits(at, 99, 1) {
+        if (self.unread_c_b3 as u32) != m.bits(at, 99, 1) {
             cx.mismatch(
-                &format!("{path}.xC_b3"),
-                format!("{:?}", self.xC_b3),
+                &format!("{path}.unread_c_b3 (xC_b3)"),
+                format!("{:?}", self.unread_c_b3),
                 format!("{:?}", m.bits(at, 99, 1)),
             );
         }
@@ -15547,80 +15547,80 @@ impl Mirror for PlayerInitData {
                 format!("{:?}", m.bits(at, 100, 1)),
             );
         }
-        if (self.xC_b5 as u32) != m.bits(at, 101, 1) {
+        if (self.attrs_scaled as u32) != m.bits(at, 101, 1) {
             cx.mismatch(
-                &format!("{path}.xC_b5"),
-                format!("{:?}", self.xC_b5),
+                &format!("{path}.attrs_scaled (xC_b5)"),
+                format!("{:?}", self.attrs_scaled),
                 format!("{:?}", m.bits(at, 101, 1)),
             );
         }
-        if (self.xC_b6 as u32) != m.bits(at, 102, 1) {
+        if (self.voice_muted as u32) != m.bits(at, 102, 1) {
             cx.mismatch(
-                &format!("{path}.xC_b6"),
-                format!("{:?}", self.xC_b6),
+                &format!("{path}.voice_muted (xC_b6)"),
+                format!("{:?}", self.voice_muted),
                 format!("{:?}", m.bits(at, 102, 1)),
             );
         }
-        if (self.xC_b7 as u32) != m.bits(at, 103, 1) {
+        if (self.stamina as u32) != m.bits(at, 103, 1) {
             cx.mismatch(
-                &format!("{path}.xC_b7"),
-                format!("{:?}", self.xC_b7),
+                &format!("{path}.stamina (xC_b7)"),
+                format!("{:?}", self.stamina),
                 format!("{:?}", m.bits(at, 103, 1)),
             );
         }
-        if (self.xD_b0 as u32) != m.bits(at, 104, 1) {
+        if (self.hp_explodes as u32) != m.bits(at, 104, 1) {
             cx.mismatch(
-                &format!("{path}.xD_b0"),
-                format!("{:?}", self.xD_b0),
+                &format!("{path}.hp_explodes (xD_b0)"),
+                format!("{:?}", self.hp_explodes),
                 format!("{:?}", m.bits(at, 104, 1)),
             );
         }
-        if (self.xD_b1 as u32) != m.bits(at, 105, 1) {
+        if (self.shows_hearts as u32) != m.bits(at, 105, 1) {
             cx.mismatch(
-                &format!("{path}.xD_b1"),
-                format!("{:?}", self.xD_b1),
+                &format!("{path}.shows_hearts (xD_b1)"),
+                format!("{:?}", self.shows_hearts),
                 format!("{:?}", m.bits(at, 105, 1)),
             );
         }
-        if (self.xD_b2 as u32) != m.bits(at, 106, 1) {
+        if (self.no_offscreen_damage as u32) != m.bits(at, 106, 1) {
             cx.mismatch(
-                &format!("{path}.xD_b2"),
-                format!("{:?}", self.xD_b2),
+                &format!("{path}.no_offscreen_damage (xD_b2)"),
+                format!("{:?}", self.no_offscreen_damage),
                 format!("{:?}", m.bits(at, 106, 1)),
             );
         }
-        if (self.xD_b3 as u32) != m.bits(at, 107, 1) {
+        if (self.no_magnifier as u32) != m.bits(at, 107, 1) {
             cx.mismatch(
-                &format!("{path}.xD_b3"),
-                format!("{:?}", self.xD_b3),
+                &format!("{path}.no_magnifier (xD_b3)"),
+                format!("{:?}", self.no_magnifier),
                 format!("{:?}", m.bits(at, 107, 1)),
             );
         }
-        if (self.xD_b4 as u32) != m.bits(at, 108, 1) {
+        if (self.dies_up as u32) != m.bits(at, 108, 1) {
             cx.mismatch(
-                &format!("{path}.xD_b4"),
-                format!("{:?}", self.xD_b4),
+                &format!("{path}.dies_up (xD_b4)"),
+                format!("{:?}", self.dies_up),
                 format!("{:?}", m.bits(at, 108, 1)),
             );
         }
-        if (self.xD_b5 as u32) != m.bits(at, 109, 1) {
+        if (self.unused_d_b5 as u32) != m.bits(at, 109, 1) {
             cx.mismatch(
-                &format!("{path}.xD_b5"),
-                format!("{:?}", self.xD_b5),
+                &format!("{path}.unused_d_b5 (xD_b5)"),
+                format!("{:?}", self.unused_d_b5),
                 format!("{:?}", m.bits(at, 109, 1)),
             );
         }
-        if (self.xD_b6 as u32) != m.bits(at, 110, 1) {
+        if (self.unused_d_b6 as u32) != m.bits(at, 110, 1) {
             cx.mismatch(
-                &format!("{path}.xD_b6"),
-                format!("{:?}", self.xD_b6),
+                &format!("{path}.unused_d_b6 (xD_b6)"),
+                format!("{:?}", self.unused_d_b6),
                 format!("{:?}", m.bits(at, 110, 1)),
             );
         }
-        if (self.xD_b7 as u32) != m.bits(at, 111, 1) {
+        if (self.unused_d_b7 as u32) != m.bits(at, 111, 1) {
             cx.mismatch(
-                &format!("{path}.xD_b7"),
-                format!("{:?}", self.xD_b7),
+                &format!("{path}.unused_d_b7 (xD_b7)"),
+                format!("{:?}", self.unused_d_b7),
                 format!("{:?}", m.bits(at, 111, 1)),
             );
         }
@@ -15741,69 +15741,69 @@ impl Mirror for gm_DbPauseInputHandlers {
     }
 }
 
-impl Mirror for gm_801677C0_s {
+impl Mirror for DebugPause {
     const SIZE: u32 = 0x30;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        gm_801677C0_s {
-            x0: m.u8(at + 0x0),
-            x1: m.u8(at + 0x1),
-            x2: m.u8(at + 0x2),
-            x3: m.u8(at + 0x3),
+        DebugPause {
+            pause_bits: m.u8(at + 0x0),
+            applied_pause_bits: m.u8(at + 0x1),
+            step_bits: m.u8(at + 0x2),
+            applied_step_bits: m.u8(at + 0x3),
             db_input: gm_DbPauseInputHandlers::import(m, at + 0x4, cx),
-            unk_20: m.u64(at + 0x10),
-            unk_28: m.u64(at + 0x18),
+            paused_links: m.u64(at + 0x10),
+            skip_links: m.u64(at + 0x18),
             pre_gobj_proc: code(m.u32(at + 0x20)),
-            unk_34: m.u32(at + 0x24) as i32,
-            unk_38_0: m.bits(at, 320, 1) != 0,
-            unk_38_1: m.bits(at, 321, 1) != 0,
+            clock_mask: m.u32(at + 0x24) as i32,
+            runs: m.bits(at, 320, 1) != 0,
+            unused_38_1: m.bits(at, 321, 1) != 0,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x0 != m.u8(at + 0x0) {
+        if self.pause_bits != m.u8(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.x0"),
-                format!("{:?}", self.x0),
+                &format!("{path}.pause_bits (x0)"),
+                format!("{:?}", self.pause_bits),
                 format!("{:?}", m.u8(at + 0x0)),
             );
         }
-        if self.x1 != m.u8(at + 0x1) {
+        if self.applied_pause_bits != m.u8(at + 0x1) {
             cx.mismatch(
-                &format!("{path}.x1"),
-                format!("{:?}", self.x1),
+                &format!("{path}.applied_pause_bits (x1)"),
+                format!("{:?}", self.applied_pause_bits),
                 format!("{:?}", m.u8(at + 0x1)),
             );
         }
-        if self.x2 != m.u8(at + 0x2) {
+        if self.step_bits != m.u8(at + 0x2) {
             cx.mismatch(
-                &format!("{path}.x2"),
-                format!("{:?}", self.x2),
+                &format!("{path}.step_bits (x2)"),
+                format!("{:?}", self.step_bits),
                 format!("{:?}", m.u8(at + 0x2)),
             );
         }
-        if self.x3 != m.u8(at + 0x3) {
+        if self.applied_step_bits != m.u8(at + 0x3) {
             cx.mismatch(
-                &format!("{path}.x3"),
-                format!("{:?}", self.x3),
+                &format!("{path}.applied_step_bits (x3)"),
+                format!("{:?}", self.applied_step_bits),
                 format!("{:?}", m.u8(at + 0x3)),
             );
         }
         self.db_input
             .compare(m, at + 0x4, &format!("{path}.db_input"), cx);
-        if self.unk_20 != m.u64(at + 0x10) {
+        if self.paused_links != m.u64(at + 0x10) {
             cx.mismatch(
-                &format!("{path}.unk_20"),
-                format!("{:?}", self.unk_20),
+                &format!("{path}.paused_links (unk_20)"),
+                format!("{:?}", self.paused_links),
                 format!("{:?}", m.u64(at + 0x10)),
             );
         }
-        if self.unk_28 != m.u64(at + 0x18) {
+        if self.skip_links != m.u64(at + 0x18) {
             cx.mismatch(
-                &format!("{path}.unk_28"),
-                format!("{:?}", self.unk_28),
+                &format!("{path}.skip_links (unk_28)"),
+                format!("{:?}", self.skip_links),
                 format!("{:?}", m.u64(at + 0x18)),
             );
         }
@@ -15814,76 +15814,76 @@ impl Mirror for gm_801677C0_s {
                 format!("{:#x}", m.u32(at + 0x20)),
             );
         }
-        if self.unk_34 != m.u32(at + 0x24) as i32 {
+        if self.clock_mask != m.u32(at + 0x24) as i32 {
             cx.mismatch(
-                &format!("{path}.unk_34"),
-                format!("{:?}", self.unk_34),
+                &format!("{path}.clock_mask (unk_34)"),
+                format!("{:?}", self.clock_mask),
                 format!("{:?}", m.u32(at + 0x24) as i32),
             );
         }
-        if (self.unk_38_0 as u32) != m.bits(at, 320, 1) {
+        if (self.runs as u32) != m.bits(at, 320, 1) {
             cx.mismatch(
-                &format!("{path}.unk_38_0"),
-                format!("{:?}", self.unk_38_0),
+                &format!("{path}.runs (unk_38_0)"),
+                format!("{:?}", self.runs),
                 format!("{:?}", m.bits(at, 320, 1)),
             );
         }
-        if (self.unk_38_1 as u32) != m.bits(at, 321, 1) {
+        if (self.unused_38_1 as u32) != m.bits(at, 321, 1) {
             cx.mismatch(
-                &format!("{path}.unk_38_1"),
-                format!("{:?}", self.unk_38_1),
+                &format!("{path}.unused_38_1 (unk_38_1)"),
+                format!("{:?}", self.unused_38_1),
                 format!("{:?}", m.bits(at, 321, 1)),
             );
         }
     }
 }
 
-impl Mirror for gm_80479D58_t {
+impl Mirror for SceneLoop {
     const SIZE: u32 = 0x40;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        gm_80479D58_t {
-            unk_0: m.u32(at + 0x0),
-            unk_4: m.u32(at + 0x4),
-            unk_8: m.u32(at + 0x8),
-            unk_C: m.u32(at + 0xc) as i32,
-            unk_10: gm_801677C0_s::import(m, at + 0x10, cx),
+        SceneLoop {
+            ticks: m.u32(at + 0x0),
+            frames_drawn: m.u32(at + 0x4),
+            game_ticks: m.u32(at + 0x8),
+            ending: m.u32(at + 0xc) as i32,
+            pause: DebugPause::import(m, at + 0x10, cx),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.unk_0 != m.u32(at + 0x0) {
+        if self.ticks != m.u32(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.unk_0"),
-                format!("{:?}", self.unk_0),
+                &format!("{path}.ticks (unk_0)"),
+                format!("{:?}", self.ticks),
                 format!("{:?}", m.u32(at + 0x0)),
             );
         }
-        if self.unk_4 != m.u32(at + 0x4) {
+        if self.frames_drawn != m.u32(at + 0x4) {
             cx.mismatch(
-                &format!("{path}.unk_4"),
-                format!("{:?}", self.unk_4),
+                &format!("{path}.frames_drawn (unk_4)"),
+                format!("{:?}", self.frames_drawn),
                 format!("{:?}", m.u32(at + 0x4)),
             );
         }
-        if self.unk_8 != m.u32(at + 0x8) {
+        if self.game_ticks != m.u32(at + 0x8) {
             cx.mismatch(
-                &format!("{path}.unk_8"),
-                format!("{:?}", self.unk_8),
+                &format!("{path}.game_ticks (unk_8)"),
+                format!("{:?}", self.game_ticks),
                 format!("{:?}", m.u32(at + 0x8)),
             );
         }
-        if self.unk_C != m.u32(at + 0xc) as i32 {
+        if self.ending != m.u32(at + 0xc) as i32 {
             cx.mismatch(
-                &format!("{path}.unk_C"),
-                format!("{:?}", self.unk_C),
+                &format!("{path}.ending (unk_C)"),
+                format!("{:?}", self.ending),
                 format!("{:?}", m.u32(at + 0xc) as i32),
             );
         }
-        self.unk_10
-            .compare(m, at + 0x10, &format!("{path}.unk_10"), cx);
+        self.pause
+            .compare(m, at + 0x10, &format!("{path}.pause (unk_10)"), cx);
     }
 }
 
@@ -24867,12 +24867,12 @@ impl Mirror for BgFlashUserData {
     }
 }
 
-impl Mirror for gmm_x0_44_t {
+impl Mirror for TrophyNotices {
     const SIZE: u32 = 0x4d8;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        gmm_x0_44_t {
+        TrophyNotices {
             flags: core::array::from_fn(|i0| m.u32(at + 0x0 + i0 as u32 * 0x4)),
             times: core::array::from_fn(|i0| m.u32(at + 0x28 + i0 as u32 * 0x4)),
             pad_500: core::array::from_fn(|i0| m.u8(at + 0x4bc + i0 as u32 * 0x1) as i8),
@@ -24911,18 +24911,18 @@ impl Mirror for gmm_x0_44_t {
     }
 }
 
-impl Mirror for gmm_x0_528_t {
+impl Mirror for OnePlayerChoice {
     const SIZE: u32 = 0x6;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        gmm_x0_528_t {
+        OnePlayerChoice {
             c_kind: m.u8(at + 0x0) as i8,
             stocks: m.u8(at + 0x1),
             color: m.u8(at + 0x2),
             cpu_level: m.u8(at + 0x3),
             nametag: m.u8(at + 0x4),
-            x5: m.u8(at + 0x5),
+            round: m.u8(at + 0x5),
         }
     }
 
@@ -24963,10 +24963,10 @@ impl Mirror for gmm_x0_528_t {
                 format!("{:?}", m.u8(at + 0x4)),
             );
         }
-        if self.x5 != m.u8(at + 0x5) {
+        if self.round != m.u8(at + 0x5) {
             cx.mismatch(
-                &format!("{path}.x5"),
-                format!("{:?}", self.x5),
+                &format!("{path}.round (x5)"),
+                format!("{:?}", self.round),
                 format!("{:?}", m.u8(at + 0x5)),
             );
         }
@@ -25344,29 +25344,29 @@ impl Mirror for EventData {
     }
 }
 
-impl Mirror for gmm_x0_vsdata {
+impl Mirror for OnePlayerModes {
     const SIZE: u32 = 0x6c;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        gmm_x0_vsdata {
-            unk_51C: gmm_x0_528_t::import(m, at + 0x0, cx),
-            unk_522: gmm_x0_528_t::import(m, at + 0x6, cx),
-            unk_528: gmm_x0_528_t::import(m, at + 0xc, cx),
-            unk_530: EventData::import(m, at + 0x14, cx),
+        OnePlayerModes {
+            classic: OnePlayerChoice::import(m, at + 0x0, cx),
+            adventure: OnePlayerChoice::import(m, at + 0x6, cx),
+            all_star: OnePlayerChoice::import(m, at + 0xc, cx),
+            event: EventData::import(m, at + 0x14, cx),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        self.unk_51C
-            .compare(m, at + 0x0, &format!("{path}.unk_51C"), cx);
-        self.unk_522
-            .compare(m, at + 0x6, &format!("{path}.unk_522"), cx);
-        self.unk_528
-            .compare(m, at + 0xc, &format!("{path}.unk_528"), cx);
-        self.unk_530
-            .compare(m, at + 0x14, &format!("{path}.unk_530"), cx);
+        self.classic
+            .compare(m, at + 0x0, &format!("{path}.classic (unk_51C)"), cx);
+        self.adventure
+            .compare(m, at + 0x6, &format!("{path}.adventure (unk_522)"), cx);
+        self.all_star
+            .compare(m, at + 0xc, &format!("{path}.all_star (unk_528)"), cx);
+        self.event
+            .compare(m, at + 0x14, &format!("{path}.event (unk_530)"), cx);
     }
 }
 
@@ -25379,11 +25379,11 @@ impl Mirror for VsModeData {
             loser: m.u8(at + 0x0) as i8,
             ordered_stage_index: m.u8(at + 0x1) as i8,
             winner: m.u8(at + 0x2) as i8,
-            unk_0x3: m.u8(at + 0x3),
-            unk_0x4: m.u8(at + 0x4),
-            unk_0x5: m.u8(at + 0x5),
-            unk_0x6: m.u8(at + 0x6),
-            unk_0x7: m.u8(at + 0x7),
+            unused_3: m.u8(at + 0x3),
+            unused_4: m.u8(at + 0x4),
+            unused_5: m.u8(at + 0x5),
+            unused_6: m.u8(at + 0x6),
+            unused_7: m.u8(at + 0x7),
             start: StartMeleeData::import(m, at + 0x8, cx),
         }
     }
@@ -25411,38 +25411,38 @@ impl Mirror for VsModeData {
                 format!("{:?}", m.u8(at + 0x2) as i8),
             );
         }
-        if self.unk_0x3 != m.u8(at + 0x3) {
+        if self.unused_3 != m.u8(at + 0x3) {
             cx.mismatch(
-                &format!("{path}.unk_0x3"),
-                format!("{:?}", self.unk_0x3),
+                &format!("{path}.unused_3 (unk_0x3)"),
+                format!("{:?}", self.unused_3),
                 format!("{:?}", m.u8(at + 0x3)),
             );
         }
-        if self.unk_0x4 != m.u8(at + 0x4) {
+        if self.unused_4 != m.u8(at + 0x4) {
             cx.mismatch(
-                &format!("{path}.unk_0x4"),
-                format!("{:?}", self.unk_0x4),
+                &format!("{path}.unused_4 (unk_0x4)"),
+                format!("{:?}", self.unused_4),
                 format!("{:?}", m.u8(at + 0x4)),
             );
         }
-        if self.unk_0x5 != m.u8(at + 0x5) {
+        if self.unused_5 != m.u8(at + 0x5) {
             cx.mismatch(
-                &format!("{path}.unk_0x5"),
-                format!("{:?}", self.unk_0x5),
+                &format!("{path}.unused_5 (unk_0x5)"),
+                format!("{:?}", self.unused_5),
                 format!("{:?}", m.u8(at + 0x5)),
             );
         }
-        if self.unk_0x6 != m.u8(at + 0x6) {
+        if self.unused_6 != m.u8(at + 0x6) {
             cx.mismatch(
-                &format!("{path}.unk_0x6"),
-                format!("{:?}", self.unk_0x6),
+                &format!("{path}.unused_6 (unk_0x6)"),
+                format!("{:?}", self.unused_6),
                 format!("{:?}", m.u8(at + 0x6)),
             );
         }
-        if self.unk_0x7 != m.u8(at + 0x7) {
+        if self.unused_7 != m.u8(at + 0x7) {
             cx.mismatch(
-                &format!("{path}.unk_0x7"),
-                format!("{:?}", self.unk_0x7),
+                &format!("{path}.unused_7 (unk_0x7)"),
+                format!("{:?}", self.unused_7),
                 format!("{:?}", m.u8(at + 0x7)),
             );
         }
@@ -25451,12 +25451,12 @@ impl Mirror for VsModeData {
     }
 }
 
-impl Mirror for gmm_x0_vsmodes {
+impl Mirror for VsModes {
     const SIZE: u32 = 0x12c8;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        gmm_x0_vsmodes {
+        VsModes {
             nametags: core::array::from_fn(|i0| m.u8(at + 0x0 + i0 as u32 * 0x1) as i8),
             table: core::array::from_fn(|i0| {
                 VsModeData::import(m, at + 0x8 + i0 as u32 * 0x140, cx)
@@ -25504,15 +25504,15 @@ impl Mirror for GameRules {
             friendly_fire: m.u8(at + 0x9),
             pause: m.u8(at + 0xa),
             score_display: m.u8(at + 0xb),
-            unk_xc: m.u8(at + 0xc),
-            xD: m.u8(at + 0xd),
-            xE: m.u8(at + 0xe),
-            xF: m.u8(at + 0xf),
-            unk_x10: m.u8(at + 0x10),
-            x11: m.u8(at + 0x11),
-            x12: m.u8(at + 0x12),
-            x13: m.u8(at + 0x13),
-            unk_14: m.u32(at + 0x14) as i32,
+            sd_penalty: m.u8(at + 0xc),
+            diagram_name_mode: m.u8(at + 0xd),
+            fighter_cursor_hi: m.u8(at + 0xe),
+            fighter_cursor_lo: m.u8(at + 0xf),
+            name_cursor_hi: m.u8(at + 0x10),
+            name_cursor_lo: m.u8(at + 0x11),
+            diagram2_fighter: m.u8(at + 0x12),
+            diagram2_name: m.u8(at + 0x13),
+            gallery_song: m.u32(at + 0x14) as i32,
         }
     }
 
@@ -25602,66 +25602,66 @@ impl Mirror for GameRules {
                 format!("{:?}", m.u8(at + 0xb)),
             );
         }
-        if self.unk_xc != m.u8(at + 0xc) {
+        if self.sd_penalty != m.u8(at + 0xc) {
             cx.mismatch(
-                &format!("{path}.unk_xc"),
-                format!("{:?}", self.unk_xc),
+                &format!("{path}.sd_penalty (unk_xc)"),
+                format!("{:?}", self.sd_penalty),
                 format!("{:?}", m.u8(at + 0xc)),
             );
         }
-        if self.xD != m.u8(at + 0xd) {
+        if self.diagram_name_mode != m.u8(at + 0xd) {
             cx.mismatch(
-                &format!("{path}.xD"),
-                format!("{:?}", self.xD),
+                &format!("{path}.diagram_name_mode (xD)"),
+                format!("{:?}", self.diagram_name_mode),
                 format!("{:?}", m.u8(at + 0xd)),
             );
         }
-        if self.xE != m.u8(at + 0xe) {
+        if self.fighter_cursor_hi != m.u8(at + 0xe) {
             cx.mismatch(
-                &format!("{path}.xE"),
-                format!("{:?}", self.xE),
+                &format!("{path}.fighter_cursor_hi (xE)"),
+                format!("{:?}", self.fighter_cursor_hi),
                 format!("{:?}", m.u8(at + 0xe)),
             );
         }
-        if self.xF != m.u8(at + 0xf) {
+        if self.fighter_cursor_lo != m.u8(at + 0xf) {
             cx.mismatch(
-                &format!("{path}.xF"),
-                format!("{:?}", self.xF),
+                &format!("{path}.fighter_cursor_lo (xF)"),
+                format!("{:?}", self.fighter_cursor_lo),
                 format!("{:?}", m.u8(at + 0xf)),
             );
         }
-        if self.unk_x10 != m.u8(at + 0x10) {
+        if self.name_cursor_hi != m.u8(at + 0x10) {
             cx.mismatch(
-                &format!("{path}.unk_x10"),
-                format!("{:?}", self.unk_x10),
+                &format!("{path}.name_cursor_hi (unk_x10)"),
+                format!("{:?}", self.name_cursor_hi),
                 format!("{:?}", m.u8(at + 0x10)),
             );
         }
-        if self.x11 != m.u8(at + 0x11) {
+        if self.name_cursor_lo != m.u8(at + 0x11) {
             cx.mismatch(
-                &format!("{path}.x11"),
-                format!("{:?}", self.x11),
+                &format!("{path}.name_cursor_lo (x11)"),
+                format!("{:?}", self.name_cursor_lo),
                 format!("{:?}", m.u8(at + 0x11)),
             );
         }
-        if self.x12 != m.u8(at + 0x12) {
+        if self.diagram2_fighter != m.u8(at + 0x12) {
             cx.mismatch(
-                &format!("{path}.x12"),
-                format!("{:?}", self.x12),
+                &format!("{path}.diagram2_fighter (x12)"),
+                format!("{:?}", self.diagram2_fighter),
                 format!("{:?}", m.u8(at + 0x12)),
             );
         }
-        if self.x13 != m.u8(at + 0x13) {
+        if self.diagram2_name != m.u8(at + 0x13) {
             cx.mismatch(
-                &format!("{path}.x13"),
-                format!("{:?}", self.x13),
+                &format!("{path}.diagram2_name (x13)"),
+                format!("{:?}", self.diagram2_name),
                 format!("{:?}", m.u8(at + 0x13)),
             );
         }
-        if self.unk_14 != m.u32(at + 0x14) as i32 {
+        if self.gallery_song != m.u32(at + 0x14) as i32 {
             cx.mismatch(
-                &format!("{path}.unk_14"),
-                format!("{:?}", self.unk_14),
+                &format!("{path}.gallery_song (unk_14)"),
+                format!("{:?}", self.gallery_song),
                 format!("{:?}", m.u32(at + 0x14) as i32),
             );
         }
@@ -26890,10 +26890,10 @@ impl Mirror for NameTagData {
             stats: GmStats::import(m, at + 0xf0, cx),
             play_time_by_fighter: core::array::from_fn(|i0| m.u32(at + 0x134 + i0 as u32 * 0x4)),
             namedata: core::array::from_fn(|i0| m.u8(at + 0x198 + i0 as u32 * 0x1) as i8),
-            x1A0: m.u8(at + 0x1a0) as i8,
+            name_end: m.u8(at + 0x1a0) as i8,
             rumble_enabled: m.u8(at + 0x1a1),
-            x1A2: m.u8(at + 0x1a2) as i8,
-            padding_x1A2: m.u8(at + 0x1a3),
+            handicap: m.u8(at + 0x1a2) as i8,
+            pad_1a3: m.u8(at + 0x1a3),
         }
     }
 
@@ -26928,10 +26928,10 @@ impl Mirror for NameTagData {
                 );
             }
         }
-        if self.x1A0 != m.u8(at + 0x1a0) as i8 {
+        if self.name_end != m.u8(at + 0x1a0) as i8 {
             cx.mismatch(
-                &format!("{path}.x1A0"),
-                format!("{:?}", self.x1A0),
+                &format!("{path}.name_end (x1A0)"),
+                format!("{:?}", self.name_end),
                 format!("{:?}", m.u8(at + 0x1a0) as i8),
             );
         }
@@ -26942,17 +26942,17 @@ impl Mirror for NameTagData {
                 format!("{:?}", m.u8(at + 0x1a1)),
             );
         }
-        if self.x1A2 != m.u8(at + 0x1a2) as i8 {
+        if self.handicap != m.u8(at + 0x1a2) as i8 {
             cx.mismatch(
-                &format!("{path}.x1A2"),
-                format!("{:?}", self.x1A2),
+                &format!("{path}.handicap (x1A2)"),
+                format!("{:?}", self.handicap),
                 format!("{:?}", m.u8(at + 0x1a2) as i8),
             );
         }
-        if self.padding_x1A2 != m.u8(at + 0x1a3) {
+        if self.pad_1a3 != m.u8(at + 0x1a3) {
             cx.mismatch(
-                &format!("{path}.padding_x1A2"),
-                format!("{:?}", self.padding_x1A2),
+                &format!("{path}.pad_1a3 (padding_x1A2)"),
+                format!("{:?}", self.pad_1a3),
                 format!("{:?}", m.u8(at + 0x1a3)),
             );
         }
@@ -27012,21 +27012,21 @@ impl Mirror for GmCardData {
     }
 }
 
-impl Mirror for gmm_x0 {
+impl Mirror for GameData {
     const SIZE: u32 = 0x10a30;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        gmm_x0 {
+        GameData {
             language: m.u8(at + 0x0),
-            unk_1: m.u8(at + 0x1),
-            unk_2: m.u8(at + 0x2),
-            pad_3: core::array::from_fn(|i0| m.u8(at + 0x3 + i0 as u32 * 0x1) as i8),
-            x39: core::array::from_fn(|i0| m.u8(at + 0x39 + i0 as u32 * 0x1)),
-            unk_44: gmm_x0_44_t::import(m, at + 0x44, cx),
-            vs: gmm_x0_vsdata::import(m, at + 0x51c, cx),
-            modes: gmm_x0_vsmodes::import(m, at + 0x588, cx),
-            x1850: GameRules::import(m, at + 0x1850, cx),
+            demo_count: m.u8(at + 0x1),
+            attract_history: m.u8(at + 0x2),
+            attract_history_rest: core::array::from_fn(|i0| m.u8(at + 0x3 + i0 as u32 * 0x1) as i8),
+            challenger_losses: core::array::from_fn(|i0| m.u8(at + 0x39 + i0 as u32 * 0x1)),
+            trophy_notices: TrophyNotices::import(m, at + 0x44, cx),
+            vs: OnePlayerModes::import(m, at + 0x51c, cx),
+            modes: VsModes::import(m, at + 0x588, cx),
+            rules: GameRules::import(m, at + 0x1850, cx),
             thing: GmCardData::import(m, at + 0x1868, cx),
         }
     }
@@ -27040,45 +27040,45 @@ impl Mirror for gmm_x0 {
                 format!("{:?}", m.u8(at + 0x0)),
             );
         }
-        if self.unk_1 != m.u8(at + 0x1) {
+        if self.demo_count != m.u8(at + 0x1) {
             cx.mismatch(
-                &format!("{path}.unk_1"),
-                format!("{:?}", self.unk_1),
+                &format!("{path}.demo_count (unk_1)"),
+                format!("{:?}", self.demo_count),
                 format!("{:?}", m.u8(at + 0x1)),
             );
         }
-        if self.unk_2 != m.u8(at + 0x2) {
+        if self.attract_history != m.u8(at + 0x2) {
             cx.mismatch(
-                &format!("{path}.unk_2"),
-                format!("{:?}", self.unk_2),
+                &format!("{path}.attract_history (unk_2)"),
+                format!("{:?}", self.attract_history),
                 format!("{:?}", m.u8(at + 0x2)),
             );
         }
         for i0 in 0..54 {
-            if self.pad_3[i0] != m.u8(at + 0x3 + i0 as u32 * 0x1) as i8 {
+            if self.attract_history_rest[i0] != m.u8(at + 0x3 + i0 as u32 * 0x1) as i8 {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.pad_3"), i0),
-                    format!("{:?}", self.pad_3[i0]),
+                    &format!("{}[{}]", format!("{path}.attract_history_rest (pad_3)"), i0),
+                    format!("{:?}", self.attract_history_rest[i0]),
                     format!("{:?}", m.u8(at + 0x3 + i0 as u32 * 0x1) as i8),
                 );
             }
         }
         for i0 in 0..11 {
-            if self.x39[i0] != m.u8(at + 0x39 + i0 as u32 * 0x1) {
+            if self.challenger_losses[i0] != m.u8(at + 0x39 + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.x39"), i0),
-                    format!("{:?}", self.x39[i0]),
+                    &format!("{}[{}]", format!("{path}.challenger_losses (x39)"), i0),
+                    format!("{:?}", self.challenger_losses[i0]),
                     format!("{:?}", m.u8(at + 0x39 + i0 as u32 * 0x1)),
                 );
             }
         }
-        self.unk_44
-            .compare(m, at + 0x44, &format!("{path}.unk_44"), cx);
+        self.trophy_notices
+            .compare(m, at + 0x44, &format!("{path}.trophy_notices (unk_44)"), cx);
         self.vs.compare(m, at + 0x51c, &format!("{path}.vs"), cx);
         self.modes
             .compare(m, at + 0x588, &format!("{path}.modes"), cx);
-        self.x1850
-            .compare(m, at + 0x1850, &format!("{path}.x1850"), cx);
+        self.rules
+            .compare(m, at + 0x1850, &format!("{path}.rules (x1850)"), cx);
         self.thing
             .compare(m, at + 0x1868, &format!("{path}.thing"), cx);
     }
@@ -27346,10 +27346,10 @@ impl Export for NameTagData {
         for i0 in 0..8 {
             m.put_u8(at + 0x198 + i0 as u32 * 0x1, self.namedata[i0] as u8);
         }
-        m.put_u8(at + 0x1a0, self.x1A0 as u8);
+        m.put_u8(at + 0x1a0, self.name_end as u8);
         m.put_u8(at + 0x1a1, self.rumble_enabled as u8);
-        m.put_u8(at + 0x1a2, self.x1A2 as u8);
-        m.put_u8(at + 0x1a3, self.padding_x1A2 as u8);
+        m.put_u8(at + 0x1a2, self.handicap as u8);
+        m.put_u8(at + 0x1a3, self.pad_1a3 as u8);
     }
 }
 

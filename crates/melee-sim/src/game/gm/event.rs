@@ -83,13 +83,13 @@ impl Running<'_> {
     /// `gm_801BEB74`: the event chosen.
     #[doc(alias = "gm_801BEB74")]
     pub fn set_event(&mut self, n: u8) {
-        self.game.game_data.vs.unk_530.event = n;
+        self.game.game_data.vs.event.event = n;
     }
 
     /// `gm_801BEB80`: the event chosen last.
     #[doc(alias = "gm_801BEB80")]
     pub fn event(&self) -> u8 {
-        self.game.game_data.vs.unk_530.event
+        self.game.game_data.vs.event.event
     }
 
     /// `gm_801BEB8C`: whether event `n` is scored by its time (`evinit`'s `x1_0`), not KOs.
@@ -251,7 +251,7 @@ impl Running<'_> {
     /// without their copy's hat), the stage too when `stage`, and their sound banks.
     #[doc(alias = "gm_801BA938")]
     fn event_cache(&mut self, lo: usize, hi: usize, stage: bool) {
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         let gc = &mut self.dvd_mut().cache.scene.game_cache;
         for i in lo..hi {
             let c = ev.chars[i];
@@ -284,7 +284,7 @@ impl Running<'_> {
     /// lists' entry's; with its first player to choose, the other players in the cache.
     #[doc(alias = "onEnterCss@801BAA60")]
     pub fn event_enter_css(&mut self) {
-        let e = self.game.game_data.vs.unk_530.clone();
+        let e = self.game.game_data.vs.event.clone();
         super::setup_players::css_one_player(
             &mut self.game.event.css,
             0xE,
@@ -310,7 +310,7 @@ impl Running<'_> {
         }
         let (ckind, _, color, nametag, _) =
             super::setup_players::css_one_player_choice(&self.game.event.css);
-        let e = &mut self.game.game_data.vs.unk_530;
+        let e = &mut self.game.game_data.vs.event;
         e.chosen_char = ckind;
         e.chosen_color = color;
         e.nametag = nametag;
@@ -336,17 +336,17 @@ impl Running<'_> {
         p.handicap = 9;
         p.team = u8_(6);
         p.nametag = 0x78;
-        p.xB = u8_(7);
+        p.sfx_size = u8_(7);
         p.rumble_enabled = false;
-        p.xC_b1 = flags & 0x80 != 0;
+        p.enters = flags & 0x80 != 0;
         p.vs_metal = flags & 0x40 != 0;
-        p.xC_b3 = flags & 0x20 != 0;
+        p.unread_c_b3 = flags & 0x20 != 0;
         p.vs_invisible = flags & 0x10 != 0;
-        p.xC_b6 = flags & 0x08 != 0;
-        p.xC_b7 = flags & 0x04 != 0;
-        p.xD_b1 = false;
-        p.xD_b2 = false;
-        p.xD_b4 = false;
+        p.voice_muted = flags & 0x08 != 0;
+        p.stamina = flags & 0x04 != 0;
+        p.shows_hearts = false;
+        p.no_offscreen_damage = false;
+        p.dies_up = false;
         p.cpu_kind = u8_(9);
         p.cpu_level = u8_(0xA);
         p.damage = 0;
@@ -393,7 +393,7 @@ impl Running<'_> {
     pub fn event_on_load(&mut self) {
         self.event_load_table();
         let port = self.one_player_port();
-        let e = &mut self.game.game_data.vs.unk_530;
+        let e = &mut self.game.game_data.vs.event;
         e.char_kind = 0;
         e.char_color = 0;
         e.port = port;
@@ -457,7 +457,7 @@ impl Running<'_> {
             };
             x45 = u8::from(self.data.u8(b.at(0x17)) == 1);
         }
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         ev.load_kind = x44;
         ev.stage = stkind;
         ev.chars = chars;
@@ -467,7 +467,7 @@ impl Running<'_> {
         match idx {
             9 | 19 | 29 | 39 | 48 => {
                 let r = self.event_round(e, round as usize);
-                let ev = &mut self.game.game_data.vs.unk_530;
+                let ev = &mut self.game.game_data.vs.event;
                 ev.load_kind = if round == 0 { 3 } else { 4 };
                 ev.chars[1] = self.data.u8(r) as i8;
                 ev.colors[1] = self.data.u8(r.at(3));
@@ -485,7 +485,7 @@ impl Running<'_> {
                         (slot, self.data.u8(r) as i8, self.data.u8(r.at(3)))
                     })
                     .collect();
-                let ev = &mut self.game.game_data.vs.unk_530;
+                let ev = &mut self.game.game_data.vs.event;
                 ev.load_kind = if round == 0 { 2 } else { 4 };
                 for (slot, c, col) in v {
                     ev.chars[slot] = c;
@@ -496,7 +496,7 @@ impl Running<'_> {
                 let x4 = e.params(self).expect("the event's parameters");
                 let p = self.data.ptr(x4.at(4)).expect("the event's third player");
                 let (c, col) = (self.data.u8(p) as i8, self.data.u8(p.at(3)));
-                let ev = &mut self.game.game_data.vs.unk_530;
+                let ev = &mut self.game.game_data.vs.event;
                 ev.chars[2] = c;
                 ev.colors[2] = col;
             }
@@ -521,21 +521,21 @@ impl Running<'_> {
         e: Entry,
         level: u8,
     ) {
-        self.game.game_data.vs.unk_530.crowd = true;
+        self.game.game_data.vs.event.crowd = true;
         let b = e.evbonus(self).expect("the event's crowd");
         let d = self.data;
         let ck = d.u8(b) as i8;
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         let own = d.u8(b.at(5)) == 1;
         if own && ev.char_kind as i8 == ck && ev.char_color == d.u8(b.at(6)) {
-            self.game.game_data.vs.unk_530.colors[1] = next_color(d.u8(b.at(6)));
+            self.game.game_data.vs.event.colors[1] = next_color(d.u8(b.at(6)));
         }
         let copies = if ck == CharacterKind::Kirby {
             d.u8(b.at(0x17))
         } else {
             0
         };
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         self.setup_opponents(
             &[ck, NONE, NONE],
             [ev.colors[1] as i8, 0, 0],
@@ -592,16 +592,16 @@ impl Running<'_> {
         start: &mut super::super::structs::StartMeleeData,
         e: Entry,
     ) {
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         if ev.round > 0 {
             let p = &mut start.players[0];
             p.stocks = ev.round_stocks as i8;
             p.damage = ev.round_damage as u16;
-            p.xC_b1 = false;
+            p.enters = false;
             let c = ev.kept_char as i8;
             if c != 0x21 {
                 p.ckind = c;
-                let ev = &mut self.game.game_data.vs.unk_530;
+                let ev = &mut self.game.game_data.vs.event;
                 ev.char_kind = c as u8;
                 ev.chars[0] = c;
             }
@@ -619,7 +619,7 @@ impl Running<'_> {
             p1.color = next_color(p1.color);
         }
         let (c, col) = (p1.ckind, p1.color);
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         ev.chars[1] = c;
         ev.colors[1] = col;
     }
@@ -699,7 +699,7 @@ impl Running<'_> {
         r.on_match_start = Some(super::super::handles::CodeRef(ON_MATCH_START));
         let counts_up = r.timer_counts_up;
         let quake = d.f32(ei.at(0x24));
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         if counts_up {
             ev.timer_counts_up = true;
         }
@@ -710,16 +710,16 @@ impl Running<'_> {
             ev.quake_scale = quake;
         }
         if e.kind(self) == 2 {
-            let ev = &mut self.game.game_data.vs.unk_530;
+            let ev = &mut self.game.game_data.vs.event;
             ev.series = true;
             let round = ev.round;
             let stage = self.event_round_stage(e, round as usize);
             start.rules.stkind = stage;
-            self.game.game_data.vs.unk_530.stage = i32::from(stage);
+            self.game.game_data.vs.event.stage = i32::from(stage);
             if round > 0 {
                 start.rules.long_countdown = true;
                 start.rules.alt_go = true;
-                start.rules.time_limit = self.game.game_data.vs.unk_530.round_seconds as u32;
+                start.rules.time_limit = self.game.game_data.vs.event.round_seconds as u32;
             }
             self.game.left_list_start(&mut start.rules);
         }
@@ -745,7 +745,7 @@ impl Running<'_> {
             self.event_round_opponent(&mut start, e);
         }
         if level == 0x2B {
-            let ev = &mut self.game.game_data.vs.unk_530;
+            let ev = &mut self.game.game_data.vs.event;
             if ev.chars[0] == ev.chars[2] && ev.colors[0] == ev.colors[2] {
                 ev.colors[2] = next_color(ev.colors[2]);
             }
@@ -754,14 +754,14 @@ impl Running<'_> {
             for (i, dir) in [(1, 1), (2, -1)] {
                 let p = &mut start.players[i];
                 p.spawn_dir = dir;
-                p.xD_b0 = true;
-                p.xD_b2 = true;
+                p.hp_explodes = true;
+                p.no_offscreen_damage = true;
             }
         }
         if e.kind(self) == 1 {
             self.event_crowd(&mut start, e, level);
         }
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         match ev.load_kind {
             0 | 1 => self.event_cache(0, 4, true),
             2 => {
@@ -797,7 +797,7 @@ impl Running<'_> {
     /// `onEnterVs`'s first player: its port, the chosen character where the event leaves it
     /// open, its rumble, and the event's note of its team, character and costume.
     fn event_first_player(&mut self, start: &mut super::super::structs::StartMeleeData) {
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         super::setup_players::set_slot(&mut start.players[0], i32::from(ev.port));
         let p = &mut start.players[0];
         let team = p.team;
@@ -807,7 +807,7 @@ impl Running<'_> {
             p.nametag = ev.nametag;
         }
         let (c, col, tag) = (p.ckind, p.color, p.nametag);
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         ev.team = team;
         ev.char_kind = c as u8;
         ev.chars[0] = c;
@@ -831,10 +831,10 @@ impl Running<'_> {
         let p0 = start.players[0].clone();
         if src.team(self) == 0 {
             start.players[i].team = p0.team;
-            start.players[i].xD_b1 = true;
+            start.players[i].shows_hearts = true;
         }
         if src.ckind(self) == CharacterKind::NONE as i8 {
-            let ev = &self.game.game_data.vs.unk_530;
+            let ev = &self.game.game_data.vs.event;
             let kept = match i {
                 1 => ev.random_char_1,
                 2 => ev.random_char_2,
@@ -844,7 +844,7 @@ impl Running<'_> {
             if kept == -1 {
                 let c = self.event_random_opponent(start, i) as i8;
                 start.players[i].ckind = c;
-                let ev = &mut self.game.game_data.vs.unk_530;
+                let ev = &mut self.game.game_data.vs.event;
                 match i {
                     1 => ev.random_char_1 = c,
                     2 => ev.random_char_2 = c,
@@ -865,7 +865,7 @@ impl Running<'_> {
         }
         if i < 4 {
             let (c, col) = (p.ckind, p.color);
-            let ev = &mut self.game.game_data.vs.unk_530;
+            let ev = &mut self.game.game_data.vs.event;
             ev.chars[i] = c;
             ev.colors[i] = col;
         }
@@ -889,7 +889,7 @@ impl Running<'_> {
         self.reset_opponents();
         let me = self.game.event.exit.match_end.clone();
         if me.outcome == super::vs::OUTCOME_RETRY {
-            let ev = &mut self.game.game_data.vs.unk_530;
+            let ev = &mut self.game.game_data.vs.event;
             let save = ev.round != 0 && level != 0x31;
             ev.voices_loaded = false;
             ev.round = 0;
@@ -904,8 +904,8 @@ impl Running<'_> {
             self.event_players();
             if save {
                 let (c, col) = (
-                    self.game.game_data.vs.unk_530.char_kind,
-                    self.game.game_data.vs.unk_530.char_color,
+                    self.game.game_data.vs.event.char_kind,
+                    self.game.game_data.vs.event.char_color,
                 );
                 self.dvd_mut().keep_class();
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;
@@ -927,7 +927,7 @@ impl Running<'_> {
         } else {
             0
         };
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         ev.coins = ev.coins.wrapping_add(coins);
         ev.play_frames = ev.play_frames.wrapping_add(me.frame_count as i32);
         if ev.series && ev.round_won {
@@ -957,7 +957,7 @@ impl Running<'_> {
             self.game.game_data.thing.save_data.events_cleared |= 1i64 << level;
         }
         let (coins, frames) = {
-            let ev = &self.game.game_data.vs.unk_530;
+            let ev = &self.game.game_data.vs.event;
             (ev.coins, ev.play_frames)
         };
         self.results_add_coins(coins);
@@ -1004,7 +1004,7 @@ impl Running<'_> {
         }
         self.trophy_unlocks();
         let _ = self.special_unlocks(0x10);
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         if kind != CharacterKind::NONE {
             self.init_challenger(
                 ev.char_kind,
@@ -1036,7 +1036,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801BC00C")]
     fn event_match_setup(&mut self) {
         let idx = self.event();
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         ev.cleared = false;
         ev.proc_counter = 0;
         ev.unread_14 = 0;
@@ -1048,7 +1048,7 @@ impl Running<'_> {
             self.event_load_table();
         }
         let e = self.event_entry(idx).expect("the event's entry");
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         match idx {
             35 => {
                 let rounds: &[usize] = if ev.round == 0 { &[2, 3] } else { &[4] };
@@ -1076,12 +1076,12 @@ impl Running<'_> {
         if matches!(idx, 9 | 19 | 29 | 35 | 39 | 48) && ev.round > 0 {
             let st = &mut self.game.vs.state;
             st.timer_seconds = ev.round_seconds as u32;
-            st.unk_2C = ev.round_frames as u16;
+            st.timer_frames = ev.round_frames as u16;
         }
         let put = |r: &mut Self, k: usize| {
             let p = r.event_round(e, k);
             let (c, col) = (r.data.u8(p), r.data.u8(p.at(3)));
-            let ev = &r.game.game_data.vs.unk_530;
+            let ev = &r.game.game_data.vs.event;
             let col = if ev.char_kind as i8 == c as i8 && ev.char_color == col {
                 next_color(col)
             } else {
@@ -1114,7 +1114,7 @@ impl Running<'_> {
         if idx == 0x24 {
             self.game.bgflash.set_scale(0.2);
         }
-        let q = self.game.game_data.vs.unk_530.quake_scale;
+        let q = self.game.game_data.vs.event.quake_scale;
         self.game.camera.set_quake_scale(q);
         let w = &mut self.game.world;
         let g = w.create(0xF, 0x11, 0);
@@ -1140,7 +1140,7 @@ impl Running<'_> {
         let with = |p: DataRef| (d.u8(p) as i8, Some(d.u8(p.at(3))));
         match idx {
             35 => {
-                let ks: &[usize] = if self.game.game_data.vs.unk_530.round == 0 {
+                let ks: &[usize] = if self.game.game_data.vs.event.round == 0 {
                     &[2, 3]
                 } else {
                     &[4]
@@ -1246,7 +1246,7 @@ impl Running<'_> {
     /// Whether the match's time ran out (`gm_801BC754`'s and the others' inline): never for
     /// a timer that counts up, else with the timer on at its last frame of second 0.
     fn event_time_up(&self) -> bool {
-        if self.game.game_data.vs.unk_530.timer_counts_up {
+        if self.game.game_data.vs.event.timer_counts_up {
             return false;
         }
         self.game.vs.start.timer_enabled
@@ -1263,9 +1263,9 @@ impl Running<'_> {
     #[doc(alias = "gm_801BC4F4")]
     fn event_success(&mut self, gobj: GObjId) {
         let level = self.event();
-        self.game.game_data.vs.unk_530.cleared = true;
+        self.game.game_data.vs.event.cleared = true;
         let best = self.event_score(i32::from(level)) as u32;
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         let record = if ev.timed {
             let mut t = self
                 .game
@@ -1277,7 +1277,7 @@ impl Running<'_> {
             if t > 0x34BBF {
                 t = 0x34BBF;
             }
-            self.game.game_data.vs.unk_530.score = t as i32;
+            self.game.game_data.vs.event.score = t as i32;
             best == 0 || t < best
         } else {
             let mut kos: u32 = 0;
@@ -1291,7 +1291,7 @@ impl Running<'_> {
                 kos = self.game.player_kos(0, 1).wrapping_sub(falls);
             }
             // `if (var_r27 > -1)`: an unsigned compare with 0xFFFFFFFF, never true.
-            self.game.game_data.vs.unk_530.score = kos as i32;
+            self.game.game_data.vs.event.score = kos as i32;
             kos > best
         };
         self.set_player_unkillable(0, 1);
@@ -1299,10 +1299,10 @@ impl Running<'_> {
         self.game.set_game_speed(1.0);
         self.game.vs_set_end_kind(2);
         if record {
-            self.game.vs.state.unk_10 = 0x9C40 + 1;
-            self.game.vs.state.unk_14 = 0x144 + 1;
+            self.game.vs.state.end_sfx_1 = 0x9C40 + 1;
+            self.game.vs.state.end_sfx_2 = 0x144 + 1;
         } else {
-            self.game.vs.state.unk_14 = 0x145 + 1;
+            self.game.vs.state.end_sfx_2 = 0x145 + 1;
         }
         self.game.vs_terminate();
         gobj::free(self, gobj);
@@ -1311,12 +1311,12 @@ impl Running<'_> {
     /// `failEvent`: the event failed: the match ended with the failure's announcement and
     /// sound, its end frozen 40 frames, the process gone.
     fn event_fail(&mut self, gobj: GObjId) {
-        self.game.game_data.vs.unk_530.cleared = false;
+        self.game.game_data.vs.event.cleared = false;
         self.game.audio.lb.master = 0x7F;
         self.game.set_game_speed(1.0);
         self.game.vs_set_end_kind(6);
-        self.game.vs.state.unk_14 = 0x148 + 1;
-        self.game.vs.state.unk_18 = 0x28;
+        self.game.vs.state.end_sfx_2 = 0x148 + 1;
+        self.game.vs.state.end_sfx_2_frame = 0x28;
         self.game.vs_terminate();
         gobj::free(self, gobj);
     }
@@ -1335,7 +1335,7 @@ impl Running<'_> {
                         count += 1;
                     }
                 }
-                if self.game.game_data.vs.unk_530.crowd {
+                if self.game.game_data.vs.event.crowd {
                     count += self.game.gm.opponents.left();
                 }
 
@@ -1352,7 +1352,7 @@ impl Running<'_> {
                 }
             }
             0 | 2 if self.event_time_up() => {
-                if u32::from(self.game.game_data.vs.unk_530.team) == self.event_winning_team() {
+                if u32::from(self.game.game_data.vs.event.team) == self.event_winning_team() {
                     self.event_success(gobj);
                     return;
                 }
@@ -1525,15 +1525,15 @@ impl Running<'_> {
     /// `itEvYoshiEgg_Spawn`); failed once the egg breaks (`x18`), cleared at the time's end.
     #[doc(alias = "gm_801BD028")]
     fn event_egg_proc(&mut self, gobj: GObjId) {
-        if self.game.game_data.vs.unk_530.proc_counter == 0 {
+        if self.game.game_data.vs.event.proc_counter == 0 {
             let e = self.event_entry(self.event()).expect("the event's entry");
             let x4 = e.params(self).expect("the egg's place");
             let d = self.data;
             let pos = crate::vec::Vec3::new(d.f32(x4), d.f32(x4.at(4)), d.f32(x4.at(8)));
             super::super::it::kinds::evyoshiegg::spawn(self, pos);
-            self.game.game_data.vs.unk_530.proc_counter += 1;
+            self.game.game_data.vs.event.proc_counter += 1;
         }
-        if self.game.game_data.vs.unk_530.proc_state != 0 {
+        if self.game.game_data.vs.event.proc_state != 0 {
             self.event_fail(gobj);
             return;
         }
@@ -1609,7 +1609,7 @@ impl Running<'_> {
         let frames = i32::from(self.game.vs_timer_frames());
         let sheik = self.game.player_fighter_kind(0) == FighterKind::Seak;
         let fc = self.game.vs_frame_count() as i32;
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         ev.round_won = true;
         ev.proc_counter = 0x78 - wait;
         ev.round_seconds = secs;
@@ -1631,7 +1631,7 @@ impl Running<'_> {
     /// from the first player's), `gm_8016AC44`.
     fn event_strike(&mut self, src: DataRef) {
         let (c, col) = (self.data.u8(src) as i8, self.data.u8(src.at(3)));
-        let ev = &self.game.game_data.vs.unk_530;
+        let ev = &self.game.game_data.vs.event;
         let col = if ev.char_kind as i8 == c && ev.char_color == col {
             next_color(col)
         } else {
@@ -1643,7 +1643,7 @@ impl Running<'_> {
     /// A round won: once the round's wait (`x10`) runs out, the fade to black (over the
     /// first event's `x4`'s frames) and the process gone.
     fn event_round_wait(&mut self, gobj: GObjId) {
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         ev.proc_counter -= 1;
         if ev.proc_counter < 0 {
             let e0 = self.event_entry(0).expect("the first event's entry");
@@ -1665,13 +1665,13 @@ impl Running<'_> {
     #[doc(alias = "gm_801BE37C")]
     #[doc(alias = "gm_801BE618")]
     fn event_rounds_proc(&mut self, gobj: GObjId) {
-        if self.game.game_data.vs.unk_530.round_won {
+        if self.game.game_data.vs.event.round_won {
             self.event_round_wait(gobj);
             return;
         }
         if self.game.player_stocks(1) <= 0 {
             let e = self.event_entry(self.event()).expect("the event's entry");
-            let round = self.game.game_data.vs.unk_530.round;
+            let round = self.game.game_data.vs.event.round;
             let src = self.event_round(e, round as usize);
             self.event_strike(src);
             if round >= self.event_rounds(e) - 1 {
@@ -1694,10 +1694,10 @@ impl Running<'_> {
     /// (`xB_5`): their masks (`lbAudioAx_80026E84`) wanted for the match's groups
     /// (`lbAudioAx_80026F2C(0x14)`, `lbAudioAx_8002702C(4, ...)`), loaded, and waited for.
     fn event_voices(&mut self, kinds: &[i32]) {
-        if self.game.game_data.vs.unk_530.voices_loaded {
+        if self.game.game_data.vs.event.voices_loaded {
             return;
         }
-        self.game.game_data.vs.unk_530.voices_loaded = true;
+        self.game.game_data.vs.event.voices_loaded = true;
         let mut mask = 0u64;
         for &k in kinds {
             mask |= crate::lb::audio::character_banks(k);
@@ -1716,7 +1716,7 @@ impl Running<'_> {
     fn event_rounds_36_proc(&mut self, gobj: GObjId) {
         let idx = self.event();
         let e = self.event_entry(idx).expect("the event's entry");
-        let round = self.game.game_data.vs.unk_530.round;
+        let round = self.game.game_data.vs.event.round;
         let p0 = e.player(self, 0).expect("the event's first player");
         let ck = |r: &Self, k: usize| i32::from(r.data.u8(r.event_round(e, k)) as i8);
         let first = i32::from(self.data.u8(p0) as i8);
@@ -1726,20 +1726,20 @@ impl Running<'_> {
             [first, ck(self, 1), ck(self, 4), first]
         };
         self.event_voices(&kinds);
-        if self.game.game_data.vs.unk_530.round_won {
+        if self.game.game_data.vs.event.round_won {
             self.event_round_wait(gobj);
             return;
         }
-        let x18 = self.game.game_data.vs.unk_530.proc_state;
+        let x18 = self.game.game_data.vs.event.proc_state;
         if round == 0 {
             match x18 {
                 0 if self.game.player_stocks(1) <= 0 => {
-                    self.game.game_data.vs.unk_530.proc_state = 1;
+                    self.game.game_data.vs.event.proc_state = 1;
                     let p = self.event_player(self.event_round(e, 2));
                     self.vs_add_player(2, &p);
                 }
                 1 if self.game.player_stocks(2) <= 0 => {
-                    self.game.game_data.vs.unk_530.proc_state = 2;
+                    self.game.game_data.vs.event.proc_state = 2;
                     let p = self.event_player(self.event_round(e, 3));
                     self.vs_add_player(3, &p);
                 }
@@ -1757,7 +1757,7 @@ impl Running<'_> {
         } else {
             match x18 {
                 0 if self.game.player_stocks(1) <= 0 => {
-                    self.game.game_data.vs.unk_530.proc_state = 1;
+                    self.game.game_data.vs.event.proc_state = 1;
                     let p = self.event_player(self.event_round(e, 4));
                     self.vs_add_player(2, &p);
                 }
@@ -1790,7 +1790,7 @@ impl Running<'_> {
             i32::from(self.data.u8(joiner) as i8),
         ];
         self.event_voices(&kinds);
-        let joined = self.game.game_data.vs.unk_530.proc_counter != 0;
+        let joined = self.game.game_data.vs.event.proc_counter != 0;
         if joined && self.game.player_stocks(2) <= 0 {
             self.event_success(gobj);
             return;
@@ -1800,9 +1800,9 @@ impl Running<'_> {
             return;
         }
         if !joined && self.game.vs_timer_seconds() >= self.data.u32(x4) {
-            self.game.game_data.vs.unk_530.proc_counter = 1;
+            self.game.game_data.vs.event.proc_counter = 1;
             let mut p = self.event_player(joiner);
-            p.color = self.game.game_data.vs.unk_530.colors[2];
+            p.color = self.game.game_data.vs.event.colors[2];
             self.vs_add_player(2, &p);
         }
         if self.event_time_up() {
@@ -1822,7 +1822,7 @@ impl Running<'_> {
                 count += 1;
             }
         }
-        if self.game.game_data.vs.unk_530.crowd {
+        if self.game.game_data.vs.event.crowd {
             count += self.game.gm.opponents.left();
         }
         if count == 0 {
@@ -1853,7 +1853,7 @@ impl Running<'_> {
         let both = self.boss_mh_word(0x170);
         let hp = |r: &Self, s: i32| r.game.player_remaining_hp(s);
         let (out1, out2) = (hp(self, 1) <= 0, hp(self, 2) <= 0);
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         match ev.round {
             0 if out1 || out2 => {
                 ev.round = 1;
@@ -1867,23 +1867,23 @@ impl Running<'_> {
         }
         if out1 && out2 {
             let end = slowed.wrapping_add(both);
-            if self.game.game_data.vs.unk_530.proc_counter == 0 {
+            if self.game.game_data.vs.event.proc_counter == 0 {
                 self.game.vs.state.hud_enabled = 0;
-                let ev = &mut self.game.game_data.vs.unk_530;
+                let ev = &mut self.game.game_data.vs.event;
                 ev.proc_state = if ev.proc_state == 1 { 2 } else { 1 };
                 let slot = ev.proc_state;
                 self.boss_camera_on_player(slot);
                 self.game.set_db_pause_flag(6);
                 self.player_disable_input(0);
                 self.set_player_unkillable(0, 1);
-                self.game.game_data.vs.unk_530.series_frames = self.game.vs_frame_count() as i32;
+                self.game.game_data.vs.event.series_frames = self.game.vs_frame_count() as i32;
                 self.game.vs.start.timer_enabled = false;
             }
-            if self.game.game_data.vs.unk_530.proc_counter == slowed {
+            if self.game.game_data.vs.event.proc_counter == slowed {
                 self.hands_out_cheer();
                 self.game.bgflash.fade_to_white(both);
             }
-            let t = self.game.game_data.vs.unk_530.proc_counter;
+            let t = self.game.game_data.vs.event.proc_counter;
             if t >= end {
                 self.event_success(gobj);
                 return;
@@ -1896,32 +1896,32 @@ impl Running<'_> {
                     lb.master = 0;
                 }
             }
-            if self.game.game_data.vs.unk_530.proc_counter % 30 == 0 {
-                let port = usize::from(self.game.game_data.vs.unk_530.port);
+            if self.game.game_data.vs.event.proc_counter % 30 == 0 {
+                let port = usize::from(self.game.game_data.vs.event.port);
                 let tag = self.game.player_nametag(0);
                 self.tou_rumble(port, tag, 2, 0x1E);
                 super::super::camera::request_quake(self, super::super::camera::QUAKE_MEDIUM, None);
             }
-            let ev = &mut self.game.game_data.vs.unk_530;
+            let ev = &mut self.game.game_data.vs.event;
             if ev.proc_counter <= end {
                 ev.proc_counter += 1;
             }
         } else if out1 || out2 {
-            self.game.game_data.vs.unk_530.proc_state = if out1 { 1 } else { 2 };
+            self.game.game_data.vs.event.proc_state = if out1 { 1 } else { 2 };
             let end = slowed.wrapping_add(one);
-            let t = self.game.game_data.vs.unk_530.proc_counter;
+            let t = self.game.game_data.vs.event.proc_counter;
             if t == 0 {
-                let slot = self.game.game_data.vs.unk_530.proc_state;
+                let slot = self.game.game_data.vs.event.proc_state;
                 self.boss_camera_on_player(slot);
                 self.game.set_db_pause_flag(6);
             }
-            if self.game.game_data.vs.unk_530.proc_counter == slowed {
+            if self.game.game_data.vs.event.proc_counter == slowed {
                 self.hands_out_cheer();
             }
-            if self.game.game_data.vs.unk_530.proc_counter == end {
+            if self.game.game_data.vs.event.proc_counter == end {
                 self.game.set_game_speed(1.0);
             }
-            let ev = &mut self.game.game_data.vs.unk_530;
+            let ev = &mut self.game.game_data.vs.event;
             if ev.proc_counter <= end {
                 ev.proc_counter += 1;
             }

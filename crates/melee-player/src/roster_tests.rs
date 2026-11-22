@@ -271,7 +271,7 @@ fn live_slow_mo_keeps_its_sounds() {
         let mut shadow = SoundLog::default();
         let (mut would_stop, mut playing) = (0, 0);
         for tick in 0..1200 {
-            let frame = session.game().scene.unk_8 as i32;
+            let frame = session.game().scene.game_ticks as i32;
             let f = session.tick(pads(tick));
             for e in &f.events {
                 if let Event::SfxStart { handle, id, .. } = *e
@@ -286,7 +286,7 @@ fn live_slow_mo_keeps_its_sounds() {
                 session.game().playback.is_none(),
                 "a live match has no playback"
             );
-            let after = session.game().scene.unk_8 as i32;
+            let after = session.game().scene.game_ticks as i32;
             for h in shadow.tick_end(after.wrapping_sub(1)) {
                 would_stop += 1;
                 if session.game().audio.sfx_check(h) {

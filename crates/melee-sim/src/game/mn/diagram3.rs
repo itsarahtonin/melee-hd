@@ -343,7 +343,7 @@ impl Running<'_> {
     /// freed, the labels freed.
     fn d3_leave(&mut self) {
         let g = self.d3_gobj();
-        self.game.game_data.x1850.xD = self.d3(g).name_mode;
+        self.game.game_data.rules.diagram_name_mode = self.d3(g).name_mode;
         self.d3_clear(g);
         if let Some(p) = self.d3(g).popup {
             gobj::free(self, p);
@@ -509,7 +509,7 @@ impl Running<'_> {
                 saved_menu: f.cur_menu,
                 cursor_row: f.hovered_selection as u8,
                 anim_state: 1,
-                name_mode: self.game.game_data.x1850.xD,
+                name_mode: self.game.game_data.rules.diagram_name_mode,
                 jobjs,
                 ..Diagram3Data::default()
             },

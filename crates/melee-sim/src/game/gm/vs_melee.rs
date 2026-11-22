@@ -375,7 +375,7 @@ impl Running<'_> {
     #[doc(alias = "mnStageSel_8025BC08")]
     #[doc(alias = "gm_80167FC4")]
     pub(crate) fn sss_stage_rule(&mut self) {
-        let sel = self.game.game_data.x1850.stage_sel;
+        let sel = self.game.game_data.rules.stage_sel;
         if sel == 1 {
             let id = self.random_stage() as i8;
             self.game.vs_melee.sss.force_stage_id = id;

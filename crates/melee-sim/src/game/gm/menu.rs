@@ -101,7 +101,7 @@ impl Running<'_> {
         self.preload_refresh();
         // The movies' buffer, which the movie player says what it writes into (`lb::mthp`).
         self.game.menu.gallery_rate_table = crate::hsd::heap::mem_alloc_unclaimed(0x271000);
-        let rules = &mut self.game.game_data.x1850;
+        let rules = &mut self.game.game_data.rules;
         let m = &mut self.game.menu_mode;
         if rules.force_main_menu != 0 {
             rules.force_main_menu = 0;

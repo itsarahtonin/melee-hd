@@ -704,12 +704,12 @@ impl Running<'_> {
     /// The cursors saved in the rules for the screen's next entry (`saveCursorPositions`).
     pub(crate) fn diagram_save_cursors(&mut self) {
         let d = self.diagram_cur();
-        let r = &mut self.game.game_data.x1850;
-        r.xE = (d.fighter_cursor >> 8) as u8;
-        r.xF = d.fighter_cursor as u8;
-        r.unk_x10 = (d.name_cursor >> 8) as u8;
-        r.x11 = d.name_cursor as u8;
-        r.xD = d.name_mode;
+        let r = &mut self.game.game_data.rules;
+        r.fighter_cursor_hi = (d.fighter_cursor >> 8) as u8;
+        r.fighter_cursor_lo = d.fighter_cursor as u8;
+        r.name_cursor_hi = (d.name_cursor >> 8) as u8;
+        r.name_cursor_lo = d.name_cursor as u8;
+        r.diagram_name_mode = d.name_mode;
     }
 
     fn diagram_refresh_cur(&mut self) {
@@ -1547,9 +1547,9 @@ impl Running<'_> {
         let addr = crate::hsd::heap::mem_alloc(0x50);
         let f = self.game.menu.flow;
         let name_mode = if self.name_count() != 0 {
-            self.game.game_data.x1850.xD
+            self.game.game_data.rules.diagram_name_mode
         } else {
-            self.game.game_data.x1850.xD = 0;
+            self.game.game_data.rules.diagram_name_mode = 0;
             0
         };
         let mut jobjs = [None; 13];

@@ -623,7 +623,7 @@ impl Running<'_> {
         if self.game.rules.notes_playback() && p.on {
             let theirs = width_bonuses(reg(xd8c), reg(xd94), scales, reg(p.average_width()));
             if width_bonuses_differ(timed, (far, near), theirs) {
-                let tick = self.game.scene.unk_8;
+                let tick = self.game.scene.game_ticks;
                 self.game.display_phase.note(tick);
             }
         }

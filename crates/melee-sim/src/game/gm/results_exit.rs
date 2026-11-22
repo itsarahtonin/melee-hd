@@ -189,7 +189,7 @@ impl Running<'_> {
             // The original's own test (`arg0 < PAD_MAX_CONTROLLERS`); a port is always one.
             &mut m[port]
         } else {
-            &mut self.game.game_data.name_tag(usize::from(nametag)).x1A2
+            &mut self.game.game_data.name_tag(usize::from(nametag)).handicap
         }
     }
 
@@ -197,7 +197,7 @@ impl Running<'_> {
     /// (`fn_80169000`) and put back where a player played.
     #[doc(alias = "gm_80168638")]
     pub(super) fn results_handicaps(&mut self, end: &MatchEnd, mut stack: TieStack) -> Option<u8> {
-        if self.game.game_data.x1850.handicap != 1 {
+        if self.game.game_data.rules.handicap != 1 {
             return None;
         }
         let mut h = [0u8; 4];

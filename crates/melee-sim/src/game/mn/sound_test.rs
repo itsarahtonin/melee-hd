@@ -514,7 +514,7 @@ impl Running<'_> {
             self.go_to_list(DATA, 2, EXIT_TO);
             self.sfx_stop_all();
             self.menu_sound_balance();
-            let bgm = self.game.game_data.x1850.bgm;
+            let bgm = self.game.game_data.rules.bgm;
             self.lb_play_music(i32::from(bgm));
             return;
         }
@@ -604,7 +604,7 @@ impl Running<'_> {
     /// `gmMainLib_8015ED68`: the song the trophy gallery plays (`x1850.unk_14`).
     #[doc(alias = "gmMainLib_8015ED68")]
     fn set_gallery_song(&mut self, bgm: i32) {
-        self.game.game_data.x1850.unk_14 = bgm;
+        self.game.game_data.rules.gallery_song = bgm;
     }
 
     /// `fn_8024B7E4`: the screen going out, freed at the end.

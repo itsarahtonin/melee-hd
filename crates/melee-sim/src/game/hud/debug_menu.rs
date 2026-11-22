@@ -217,7 +217,7 @@ impl DebugVars {
             p.cpu_kind = w(0xA8 + i) as u8;
             p.cpu_level = w(0xB8 + i) as u8;
             p.stocks = w(0xD4) as i8;
-            p.xC_b1 = false;
+            p.enters = false;
             p.model_scale = f(0x98 + i);
         }
         d

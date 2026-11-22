@@ -977,7 +977,7 @@ pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
             .flatten()
             .any(|o| copy_origin(o, vp)[..2] != [copy_x, copy_y])
     }) {
-        let tick = r.game.scene.unk_8;
+        let tick = r.game.scene.game_ticks;
         r.game.display_phase.note(tick);
     }
     let z = screen_mut(r.game, SCREEN_ZOOM);

@@ -255,7 +255,7 @@ impl Running<'_> {
         let me = self.results_end();
         let human = me.player_standings[usize::from(slot)].pkind == PKIND_HUMAN;
         let earned: Vec<usize> = (0..0x100)
-            .filter(|&i| me.x44C[usize::from(slot)].x0[i] != 0)
+            .filter(|&i| me.decisions[usize::from(slot)].earned[i] != 0)
             .collect();
         if human {
             for &i in &earned {

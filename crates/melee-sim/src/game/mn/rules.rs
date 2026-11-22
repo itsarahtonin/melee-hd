@@ -240,7 +240,7 @@ impl Running<'_> {
     fn rules_save(&mut self) {
         let d = self.rules_list_data();
         let v = |i: usize| d.values[i].expect("a rule's value");
-        let r = &mut self.game.game_data.x1850;
+        let r = &mut self.game.game_data.rules;
         r.mode = v(0);
         r.time_limit = v(1);
         r.handicap = v(2);
@@ -773,7 +773,7 @@ impl Running<'_> {
             }
             let d = self.rules_data(gobj);
             let v = |i: usize| d.values[i].expect("a rule's value");
-            let r = &mut self.game.game_data.x1850;
+            let r = &mut self.game.game_data.rules;
             r.mode = v(0);
             r.time_limit = v(1);
             r.handicap = v(2);
@@ -820,7 +820,7 @@ impl Running<'_> {
         // `x7` and `x8`, which nothing writes: what the heap's image knows the block held.
         let left = super::leftover_bytes_known::<2>(self.data, addr + 7);
         let f = self.game.menu.flow;
-        let r = &self.game.game_data.x1850;
+        let r = &self.game.game_data.rules;
         let mut handicap = r.handicap;
         if self.game.vs_menus.auto_handicap == 0 && handicap == 1 {
             handicap = 0;
@@ -1009,7 +1009,7 @@ impl Running<'_> {
         w.proc_mut(p).flags_3 = w.phase;
         let g = self.rules_list(1);
         self.game.world.mark_ran(g);
-        let bgm = self.game.game_data.x1850.bgm;
+        let bgm = self.game.game_data.rules.bgm;
         self.lb_play_music(i32::from(bgm));
     }
 

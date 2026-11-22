@@ -83,16 +83,16 @@ impl Running<'_> {
         d.modes.nametags = [5; 4];
         // Classic, Adventure, All-Star: no character chosen, their stocks.
         for (s, stocks) in [
-            (&mut d.vs.unk_51C, 3),
-            (&mut d.vs.unk_522, 3),
-            (&mut d.vs.unk_528, 1),
+            (&mut d.vs.classic, 3),
+            (&mut d.vs.adventure, 3),
+            (&mut d.vs.all_star, 1),
         ] {
             s.c_kind = 0x21;
             s.color = 0;
             s.stocks = stocks;
             s.cpu_level = 0;
             s.nametag = 0x78;
-            s.x5 = 0;
+            s.round = 0;
         }
         init_vs_mode(&mut d.modes.table[VS_CAMERA]);
         // The trophy gallery (`Toy_Mode_OnInit`): its screens' state cleared, the gallery
@@ -100,7 +100,7 @@ impl Running<'_> {
         self.toy_mode_init();
         let d = &mut self.game.game_data;
         // Target Test: no character, no name tag.
-        let t = &mut d.vs.unk_530.target_test;
+        let t = &mut d.vs.event.target_test;
         t.ckind = 0x21;
         t.color = 0;
         t.nametag = 0x78;
@@ -128,7 +128,7 @@ impl Running<'_> {
         init_vs_mode(&mut d.modes.table[VS_MULTIMAN]);
         init_vs_mode(&mut d.modes.table[VS_FIXED_CAMERA]);
         // Events: none chosen, no name tag.
-        let e = &mut d.vs.unk_530;
+        let e = &mut d.vs.event;
         e.char_kind = 0;
         e.char_color = 0;
         e.chosen_char = 0x21;

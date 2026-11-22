@@ -1489,7 +1489,7 @@ fn count_quakes_down(frames: &mut [i32; QUAKE_KINDS]) -> bool {
 /// counted (`live::PlaybackCamera`, design call 9).
 fn note_quake_model(game: &mut Game) {
     if game.camera.cam.quake_gobj.is_some() != game.display_phase.playback.quake_model {
-        let tick = game.scene.unk_8;
+        let tick = game.scene.game_ticks;
         game.display_phase.note(tick);
     }
 }
@@ -4127,7 +4127,7 @@ mod playback_camera_tests {
         g.camera.cam.quake_frames_left[QUAKE_LOOP as usize] = 4;
         let tick = |g: &mut Game, mode: i32, t: u32| {
             g.camera.cam.mode = mode;
-            g.scene.unk_8 = t;
+            g.scene.game_ticks = t;
             update_quakes(&mut Running {
                 game: g,
                 data: &data,

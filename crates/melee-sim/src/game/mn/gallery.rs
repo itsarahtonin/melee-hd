@@ -410,7 +410,7 @@ impl Running<'_> {
         }
         self.mthp_release();
         self.lb_audio_music_stop();
-        let bgm = self.game.game_data.x1850.bgm;
+        let bgm = self.game.game_data.rules.bgm;
         self.lb_play_music(i32::from(bgm));
         let gd = self.gallery_mut();
         gd.playing = 0;

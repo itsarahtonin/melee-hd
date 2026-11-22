@@ -71,14 +71,14 @@ impl Running<'_> {
         let s = &self.game.game_data.thing.save_data;
         if s.trophies[t / 32] & (1 << (t % 32)) == 0 {
             let now = self.clock_seconds();
-            self.game.game_data.unk_44.times[t] = now;
+            self.game.game_data.trophy_notices.times[t] = now;
             self.game.game_data.thing.save_data.trophies[t / 32] |= 1 << (t % 32);
             self.add_trophy(t as i32, 1);
         }
     }
 
     fn trophy_notice_waits(&self, t: usize) -> bool {
-        self.game.game_data.unk_44.flags[t / 32] & (1 << (t % 32)) != 0
+        self.game.game_data.trophy_notices.flags[t / 32] & (1 << (t % 32)) != 0
     }
 
     /// `gm_ModeState_Prize_OnEnter`: the notices waiting queued for the prize interface: each
@@ -106,7 +106,7 @@ impl Running<'_> {
             if self.trophy_notice_waits(t) {
                 self.take_trophy_notice(t);
                 self.game.prize.queued[0x44 + t] = self.game.trophy_count(t) as u8;
-                let time = self.game.game_data.unk_44.times[t];
+                let time = self.game.game_data.trophy_notices.times[t];
                 last = self.queue_notice(TROPHY_MESSAGE, n, t as u16, time, last);
                 n += 1;
             }
@@ -125,7 +125,7 @@ impl Running<'_> {
             let now = self.game.trophy_count(t);
             if (had < now || now == 0) && self.trophy_notice_waits(t) {
                 self.take_trophy_notice(t);
-                let time = self.game.game_data.unk_44.times[t];
+                let time = self.game.game_data.trophy_notices.times[t];
                 last = self.queue_notice(TROPHY_MESSAGE, n, t as u16, time, last);
                 n += 1;
             }

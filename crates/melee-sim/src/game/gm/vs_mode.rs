@@ -185,7 +185,7 @@ pub fn player_defaults() -> PlayerInitData {
         spawn_pos: -1,
         handicap: 9,
         nametag: NO_NAMETAG,
-        xC_b1: true,
+        enters: true,
         cpu_kind: 4,
         attack_ratio: 1.0,
         defense_ratio: 1.0,
@@ -244,14 +244,14 @@ pub struct AutoHandicaps {
 
 impl AutoHandicaps {
     /// The save's.
-    pub fn of(g: &crate::game::structs::gmm_x0) -> AutoHandicaps {
+    pub fn of(g: &crate::game::structs::GameData) -> AutoHandicaps {
         AutoHandicaps {
             ports: g.modes.nametags[..4].try_into().expect("four ports"),
             tags: g
                 .thing
                 .nametag_banks
                 .iter()
-                .flat_map(|b| b.inner.iter().map(|t| t.x1A2))
+                .flat_map(|b| b.inner.iter().map(|t| t.handicap))
                 .collect(),
         }
     }
@@ -618,7 +618,7 @@ pub fn tiny_player(p: &mut PlayerInitData) {
     p.model_scale = 0.35;
     p.defense_ratio = 0.5;
     p.attack_ratio = 1.0;
-    p.xB = 1;
+    p.sfx_size = 1;
 }
 
 /// Giant Melee's players: nearly twice the size, dealing half again the damage,
@@ -628,7 +628,7 @@ pub fn giant_player(p: &mut PlayerInitData) {
     p.model_scale = 1.8;
     p.defense_ratio = 1.0;
     p.attack_ratio = 1.5;
-    p.xB = 2;
+    p.sfx_size = 2;
 }
 
 /// Single-Button Melee's rules, `fn_801BA1B4`.
@@ -674,7 +674,7 @@ pub fn stamina_entry(vs: &StartMeleeData) -> StartMeleeData {
     all_player_defaults(&mut start.players);
     for (p, v) in start.players.iter_mut().zip(&vs.players).take(4) {
         p.clone_from(v);
-        p.xC_b7 = true;
+        p.stamina = true;
         p.stocks = 1;
         p.hp = 150;
     }

@@ -699,7 +699,7 @@ impl Running<'_> {
     /// `gmClassic_801B3DD8`: Classic's select from its saved choices.
     #[doc(alias = "gmClassic_801B3DD8")]
     pub fn classic_enter_css(&mut self) {
-        let s = self.game.game_data.vs.unk_51C.clone();
+        let s = self.game.game_data.vs.classic.clone();
         let slot = self.game.one_player.classic.base.player.slot;
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
@@ -737,9 +737,9 @@ impl Running<'_> {
             super::setup_players::css_one_player_choice(&self.game.one_player.css);
         let d = &mut self.game.game_data.vs;
         let s = match mode {
-            GM_CLASSIC => &mut d.unk_51C,
-            GM_ADVENTURE => &mut d.unk_522,
-            _ => &mut d.unk_528,
+            GM_CLASSIC => &mut d.classic,
+            GM_ADVENTURE => &mut d.adventure,
+            _ => &mut d.all_star,
         };
         s.c_kind = ckind;
         s.stocks = stocks;
@@ -759,7 +759,7 @@ impl Running<'_> {
         p.cpu_level = s.cpu_level;
         p.stocks = s.stocks;
         p.nametag = s.nametag;
-        s.x5
+        s.round
     }
 
     /// `gm_80168F88`: the announcer's bank (bank 2's 0x10) wanted and waited for.
@@ -817,7 +817,7 @@ impl Running<'_> {
     #[doc(alias = "gmClassic_801B2BA4")]
     fn classic_pick(&self, table: usize) -> Option<MatchupRef> {
         let (off, t, at) = CLASSIC_TABLES[table];
-        let me = i32::from(self.game.game_data.vs.unk_51C.c_kind);
+        let me = i32::from(self.game.game_data.vs.classic.c_kind);
         let picks: Vec<Matchup> = self
             .game
             .one_player
@@ -877,7 +877,7 @@ impl Running<'_> {
     /// `gm_801B42E8`: Adventure's select from its saved choices.
     #[doc(alias = "gm_801B42E8")]
     pub fn adventure_enter_css(&mut self) {
-        let s = self.game.game_data.vs.unk_522.clone();
+        let s = self.game.game_data.vs.adventure.clone();
         let slot = self.game.one_player.adventure.base.player.slot;
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
@@ -939,7 +939,7 @@ impl Running<'_> {
     /// `gm_801B5F50`: All-Star's select from its saved choices.
     #[doc(alias = "gm_801B5F50")]
     pub fn allstar_enter_css(&mut self) {
-        let s = self.game.game_data.vs.unk_528.clone();
+        let s = self.game.game_data.vs.all_star.clone();
         let slot = self.game.one_player.allstar.base.player.slot;
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
@@ -965,7 +965,7 @@ impl Running<'_> {
         let x5 = self.save_one_player_choice(GM_ALLSTAR);
         self.set_next_game_mode_state_id(x5.wrapping_mul(8) & 0xF8);
         self.load_announcer_bank();
-        let round = self.game.game_data.vs.unk_528.x5;
+        let round = self.game.game_data.vs.all_star.round;
         self.allstar_round_setup(usize::from(round));
     }
 
@@ -1052,7 +1052,7 @@ impl Running<'_> {
         if self.game.one_player.target_entries != 0 {
             self.save_after_run();
         }
-        let t = self.game.game_data.vs.unk_530.target_test.clone();
+        let t = self.game.game_data.vs.event.target_test.clone();
         let slot = self.game.one_player.target_slot;
         let css = &mut self.game.one_player.target_css;
         css.vs.start.rules = super::vs_mode::rules_defaults();
@@ -1081,7 +1081,7 @@ impl Running<'_> {
             return;
         }
         let (ckind, _, color, nametag, _) = super::setup_players::css_one_player_choice(css);
-        let t = &mut self.game.game_data.vs.unk_530.target_test;
+        let t = &mut self.game.game_data.vs.event.target_test;
         t.ckind = ckind;
         t.color = color;
         t.nametag = nametag;
@@ -1095,7 +1095,7 @@ impl Running<'_> {
     /// the character's target stage, in the game cache too; and the rumble setting.
     #[doc(alias = "gm_801B6428")]
     pub fn target_enter_match(&mut self) {
-        let t = self.game.game_data.vs.unk_530.target_test.clone();
+        let t = self.game.game_data.vs.event.target_test.clone();
         let slot = self.game.one_player.target_slot;
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
@@ -1128,7 +1128,7 @@ impl Running<'_> {
         let ckind = if t.ckind == 14 { 0x20 } else { t.ckind as u8 };
         super::setup_players::setup_human(&mut s.players[0], ckind, t.color, 1, slot);
         s.players[0].nametag = t.nametag;
-        s.players[0].xC_b1 = false;
+        s.players[0].enters = false;
         let stkind = target_stage(s.players[0].ckind as u8);
         s.rules.stkind = stkind;
         self.dvd_mut().cache.scene.game_cache.stkind = i32::from(stkind);
@@ -1147,7 +1147,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B65D4")]
     pub fn target_exit_match(&mut self) {
         let end = self.game.one_player.target_exit.match_end.clone();
-        let t = self.game.game_data.vs.unk_530.target_test.clone();
+        let t = self.game.game_data.vs.event.target_test.clone();
         let slot = self.game.one_player.target_slot;
         let s = &mut self.game.game_data.thing.save_data;
         s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;

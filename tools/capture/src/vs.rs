@@ -7,7 +7,7 @@ use melee_sim::game::gm::pause::PauseScreen;
 use melee_sim::game::gm::vs::Ranks;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
-use melee_sim::game::structs::{_StaticPlayer, gm_80479D58_t};
+use melee_sim::game::structs::{_StaticPlayer, SceneLoop};
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::input::controller::{PadData, PadLib, Status};
 use melee_sim::input::pad::PadStatus;
@@ -341,15 +341,15 @@ impl<'a> Importer<'a> {
             bytes: &cap.call.mem1,
             base: MEM1,
         };
-        self.game.scene = gm_80479D58_t::import(&mem, sym("gm_80479D58"), self);
+        self.game.scene = SceneLoop::import(&mem, sym("gm_80479D58"), self);
         // The tick's sound log, which the codes close after the trace's sample, is still to
         // close: the next tick's start does, as after a tick melee-sim ran
         // (`scene::finish_tick`).
         let s = &self.game.scene;
         if let Some(p) = self.game.playback.as_mut()
-            && s.unk_C == 0
+            && s.ending == 0
         {
-            p.sounds.closing = Some((s.unk_8 as i32).wrapping_sub(1));
+            p.sounds.closing = Some((s.game_ticks as i32).wrapping_sub(1));
         }
         let r = self.r();
         let pacing = r.pacing();

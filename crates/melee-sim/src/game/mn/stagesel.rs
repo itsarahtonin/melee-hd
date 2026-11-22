@@ -829,7 +829,7 @@ impl Running<'_> {
         self.game.stagesel.hovers.insert(addr, 0);
         self.game.world.setup_proc(gobj, CodeRef(HOVER_PROC), 1);
         self.sss_translate_x(Some(j), 100.0);
-        let bgm = self.game.game_data.x1850.bgm;
+        let bgm = self.game.game_data.rules.bgm;
         self.lb_play_music(i32::from(bgm));
     }
 
@@ -914,7 +914,7 @@ impl Running<'_> {
             if let Some(c) = self.game.stagesel.camera {
                 crate::hsd::gobj::free(self, c);
             }
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.change_game_mode_after_scene(super::super::gm::machine::GM_MENU);
             self.game.end_scene();
             return;

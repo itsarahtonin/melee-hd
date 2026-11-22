@@ -328,8 +328,9 @@ mod label_tests {
     #[test]
     fn step_3s_renamed_fields_label_gives_the_originals_name() {
         use crate::game::structs::{
-            _StaticPlayer, Camera, EventData, GmSaveData, Ground, GroundParam, MatchPlayerData,
-            StageInfo, StaleMoveTable, StartMeleeRules,
+            _StaticPlayer, Camera, EventData, GameData, GmSaveData, Ground, GroundParam,
+            MatchPlayerData, PlayerInitData, SceneLoop, StageInfo, StaleMoveTable, StartMeleeRules,
+            VsSceneState,
         };
         assert_eq!(
             labels_after::<Fighter>("fighter", |fp| {
@@ -442,6 +443,42 @@ mod label_tests {
             [
                 "event.round (x20)",
                 "event.target_test (unk_584).color (unk_585)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<VsSceneState>("vs", |s| {
+                s.timer_frames = 1;
+                s.fighters[0].respawn_damage = 1;
+                s.match_end.standings_tick = 1;
+            }),
+            [
+                "vs.timer_frames (unk_2C)",
+                "vs.fighters[0].respawn_damage (x6)",
+                "vs.match_end (x24C).standings_tick (x0)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<PlayerInitData>("player", |p| p.shows_hearts = true),
+            ["player.shows_hearts (xD_b1)"]
+        );
+        assert_eq!(
+            labels_after::<GameData>("game_data", |d| {
+                d.vs.all_star.round = 1;
+                d.rules.gallery_song = 1;
+            }),
+            [
+                "game_data.vs.all_star (unk_528).round (x5)",
+                "game_data.rules (x1850).gallery_song (unk_14)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<SceneLoop>("scene", |s| {
+                s.ticks = 1;
+                s.pause.runs = true;
+            }),
+            [
+                "scene.ticks (unk_0)",
+                "scene.pause (unk_10).runs (unk_38_0)"
             ]
         );
     }

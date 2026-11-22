@@ -399,10 +399,10 @@ impl Running<'_> {
         for p in &mut s.players[1..6] {
             p.team = team;
             if cruel {
-                p.xD_b4 = true;
+                p.dies_up = true;
             }
             if clear_xc_b1 {
-                p.xC_b1 = false;
+                p.enters = false;
             }
         }
         super::vs_mode::load_rumble_enabled_with(s, &prefs, &tags);
@@ -728,8 +728,8 @@ impl Running<'_> {
                 if r.won != 0 {
                     (r.frames as u32) < score
                 } else {
-                    self.game.vs.state.unk_14 = 0x149;
-                    self.game.vs.state.unk_18 = 40;
+                    self.game.vs.state.end_sfx_2 = 0x149;
+                    self.game.vs.state.end_sfx_2_frame = 40;
                     false
                 }
             }
@@ -738,8 +738,8 @@ impl Running<'_> {
             _ => false,
         };
         if record {
-            self.game.vs.state.unk_10 = 0x9C41;
-            self.game.vs.state.unk_14 = 0x145;
+            self.game.vs.state.end_sfx_1 = 0x9C41;
+            self.game.vs.state.end_sfx_2 = 0x145;
             self.tou_rumble(r.port as usize, r.nametag, 0xD, 0x5A);
         }
     }
@@ -777,7 +777,7 @@ impl Running<'_> {
         p.ckind = CharacterKind::Boy as i8;
         p.slot_type = 1;
         p.stocks = 1;
-        p.xD_b4 = true;
+        p.dies_up = true;
         mm.joiner = p;
         if let Some(b) = block_index(i32::from(mode)) {
             let t = self.game.multi_man.tables[b].expect("a Multi-Man table");

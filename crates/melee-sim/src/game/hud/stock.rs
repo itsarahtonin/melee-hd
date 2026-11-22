@@ -577,7 +577,7 @@ impl Running<'_> {
             &mut crate::game::code::ParticleHooks,
             Some(root),
         );
-        let flags = g.vs.state.fighters[p].x4[0];
+        let flags = g.vs.state.fighters[p].flags[0];
         if flags & 0x40 != 0 {
             g.color_stock_icons(i32::from(player), [0x08, 0x08, 0x08]);
         } else if flags & 0x80 != 0 {

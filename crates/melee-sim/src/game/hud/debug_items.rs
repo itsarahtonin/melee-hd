@@ -584,7 +584,7 @@ impl Running<'_> {
             p.color = color as u8;
             self.change_game_mode_after_scene(GM_CLASSIC_GOVER);
         } else {
-            let s = &mut self.game.game_data.vs.unk_51C;
+            let s = &mut self.game.game_data.vs.classic;
             s.c_kind = ckind as _;
             s.color = color as u8;
             if mode <= 2 {
@@ -633,7 +633,7 @@ impl Running<'_> {
     fn debug_allstar_from_round(&mut self, arg: i32) -> i32 {
         if arg == CB_SELECT {
             let round = self.game.hud.debug.word(0x804D_5910).wrapping_sub(1);
-            self.game.game_data.vs.unk_528.x5 = round as u8;
+            self.game.game_data.vs.all_star.round = round as u8;
             self.sfx_forward();
             self.debug_to_mode(crate::game::gm::GM_ALLSTAR);
         }
@@ -647,7 +647,7 @@ impl Running<'_> {
     fn debug_adventure_from_stage(&mut self, arg: i32) -> i32 {
         if arg == CB_SELECT {
             let stage = self.game.hud.debug.word(0x804D_5908).wrapping_sub(1);
-            self.game.game_data.vs.unk_522.x5 = stage as u8;
+            self.game.game_data.vs.adventure.round = stage as u8;
             self.sfx_forward();
             self.debug_to_mode(crate::game::gm::GM_ADVENTURE);
         }
@@ -661,7 +661,7 @@ impl Running<'_> {
     fn debug_classic_from_stage(&mut self, arg: i32) -> i32 {
         if arg == CB_SELECT {
             let stage = self.game.hud.debug.word(0x804D_590C).wrapping_sub(1);
-            self.game.game_data.vs.unk_51C.x5 = stage as u8;
+            self.game.game_data.vs.classic.round = stage as u8;
             self.sfx_forward();
             self.debug_to_mode(crate::game::gm::GM_CLASSIC);
         }

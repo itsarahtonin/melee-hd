@@ -109,19 +109,23 @@ impl Running<'_> {
     #[doc(alias = "ifStatus_802F7034")]
     pub fn announce_match_end(&mut self, on_start: Option<CodeRef>) {
         let s = &self.game.vs.state;
-        let a = if s.unk_10 != 0 {
-            s.unk_10.wrapping_sub(1)
+        let a = if s.end_sfx_1 != 0 {
+            s.end_sfx_1.wrapping_sub(1)
         } else {
             -1
         };
-        let b = if s.unk_14 != 0 {
-            s.unk_14.wrapping_sub(1)
+        let b = if s.end_sfx_2 != 0 {
+            s.end_sfx_2.wrapping_sub(1)
         } else {
             -1
         };
-        let c = if s.unk_18 != 0 { s.unk_18 as i32 } else { 0 };
-        let kind = if s.unk_B != 0 {
-            i32::from(s.unk_B) - 1
+        let c = if s.end_sfx_2_frame != 0 {
+            s.end_sfx_2_frame as i32
+        } else {
+            0
+        };
+        let kind = if s.end_kind != 0 {
+            i32::from(s.end_kind) - 1
         } else if s.match_result == OUTCOME_TIMEOUT {
             0
         } else if self.game.vs.start.goes_on {

@@ -433,7 +433,7 @@ impl Running<'_> {
         } else {
             self.game.player_damage(slot)
         };
-        let explode = stamina && self.game.vs.state.fighters[slot as usize].x4[0] & 0x04 != 0;
+        let explode = stamina && self.game.vs.state.fighters[slot as usize].flags[0] & 0x04 != 0;
         let p = &mut self.game.hud.status.players[i];
         p.old_damage = p.damage_percent;
         p.damage_percent = (value as i16).clamp(0, 0x3E7);
@@ -675,7 +675,7 @@ impl Running<'_> {
     /// the display blows apart, a stock match announces a player out, and outside stock
     /// matches the rules' `x2_5` shows the KO's mark (`mark`, an `if_2F72` function).
     fn stock_loss(&mut self, slot: i32, mark: u32) {
-        self.game.vs.state.unk_D = slot as u8;
+        self.game.vs.state.last_ko = slot as u8;
         self.game.explode_damage_display(slot);
         let k = self.game.player_pkind(slot);
         if self.game.vs.start.is_stock
