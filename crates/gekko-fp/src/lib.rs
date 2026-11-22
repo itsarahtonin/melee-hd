@@ -23,9 +23,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 mod estimate;
 mod paired;
+mod wide;
 
 pub use estimate::{fres, frsqrte};
 pub use paired::*;
+pub use wide::{mtx_concat, set_wide_lanes, wide_lanes};
 
 const SIGN: u64 = 0x8000_0000_0000_0000;
 const EXP: u64 = 0x7FF0_0000_0000_0000;

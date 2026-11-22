@@ -269,6 +269,97 @@ mod tests {
         m
     }
 
+    /// `Mtx34::concat`'s two paths on the same inputs, bit for bit, in both float modes: the
+    /// wide lanes (`gekko_fp::mtx_concat`, where the processor has AVX2 and FMA3), the scalar
+    /// lanes the dispatch takes with them off (`set_wide_lanes(false)`, as on any other
+    /// processor), and the scalar lanes with the portable fused multiply-add (no FMA3). The
+    /// inputs: matrices of the game's values (the wide lanes' ground), of any bits, of the
+    /// edge cases alone (quiet and signaling NaNs with payloads, infinities, zeros of both
+    /// signs, subnormals, the largest and smallest normals) and mixed into game values, with
+    /// zeros and ones mixed in, and sums the Gekko's double rounding fix-up decides.
+    #[test]
+    fn concat_paths_agree() {
+        const EDGES: [u32; 14] = [
+            0x7FC0_0000,
+            0xFFC0_0001,
+            0x7F80_0001,
+            0x7FA5_5A5A,
+            0x7F80_0000,
+            0xFF80_0000,
+            0x0000_0000,
+            0x8000_0000,
+            0x0000_0001,
+            0x807F_FFFF,
+            0x0040_0000,
+            0x7F7F_FFFF,
+            0x0080_0000,
+            0x8080_0000,
+        ];
+        let zero_one = |rng: &mut Bits| match rng.next() % 6 {
+            0 => 0.0,
+            1 => -0.0,
+            2 => 1.0,
+            _ => rng.game(),
+        };
+        let edge = |rng: &mut Bits| f32::from_bits(EDGES[rng.next() as usize % EDGES.len()]);
+        let some_edges = |rng: &mut Bits| {
+            if rng.next().is_multiple_of(12) {
+                f32::from_bits(EDGES[rng.next() as usize % EDGES.len()])
+            } else {
+                rng.game()
+            }
+        };
+        let mut wide_ran = 0;
+        let mut check = |a: &Mtx34, b: &Mtx34, what: &str| {
+            gekko_fp::set_wide_lanes(true);
+            wide_ran += usize::from(gekko_fp::mtx_concat(&a.m, &b.m).is_some());
+            let wide = bits(&a.concat(b));
+            gekko_fp::set_wide_lanes(false);
+            let scalar = bits(&a.concat(b));
+            gekko_fp::set_wide_lanes(true);
+            gekko_fp::set_portable_fma(true);
+            let portable = bits(&a.concat(b));
+            gekko_fp::set_portable_fma(false);
+            assert_eq!(wide, scalar, "{a:?} · {b:?} {what}: wide against scalar");
+            assert_eq!(
+                wide, portable,
+                "{a:?} · {b:?} {what}: against the portable FMA"
+            );
+            assert_eq!(wide, bits(&a.concat_scalar(b)), "{a:?} · {b:?} {what}");
+        };
+        for mode in MODES {
+            set_fp_mode(mode);
+            let mut rng = Bits(0x6A09_E667_F3BC_C909);
+            for i in 0..100_000 {
+                let f: fn(&mut Bits) -> f32 = match i % 5 {
+                    0 | 1 => Bits::game,
+                    2 => Bits::float,
+                    3 => zero_one,
+                    _ if i % 10 == 4 => edge,
+                    _ => some_edges,
+                };
+                let (a, b) = (mtx(&mut rng, f), mtx(&mut rng, f));
+                check(&a, &b, &format!("{mode:?} {i}"));
+            }
+            // 2^-12 (1 + 2^-23) · 2^-12 (1 - 2^-23) added to 1 + 2^-23 rounds in double to
+            // exactly halfway between two singles, from below: the Gekko keeps the lower.
+            let mut a = Mtx34::IDENTITY;
+            a.m[0][1] = f32::from_bits(0x3980_0001);
+            let mut b = Mtx34::IDENTITY;
+            b.m[0][0] = f32::from_bits(0x3F80_0001);
+            b.m[1][0] = f32::from_bits(0x397F_FFFE);
+            check(&a, &b, &format!("{mode:?} halfway"));
+            if mode == FpMode::Hardware {
+                assert_eq!(a.concat(&b).m[0][0].to_bits(), 0x3F80_0001);
+            }
+        }
+        set_fp_mode(FpMode::Hardware);
+        gekko_fp::set_wide_lanes(true);
+        if gekko_fp::wide_lanes() {
+            assert!(wide_ran > 100_000, "the wide lanes ran {wide_ran} times");
+        }
+    }
+
     /// A joint's made matrix: its flags, scale, rotation, translation, parent's scale and
     /// parent's matrix.
     type Made = (
