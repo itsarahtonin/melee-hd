@@ -137,6 +137,7 @@ fn model_of(r: &Running, l: ItemLinkId) -> JObjId {
 /// the plane, and `Item_InitSpawnCommonFields`), its fighter kept, the item's own set-up
 /// (`set_up`), its links from his hand, held there.
 #[doc(alias = "itSeakChain_Spawn")]
+#[doc(alias = "it_802C27D4")]
 pub fn spawn(
     r: &mut Running,
     owner: GObjId,
@@ -177,6 +178,7 @@ pub fn spawn(
 /// collision ([`Strand::coll`]). (The originals return the tip's model, which their callers
 /// drop; the string and the yo-yo keep it, [`Vars::tip_model`].)
 #[doc(alias = "it_802BAF2C")]
+#[doc(alias = "it_802C248C")]
 pub fn make_links(r: &mut Running, gobj: GObjId, hand_joint: Option<JObjId>, s: &Strand) {
     let a = attrs(r, gobj);
     let n = r.data.u32(a.at(s.count)) as i32;
@@ -264,6 +266,7 @@ fn release(r: &mut Running, gobj: GObjId, s: &Strand) {
 
 /// The item and its links gone.
 #[doc(alias = "it_802BB20C")]
+#[doc(alias = "it_802C2750")]
 pub fn remove(r: &mut Running, gobj: GObjId, s: &Strand) {
     release(r, gobj, s);
     super::super::item::destroy(r, gobj);
@@ -272,6 +275,7 @@ pub fn remove(r: &mut Running, gobj: GObjId, s: &Strand) {
 /// Every state's animation: once the fighter has left the states it lives through (or is gone),
 /// he lets go and the links go; true to end the item.
 #[doc(alias = "itSeakchain_UnkMotion4_Anim")]
+#[doc(alias = "itClimbersstring_UnkMotion3_Anim")]
 pub fn let_go_if_left(r: &mut Running, gobj: GObjId, s: &Strand) -> bool {
     let (first, last) = s.states;
     let keep = match item(r.game, gobj).owner {
@@ -312,6 +316,7 @@ pub fn place_model(r: &mut Running, model: JObjId, m: Mtx34) {
 
 /// The tip's model at the hand's point (the string's tip in again, [`Strand::tip_folds_in`]).
 #[doc(alias = "it_802BCA30")]
+#[doc(alias = "it_802C33B8")]
 pub fn tip_to_hand(r: &mut Running, gobj: GObjId, s: &Strand) {
     let l = tip(r, gobj, s);
     let model = model_of(r, l);
@@ -385,6 +390,43 @@ pub fn walk_out(
     Some(cur)
 }
 
+/// Pays the links out from the tip `l` toward the hand's point `target`: the tip still, at
+/// `start` if there's one (Nana's hand's point; the yo-yo's hitbox); each link out stays between
+/// `min` and `max` from the one before (and goes in once it's back at the target), and the next
+/// goes out once the target is `max` away. Returns 0 when a link stays in, else 2.
+#[doc(alias = "it_802C2EC4")]
+pub fn pay_out(
+    r: &mut Running,
+    l: ItemLinkId,
+    target: Vec3,
+    start: Option<Vec3>,
+    min: f64,
+    max: f64,
+) -> i32 {
+    let k = link_mut(r.game, l);
+    if let Some(p) = start {
+        k.pos = p;
+    }
+    k.vel = Vec3::new(0.0, 0.0, 0.0);
+    let out = walk_out(r, l, target, max, None, false, |r, it, cur| {
+        let at = lk(r.game, cur).pos;
+        link_mut(r.game, it).pos = target;
+        let mut d = Vec3::default();
+        let dist = direction(target, at, &mut d);
+        if dist > max {
+            hold(r, it, at, d, max);
+        } else if dist < min {
+            let mut d2 = Vec3::default();
+            if direction(lk(r.game, it).pos, target, &mut d2) <= reg(0.1f32) {
+                link_mut(r.game, it).x2C_b0 = false;
+            } else {
+                hold(r, it, at, d, min);
+            }
+        }
+    });
+    if out.is_some() { 2 } else { 0 }
+}
+
 /// `l` put `first` from the hand's point `at`, along the line from `at` to it; then each link
 /// past it toward the tip in turn takes `step`'s move and, where `step` says so, is held within
 /// `len` of the link before.
@@ -419,6 +461,7 @@ pub fn trail(
 /// [`Strand::tip_faces`]), its matrix's axes scaled ([`Strand::length`], copied out and back,
 /// [`Strand::copies`]). Whether a link was out.
 #[doc(alias = "it_802BCB88")]
+#[doc(alias = "it_802C3520")]
 pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3, s: &Strand) -> bool {
     let mut l = vars(r, gobj, s).hand.get();
     while let Some(k) = l {
@@ -479,6 +522,7 @@ pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3, s: &Strand) -> bool {
 
 /// Forgets a GObj going away, as every item does, and its fighter if it's him.
 #[doc(alias = "itSeakChain_Logic54_EvtUnk")]
+#[doc(alias = "it_2725_Logic70_EvtUnk")]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>, s: &Strand) {
     lib26b1::forget(r.game, gobj, other);
     let v = vars(r, gobj, s);
