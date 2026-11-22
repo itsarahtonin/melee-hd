@@ -168,8 +168,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grInishie2_801FCBC4")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.inishie2_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0, setup::SETUP_FRAME);
     create(r, MAP_STAGE, setup::SETUP_FRAME);
     for joint in [0, 0xC, 0xD, 0xE, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 2] {
@@ -216,8 +216,8 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
         anime::start(r.game, r.data, gobj, part, 7, anim, 0.0, 1.0, true);
     }
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     init_logs(r, gobj);
     init_birdo_wait(r, gobj);
     init_pidgit_wait(r, gobj);

@@ -188,8 +188,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grFlatzone_80216E78")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.flatzone_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 1, 2, 3, 4, 5, 6, 8] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -355,7 +355,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     material::set_tree_flags(r.game, j, 0x2800_0000);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The platforms' start hook, `fn_80217440`: they may change.

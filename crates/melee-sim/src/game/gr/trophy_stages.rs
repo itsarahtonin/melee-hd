@@ -87,8 +87,8 @@ pub fn create(r: &mut Running, stage: usize, map_id: i32, frame: u32) -> Option<
 #[doc(alias = "grFigure3_8020E508")]
 pub fn on_init(r: &mut Running, stage: usize) {
     r.game.gr.figure_yakumono[stage] = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 2, 1] {
         create(r, stage, map_id, setup::SETUP_FRAME);
     }

@@ -197,17 +197,17 @@ impl Running<'_> {
         use crate::hsd::cobj;
         use gekko_fp as fp;
         let i = &self.game.stage_info;
-        if !i.unk8C.b3 {
+        if !i.bits.has_guide_points {
             return;
         }
         let eye = cobj::eye_vector(&mut self.game.objs, self.data, Some(c))
             .unwrap_or(cobj::NO_EYE_VECTOR);
         let i = &self.game.stage_info;
-        let (mut front_near, mut front_far) = (i.x130, i.x13C);
+        let (mut front_near, mut front_far) = (i.guide_front_near, i.guide_front_far);
         let (mut near, mut far) = if reg(eye.x) < 0.0 {
-            (i.x148, i.x154)
+            (i.guide_left_near, i.guide_left_far)
         } else {
-            (i.x160, i.x16C)
+            (i.guide_right_near, i.guide_right_far)
         };
         let (near, far) = if reg(eye.z) < 0.0 {
             let len = crate::math::sqrt_reg(fp::fmadds(
@@ -234,7 +234,7 @@ impl Running<'_> {
         };
         let at = cobj::eye_position(&mut self.game.objs, self.data, c)
             .expect("HSD_CObjGetEyePosition: a CObj without an eye WObj");
-        let Some(fog_gobj) = self.game.stage_info.x12C else {
+        let Some(fog_gobj) = self.game.stage_info.fog else {
             return;
         };
         let Some(Obj::Fog(fog)) = self.game.world.gobjs[fog_gobj.0].obj else {
@@ -374,7 +374,7 @@ impl Running<'_> {
     /// draws collisions or the stage keeps its fog off (`Ground_801C1E00`).
     #[doc(alias = "Ground_801C1E2C")]
     pub fn render_stage_fog(&mut self, gobj: GObjId) {
-        if self.game.camera.draw_collisions() || !self.game.stage_info.unk8C.b2 {
+        if self.game.camera.draw_collisions() || !self.game.stage_info.bits.fog_enabled {
             return;
         }
         if let Some(Obj::Fog(f)) = self.game.world.gobj(gobj).obj {

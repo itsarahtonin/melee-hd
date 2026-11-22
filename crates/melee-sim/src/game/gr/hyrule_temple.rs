@@ -116,7 +116,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The temple's setup (map 2), `grShrine_80201E9C`: its collision and animation, a start hook
@@ -130,7 +130,7 @@ pub fn init_temple(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     setup::add_start_hook(r.game, gobj, CodeRef(START_HOOK));
     update_map_coll(r.game, r.data, gobj);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The temple's process (map 2), `grShrine_80201F1C`: the collision follows the model, and the

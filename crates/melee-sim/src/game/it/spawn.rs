@@ -323,10 +323,10 @@ pub fn build_monsters(game: &mut Game, data: &Archives) {
 pub fn stage_counts(game: &Game) -> [i32; 35] {
     let si = &game.stage_info;
     std::array::from_fn(|i| match i {
-        0 => si.xA0,
+        0 => si.item_frequencies,
         _ => {
             let at = 4 * (i - 1);
-            i32::from_be_bytes(si.xA4_pad[at..at + 4].try_into().unwrap())
+            i32::from_be_bytes(si.item_frequencies_rest[at..at + 4].try_into().unwrap())
         }
     })
 }

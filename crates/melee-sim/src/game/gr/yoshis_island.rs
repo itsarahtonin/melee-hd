@@ -104,8 +104,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grYorster_80201FA4")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.yorster_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0, setup::SETUP_FRAME);
     create(r, 1, setup::SETUP_FRAME);
     setup::measure_cam_bounds(r.game, r.data);

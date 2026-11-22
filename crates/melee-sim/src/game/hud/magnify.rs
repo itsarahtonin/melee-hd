@@ -128,7 +128,12 @@ impl Running<'_> {
             .param
             .as_ref()
             .expect("stage_info.param is null");
-        let colors = (p.xB8.clone(), p.xC0.clone(), p.xD0.clone(), p.xD8.clone());
+        let colors = (
+            p.bubble_color_0.clone(),
+            p.bubble_color_2.clone(),
+            p.bubble_color_6.clone(),
+            p.bubble_color_8.clone(),
+        );
         let m = &mut self.game.magnify;
         (m.x4, m.x8, m.xC, m.x10) = colors;
         let lupe = self

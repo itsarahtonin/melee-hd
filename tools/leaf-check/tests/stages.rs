@@ -3646,7 +3646,7 @@ fn garden_river() {
             .expect("the fighter's GObj");
         let pull = jungle_japes::river(r, ground, fighter);
         if let Some(v) = pull {
-            r.game.stage_info.x730 = v;
+            r.game.stage_info.barrel_pos = v;
         }
         Ret::Int(u32::from(pull.is_some()))
     };
@@ -4301,9 +4301,9 @@ fn kongo_path() {
         let (at, rot) =
             melee_sim::game::gr::ground::spline_pose(r.data, spline, call.regs.fpr[1].ps0 as f32);
         if let Some(at) = at {
-            r.game.stage_info.x130 = at;
+            r.game.stage_info.guide_front_near = at;
         }
-        r.game.stage_info.x13C = rot;
+        r.game.stage_info.guide_front_far = rot;
         Ret::Nothing
     };
     let si = leaf_check::sym("stage_info");
@@ -4322,7 +4322,7 @@ fn kongo_path() {
         if let Some(v) =
             melee_sim::hsd::spline::tangent(r.data, spline, call.regs.fpr[1].ps0 as f32)
         {
-            r.game.stage_info.x130 = v;
+            r.game.stage_info.guide_front_near = v;
         }
         Ret::Nothing
     };
@@ -4880,7 +4880,7 @@ fn greens_wind() {
             .get(&call.regs.gpr[4])
             .expect("the fighter's GObj");
         let push = green_greens::wind_push(r, ground, fighter);
-        r.game.stage_info.x730 = push.unwrap_or(Vec3::ZERO);
+        r.game.stage_info.barrel_pos = push.unwrap_or(Vec3::ZERO);
         Ret::Int(u32::from(push.is_some()))
     };
     let out = |c: &mut Call| c.regs.gpr[5] = leaf_check::sym("stage_info") + 0x730;
@@ -5599,7 +5599,7 @@ fn zebes_lava() {
             let param = r.game.gr.zebes_yakumono.expect("yakumono_param");
             assert_eq!(Some(h), r.data.ptr(param.at(0x2C)));
             let word = peek_u32(call, peek_u32(call, ZEBES_PARAM) + 0x2C);
-            r.game.stage_info.x730.x = f32::from_bits(word);
+            r.game.stage_info.barrel_pos.x = f32::from_bits(word);
         }
         Ret::Int(u32::from(hit.is_some()))
     };
@@ -10188,7 +10188,7 @@ fn castle_bills() {
     let at = |r: &mut Running, _: &Maps, _: &Call| {
         let found = peachs_castle::bill_position(r.game, r.data);
         if let Some(v) = found {
-            r.game.stage_info.x730 = v;
+            r.game.stage_info.barrel_pos = v;
         }
         Ret::Int(u32::from(found.is_some()))
     };
@@ -10476,7 +10476,7 @@ fn castle_moat() {
                 .expect("the fighter's GObj");
             let push = peachs_castle::moat(r, ground, fighter);
             if let Some(v) = push {
-                r.game.stage_info.x730 = v;
+                r.game.stage_info.barrel_pos = v;
             }
             Ret::Int(u32::from(push.is_some()))
         };

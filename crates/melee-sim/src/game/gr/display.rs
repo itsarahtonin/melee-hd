@@ -150,7 +150,7 @@ impl Running<'_> {
     pub fn render_stage_object(&mut self, gobj: GObjId, pass: i32) {
         let gid = ground_of(self.game, gobj);
         let gp = &self.game.grounds[gid.0];
-        if gp.x11_flags.b012 != self.game.camera.layer() {
+        if gp.pass_flags.b012 != self.game.camera.layer() {
             return;
         }
         let rendering = self
@@ -159,7 +159,7 @@ impl Running<'_> {
             .rendering_camera
             .expect("the drawing camera");
         let rendering_obj = self.game.world.gobj(rendering).obj;
-        let (x18, follows) = (gp.x18, gp.x10_flags.b3);
+        let (x18, follows) = (gp.camera, gp.flags.follows_camera);
         match x18 {
             Some(cam) => {
                 if self.game.world.gobj(cam).obj != rendering_obj {
@@ -190,7 +190,7 @@ impl Running<'_> {
             return;
         }
         let gp = &self.game.grounds[gid.0];
-        let (keeps_fog, shadowed) = (gp.x10_flags.b2, gp.x10_flags.b5);
+        let (keeps_fog, shadowed) = (gp.flags.keeps_fog, gp.flags.shadowed);
         if !keeps_fog {
             display::fog_set(&mut self.game.objs, None);
         }
@@ -209,8 +209,8 @@ impl Running<'_> {
         }
         if !keeps_fog
             && !self.game.camera.draw_collisions()
-            && self.game.stage_info.unk8C.b2
-            && let Some(fg) = self.game.stage_info.x12C
+            && self.game.stage_info.bits.fog_enabled
+            && let Some(fg) = self.game.stage_info.fog
             && let Some(Obj::Fog(f)) = self.game.world.gobj(fg).obj
         {
             display::fog_set(&mut self.game.objs, Some(f));

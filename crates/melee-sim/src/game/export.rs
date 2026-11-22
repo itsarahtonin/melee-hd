@@ -979,28 +979,37 @@ pub fn lay_ground(game: &Game, img: &Image, l: &mut Lay, g: super::handles::Grou
     let o = &game.grounds[g.0];
     let ga = |x: Option<GObjId>| x.map_or(0, |x| game.world.gobjs.addr(x.0));
     let code = |c: Option<super::handles::CodeRef>| c.map_or(0, |c| c.0);
-    l.u32(0, o.x0 as u32);
+    l.u32(0, o.unread_0 as u32);
     l.u32(4, ga(o.gobj));
-    l.u32(8, code(o.x8_callback));
-    l.u32(0xC, code(o.xC_callback));
-    let f = &o.x10_flags;
+    l.u32(8, code(o.unread_8));
+    l.u32(0xC, code(o.unread_c));
+    let f = &o.flags;
     l.u8(
         0x10,
-        msb_bits(&[f.b0, f.b1, f.b2, f.b3, f.b4, f.b5, f.b6, f.b7]),
+        msb_bits(&[
+            f.unread_b0,
+            f.unread_b1,
+            f.keeps_fog,
+            f.follows_camera,
+            f.overlay_done,
+            f.shadowed,
+            f.tinted,
+            f.debug_lines,
+        ]),
     );
     // The pass, and the five bits no code touches as the block held them where known.
-    match o.x11_flags.rest {
-        Some(rest) => l.u8(0x11, (o.x11_flags.b012 & 7) << 5 | rest & 0x1F),
-        None => l.put_bits(at + 0x11, 0, 3, u32::from(o.x11_flags.b012 & 7)),
+    match o.pass_flags.rest {
+        Some(rest) => l.u8(0x11, (o.pass_flags.b012 & 7) << 5 | rest & 0x1F),
+        None => l.put_bits(at + 0x11, 0, 3, u32::from(o.pass_flags.b012 & 7)),
     }
     l.u32(0x14, o.map_id as u32);
-    l.u32(0x18, ga(o.x18));
-    l.u32(0x1C, code(o.x1C_callback));
-    for (i, &v) in o.x20.iter().enumerate() {
+    l.u32(0x18, ga(o.camera));
+    l.u32(0x1C, code(o.callback3));
+    for (i, &v) in o.sounds.iter().enumerate() {
         l.u32(0x20 + 4 * i as u32, v as u32);
     }
     color_overlay(img, l, 0x40, &o.color_overlay);
-    l.f32(0xC0, o.xC0);
+    l.f32(0xC0, o.material_alpha);
     match &o.u.vars {
         super::gr::GroundVars::Bytes(b) => l.bytes(0xC4, b),
         v => {

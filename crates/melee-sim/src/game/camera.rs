@@ -567,7 +567,7 @@ fn cam_offset(s: &StageInfo) -> Vec3 {
 
 /// `Ground_801C4368`'s slope plus one, through the stack as the camera keeps it.
 fn ground_floor(s: &StageInfo) -> f64 {
-    reg(mem(fp::frsp(fp::fadd(reg(s.x724), 1.0))))
+    reg(mem(fp::frsp(fp::fadd(reg(s.acid_level), 1.0))))
 }
 
 /// The lower of the camera bounds' bottom and the ground's floor.
@@ -928,7 +928,7 @@ fn clamp_into_bounds(s: &StageInfo, p: &mut Vec3) {
     if flags == 0 {
         return;
     }
-    let floor = mem(fp::frsp(fp::fadd(reg(s.x724), 1.0)));
+    let floor = mem(fp::frsp(fp::fadd(reg(s.acid_level), 1.0)));
     if flags & OUTSIDE_LEFT != 0 {
         p.x = mem(cam_left(s));
     }

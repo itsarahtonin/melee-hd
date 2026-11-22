@@ -132,8 +132,8 @@ const TROPHY_FRAME: u32 = setup::SETUP_FRAME - 0x110;
 #[doc(alias = "grHeal_8021EF3C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.heal_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 1, 3] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -295,7 +295,7 @@ pub fn portal_touched(gp: &mut super::super::structs::Ground, b1234: u32, kind: 
 #[doc(alias = "stageGObj3_OnInit@8021F5DC")]
 pub fn init_background(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].x10_flags.b2 = false;
+    r.game.grounds[g.0].flags.keeps_fog = false;
     let m = map_id(r, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
 }

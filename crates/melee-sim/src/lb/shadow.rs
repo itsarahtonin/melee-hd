@@ -139,7 +139,12 @@ impl Running<'_> {
             let (Some(cm), false) = (fp.camera_box, fp.shadow.x0_b3) else {
                 continue;
             };
-            let intensity = self.game.gr.param.as_ref().map_or(128, |p| i32::from(p.x4)) as u8;
+            let intensity = self
+                .game
+                .gr
+                .param
+                .as_ref()
+                .map_or(128, |p| i32::from(p.shadow_intensity)) as u8;
             self.game.objs.shadows[s.0].intensity = intensity;
             let b = self.game.camera.subject(cm);
             let (bone, ext) = (b.bone_pos, b.target_ext.v.z);

@@ -358,8 +358,8 @@ pub const CLIMB10_PROC_FRAME: u32 = super::corneria::PROC_LOOP - 0x108;
 #[doc(alias = "grIceMt_801F686C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.icemt_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = true;
-    r.game.stage_info.unk8C.b5 = false;
+    r.game.stage_info.bits.own_entry_points = true;
+    r.game.stage_info.bits.keeps_spawn_point = false;
     create(r, 0, SETUP_FRAME);
     create(r, 8, SETUP_FRAME);
     for m in 1..=6 {
@@ -1450,7 +1450,7 @@ pub fn init_bg(r: &mut Running, gobj: GObjId) {
     let parts = [1, 2, 3, 4, 5, 6].map(|d| nth_joint(r.game, gobj, d));
     super::ground::set_guide_points(r.game, r.data, parts);
     r.game.grounds[g.0].u.icemt_bg().speed = 0.0;
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The background's process, `stageGObj8_GObjProc`: its part 8 scrolls by 0.3 of the climb's

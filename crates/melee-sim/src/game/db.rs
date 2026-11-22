@@ -728,7 +728,7 @@ impl Running<'_> {
         for g in self.game.link_gobjs(P_LINK_GROUND) {
             // The link's other GObjs hold no stage part (`ground != NULL`).
             if let Some(super::state::UserData::Ground(gr)) = self.game.world.gobjs[g.0].user_data {
-                self.game.grounds[gr.0].x10_flags.b7 = on;
+                self.game.grounds[gr.0].flags.debug_lines = on;
             }
         }
     }

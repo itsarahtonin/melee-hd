@@ -90,8 +90,8 @@ pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
 #[doc(alias = "grZebesRoute_8020B164")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.zebesroute_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in 0..3 {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -156,8 +156,8 @@ pub fn init_shaft(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     r.game.geometry_mut().set_ledge_callback(
         END_JOINT,
         Some(super::CollUser::Ground(g)),

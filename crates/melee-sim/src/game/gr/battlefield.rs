@@ -79,8 +79,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grBattle_OnInit")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.battle_yakumono = r.game.stage_info.yakumono_param;
-    r.game.stage_info.unk8C.b4 = true;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = true;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0, setup::SETUP_FRAME);
     // `gm_8016B3D8`: Classic, Adventure and All-Star.
     let single = (3..=5).contains(&r.game.gr.game_mode);
@@ -126,7 +126,7 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
     if r.game.gr.battle_demo {
         for i in 0..4 {
             let v = grlib::start_point(r.game, i);
-            let j = r.game.stage_info.x280[i as usize].expect("HSD_JObjSetTranslate: jobj");
+            let j = r.game.stage_info.points[i as usize].expect("HSD_JObjSetTranslate: jobj");
             jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate = v);
         }
     }
@@ -154,7 +154,7 @@ pub fn proc_floor(r: &mut Running, gobj: GObjId) {
 pub fn init_plain(r: &mut Running, gobj: GObjId) {
     init_floor(r, gobj);
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// A background's setup (maps 1, 2 and 4: `grBattle_GObj1_Callback0`, `GObj2_Callback0`,
@@ -168,7 +168,7 @@ pub fn init_background(r: &mut Running, gobj: GObjId) {
     let map_id = r.game.grounds[g.0].map_id;
     anime::start_map(r.game, r.data, gobj, map_id, 0);
     material::model_to_stage_class(r.game, j);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The sky's setup (map 3), `grBattle_BG_Callback0`: hidden, waiting 40 to 60 seconds.
@@ -176,7 +176,7 @@ pub fn init_background(r: &mut Running, gobj: GObjId) {
 pub fn init_sky(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
     let timer = r.game.objs.rng.below(1200) + 2400;
     let v = r.game.grounds[g.0].u.battle_bg();
     v.state = WAITING;

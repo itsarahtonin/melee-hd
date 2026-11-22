@@ -677,5 +677,5 @@ GROUPS = [
 ]
 
 STEP_3 = {}
-for _group in GROUPS[:2]:
+for _group in GROUPS[:3]:
     STEP_3.update(_group)

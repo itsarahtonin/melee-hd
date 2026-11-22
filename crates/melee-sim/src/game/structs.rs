@@ -4845,34 +4845,42 @@ impl Default for Item {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Ground_x10_flags {
     /// +0x0 (bits 0..+1)
-    pub b0: bool,
+    #[doc(alias("b0"))]
+    pub unread_b0: bool,
     /// +0x0 (bits 1..+1)
-    pub b1: bool,
+    #[doc(alias("b1"))]
+    pub unread_b1: bool,
     /// +0x0 (bits 2..+1)
-    pub b2: bool,
+    #[doc(alias("b2"))]
+    pub keeps_fog: bool,
     /// +0x0 (bits 3..+1)
-    pub b3: bool,
+    #[doc(alias("b3"))]
+    pub follows_camera: bool,
     /// +0x0 (bits 4..+1)
-    pub b4: bool,
+    #[doc(alias("b4"))]
+    pub overlay_done: bool,
     /// +0x0 (bits 5..+1)
-    pub b5: bool,
+    #[doc(alias("b5"))]
+    pub shadowed: bool,
     /// +0x0 (bits 6..+1)
-    pub b6: bool,
+    #[doc(alias("b6"))]
+    pub tinted: bool,
     /// +0x0 (bits 7..+1)
-    pub b7: bool,
+    #[doc(alias("b7"))]
+    pub debug_lines: bool,
 }
 
 impl Default for Ground_x10_flags {
     fn default() -> Self {
         Ground_x10_flags {
-            b0: false,
-            b1: false,
-            b2: false,
-            b3: false,
-            b4: false,
-            b5: false,
-            b6: false,
-            b7: false,
+            unread_b0: false,
+            unread_b1: false,
+            keeps_fog: false,
+            follows_camera: false,
+            overlay_done: false,
+            shadowed: false,
+            tinted: false,
+            debug_lines: false,
         }
     }
 }
@@ -4881,29 +4889,38 @@ impl Default for Ground_x10_flags {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Ground {
     /// +0x0
-    pub x0: i32,
+    #[doc(alias("x0"))]
+    pub unread_0: i32,
     /// +0x4
     pub gobj: Option<GObjId>,
     /// +0x8
-    pub x8_callback: Option<CodeRef>,
+    #[doc(alias("x8_callback"))]
+    pub unread_8: Option<CodeRef>,
     /// +0xc
-    pub xC_callback: Option<CodeRef>,
+    #[doc(alias("xC_callback"))]
+    pub unread_c: Option<CodeRef>,
     /// +0x10
-    pub x10_flags: Ground_x10_flags,
+    #[doc(alias("x10_flags"))]
+    pub flags: Ground_x10_flags,
     /// +0x11
-    pub x11_flags: GroundX11Flags,
+    #[doc(alias("x11_flags"))]
+    pub pass_flags: GroundX11Flags,
     /// +0x14
     pub map_id: i32,
     /// +0x18
-    pub x18: Option<GObjId>,
+    #[doc(alias("x18"))]
+    pub camera: Option<GObjId>,
     /// +0x1c
-    pub x1C_callback: Option<CodeRef>,
+    #[doc(alias("x1C_callback"))]
+    pub callback3: Option<CodeRef>,
     /// +0x20
-    pub x20: [i32; 8],
+    #[doc(alias("x20"))]
+    pub sounds: [i32; 8],
     /// +0x40
     pub color_overlay: ColorOverlay,
     /// +0xc0
-    pub xC0: f32,
+    #[doc(alias("xC0"))]
+    pub material_alpha: f32,
     /// +0xc4
     pub u: GroundUnion,
 }
@@ -4911,18 +4928,18 @@ pub struct Ground {
 impl Default for Ground {
     fn default() -> Self {
         Ground {
-            x0: 0,
+            unread_0: 0,
             gobj: None,
-            x8_callback: None,
-            xC_callback: None,
-            x10_flags: Default::default(),
-            x11_flags: Default::default(),
+            unread_8: None,
+            unread_c: None,
+            flags: Default::default(),
+            pass_flags: Default::default(),
             map_id: 0,
-            x18: None,
-            x1C_callback: None,
-            x20: [0; 8],
+            camera: None,
+            callback3: None,
+            sounds: [0; 8],
             color_overlay: Default::default(),
-            xC0: 0.0,
+            material_alpha: 0.0,
             u: Default::default(),
         }
     }
@@ -5043,34 +5060,42 @@ impl Default for StageCameraInfo {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct StageInfo_unk8C {
     /// +0x0 (bits 0..+1)
-    pub b0: bool,
+    #[doc(alias("b0"))]
+    pub picked_alt_song: bool,
     /// +0x0 (bits 1..+1)
-    pub b1: bool,
+    #[doc(alias("b1"))]
+    pub playing_alt_song: bool,
     /// +0x0 (bits 2..+1)
-    pub b2: bool,
+    #[doc(alias("b2"))]
+    pub fog_enabled: bool,
     /// +0x0 (bits 3..+1)
-    pub b3: bool,
+    #[doc(alias("b3"))]
+    pub has_guide_points: bool,
     /// +0x0 (bits 4..+1)
-    pub b4: bool,
+    #[doc(alias("b4"))]
+    pub own_entry_points: bool,
     /// +0x0 (bits 5..+1)
-    pub b5: bool,
+    #[doc(alias("b5"))]
+    pub keeps_spawn_point: bool,
     /// +0x0 (bits 6..+1)
-    pub b6: bool,
+    #[doc(alias("b6"))]
+    pub watches_point: bool,
     /// +0x0 (bits 7..+1)
-    pub b7: bool,
+    #[doc(alias("b7"))]
+    pub watches_point_2: bool,
 }
 
 impl Default for StageInfo_unk8C {
     fn default() -> Self {
         StageInfo_unk8C {
-            b0: false,
-            b1: false,
-            b2: false,
-            b3: false,
-            b4: false,
-            b5: false,
-            b6: false,
-            b7: false,
+            picked_alt_song: false,
+            playing_alt_song: false,
+            fog_enabled: false,
+            has_guide_points: false,
+            own_entry_points: false,
+            keeps_spawn_point: false,
+            watches_point: false,
+            watches_point_2: false,
         }
     }
 }
@@ -5087,33 +5112,47 @@ pub struct StageInfo {
     /// +0x88
     pub grkind: i32,
     /// +0x8c
-    pub unk8C: StageInfo_unk8C,
+    #[doc(alias("unk8C"))]
+    pub bits: StageInfo_unk8C,
     /// +0x90
-    pub x90: Option<CodeRef>,
+    #[doc(alias("x90"))]
+    pub watch_callback: Option<CodeRef>,
     /// +0x94
-    pub x94: Option<CodeRef>,
+    #[doc(alias("x94"))]
+    pub watch_callback_2: Option<CodeRef>,
     /// +0x98
-    pub x98: i32,
+    #[doc(alias("x98"))]
+    pub bgm: i32,
     /// +0x9c
-    pub x9C: u32,
+    #[doc(alias("x9C"))]
+    pub watch_frame: u32,
     /// +0xa0
-    pub xA0: i32,
+    #[doc(alias("xA0"))]
+    pub item_frequencies: i32,
     /// +0xa4
-    pub xA4_pad: [u8; 136],
+    #[doc(alias("xA4_pad"))]
+    pub item_frequencies_rest: [u8; 136],
     /// +0x12c
-    pub x12C: Option<GObjId>,
+    #[doc(alias("x12C"))]
+    pub fog: Option<GObjId>,
     /// +0x130
-    pub x130: Vec3,
+    #[doc(alias("x130"))]
+    pub guide_front_near: Vec3,
     /// +0x13c
-    pub x13C: Vec3,
+    #[doc(alias("x13C"))]
+    pub guide_front_far: Vec3,
     /// +0x148
-    pub x148: Vec3,
+    #[doc(alias("x148"))]
+    pub guide_left_near: Vec3,
     /// +0x154
-    pub x154: Vec3,
+    #[doc(alias("x154"))]
+    pub guide_left_far: Vec3,
     /// +0x160
-    pub x160: Vec3,
+    #[doc(alias("x160"))]
+    pub guide_right_near: Vec3,
     /// +0x16c
-    pub x16C: Vec3,
+    #[doc(alias("x16C"))]
+    pub guide_right_far: Vec3,
     /// +0x178
     pub on_touch_line: Option<CodeRef>,
     /// +0x17c
@@ -5121,11 +5160,14 @@ pub struct StageInfo {
     /// +0x180
     pub map_gobjs: [Option<GObjId>; 64],
     /// +0x280
-    pub x280: [Option<JObjId>; 261],
+    #[doc(alias("x280"))]
+    pub points: [Option<JObjId>; 261],
     /// +0x694
-    pub x694: StageCameras,
+    #[doc(alias("x694"))]
+    pub cameras: StageCameras,
     /// +0x6a4
-    pub x6A4: Option<StartHookId>,
+    #[doc(alias("x6A4"))]
+    pub start_hooks: Option<StartHookId>,
     /// +0x6a8
     pub itemdata: Option<DataRef>,
     /// +0x6ac
@@ -5143,57 +5185,82 @@ pub struct StageInfo {
     /// +0x6c4
     pub map_plit: Option<DataRef>,
     /// +0x6c8
-    pub x6C8: Option<DataRef>,
+    #[doc(alias("x6C8"))]
+    pub unread_6c8: Option<DataRef>,
     /// +0x6cc
     pub quake_model_set: Option<DataRef>,
     /// +0x6d0
-    pub x6D0: i16,
+    #[doc(alias("x6D0"))]
+    pub goal_point: i16,
     /// +0x6d2
-    pub x6D2: i16,
+    #[doc(alias("x6D2"))]
+    pub target_count: i16,
     /// +0x6d4
-    pub x6D4: i16,
+    #[doc(alias("x6D4"))]
+    pub targets_left: i16,
     /// +0x6d6
-    pub x6D6: i16,
+    #[doc(alias("x6D6"))]
+    pub unused_6d6: i16,
     /// +0x6d8
-    pub x6D8: i32,
+    #[doc(alias("x6D8"))]
+    pub route_event: i32,
     /// +0x6dc
-    pub x6DC: i16,
+    #[doc(alias("x6DC"))]
+    pub route_zone: i16,
     /// +0x6de
-    pub x6DE: i16,
+    #[doc(alias("x6DE"))]
+    pub unused_6de: i16,
     /// +0x6e0
-    pub x6E0: f32,
+    #[doc(alias("x6E0"))]
+    pub home_run_distance: f32,
     /// +0x6e4
-    pub x6E4: [i32; 2],
+    #[doc(alias("x6E4"))]
+    pub drawn_trophies: [i32; 2],
     /// +0x6ec
-    pub x6EC_pad: [u8; 28],
+    #[doc(alias("x6EC_pad"))]
+    pub pad_6ec: [u8; 28],
     /// +0x708
-    pub x708: i16,
+    #[doc(alias("x708"))]
+    pub trophy_coin_wait: i16,
     /// +0x70c
-    pub x70C: f32,
+    #[doc(alias("x70C"))]
+    pub watch_half_width: f32,
     /// +0x710
-    pub x710: f32,
+    #[doc(alias("x710"))]
+    pub watch_half_height: f32,
     /// +0x714
-    pub x714: i32,
+    #[doc(alias("x714"))]
+    pub watched_point: i32,
     /// +0x718
-    pub x718: f32,
+    #[doc(alias("x718"))]
+    pub watch_half_width_2: f32,
     /// +0x71c
-    pub x71C: f32,
+    #[doc(alias("x71C"))]
+    pub watch_half_height_2: f32,
     /// +0x720
-    pub x720: i32,
+    #[doc(alias("x720"))]
+    pub watched_point_2: i32,
     /// +0x724
-    pub x724: f32,
+    #[doc(alias("x724"))]
+    pub acid_level: f32,
     /// +0x728
-    pub x728: f32,
+    #[doc(alias("x728"))]
+    pub prev_acid_level: f32,
     /// +0x72c
-    pub x72C: Option<GObjId>,
+    #[doc(alias("x72C"))]
+    pub barrel: Option<GObjId>,
     /// +0x730
-    pub x730: Vec3,
+    #[doc(alias("x730"))]
+    pub barrel_pos: Vec3,
     /// +0x73c
-    pub x73C: f32,
+    #[doc(alias("x73C"))]
+    pub barrel_value: f32,
     /// +0x740
-    pub x740: i32,
+    #[doc(alias("x740"))]
+    pub cars_state: i32,
     /// +0x744
-    pub x744_pad: [u8; 4],
+    #[doc(alias("x744_pad"))]
+    pub pad_744: [u8; 4],
 }
 
 impl Default for StageInfo {
@@ -5203,26 +5270,26 @@ impl Default for StageInfo {
             blast_zone: Default::default(),
             flags: 0,
             grkind: 0,
-            unk8C: Default::default(),
-            x90: None,
-            x94: None,
-            x98: 0,
-            x9C: 0,
-            xA0: 0,
-            xA4_pad: [0; 136],
-            x12C: None,
-            x130: Default::default(),
-            x13C: Default::default(),
-            x148: Default::default(),
-            x154: Default::default(),
-            x160: Default::default(),
-            x16C: Default::default(),
+            bits: Default::default(),
+            watch_callback: None,
+            watch_callback_2: None,
+            bgm: 0,
+            watch_frame: 0,
+            item_frequencies: 0,
+            item_frequencies_rest: [0; 136],
+            fog: None,
+            guide_front_near: Default::default(),
+            guide_front_far: Default::default(),
+            guide_left_near: Default::default(),
+            guide_left_far: Default::default(),
+            guide_right_near: Default::default(),
+            guide_right_far: Default::default(),
             on_touch_line: None,
             on_check_shadow_render: None,
             map_gobjs: [None; 64],
-            x280: [None; 261],
-            x694: Default::default(),
-            x6A4: None,
+            points: [None; 261],
+            cameras: Default::default(),
+            start_hooks: None,
             itemdata: None,
             coll_data: None,
             param: None,
@@ -5231,32 +5298,32 @@ impl Default for StageInfo {
             map_texg: None,
             yakumono_param: None,
             map_plit: None,
-            x6C8: None,
+            unread_6c8: None,
             quake_model_set: None,
-            x6D0: 0,
-            x6D2: 0,
-            x6D4: 0,
-            x6D6: 0,
-            x6D8: 0,
-            x6DC: 0,
-            x6DE: 0,
-            x6E0: 0.0,
-            x6E4: [0; 2],
-            x6EC_pad: [0; 28],
-            x708: 0,
-            x70C: 0.0,
-            x710: 0.0,
-            x714: 0,
-            x718: 0.0,
-            x71C: 0.0,
-            x720: 0,
-            x724: 0.0,
-            x728: 0.0,
-            x72C: None,
-            x730: Default::default(),
-            x73C: 0.0,
-            x740: 0,
-            x744_pad: [0; 4],
+            goal_point: 0,
+            target_count: 0,
+            targets_left: 0,
+            unused_6d6: 0,
+            route_event: 0,
+            route_zone: 0,
+            unused_6de: 0,
+            home_run_distance: 0.0,
+            drawn_trophies: [0; 2],
+            pad_6ec: [0; 28],
+            trophy_coin_wait: 0,
+            watch_half_width: 0.0,
+            watch_half_height: 0.0,
+            watched_point: 0,
+            watch_half_width_2: 0.0,
+            watch_half_height_2: 0.0,
+            watched_point_2: 0,
+            acid_level: 0.0,
+            prev_acid_level: 0.0,
+            barrel: None,
+            barrel_pos: Default::default(),
+            barrel_value: 0.0,
+            cars_state: 0,
+            pad_744: [0; 4],
         }
     }
 }
@@ -5267,134 +5334,173 @@ pub struct GroundParam {
     /// +0x0
     pub y: f32,
     /// +0x4
-    pub x4: i16,
+    #[doc(alias("x4"))]
+    pub shadow_intensity: i16,
     /// +0x6
-    pub x6_pad: [u8; 2],
+    #[doc(alias("x6_pad"))]
+    pub pad_6: [u8; 2],
     /// +0x8
-    pub x8: i16,
+    #[doc(alias("x8"))]
+    pub cam_vertical_tilt: i16,
     /// +0xa
-    pub xA: i16,
+    #[doc(alias("xA"))]
+    pub unused_a: i16,
     /// +0xc
-    pub xC: i32,
+    #[doc(alias("xC"))]
+    pub cam_zoom_rate: i32,
     /// +0x10
-    pub x10: i32,
+    #[doc(alias("x10"))]
+    pub cam_max_depth: i32,
     /// +0x14
-    pub x14: i32,
+    #[doc(alias("x14"))]
+    pub cam_pan_degrees: i32,
     /// +0x18
-    pub x18: f32,
+    #[doc(alias("x18"))]
+    pub cam_tilt_rate: f32,
     /// +0x1c
-    pub x1C: f32,
+    #[doc(alias("x1C"))]
+    pub cam_pan_rate: f32,
     /// +0x20
-    pub x20: f32,
+    #[doc(alias("x20"))]
+    pub cam_track_ratio: f32,
     /// +0x24
-    pub x24: f32,
+    #[doc(alias("x24"))]
+    pub cam_fixed_zoom: f32,
     /// +0x28
-    pub x28: f32,
+    #[doc(alias("x28"))]
+    pub cam_track_smooth: f32,
     /// +0x2c
-    pub x2C_pad: [u8; 2],
+    #[doc(alias("x2C_pad"))]
+    pub pad_2c: [u8; 2],
     /// +0x2e
-    pub x2E: i16,
+    #[doc(alias("x2E"))]
+    pub pausecam_unread: i16,
     /// +0x30
-    pub x30: i32,
+    #[doc(alias("x30"))]
+    pub pausecam_zpos_min: i32,
     /// +0x34
-    pub x34: i32,
+    #[doc(alias("x34"))]
+    pub pausecam_zpos_init: i32,
     /// +0x38
-    pub x38: i32,
+    #[doc(alias("x38"))]
+    pub pausecam_zpos_max: i32,
     /// +0x3c
-    pub x3C: f32,
+    #[doc(alias("x3C"))]
+    pub cam_angle_up: f32,
     /// +0x40
-    pub x40: f32,
+    #[doc(alias("x40"))]
+    pub cam_angle_down: f32,
     /// +0x44
-    pub x44: f32,
+    #[doc(alias("x44"))]
+    pub cam_angle_left: f32,
     /// +0x48
-    pub x48: f32,
+    #[doc(alias("x48"))]
+    pub cam_angle_right: f32,
     /// +0x4c
-    pub x4C_fixed_cam: i32,
+    #[doc(alias("x4C_fixed_cam"))]
+    pub fixed_cam: i32,
     /// +0x50
-    pub x50: f32,
+    #[doc(alias("x50"))]
+    pub fixed_cam_x: f32,
     /// +0x54
-    pub x54: f32,
+    #[doc(alias("x54"))]
+    pub fixed_cam_y: f32,
     /// +0x58
-    pub x58: f32,
+    #[doc(alias("x58"))]
+    pub fixed_cam_z: f32,
     /// +0x5c
-    pub x5C: f32,
+    #[doc(alias("x5C"))]
+    pub fixed_cam_fov: f32,
     /// +0x60
-    pub x60: f32,
+    #[doc(alias("x60"))]
+    pub fixed_cam_vert_angle: f32,
     /// +0x64
-    pub x64: f32,
+    #[doc(alias("x64"))]
+    pub fixed_cam_horz_angle: f32,
     /// +0x68
-    pub x68: i16,
+    #[doc(alias("x68"))]
+    pub item_freq_pct: i16,
     /// +0x6a
-    pub x6A: [i16; 35],
+    #[doc(alias("x6A"))]
+    pub unused_6a: [i16; 35],
     /// +0xb0
     pub stage_params: Option<DataRef>,
     /// +0xb4
     pub stage_param_count: i32,
     /// +0xb8
-    pub xB8: _GXColor,
+    #[doc(alias("xB8"))]
+    pub bubble_color_0: _GXColor,
     /// +0xbc
-    pub xBC: _GXColor,
+    #[doc(alias("xBC"))]
+    pub bubble_color_1: _GXColor,
     /// +0xc0
-    pub xC0: _GXColor,
+    #[doc(alias("xC0"))]
+    pub bubble_color_2: _GXColor,
     /// +0xc4
-    pub xC4: _GXColor,
+    #[doc(alias("xC4"))]
+    pub bubble_color_3: _GXColor,
     /// +0xc8
-    pub xC8: _GXColor,
+    #[doc(alias("xC8"))]
+    pub bubble_color_4: _GXColor,
     /// +0xcc
-    pub xCC: _GXColor,
+    #[doc(alias("xCC"))]
+    pub bubble_color_5: _GXColor,
     /// +0xd0
-    pub xD0: _GXColor,
+    #[doc(alias("xD0"))]
+    pub bubble_color_6: _GXColor,
     /// +0xd4
-    pub xD4: _GXColor,
+    #[doc(alias("xD4"))]
+    pub bubble_color_7: _GXColor,
     /// +0xd8
-    pub xD8: _GXColor,
+    #[doc(alias("xD8"))]
+    pub bubble_color_8: _GXColor,
 }
 
 impl Default for GroundParam {
     fn default() -> Self {
         GroundParam {
             y: 0.0,
-            x4: 0,
-            x6_pad: [0; 2],
-            x8: 0,
-            xA: 0,
-            xC: 0,
-            x10: 0,
-            x14: 0,
-            x18: 0.0,
-            x1C: 0.0,
-            x20: 0.0,
-            x24: 0.0,
-            x28: 0.0,
-            x2C_pad: [0; 2],
-            x2E: 0,
-            x30: 0,
-            x34: 0,
-            x38: 0,
-            x3C: 0.0,
-            x40: 0.0,
-            x44: 0.0,
-            x48: 0.0,
-            x4C_fixed_cam: 0,
-            x50: 0.0,
-            x54: 0.0,
-            x58: 0.0,
-            x5C: 0.0,
-            x60: 0.0,
-            x64: 0.0,
-            x68: 0,
-            x6A: [0; 35],
+            shadow_intensity: 0,
+            pad_6: [0; 2],
+            cam_vertical_tilt: 0,
+            unused_a: 0,
+            cam_zoom_rate: 0,
+            cam_max_depth: 0,
+            cam_pan_degrees: 0,
+            cam_tilt_rate: 0.0,
+            cam_pan_rate: 0.0,
+            cam_track_ratio: 0.0,
+            cam_fixed_zoom: 0.0,
+            cam_track_smooth: 0.0,
+            pad_2c: [0; 2],
+            pausecam_unread: 0,
+            pausecam_zpos_min: 0,
+            pausecam_zpos_init: 0,
+            pausecam_zpos_max: 0,
+            cam_angle_up: 0.0,
+            cam_angle_down: 0.0,
+            cam_angle_left: 0.0,
+            cam_angle_right: 0.0,
+            fixed_cam: 0,
+            fixed_cam_x: 0.0,
+            fixed_cam_y: 0.0,
+            fixed_cam_z: 0.0,
+            fixed_cam_fov: 0.0,
+            fixed_cam_vert_angle: 0.0,
+            fixed_cam_horz_angle: 0.0,
+            item_freq_pct: 0,
+            unused_6a: [0; 35],
             stage_params: None,
             stage_param_count: 0,
-            xB8: Default::default(),
-            xBC: Default::default(),
-            xC0: Default::default(),
-            xC4: Default::default(),
-            xC8: Default::default(),
-            xCC: Default::default(),
-            xD0: Default::default(),
-            xD4: Default::default(),
-            xD8: Default::default(),
+            bubble_color_0: Default::default(),
+            bubble_color_1: Default::default(),
+            bubble_color_2: Default::default(),
+            bubble_color_3: Default::default(),
+            bubble_color_4: Default::default(),
+            bubble_color_5: Default::default(),
+            bubble_color_6: Default::default(),
+            bubble_color_7: Default::default(),
+            bubble_color_8: Default::default(),
         }
     }
 }

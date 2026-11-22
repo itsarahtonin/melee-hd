@@ -96,8 +96,8 @@ fn param(game: &Game) -> DataRef {
 #[doc(alias = "grFigureGet_OnInit")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.figureget_yakumono = yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0, setup::SETUP_FRAME);
     create(r, 1, setup::SETUP_FRAME);
     setup::measure_cam_bounds(r.game, r.data);
@@ -146,8 +146,8 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     r.stage_trophies();
     let i0 = r.game.objs.rng.below(3) as usize;
     let t = r.toy_draw(0, 0x63, 0, 65.0);

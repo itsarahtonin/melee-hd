@@ -92,8 +92,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grKraid_OnInit")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.kraid_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 2, 3] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -138,7 +138,7 @@ pub fn init_copy(r: &mut Running, gobj: GObjId) {
     let s = super::ground::scale(r.game);
     let j = jobj_of(r.game, gobj).expect("jobj");
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// Kraid's copy's process (map 1), `grKraid_801FE2D0`, a debugging leftover: A pressed on the
@@ -168,7 +168,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The rock's setup (map 3), `grKraid_801FE3B4`: its collision, at rest, and its animations.

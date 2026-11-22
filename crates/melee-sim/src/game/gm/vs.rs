@@ -929,7 +929,7 @@ impl Running<'_> {
             .param
             .as_ref()
             .expect("stage_info.param is null")
-            .x4C_fixed_cam;
+            .fixed_cam;
         let c = &mut self.game.camera;
         if fixed != 0 {
             c.set_fixed();
@@ -994,7 +994,7 @@ impl Running<'_> {
         let sel = super::match_exit::selkind(ckind);
         let r = self.game.record_1p(sel);
         let (cleared, best) = (r.b0, r.x94);
-        let left = i32::from(self.game.stage_info.x6D4);
+        let left = i32::from(self.game.stage_info.targets_left);
         let new = if !cleared {
             left == 0
         } else {
@@ -1266,7 +1266,7 @@ impl Running<'_> {
         let fighters = &self.game.vs.state.fighters;
         let idx = fighters.iter().position(|f| f.x8 == 0).unwrap_or(0);
         let chr = self.game.player_ckind(slot) as i8;
-        let own = self.game.stage_info.unk8C.b4;
+        let own = self.game.stage_info.bits.own_entry_points;
         let point = if own { slot } else { 0 };
         let pos = super::super::gr::stage::entry_point(self.game, self.data, point)
             .unwrap_or_else(|| panic!("entry point {point} reads a stale vector"));
@@ -1342,7 +1342,7 @@ impl Running<'_> {
     pub fn respawn(&mut self, slot: i32, sub: i32) {
         let stkind = i32::from(self.game.vs_stkind());
         let (point, mut pos, off) = if super::super::gr::stage::is_special_target_stage(stkind) {
-            let point = i32::from(self.game.stage_info.x6DC);
+            let point = i32::from(self.game.stage_info.route_zone);
             let pos = super::super::gr::stage::entry_point(self.game, self.data, point)
                 .unwrap_or_else(|| panic!("entry point {point} reads a stale vector"));
             if stkind != StKind::AdventureIcemt && sub == 0 {
@@ -1358,7 +1358,7 @@ impl Running<'_> {
         pos.x = mem(fp::fadds(reg(pos.x), reg(off.x)));
         let g = &mut *self.game;
         g.set_player_spawn_platform_pos(slot, pos);
-        if !g.stage_info.unk8C.b5 {
+        if !g.stage_info.bits.keeps_spawn_point {
             g.set_player_spawn_point(slot, point);
             g.set_player_some_pos(slot, off);
         }

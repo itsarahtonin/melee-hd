@@ -727,7 +727,7 @@ impl Match {
                 m.game.stage_info.ground_kind(),
                 super::gr::GrKind::Inishie1 | super::gr::GrKind::Inishie2
             )
-            && let Some(fast) = super::gr::mushroom_kingdom::fast_song(m.game.stage_info.x98)
+            && let Some(fast) = super::gr::mushroom_kingdom::fast_song(m.game.stage_info.bgm)
         {
             let name = crate::lb::audio::HPS_NAMES[fast as usize];
             let file = load(&format!("audio/{name}"));

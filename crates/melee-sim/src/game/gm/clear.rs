@@ -891,8 +891,8 @@ impl Running<'_> {
             1 => {
                 // `Ground_801C1DE4`: the targets left and the stage's targets.
                 let (left, total) = (
-                    i32::from(self.game.stage_info.x6D4),
-                    i32::from(self.game.stage_info.x6D2),
+                    i32::from(self.game.stage_info.targets_left),
+                    i32::from(self.game.stage_info.target_count),
                 );
                 let c = self.clear_mut();
                 c.targets_stage = 1;

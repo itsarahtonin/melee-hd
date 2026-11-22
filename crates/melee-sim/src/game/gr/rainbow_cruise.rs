@@ -190,8 +190,8 @@ const INIT_FRAME: u32 = setup::init_frame(0x30);
 #[doc(alias = "grRCruise_801FF168")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.rcruise_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = true;
-    r.game.stage_info.unk8C.b5 = false;
+    r.game.stage_info.bits.own_entry_points = true;
+    r.game.stage_info.bits.keeps_spawn_point = false;
     let lead = create(r, 3, INIT_FRAME).expect("grrcruise.c: the course");
     let g = ground_of(r.game, lead);
     r.game.grounds[g.0].u.scroll().flags |= 0x80;
@@ -247,7 +247,7 @@ pub fn init_far(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The ship's start hook, `grRCruise_801FF444`: the deck's and planks' collision joints tell

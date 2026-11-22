@@ -366,7 +366,7 @@ impl Game {
         self.ef.count = live.ef.count;
         self.ef.load_kind = live.ef.load_kind;
         Carried::of(live).put(self);
-        self.stage_info.unk8C.clone_from(&live.stage_info.unk8C);
+        self.stage_info.bits.clone_from(&live.stage_info.bits);
         Counters::of(live).put(self);
     }
 

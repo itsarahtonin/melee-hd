@@ -197,8 +197,8 @@ fn set_translate_x(game: &mut Game, j: JObjId, x: f64) {
 #[doc(alias = "grHomeRun_8021C754")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.homerun.yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     units(r.game);
     create(r, 0, INIT_FRAME);
     create(r, MAP_FIELD, INIT_FRAME);
@@ -270,7 +270,7 @@ pub fn init_field(r: &mut Running, gobj: GObjId) {
     }
     let j = j.expect("the field's joint");
     scale_by_ratio(r.game, j);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     anime::start_map(r.game, r.data, gobj, m, 0);
     let user = Some(super::CollUser::Ground(g));
     r.game
@@ -634,7 +634,7 @@ pub fn measure(game: &mut Game, x: f32) {
     if game.gm.unlocks.is_us() {
         result = fp::frsp(fp::fmul(result, 0.304788));
     }
-    game.stage_info.x6E0 = mem(fp::fmuls(100.0, result));
+    game.stage_info.home_run_distance = mem(fp::fmuls(100.0, result));
 }
 
 /// Sandbag landed, `grHomeRun_8021EAF8` (`stage_info.flags`' 0x80).

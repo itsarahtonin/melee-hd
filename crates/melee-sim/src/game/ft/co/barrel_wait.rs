@@ -38,7 +38,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The barrel's object (`stage_info.x72C`).
 fn barrel_gobj(g: &Running) -> GObjId {
-    g.game.stage_info.x72C.expect("no barrel on the stage")
+    g.game.stage_info.barrel.expect("no barrel on the stage")
 }
 
 /// Asks the stage's barrel to shoot its fighter at once, `Ground_801C4DD0`.

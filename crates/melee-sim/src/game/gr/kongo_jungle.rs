@@ -214,8 +214,8 @@ fn map_id(game: &Game, gobj: GObjId) -> i32 {
 #[doc(alias = "grKongo_801D523C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.kongo_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 10, 5, 3, 6, 4] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -261,7 +261,7 @@ pub fn init_front(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// The stage's setup (map 10), `grKongo_801D5490`: its collision and animation, it receives
@@ -274,7 +274,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     let joints = [0x13, 0xD, 0x2B, 0x28].map(|d| nth_joint(r.game, gobj, d));
     let v = r.game.grounds[g.0].u.kongo();
     v.event_wait = -1;

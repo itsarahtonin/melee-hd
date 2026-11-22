@@ -195,8 +195,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grInishie1_801FA90C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.inishie1_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0, setup::SETUP_FRAME);
     create(r, MAP_STAGE, setup::SETUP_FRAME);
     setup::measure_cam_bounds(r.game, r.data);
@@ -238,8 +238,8 @@ pub fn init_map1(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
 }
 
 /// The stage's setup (map 3), `grInishie1_801FAADC`: its collision and animation, the blocks,

@@ -234,8 +234,8 @@ fn map_id(game: &Game, gobj: GObjId) -> i32 {
 #[doc(alias = "grCastle_801CD37C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.castle_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 4, 3, 6] {
         create(r, map_id, INIT_FRAME);
     }
@@ -286,7 +286,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The castle's start hook, `grCastle_801CD610`: the moat as the fighters' wind device, the
@@ -345,7 +345,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let v = r.game.grounds[g.0].u.castle();
     v.switches = [None; 3];
     v.set_bill_due(false);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// Builds flag `i`'s dynamics chain down `root` (`grLib_801C9B20`'s body): as many links as
@@ -434,7 +434,7 @@ pub fn init_lifts(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     let p = param(r.game);
     for (i, (part, joint)) in [(1, 4), (4, 5)].into_iter().enumerate() {
         let lift = nth_joint(r.game, gobj, part);
@@ -896,7 +896,7 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     r.game.grounds[g.0].u.castle_blocks().state = 0;
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, HIDDEN);
     let v = r.game.grounds[g.0].u.castle_blocks();
@@ -1503,7 +1503,7 @@ fn press(r: &mut Running, g: GroundId, by: Option<GObjId>) {
 pub fn render_stage(r: &mut Running, gobj: GObjId, pass: i32) {
     r.render_stage_object(gobj, pass);
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].x10_flags.b7 {
+    if r.game.grounds[g.0].flags.debug_lines {
         super::super::code::unported_call("lb_800117F4 (the flags' chains' debug lines)");
     }
 }

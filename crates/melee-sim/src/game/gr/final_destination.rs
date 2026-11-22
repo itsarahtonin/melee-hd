@@ -153,7 +153,7 @@ pub fn init_map1(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let map_id = r.game.grounds[g.0].map_id;
     anime::start_map(r.game, r.data, gobj, map_id, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// The background pieces give their materials the stage class and mark their kind
@@ -167,7 +167,7 @@ pub fn init_piece(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     material::model_to_stage_class(r.game, j);
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The start hook that lets the cycle run, `grLast_8021A9AC`.
@@ -194,7 +194,7 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
     v.b27 = true;
     set_phase(r, gobj, 1, SETUP_PIECES_FRAME);
     let gp = &mut r.game.grounds[g.0];
-    gp.x11_flags.b012 = 1;
+    gp.pass_flags.b012 = 1;
     gp.u.map().b1 = false;
     setup::add_start_hook(r.game, gobj, super::super::handles::CodeRef(0x8021_A9AC));
 }
@@ -668,7 +668,7 @@ pub fn init_sway(r: &mut Running, gobj: GObjId) {
     l.generator = None;
     let part = nth_joint(r.game, gobj, 5).expect("HSD_JObjSetScale: jobj");
     jobj::set_srt(&mut r.game.objs.jobjs, part, |o| o.scale = ONES);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The swaying piece's process, `grLast_8021ADD0`: the sway speeds drift and damp, bounce off
@@ -761,8 +761,8 @@ pub fn proc_sway(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grLast_OnInit")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.last_yakumono = r.game.stage_info.yakumono_param;
-    r.game.stage_info.unk8C.b4 = true;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = true;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in 0..4 {
         create(r, map_id, setup::SETUP_FRAME);
     }

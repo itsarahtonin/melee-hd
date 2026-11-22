@@ -429,7 +429,7 @@ impl Ctx<'_> {
         };
         let (desc, rendermode) = self.mobj_setup_tev_part(m);
         let overlay = &gp.color_overlay;
-        if overlay.x7C_color_enable || gp.x10_flags.b6 {
+        if overlay.x7C_color_enable || gp.flags.tinted {
             let mut d = tevdesc_tmpl(GX_DISABLE);
             d.stage = self.hsd.tev.assign_tev();
             if overlay.x7C_color_enable {
@@ -463,7 +463,7 @@ impl Ctx<'_> {
                     d.conf.kcsel = kcsel(reg2);
                 }
             }
-            if gp.x10_flags.b6 {
+            if gp.flags.tinted {
                 let reg = free_alpha_register(0, &desc);
                 assert!(reg != -1, "can't find free alpha register!");
                 // The template's `idx` (0xFF): a TEV register's color takes the value, a konst
@@ -471,7 +471,7 @@ impl Ctx<'_> {
                 set_reg_values(
                     self.gx,
                     &mut self.hsd.tev,
-                    &[(CnstValue::F32(gp.xC0), COMP_A, reg as u8, 0xFF)],
+                    &[(CnstValue::F32(gp.material_alpha), COMP_A, reg as u8, 0xFF)],
                 );
                 d.conf.alpha_b = GX_CA_APREV;
                 d.conf.alpha_c = alpha_arg(reg);

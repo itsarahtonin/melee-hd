@@ -196,8 +196,8 @@ pub const INIT_FRAME: u32 = setup::SETUP_FRAME - 0x30;
 pub fn on_init(r: &mut Running) {
     r.game.gr.venom_yakumono = super::ground::yakumono_param(r.game);
     create(r, 4, INIT_FRAME);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     let copy = create(r, 0, INIT_FRAME);
     {
         let c = g(r.game);
@@ -313,11 +313,11 @@ pub fn init_background(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let m = gp_map(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[gid.0].x11_flags.b012 = 2;
+    r.game.grounds[gid.0].pass_flags.b012 = 2;
     let n = |r: &Running, k: i32| nth_joint(r.game, gobj, k);
     let points = [n(r, 1), n(r, 4), n(r, 3), n(r, 2), n(r, 5), n(r, 6)];
     super::ground::set_guide_points(r.game, r.data, points);
-    r.game.grounds[gid.0].x10_flags.b2 = false;
+    r.game.grounds[gid.0].flags.keeps_fog = false;
 }
 
 /// The platforms' start hook (`fn_802040B4`).
@@ -364,7 +364,7 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
         let v = r.game.grounds[gid.0].u.venom_platform();
         std::mem::swap(&mut v.upper, &mut v.lower);
     }
-    r.game.grounds[gid.0].x10_flags.b5 = true;
+    r.game.grounds[gid.0].flags.shadowed = true;
 }
 
 /// The stack address of the scale joint's descriptor for the event's window (map 1), which the

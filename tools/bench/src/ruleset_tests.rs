@@ -784,7 +784,7 @@ fn slippi_onett_cars_note_the_other_phase() {
                 GroundVars::OnettCar(v) => Some((v.state_a, v.sub_state_a, v.curr_car)),
                 _ => None,
             })
-            .map(|c| (c, g.stage_info.x740))
+            .map(|c| (c, g.stage_info.cars_state))
     };
     let runs = on_sim_thread(FpMode::Slippi, || {
         let rules = Rules::slippi_online();
@@ -1036,7 +1036,10 @@ fn slippi_onett_cars_note_a_doubled_round() {
             GroundVars::OnettCar(v) => Some((v.state_a, v.sub_state_a, v.curr_car)),
             _ => None,
         });
-        format!("{cars:?} {} {:#x}", g.stage_info.x740, g.objs.rng.seed)
+        format!(
+            "{cars:?} {} {:#x}",
+            g.stage_info.cars_state, g.objs.rng.seed
+        )
     };
     doubled_round_notes(
         std::path::Path::new(&melee_local_data::ssbm_rs_local(

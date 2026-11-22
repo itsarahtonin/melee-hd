@@ -46,7 +46,7 @@ pub fn start_script(
     co.script.loop_count = 0;
     co.x7C_flag2 = false;
     co.x7C_color_enable = false;
-    gp.x10_flags.b4 = false;
+    gp.flags.overlay_done = false;
     run_ground_overlay(game, data, gobj);
 }
 
@@ -56,7 +56,7 @@ pub fn reset_overlay(game: &mut Game, gobj: GObjId) {
     let g = ground_of(game, gobj);
     let gp = &mut game.grounds[g.0];
     clear_overlay(&mut gp.color_overlay);
-    gp.x10_flags.b4 = true;
+    gp.flags.overlay_done = true;
 }
 
 /// Runs a stage object's color overlay for one tick, `grMaterial_801C9698`: `x10_flags.b4`
@@ -66,7 +66,7 @@ pub fn run_ground_overlay(game: &mut Game, data: &Archives, gobj: GObjId) {
     let g = ground_of(game, gobj);
     let gp = &mut game.grounds[g.0];
     if run_overlay(data, &mut gp.color_overlay) {
-        gp.x10_flags.b4 = true;
+        gp.flags.overlay_done = true;
     }
 }
 

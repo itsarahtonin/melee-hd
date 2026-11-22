@@ -860,7 +860,10 @@ impl Running<'_> {
     #[doc(alias = "Ground_801C1DE4")]
     pub fn target_icons_proc(&mut self, _gobj: GObjId) {
         let g = &mut *self.game;
-        let (left, total) = (i32::from(g.stage_info.x6D4), i32::from(g.stage_info.x6D2));
+        let (left, total) = (
+            i32::from(g.stage_info.targets_left),
+            i32::from(g.stage_info.target_count),
+        );
         let mut counter = 0;
         let (mut x, mut y) = (reg(-21.0), reg(11.0));
         for i in 0..16 {

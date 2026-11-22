@@ -142,11 +142,11 @@ pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
     let gobj = setup::stage_gobj(r, map_id, frame)?;
     let g = ground_of(r.game, gobj);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     r.game.world.setup_gx_link(gobj, CodeRef(0x801C_5DB0), 3, 0);
     if cb.callback3 != 0 {
-        r.game.grounds[g.0].x1C_callback = Some(CodeRef(cb.callback3));
+        r.game.grounds[g.0].callback3 = Some(CodeRef(cb.callback3));
     }
     if cb.on_init != 0 {
         super::super::code::run_proc(r, gobj, CodeRef(cb.on_init));
@@ -168,8 +168,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grGreatBay_801F4240")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.greatbay_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 3, 4, 2, 1, 9, MAP_TINGLE] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -209,7 +209,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     anime::set_loop(r.game, gobj, 0, 7, true);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// The water in front's setup (map 4), `grGreatBay_801F44B0`: its animation, looping, drawn in
@@ -220,7 +220,7 @@ pub fn init_water(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     anime::set_loop(r.game, gobj, 0, 7, true);
-    r.game.grounds[g.0].x11_flags.b012 = 3;
+    r.game.grounds[g.0].pass_flags.b012 = 3;
 }
 
 /// The island's start hook, `fn_801F4520`: the sea as a fighter device of type 6
@@ -244,10 +244,10 @@ pub fn init_island(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.x11_flags.b012 = 1;
-    gp.xC_callback = None;
-    gp.x10_flags.b5 = true;
+    gp.unread_8 = None;
+    gp.pass_flags.b012 = 1;
+    gp.unread_c = None;
+    gp.flags.shadowed = true;
     let n = |r: &Running, k: i32| nth_joint(r.game, gobj, k);
     let points = [n(r, 4), n(r, 1), n(r, 3), n(r, 2), n(r, 6), n(r, 5)];
     set_guide_points(r.game, r.data, points);
@@ -308,8 +308,8 @@ pub fn init_turtle(r: &mut Running, gobj: GObjId) {
     v.set_item_done(true);
     v.splash = None;
     let gp = &mut r.game.grounds[g.0];
-    gp.x10_flags.b5 = true;
-    gp.x11_flags.b012 = 1;
+    gp.flags.shadowed = true;
+    gp.pass_flags.b012 = 1;
 }
 
 /// The turtle's process (map 1), `grGreatBay_801F499C`. Under water (state 0), once its wait
@@ -494,7 +494,7 @@ pub fn init_tingle(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     let j = jobj_of(r.game, gobj).expect("jobj");
     setup::init_map_coll(r.game, r.data, Some(j), m);
-    r.game.grounds[g.0].xC_callback = None;
+    r.game.grounds[g.0].unread_c = None;
     r.game.geometry_mut().set_ledge_callback(
         BALLOON_JOINT,
         Some(super::CollUser::Ground(g)),
@@ -639,7 +639,7 @@ pub fn init_giant(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     anime::set_rate(r.game, gobj, 0, 7, 0.0, true);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The moon's setup (map 9), `grGreatBay_801F5A00`: its animation, stopped, the four giants
@@ -661,7 +661,7 @@ pub fn init_moon(r: &mut Running, gobj: GObjId) {
     );
     let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
     r.game.grounds[g.0].u.greatbay2().moon_wait = wait;
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// Where the moon's setup puts the giants' scale joints' descriptors on the stack: below the

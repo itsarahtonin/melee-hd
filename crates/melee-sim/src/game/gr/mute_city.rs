@@ -209,8 +209,8 @@ pub const COURSE_FRAME: u32 = setup::SETUP_FRAME - 0x30 - 0x48;
 #[doc(alias = "grMuteCity_801EFC6C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.mutecity_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = false;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = false;
     create(r, 0, setup::SETUP_FRAME);
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
@@ -317,7 +317,7 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
         v.shadow_jobjs = shadows;
         v.bounds = bounds;
     }
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     let platform = create(r, 0x1D, COURSE_FRAME);
     r.game.grounds[g.0].u.mute_city().platform = platform;
     let cars = create(r, 2, COURSE_FRAME);
@@ -393,7 +393,7 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     anime::loop_between(r.game, gobj, 0, 7, 0.0, 3600.0);
     anime::start(r.game, r.data, gobj, 6, 7, 1, 0.0, 1.0, true);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     let sway = nth_joint(r.game, gobj, 6);
     let v = r.game.grounds[g.0].u.mute_city2();
     v.sway_jobj = sway;

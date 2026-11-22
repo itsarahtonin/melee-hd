@@ -89,7 +89,7 @@ pub fn map_gobj(game: &Game, map_id: i32) -> Option<GObjId> {
 /// Sets `stage_info.unk8C.b2`, which lets the stage's fog apply, `Ground_801C1E00`.
 #[doc(alias = "Ground_801C1E00")]
 pub fn set_fog_enabled(game: &mut Game, on: bool) {
-    game.stage_info.unk8C.b2 = on;
+    game.stage_info.bits.fog_enabled = on;
 }
 
 /// Which of the stage parameters' colors (`GroundParam::xB8` through `xD8`).
@@ -119,15 +119,15 @@ pub enum ParamColor {
 pub fn set_param_color(game: &mut Game, which: ParamColor, c: _GXColor) {
     let p = game.gr.param.as_mut().expect("stage_info.param is null");
     let (slot, off) = match which {
-        ParamColor::B8 => (&mut p.xB8, 0xB8),
-        ParamColor::BC => (&mut p.xBC, 0xBC),
-        ParamColor::C0 => (&mut p.xC0, 0xC0),
-        ParamColor::C4 => (&mut p.xC4, 0xC4),
-        ParamColor::C8 => (&mut p.xC8, 0xC8),
-        ParamColor::CC => (&mut p.xCC, 0xCC),
-        ParamColor::D0 => (&mut p.xD0, 0xD0),
-        ParamColor::D4 => (&mut p.xD4, 0xD4),
-        ParamColor::D8 => (&mut p.xD8, 0xD8),
+        ParamColor::B8 => (&mut p.bubble_color_0, 0xB8),
+        ParamColor::BC => (&mut p.bubble_color_1, 0xBC),
+        ParamColor::C0 => (&mut p.bubble_color_2, 0xC0),
+        ParamColor::C4 => (&mut p.bubble_color_3, 0xC4),
+        ParamColor::C8 => (&mut p.bubble_color_4, 0xC8),
+        ParamColor::CC => (&mut p.bubble_color_5, 0xCC),
+        ParamColor::D0 => (&mut p.bubble_color_6, 0xD0),
+        ParamColor::D4 => (&mut p.bubble_color_7, 0xD4),
+        ParamColor::D8 => (&mut p.bubble_color_8, 0xD8),
     };
     image_param(game.stage_info.param, off, [c.r, c.g, c.b, c.a]);
     *slot = c;
@@ -149,7 +149,7 @@ fn image_param(param: Option<DataRef>, off: u32, bytes: [u8; 4]) {
 #[doc(alias = "Ground_801C2090")]
 #[track_caller]
 pub fn fog_color(game: &Game) -> Option<_GXColor> {
-    let g = game.stage_info.x12C?;
+    let g = game.stage_info.fog?;
     match game.world.gobjs[g.0].obj {
         Some(Obj::Fog(f)) => {
             let fog = &game.objs.fogs[f];
@@ -166,7 +166,7 @@ pub fn fog_color(game: &Game) -> Option<_GXColor> {
 
 /// [`fog_color`]'s RGB, for the callers that read nothing else (`Ground_801C2090`).
 pub fn fog_rgb(game: &Game) -> Option<(u8, u8, u8)> {
-    let g = game.stage_info.x12C?;
+    let g = game.stage_info.fog?;
     match game.world.gobjs[g.0].obj {
         Some(Obj::Fog(f)) => {
             let [r, g, b, _] = game.objs.fogs[f].color;
@@ -179,7 +179,7 @@ pub fn fog_rgb(game: &Game) -> Option<(u8, u8, u8)> {
 /// Sets the stage fog's color, `Ground_801C205C`.
 #[doc(alias = "Ground_801C205C")]
 pub fn set_fog_color(game: &mut Game, c: _GXColor) {
-    let Some(g) = game.stage_info.x12C else {
+    let Some(g) = game.stage_info.fog else {
         return;
     };
     if let Some(Obj::Fog(f)) = game.world.gobjs[g.0].obj {
@@ -192,7 +192,7 @@ pub fn set_fog_color(game: &mut Game, c: _GXColor) {
 /// that stack byte held (`docs/engine.md`, "Uninitialized values"), so the fog keeps its old
 /// alpha, marked stale.
 pub fn set_fog_rgb(game: &mut Game, r: u8, g: u8, b: u8) {
-    let Some(gobj) = game.stage_info.x12C else {
+    let Some(gobj) = game.stage_info.fog else {
         return;
     };
     if let Some(Obj::Fog(f)) = game.world.gobjs[gobj.0].obj {
@@ -286,7 +286,7 @@ pub fn point(game: &mut Game, data: &Archives, id: i32) -> Option<Vec3> {
         let b = found(game, 7);
         return Some(half(a, b));
     }
-    if let Some(j) = game.stage_info.x280[id as usize] {
+    if let Some(j) = game.stage_info.points[id as usize] {
         return Some(crate::lb::joint::world_position(
             &mut game.objs,
             data,
@@ -405,7 +405,7 @@ pub fn proc_anim(r: &mut Running, gobj: GObjId) {
     super::material::run_ground_overlay(r.game, r.data, gobj);
     bump_generation(r.game);
     let gp = ground_of(r.game, gobj);
-    if let Some(cb) = r.game.grounds[gp.0].x8_callback {
+    if let Some(cb) = r.game.grounds[gp.0].unread_8 {
         super::super::code::run_proc(r, gobj, cb);
     }
 }
@@ -414,7 +414,7 @@ pub fn proc_anim(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Ground_801C1D38")]
 pub fn proc_callback(r: &mut Running, gobj: GObjId) {
     let gp = ground_of(r.game, gobj);
-    if let Some(cb) = r.game.grounds[gp.0].xC_callback {
+    if let Some(cb) = r.game.grounds[gp.0].unread_c {
         super::super::code::run_proc(r, gobj, cb);
     }
 }
@@ -426,35 +426,39 @@ pub fn proc_callback(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Ground_801C0C2C")]
 pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
     let info = &r.game.stage_info;
-    if (info.unk8C.b6 || info.unk8C.b7)
+    if (info.bits.watches_point || info.bits.watches_point_2)
         && let Some(gobj) = p1_fighter(r.game)
         && !r.game.ft_is_sleeping(gobj)
     {
         let pos = r.game.ft_pos(gobj);
-        if r.game.stage_info.unk8C.b6 {
+        if r.game.stage_info.bits.watches_point {
             let (w, h, cb) = {
                 let i = &r.game.stage_info;
-                (i.x70C, i.x710, i.x90)
+                (i.watch_half_width, i.watch_half_height, i.watch_callback)
             };
             let found = search_points(r, pos, 0x99..0xB3, w, h, cb);
-            r.game.stage_info.x714 = found;
-            r.game.stage_info.unk8C.b6 = false;
+            r.game.stage_info.watched_point = found;
+            r.game.stage_info.bits.watches_point = false;
         }
-        if r.game.stage_info.unk8C.b7 {
+        if r.game.stage_info.bits.watches_point_2 {
             let (w, h, cb) = {
                 let i = &r.game.stage_info;
-                (i.x718, i.x71C, i.x94)
+                (
+                    i.watch_half_width_2,
+                    i.watch_half_height_2,
+                    i.watch_callback_2,
+                )
             };
             let found = search_points(r, pos, 0xBD..0xC7, w, h, cb);
-            r.game.stage_info.x720 = found;
-            r.game.stage_info.unk8C.b7 = false;
+            r.game.stage_info.watched_point_2 = found;
+            r.game.stage_info.bits.watches_point_2 = false;
         }
     }
     // `gm_8016B238`: the rules' bob-omb rain, a bomb every 30 frames after the first 1200.
     if r.game.vs_sudden_death() != 0 {
         let frame = r.game.vs_frame_count();
-        if frame as i32 > 0x4B0 && frame.wrapping_sub(r.game.stage_info.x9C) > 0x1E {
-            r.game.stage_info.x9C = frame;
+        if frame as i32 > 0x4B0 && frame.wrapping_sub(r.game.stage_info.watch_frame) > 0x1E {
+            r.game.stage_info.watch_frame = frame;
             // `sp2C` is a stack vector the point fills whenever it finds one; it isn't read
             // otherwise.
             let (found, at) = bomb_rain_point(r.game, r.data, Vec3::default());
@@ -570,7 +574,7 @@ pub fn item_freq_scale(game: &Game, data: &Archives, stkind: i32) -> f64 {
     for i in 0..p.stage_param_count.max(0) as u32 {
         let e = p.stage_params.expect("no stage parameters").at(0x64 * i);
         if data.u32(e) as i32 == stkind {
-            return fp::fmuls(pct(p.x68), pct(data.u16(e.at(0x18)) as i16));
+            return fp::fmuls(pct(p.item_freq_pct), pct(data.u16(e.at(0x18)) as i16));
         }
     }
     panic!("stage {stkind} has no stage parameters (ground.c:2343)")
@@ -589,7 +593,10 @@ pub fn set_scale(game: &mut Game, y: f32) {
 /// The stage parameters' `x4`, or 128 without them, `Ground_801C0508`.
 #[doc(alias = "Ground_801C0508")]
 pub fn param_x4(game: &Game) -> i32 {
-    game.gr.param.as_ref().map_or(128, |p| i32::from(p.x4))
+    game.gr
+        .param
+        .as_ref()
+        .map_or(128, |p| i32::from(p.shadow_intensity))
 }
 
 /// One of the stage parameters' colors (`Ground_801C0604` and its siblings hand back where it
@@ -606,15 +613,15 @@ pub fn param_x4(game: &Game) -> i32 {
 pub fn param_color(game: &Game, which: ParamColor) -> _GXColor {
     let p = game.gr.param.as_ref().expect("stage_info.param is null");
     match which {
-        ParamColor::B8 => p.xB8.clone(),
-        ParamColor::BC => p.xBC.clone(),
-        ParamColor::C0 => p.xC0.clone(),
-        ParamColor::C4 => p.xC4.clone(),
-        ParamColor::C8 => p.xC8.clone(),
-        ParamColor::CC => p.xCC.clone(),
-        ParamColor::D0 => p.xD0.clone(),
-        ParamColor::D4 => p.xD4.clone(),
-        ParamColor::D8 => p.xD8.clone(),
+        ParamColor::B8 => p.bubble_color_0.clone(),
+        ParamColor::BC => p.bubble_color_1.clone(),
+        ParamColor::C0 => p.bubble_color_2.clone(),
+        ParamColor::C4 => p.bubble_color_3.clone(),
+        ParamColor::C8 => p.bubble_color_4.clone(),
+        ParamColor::CC => p.bubble_color_5.clone(),
+        ParamColor::D0 => p.bubble_color_6.clone(),
+        ParamColor::D4 => p.bubble_color_7.clone(),
+        ParamColor::D8 => p.bubble_color_8.clone(),
     }
 }
 
@@ -757,19 +764,19 @@ pub fn flags(game: &Game, mask: u32) -> u32 {
 #[doc(alias = "Ground_801C1DD4")]
 #[doc(alias("x6d0"))]
 pub fn goal_point(game: &Game) -> i32 {
-    i32::from(game.stage_info.x6D0)
+    i32::from(game.stage_info.goal_point)
 }
 
 /// Whether the stage's fog applies (`unk8C.b2`), `Ground_801C1E18`.
 #[doc(alias = "Ground_801C1E18")]
 pub fn fog_enabled(game: &Game) -> bool {
-    game.stage_info.unk8C.b2
+    game.stage_info.bits.fog_enabled
 }
 
 /// The stage's fog GObj, `Ground_801C1E84`.
 #[doc(alias = "Ground_801C1E84")]
 pub fn fog_gobj(game: &Game) -> Option<GObjId> {
-    game.stage_info.x12C
+    game.stage_info.fog
 }
 
 /// Gives the camera the stage fog's color as its clear color (black without a fog),
@@ -824,13 +831,13 @@ pub fn spline(game: &Game, data: &Archives, map_id: i32, i: i32) -> Option<DataR
 /// A point of interest's joint, `Ground_801C2CF4`.
 #[doc(alias = "Ground_801C2CF4")]
 pub fn point_joint(game: &Game, i: i32) -> Option<JObjId> {
-    game.stage_info.x280[i as usize]
+    game.stage_info.points[i as usize]
 }
 
 /// Sets a point of interest's joint, `Ground_801C2D0C`.
 #[doc(alias = "Ground_801C2D0C")]
 pub fn set_point_joint(game: &mut Game, i: i32, j: Option<JObjId>) {
-    game.stage_info.x280[i as usize] = j;
+    game.stage_info.points[i as usize] = j;
 }
 
 /// Sets the camera limits' top edge, `Ground_801C3880`.
@@ -893,33 +900,33 @@ pub fn set_blast_right(game: &mut Game, v: f32) {
 #[doc(alias = "Ground_801C3D44")]
 pub fn watch_points(game: &mut Game, cb: Option<CodeRef>, w: f32, h: f32) -> i32 {
     let i = &mut game.stage_info;
-    i.unk8C.b6 = true;
-    i.x70C = mem(fp::fmuls(0.5, reg(w)));
-    i.x710 = mem(fp::fmuls(0.5, reg(h)));
-    i.x90 = cb;
-    if i.x714 != -1 {
+    i.bits.watches_point = true;
+    i.watch_half_width = mem(fp::fmuls(0.5, reg(w)));
+    i.watch_half_height = mem(fp::fmuls(0.5, reg(h)));
+    i.watch_callback = cb;
+    if i.watched_point != -1 {
         i.flags |= 0x10;
-        i.x6D0 = i.x714 as i16;
+        i.goal_point = i.watched_point as i16;
     } else {
         i.flags &= !0x10;
     }
-    i.x714
+    i.watched_point
 }
 
 /// The second such search (`unk8C.b7`), `Ground_801C3DB4`.
 #[doc(alias = "Ground_801C3DB4")]
 pub fn watch_points2(game: &mut Game, cb: Option<CodeRef>, w: f32, h: f32) -> i32 {
     let i = &mut game.stage_info;
-    i.unk8C.b7 = true;
-    i.x718 = mem(fp::fmuls(0.5, reg(w)));
-    i.x71C = mem(fp::fmuls(0.5, reg(h)));
-    i.x94 = cb;
-    if i.x720 != -1 {
+    i.bits.watches_point_2 = true;
+    i.watch_half_width_2 = mem(fp::fmuls(0.5, reg(w)));
+    i.watch_half_height_2 = mem(fp::fmuls(0.5, reg(h)));
+    i.watch_callback_2 = cb;
+    if i.watched_point_2 != -1 {
         i.flags |= 0x40;
     } else {
         i.flags &= !0x40;
     }
-    i.x720
+    i.watched_point_2
 }
 
 /// The first animation in a joint tree, depth first, `Ground_801C3E18`.
@@ -943,8 +950,8 @@ pub fn anim_frame(game: &Game, j: Option<JObjId>) -> f32 {
 #[doc(alias = "Ground_801C4338")]
 pub fn target_broken(game: &mut Game) {
     let i = &mut game.stage_info;
-    i.x6D4 = i.x6D4.wrapping_sub(1);
-    if i.x6D4 == 0 {
+    i.targets_left = i.targets_left.wrapping_sub(1);
+    if i.targets_left == 0 {
         i.flags |= 0x20;
     }
 }
@@ -954,15 +961,18 @@ pub fn target_broken(game: &mut Game) {
 #[doc(alias("x724_and_step"))]
 pub fn acid_level_and_step(game: &Game) -> (f32, f32) {
     let i = &game.stage_info;
-    (i.x724, mem(fp::fsubs(reg(i.x724), reg(i.x728))))
+    (
+        i.acid_level,
+        mem(fp::fsubs(reg(i.acid_level), reg(i.prev_acid_level))),
+    )
 }
 
 /// Sets `x724`, keeping its last value in `x728`, `Ground_801C438C`.
 #[doc(alias = "Ground_801C438C")]
 #[doc(alias("set_x724"))]
 pub fn set_acid_level(game: &mut Game, v: f32) {
-    game.stage_info.x728 = game.stage_info.x724;
-    game.stage_info.x724 = v;
+    game.stage_info.prev_acid_level = game.stage_info.acid_level;
+    game.stage_info.acid_level = v;
 }
 
 /// The stage's light GObj (the first of class 13 on the lights' link), `Ground_801C498C`.
@@ -983,33 +993,33 @@ pub fn light_gobj(game: &Game) -> Option<GObjId> {
 #[doc(alias = "Ground_801C4D70")]
 pub fn set_barrel(game: &mut Game, gobj: Option<GObjId>, pos: Vec3, v: f32) -> bool {
     let i = &mut game.stage_info;
-    i.x72C = gobj;
-    i.x730 = pos;
-    i.x73C = v;
+    i.barrel = gobj;
+    i.barrel_pos = pos;
+    i.barrel_value = v;
     true
 }
 
 /// The barrel's place and value, `Ground_801C4DA0`.
 #[doc(alias = "Ground_801C4DA0")]
 pub fn barrel(game: &Game) -> (Vec3, f32) {
-    (game.stage_info.x730, game.stage_info.x73C)
+    (game.stage_info.barrel_pos, game.stage_info.barrel_value)
 }
 
 /// Six joints' world positions as the stage's guide points (`x130` to `x16C`, `unk8C.b3`),
 /// `Ground_801C4E70`.
 #[doc(alias = "Ground_801C4E70")]
 pub fn set_guide_points(game: &mut Game, data: &Archives, joints: [Option<JObjId>; 6]) {
-    game.stage_info.unk8C.b3 = true;
+    game.stage_info.bits.has_guide_points = true;
     for (k, j) in joints.into_iter().enumerate() {
         let v = crate::lb::joint::world_position(&mut game.objs, data, j, None);
         let i = &mut game.stage_info;
         let slot = match k {
-            0 => &mut i.x130,
-            1 => &mut i.x13C,
-            2 => &mut i.x148,
-            3 => &mut i.x154,
-            4 => &mut i.x160,
-            _ => &mut i.x16C,
+            0 => &mut i.guide_front_near,
+            1 => &mut i.guide_front_far,
+            2 => &mut i.guide_left_near,
+            3 => &mut i.guide_left_far,
+            4 => &mut i.guide_right_near,
+            _ => &mut i.guide_right_far,
         };
         *slot = v;
     }
@@ -1069,42 +1079,42 @@ pub fn spline_pose(data: &Archives, spline: DataRef, u: f32) -> (Option<Vec3>, V
 #[doc(alias = "Ground_801C5740")]
 #[doc(alias("set_x6d8"))]
 pub fn set_route_event(game: &mut Game, v: i32) {
-    game.stage_info.x6D8 = v;
+    game.stage_info.route_event = v;
 }
 
 /// Clears `x6D8`, `Ground_801C5750`.
 #[doc(alias = "Ground_801C5750")]
 #[doc(alias("clear_x6d8"))]
 pub fn clear_route_event(game: &mut Game) {
-    game.stage_info.x6D8 = 0;
+    game.stage_info.route_event = 0;
 }
 
 /// `x6D8`, `Ground_801C5764`.
 #[doc(alias = "Ground_801C5764")]
 #[doc(alias("x6d8"))]
 pub fn route_event(game: &Game) -> i32 {
-    game.stage_info.x6D8
+    game.stage_info.route_event
 }
 
 /// `x6DC`, `Ground_801C5774`.
 #[doc(alias = "Ground_801C5774")]
 #[doc(alias("x6dc"))]
 pub fn route_zone(game: &Game) -> i32 {
-    i32::from(game.stage_info.x6DC)
+    i32::from(game.stage_info.route_zone)
 }
 
 /// Sets Onett's car warning (`x740`), which the CPU reads, `Ground_801C5784`.
 #[doc(alias = "Ground_801C5784")]
 #[doc(alias("set_x740"))]
 pub fn set_cars_state(game: &mut Game, v: i32) {
-    game.stage_info.x740 = v;
+    game.stage_info.cars_state = v;
 }
 
 /// Onett's car warning, `Ground_801C5794`.
 #[doc(alias = "Ground_801C5794")]
 #[doc(alias("x740"))]
 pub fn cars_state(game: &Game) -> i32 {
-    game.stage_info.x740
+    game.stage_info.cars_state
 }
 
 /// Player 1's fighter, `Ground_GetP1Fighter`.
@@ -1123,7 +1133,7 @@ pub fn p1_fighter2(game: &Game) -> Option<GObjId> {
 #[doc(alias = "Ground_801C57F0")]
 #[doc(alias("x6e0"))]
 pub fn home_run_distance(game: &Game, _arg: i32) -> f32 {
-    game.stage_info.x6E0
+    game.stage_info.home_run_distance
 }
 
 /// One of `x6E4`'s two entries drawn at random, `Ground_801C5840`: `HSD_Randi(1)`, so always
@@ -1132,7 +1142,7 @@ pub fn home_run_distance(game: &Game, _arg: i32) -> f32 {
 #[doc(alias("x6e4_drawn"))]
 pub fn drawn_trophy(game: &mut Game) -> i32 {
     let i = game.objs.rng.below(1);
-    game.stage_info.x6E4[i as usize]
+    game.stage_info.drawn_trophies[i as usize]
 }
 
 /// A trophy point of the stage at random, `Ground_801C5940`: the first 32 of the main
@@ -1168,26 +1178,26 @@ pub fn trophy_point(game: &mut Game, data: &Archives) -> i32 {
 #[doc(alias = "Ground_801C5A84")]
 #[doc(alias("set_x98"))]
 pub fn set_bgm(game: &mut Game, v: i32) {
-    game.stage_info.x98 = v;
+    game.stage_info.bgm = v;
 }
 
 /// `x98`, `Ground_801C5A94`.
 #[doc(alias = "Ground_801C5A94")]
 #[doc(alias("x98"))]
 pub fn bgm(game: &Game) -> i32 {
-    game.stage_info.x98
+    game.stage_info.bgm
 }
 
 /// Sets `unk8C.b1`, `Ground_801C5AA4`.
 #[doc(alias = "Ground_801C5AA4")]
 pub fn set_b1(game: &mut Game, v: bool) {
-    game.stage_info.unk8C.b1 = v;
+    game.stage_info.bits.playing_alt_song = v;
 }
 
 /// `unk8C.b1`, `Ground_801C5ABC`.
 #[doc(alias = "Ground_801C5ABC")]
 pub fn b1(game: &Game) -> bool {
-    game.stage_info.unk8C.b1
+    game.stage_info.bits.playing_alt_song
 }
 
 /// A stage kind's `flags2`, `Ground_801C5AD0`.
@@ -1242,12 +1252,12 @@ impl Running<'_> {
             return;
         }
         if id != SOUND_STOP {
-            let h = self.game.grounds[g.0].x20[i as usize];
+            let h = self.game.grounds[g.0].sounds[i as usize];
             if h != -1 {
                 self.sfx_stop(h);
             }
             let h = self.sfx_play(id as i32, 0x7F, 0x40);
-            self.game.grounds[g.0].x20[i as usize] = h;
+            self.game.grounds[g.0].sounds[i as usize] = h;
         } else {
             self.stop_object_sound(Some(g), i);
         }
@@ -1260,7 +1270,7 @@ impl Running<'_> {
             return false;
         }
         let Some(g) = g else { return false };
-        let h = self.game.grounds[g.0].x20[i as usize];
+        let h = self.game.grounds[g.0].sounds[i as usize];
         h != -1 && self.sfx_playing(h)
     }
 
@@ -1271,11 +1281,11 @@ impl Running<'_> {
             return;
         }
         let Some(g) = g else { return };
-        let h = self.game.grounds[g.0].x20[i as usize];
+        let h = self.game.grounds[g.0].sounds[i as usize];
         if h != -1 {
             self.sfx_stop(h);
         }
-        self.game.grounds[g.0].x20[i as usize] = -1;
+        self.game.grounds[g.0].sounds[i as usize] = -1;
     }
 
     /// Stops every one of a stage object's sounds, `Ground_801C55AC`.
@@ -1295,7 +1305,7 @@ impl Running<'_> {
             return;
         }
         let Some(g) = g else { return };
-        let h = self.game.grounds[g.0].x20[i as usize];
+        let h = self.game.grounds[g.0].sounds[i as usize];
         if h != -1 {
             let vol = fp::fctiwz(fp::fmuls(fp::frsp(127.0), reg(v)));
             self.sfx_volume(h, vol);
@@ -1309,7 +1319,7 @@ impl Running<'_> {
             return;
         }
         let Some(g) = g else { return };
-        let h = self.game.grounds[g.0].x20[i as usize];
+        let h = self.game.grounds[g.0].sounds[i as usize];
         if h != -1 {
             let pan = fp::fctiwz(fp::fmuls(63.5, fp::fadds(fp::frsp(1.0), reg(v))));
             self.sfx_pan(h, pan);

@@ -81,7 +81,7 @@ pub fn free_chain(game: &mut Game, desc: &mut crate::game::structs::DynamicsDesc
 /// Whether a stage object's color overlay has ended (`x10_flags.b4`), `grLib_801C96E8`.
 #[doc(alias = "grLib_801C96E8")]
 pub fn overlay_done(game: &Game, gobj: GObjId) -> bool {
-    game.grounds[ground_of(game, gobj).0].x10_flags.b4
+    game.grounds[ground_of(game, gobj).0].flags.overlay_done
 }
 
 /// Removes the particle generators bound to a joint tree, `grLib_801C9854` (`hsd_8039D5DC`).
@@ -291,14 +291,14 @@ pub fn quake_proc(r: &mut Running, gobj: GObjId, looping: bool) {
 #[doc(alias = "grLib_801C9E40")]
 #[doc(alias("x708"))]
 pub fn trophy_coin_wait(game: &Game) -> i32 {
-    i32::from(game.stage_info.x708)
+    i32::from(game.stage_info.trophy_coin_wait)
 }
 
 /// Sets `stage_info.x708`, `grLib_801C9E50`.
 #[doc(alias = "grLib_801C9E50")]
 #[doc(alias("set_x708"))]
 pub fn set_trophy_coin_wait(game: &mut Game, v: i16) {
-    game.stage_info.x708 = v;
+    game.stage_info.trophy_coin_wait = v;
 }
 
 /// Whether a point lies within `offset` of a collision's ECB box (the inline
