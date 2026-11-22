@@ -399,8 +399,9 @@ impl Settings {
 /// bank of each slot's character, `lb::audio::character_slot`; the stage's ground kind,
 /// `lb::audio::ground_kind`), as the match after it does; on the retail game the tables they
 /// index end before them. Every slot is checked, as the playback scene reads every slot's
-/// kind but the none (33), which only an empty slot (slot type 3) holds.
-fn retail_kinds(start: &StartMeleeData) -> Result<(), CodeError> {
+/// kind but the none (33), which only an empty slot (slot type 3) holds. The player's
+/// Recordings tab marks such a replay unplayable by the same rule, from its game start.
+pub fn retail_kinds(start: &StartMeleeData) -> Result<(), CodeError> {
     for (slot, p) in start.players.iter().enumerate() {
         let kind = p.ckind as u8;
         if kind > CharacterKind::NONE || (kind == CharacterKind::NONE && p.slot_type != 3) {
