@@ -121,7 +121,7 @@ impl Running<'_> {
                     } else {
                         self.game.player_score(r, i)
                     };
-                r.player_standings[i].x30 = sub_rank(r, i);
+                r.player_standings[i].sub_rank = sub_rank(r, i);
             }
         }
         self.game.rank_results(r);
@@ -137,7 +137,7 @@ impl Game {
         for i in 0..6 {
             if r.player_standings[i].pkind != PKIND_NA {
                 r.player_standings[i].score = self.player_score(&r, i);
-                r.player_standings[i].x30 = sub_rank(&r, i);
+                r.player_standings[i].sub_rank = sub_rank(&r, i);
             }
         }
         self.rank_results(&mut r);
@@ -169,67 +169,69 @@ impl Game {
             p.ckind = self.player_ckind(s) as i8;
             p.ftkind = self.player_fighter_kind(s) as i8;
             p.stocks = self.player_stocks(s) as i8;
-            p.x3_u[0] = (p.x3_u[0] & 0x03) | ((self.player_costume(s) as u8 & 0x3F) << 2);
-            p.x4 = self.player_nametag(s);
-            p.x1C = self.player_coins(s);
-            p.x28 = self.player_match_frame_count(s);
-            if p.x28 == u32::MAX {
-                p.x28 = self.vs_frame_count();
+            p.flags[0] = (p.flags[0] & 0x03) | ((self.player_costume(s) as u8 & 0x3F) << 2);
+            p.nametag = self.player_nametag(s);
+            p.coins_held = self.player_coins(s);
+            p.match_frames = self.player_match_frame_count(s);
+            if p.match_frames == u32::MAX {
+                p.match_frames = self.vs_frame_count();
             }
             p.self_destructs = self.player_self_destructs(s) as u16;
-            p.x24 = self.player_falls(s);
+            p.falls = self.player_falls(s);
             p.team = self.player_team(s) as u8;
             p.percent = self.player_damage(s) as u16;
-            p.x3_u[0] = (p.x3_u[0] & !0x02) | (u8::from(self.player_rumbles(s)) << 1);
-            p.x3_u[0] = (p.x3_u[0] & !0x01) | u8::from(self.player_more_flags_bit2(s));
-            p.x9 = self.player_remaining_hp(s) as i8 as u8;
+            p.flags[0] = (p.flags[0] & !0x02) | (u8::from(self.player_rumbles(s)) << 1);
+            p.flags[0] = (p.flags[0] & !0x01) | u8::from(self.player_more_flags_bit2(s));
+            p.remaining_hp = self.player_remaining_hp(s) as i8 as u8;
             let cnt = self.player_stick_inputs(s, 0) as u32;
             let v = fp::fmuls(
                 f64::from(0.031_f32),
                 fp::fmuls(fp::frsp(f64::from(cnt)), self.results_stick_scale()),
             );
             // `fn_80166A8C`: stored through GQR3, an unsigned halfword.
-            p.xE = (v as f32).clamp(0.0, 65535.0) as u16;
+            p.coins = (v as f32).clamp(0.0, 65535.0) as u16;
             let ratio = self.hit_ratio(s);
-            p.x34 = fp::fctiwz(fp::fmuls(100.0, ratio)) as i8 as u8;
+            p.hit_percent = fp::fctiwz(fp::fmuls(100.0, ratio)) as i8 as u8;
             let st = self.player(s).stale_moves.total_attack_count_struct.clone();
-            p.x38 = u32::from_be_bytes(st.x358[0..4].try_into().unwrap());
-            p.x3C = st.attacks.total;
+            p.attacks_hit = u32::from_be_bytes(st.x358[0..4].try_into().unwrap());
+            p.attacks_total = st.attacks.total;
             let t = &self.player(s).stale_moves;
-            p.x40 = to_u32(t.xC6C);
-            p.x44 = to_u32(t.xC60);
-            p.x48 = t.xC68 as u32;
-            p.x4C = to_u32(t.xC64);
+            p.damage_dealt = to_u32(t.xC6C);
+            p.damage_taken = to_u32(t.xC60);
+            p.damage_recovered = t.xC68 as u32;
+            p.peak_damage = to_u32(t.xC64);
             let pl = self.player(s);
-            p.x50 = to_u32(pl.ext_f32(0xD74)).wrapping_mul(10);
-            p.x54 = to_u32(pl.ext_f32(0xD78)).wrapping_mul(10);
-            p.x58 = to_u32(pl.ext_f32(0xD7C)).wrapping_mul(10);
-            p.x5C = to_u32(pl.ext_f32(0xD80)).wrapping_mul(10);
-            p.x60 = self.player_total_coins(s) as u32;
-            p.x64 = self.player_coins_knocked(s) as u32;
-            p.x68 = self.player_coins_lost(s) as u32;
+            p.walk_distance = to_u32(pl.ext_f32(0xD74)).wrapping_mul(10);
+            p.run_distance = to_u32(pl.ext_f32(0xD78)).wrapping_mul(10);
+            p.fall_distance = to_u32(pl.ext_f32(0xD7C)).wrapping_mul(10);
+            p.peak_height = to_u32(pl.ext_f32(0xD80)).wrapping_mul(10);
+            p.coins_collected = self.player_total_coins(s) as u32;
+            p.coins_swiped = self.player_coins_knocked(s) as u32;
+            p.coins_lost = self.player_coins_lost(s) as u32;
             let pl = self.player(s);
-            p.x6C = pl.ext_u32(0xD24) / 60;
-            p.x70 = pl.ext_u32(0xD20) / 60;
-            p.x74 = st.attacks.total.wrapping_sub(st.attacks.aerials_count);
-            p.x78 = st.attacks.aerials_count;
-            p.x7C = st.attacks.thrown_item_count;
-            p.x80 = st.attacks.specials_count;
-            p.x84 = st.attacks.by_attack_counts[STATS_CATCH];
-            p.x88 = down_attacks(&st.attacks.by_attack_counts);
+            p.air_time = pl.ext_u32(0xD24) / 60;
+            p.ground_time = pl.ext_u32(0xD20) / 60;
+            p.ground_attacks = st.attacks.total.wrapping_sub(st.attacks.aerials_count);
+            p.air_attacks = st.attacks.aerials_count;
+            p.items_thrown = st.attacks.thrown_item_count;
+            p.specials = st.attacks.specials_count;
+            p.grabs = st.attacks.by_attack_counts[STATS_CATCH];
+            p.down_attacks = down_attacks(&st.attacks.by_attack_counts);
             // `pl_800386D8(stats, 112)`: past `x358`'s high attacks, the word at 0x5A8.
-            p.x8C = st.x598[4];
-            p.x90 = pl
+            p.action_stat_112 = st.x598[4];
+            p.items_picked_up = pl
                 .stale_moves
                 .x674
                 .iter()
                 .fold(0u32, |a, &v| a.wrapping_add(v));
             let (d44, d68) = (pl.ext_f32(0xD84), pl.ext_f32(0xD88));
-            p.x94 = crate::ppc::cvt_fp2unsigned(fp::fmuls(60.0, fp::fmuls(10.0, reg(d44))));
-            p.x98 = crate::ppc::cvt_fp2unsigned(fp::fmuls(60.0, fp::fmuls(10.0, reg(d68))));
-            p.x9C = (pl.ext_u32(0xD04) / 60) as i32;
-            p.xA0 = (pl.ext_u32(0xD68) / 60) as i32;
-            p.xA4 = pl.stale_moves.xCB0 as u32;
+            p.timed_stat_1 =
+                crate::ppc::cvt_fp2unsigned(fp::fmuls(60.0, fp::fmuls(10.0, reg(d44))));
+            p.timed_stat_2 =
+                crate::ppc::cvt_fp2unsigned(fp::fmuls(60.0, fp::fmuls(10.0, reg(d68))));
+            p.timed_stat_3 = (pl.ext_u32(0xD04) / 60) as i32;
+            p.timed_stat_4 = (pl.ext_u32(0xD68) / 60) as i32;
+            p.last_attack_stat = pl.stale_moves.xCB0 as u32;
             for (j, k) in row.iter_mut().enumerate() {
                 if r.player_standings[j].pkind != PKIND_NA {
                     *k = self.player_kos(s, j as i32) as u16;
@@ -237,7 +239,7 @@ impl Game {
             }
             let p = &mut r.player_standings[i];
             p.kills.copy_from_slice(&row[..4]);
-            p.x18 = row[4];
+            p.kills_rest = row[4];
         }
         for (i, row) in kills.iter().enumerate() {
             if r.player_standings[i].pkind == PKIND_NA {
@@ -256,11 +258,11 @@ impl Game {
                 let p = &mut r.player_standings[i];
                 if other {
                     if r.is_teams != 1 || i != j {
-                        p.x20 = p.x20.wrapping_add(u32::from(k));
+                        p.kos = p.kos.wrapping_add(u32::from(k));
                     }
                 } else {
                     p.self_destructs = p.self_destructs.wrapping_add(k);
-                    p.x24 = p.x24.wrapping_add(i32::from(k));
+                    p.falls = p.falls.wrapping_add(i32::from(k));
                 }
             }
         }
@@ -325,17 +327,17 @@ impl Game {
     #[doc(alias = "fn_8016588C")]
     fn player_score(&self, r: &MatchEnd, i: usize) -> i32 {
         let p = &r.player_standings[i];
-        let lasted = || (p.x28 / 60).wrapping_add(0xFF00_0001) as i32;
+        let lasted = || (p.match_frames / 60).wrapping_add(0xFF00_0001) as i32;
         if self.game_mode == GM_STAMINA_VS {
-            let v = if p.x28 != 0 {
+            let v = if p.match_frames != 0 {
                 lasted()
             } else {
-                i32::from(p.x9)
+                i32::from(p.remaining_hp)
             };
             return clamp_score(v);
         }
         match r.match_kind {
-            2 => clamp_score(p.x1C),
+            2 => clamp_score(p.coins_held),
             1 => {
                 let v = if p.stocks != 0 {
                     i32::from(p.stocks)
@@ -350,8 +352,8 @@ impl Game {
             _ => {
                 let a = u32::from(p.self_destructs);
                 let v = p
-                    .x20
-                    .wrapping_sub((p.x24 as u32).wrapping_sub(a))
+                    .kos
+                    .wrapping_sub((p.falls as u32).wrapping_sub(a))
                     .wrapping_add(a.wrapping_mul(r.sd_penalty as i32 as u32));
                 clamp_score(v as i32)
             }
@@ -367,7 +369,7 @@ impl Game {
             }
             let team = usize::from(r.player_standings[i].team);
             let score = r.player_standings[i].score;
-            let x30 = r.player_standings[i].x30;
+            let x30 = r.player_standings[i].sub_rank;
             let stock = self.game_mode == GM_STAMINA_VS || r.match_kind == 1;
             let mut t = TeamStanding::of(r, team);
             if stock {
@@ -481,10 +483,10 @@ fn sub_rank(r: &MatchEnd, i: usize) -> u32 {
     let me = &r.player_standings[i];
     let live = |j: usize| r.player_standings[j].pkind != PKIND_NA;
     let gt = (0..6)
-        .filter(|&j| live(j) && me.x20 > r.player_standings[j].x20)
+        .filter(|&j| live(j) && me.kos > r.player_standings[j].kos)
         .count() as u32;
     let lt = (0..6)
-        .filter(|&j| live(j) && (me.x24 as u32) < (r.player_standings[j].x24 as u32))
+        .filter(|&j| live(j) && (me.falls as u32) < (r.player_standings[j].falls as u32))
         .count() as u32;
     gt.wrapping_mul(16)
         .wrapping_add(lt)
@@ -537,7 +539,7 @@ fn rank_small(r: &mut MatchEnd) {
             if pj.pkind != PKIND_NA
                 && i != j
                 && pi.is_big_loser == pj.is_big_loser
-                && pi.x30 < pj.x30
+                && pi.sub_rank < pj.sub_rank
             {
                 let p = &mut r.player_standings[i];
                 p.is_small_loser = p.is_small_loser.wrapping_add(1);

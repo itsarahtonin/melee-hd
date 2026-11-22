@@ -340,7 +340,7 @@ pub fn setup(r: &mut Running) {
     if game.vs_sudden_death() != 0 || game.vs_item_freq() == -1 {
         return;
     }
-    let mask = game.vs.start.x20;
+    let mask = game.vs.start.item_switch;
     game.it.spawn.spawner.mask = mask;
     let counts = stage_counts(game);
     let weight = game.vs_item_weight();

@@ -1289,7 +1289,7 @@ fn slippi_scizor_notes_reads_off_course() {
         Vec3::new(1000.0, 0.0, 0.0),
         Some((171, 2)),
         &|g, _| {
-            g.vs.start.x28 = 171;
+            g.vs.start.forced_pokemon = 171;
             let ids: Vec<u32> = g.items.iter().map(|(i, _)| i).collect();
             for i in ids {
                 let it = &mut g.items[i];

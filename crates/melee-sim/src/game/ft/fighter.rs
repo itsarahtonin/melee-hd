@@ -713,7 +713,7 @@ pub fn proc_dynamics(g: &mut Running, gobj: GObjId) {
 #[doc(alias = "Fighter_procGrabColl")]
 pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
     // `gm_8016B1C4`: rules without grabs.
-    if g.game.fighter(gobj).is_sleeping || g.game.vs.start.x5_2 {
+    if g.game.fighter(gobj).is_sleeping || g.game.vs.start.no_fighter_hits {
         return;
     }
     catch_devices(g, gobj);

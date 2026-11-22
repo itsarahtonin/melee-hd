@@ -653,48 +653,48 @@ impl Running<'_> {
         start.rules = super::vs_mode::rules_defaults();
         let r = &mut start.rules;
         r.match_kind = b0 >> 5;
-        r.x0_3 = b0 >> 2 & 7;
+        r.damage_display = b0 >> 2 & 7;
         r.timer_enabled = b0 & 2 != 0;
         r.timer_counts_up = b0 & 1 != 0;
-        r.x1_0 = true;
-        r.x1_1 = false;
-        r.x1_2 = false;
-        r.x1_3 = false;
+        r.exact_start_frame = true;
+        r.counts_coins = false;
+        r.long_countdown = false;
+        r.alt_go = false;
         r.timer_shows_hours = false;
         r.friendly_fire = b1 & 0x40 != 0;
-        r.x2_2 = false;
+        r.unread_2_2 = false;
         r.single_button = false;
         r.disable_pausing = false;
-        r.x2_5 = b1 & 0x20 != 0;
-        r.x3_1 = true;
-        r.x3_2 = true;
-        r.x3_3 = true;
-        r.x3_4 = true;
-        r.x3_5 = true;
-        r.x3_7 = false;
-        r.x4_2 = false;
-        r.x4_3 = true;
-        r.x4_4 = false;
-        r.x4_6 = false;
-        r.x4_7 = false;
-        r.x5_0 = true;
-        r.x5_1 = false;
-        r.x5_2 = b1 & 0x10 != 0;
-        r.x5_3 = b1 & 0x08 != 0;
-        r.x7 = 0;
+        r.damage_display_kos = b1 & 0x20 != 0;
+        r.pause_shows_stick = true;
+        r.pause_z_retries = true;
+        r.pause_shows_z = true;
+        r.pause_lras_quits = true;
+        r.pause_shows_lras = true;
+        r.pause_shows_timers = false;
+        r.single_player = false;
+        r.game_over_scene = true;
+        r.clear_scores = false;
+        r.time_bonus = false;
+        r.damage_bonus = false;
+        r.endless = true;
+        r.goes_on = false;
+        r.no_fighter_hits = b1 & 0x10 != 0;
+        r.stadium_zoom = b1 & 0x08 != 0;
+        r.end_kind = 0;
         r.is_teams = d.u8(ei.at(2));
-        r.x9 = 0;
-        r.xA = 0;
+        r.run_kind = 0;
+        r.stage_layout = 0;
         r.item_freq = d.u8(ei.at(3)) as i8;
         r.sd_penalty = d.u8(ei.at(4)) as i8;
-        r.xD = 0x6E;
+        r.end_wait = 0x6E;
         r.stkind = d.u16(ei.at(6));
         r.time_limit = d.u32(ei.at(8));
-        r.x14 = 0;
-        r.x18 = 0;
-        r.x20 = u64::from(d.u32(ei.at(0x10))) << 32 | u64::from(d.u32(ei.at(0x14)));
-        r.x28 = d.u32(ei.at(0x18)) as i32;
-        r.x30 = d.f32(ei.at(0x1C));
+        r.start_frame = 0;
+        r.score = 0;
+        r.item_switch = u64::from(d.u32(ei.at(0x10))) << 32 | u64::from(d.u32(ei.at(0x14)));
+        r.forced_pokemon = d.u32(ei.at(0x18)) as i32;
+        r.damage_ratio = d.f32(ei.at(0x1C));
         r.game_speed = d.f32(ei.at(0x20));
         r.on_match_start = Some(super::super::handles::CodeRef(ON_MATCH_START));
         let counts_up = r.timer_counts_up;
@@ -717,8 +717,8 @@ impl Running<'_> {
             start.rules.stkind = stage;
             self.game.game_data.vs.unk_530.x48 = i32::from(stage);
             if round > 0 {
-                start.rules.x1_2 = true;
-                start.rules.x1_3 = true;
+                start.rules.long_countdown = true;
+                start.rules.alt_go = true;
                 start.rules.time_limit = self.game.game_data.vs.unk_530.x2C as u32;
             }
             self.game.left_list_start(&mut start.rules);
@@ -922,7 +922,11 @@ impl Running<'_> {
             return;
         }
         let p0 = &me.player_standings[0];
-        let coins = if p0.pkind == 0 { i32::from(p0.xE) } else { 0 };
+        let coins = if p0.pkind == 0 {
+            i32::from(p0.coins)
+        } else {
+            0
+        };
         let ev = &mut self.game.game_data.vs.unk_530;
         ev.x3C = ev.x3C.wrapping_add(coins);
         ev.x40 = ev.x40.wrapping_add(me.frame_count as i32);
@@ -1191,7 +1195,7 @@ impl super::super::state::Game {
     /// (`lbl_8046B668`) emptied and given to the rules.
     pub fn left_list_start(&mut self, rules: &mut super::super::structs::StartMeleeRules) {
         self.gm.left.arr2[0] = -2;
-        rules.x58 = super::super::handles::RawPtr(super::one_player_match::LEFT_LIST);
+        rules.challenger_record = super::super::handles::RawPtr(super::one_player_match::LEFT_LIST);
     }
 
     /// `gm_8016A9E8`: a character and costume put first in the characters-left list, the

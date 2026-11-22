@@ -327,7 +327,7 @@ fn a_recording_carries_the_item_settings() {
             let info = melee_slippi::start(&replay).info;
             let rules = &s.start.rules;
             assert_eq!(info[0xB] as i8, rules.item_freq);
-            assert_eq!(info[0x20..0x28], rules.x20.to_be_bytes());
+            assert_eq!(info[0x20..0x28], rules.item_switch.to_be_bytes());
             let payload = &(replay.events.iter())
                 .find(|e| e.command == event::GAME_START)
                 .expect("a game start")
@@ -337,7 +337,7 @@ fn a_recording_carries_the_item_settings() {
             let enabled =
                 (payload[0x28 - 1..0x2D - 1].iter()).fold(0u64, |m, &b| m << 8 | u64::from(b));
             assert_eq!(behavior, if prefs.item_freq == 0xFF { -1 } else { 3 });
-            assert_eq!(enabled, rules.x20 & ((1 << 40) - 1));
+            assert_eq!(enabled, rules.item_switch & ((1 << 40) - 1));
             if prefs.item_freq != 0xFF {
                 let kinds: Vec<u32> = (0..35).filter(|k| enabled >> k & 1 != 0).collect();
                 assert_eq!(

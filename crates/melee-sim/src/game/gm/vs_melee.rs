@@ -255,9 +255,9 @@ impl Running<'_> {
         let standings = self.game.vs_melee.exit.match_end.player_standings.clone();
         for p in &standings {
             if p.pkind != 3 {
-                self.game.add_kos(p.x20 as i32);
+                self.game.add_kos(p.kos as i32);
                 self.game.add_self_destructs(i32::from(p.self_destructs));
-                self.game.add_damage(p.x44 as i32);
+                self.game.add_damage(p.damage_taken as i32);
             }
         }
     }

@@ -199,7 +199,7 @@ pub fn merge_sudden_death(end: &mut MatchEnd, sd: &mut MatchEnd) {
             }
             let (s, e) = (&sd.player_standings[i], &mut end.player_standings[i]);
             e.ftkind = s.ftkind;
-            e.xE = e.xE.wrapping_add(s.xE);
+            e.coins = e.coins.wrapping_add(s.coins);
             if e.is_big_loser == 0 {
                 if s.pkind == 3 {
                     e.is_big_loser = e.is_big_loser.wrapping_add(players);
@@ -340,32 +340,32 @@ pub fn loser(end: &MatchEnd) -> usize {
     }
     let (i, done) = tie_break(
         &mut spc,
-        |a, b| ps[a].x20 > ps[b].x20,
-        |a, b| ps[a].x20 == ps[b].x20,
+        |a, b| ps[a].kos > ps[b].kos,
+        |a, b| ps[a].kos == ps[b].kos,
     );
     if done {
         return i;
     }
     let (i, done) = tie_break(
         &mut spc,
-        |a, b| (ps[a].x24 as u32) < (ps[b].x24 as u32),
-        |a, b| ps[a].x24 == ps[b].x24,
+        |a, b| (ps[a].falls as u32) < (ps[b].falls as u32),
+        |a, b| ps[a].falls == ps[b].falls,
     );
     if done {
         return i;
     }
     let (i, done) = tie_break(
         &mut spc,
-        |a, b| ps[a].x44 > ps[b].x44,
-        |a, b| ps[a].x44 == ps[b].x44,
+        |a, b| ps[a].damage_taken > ps[b].damage_taken,
+        |a, b| ps[a].damage_taken == ps[b].damage_taken,
     );
     if done {
         return i;
     }
     let (i, done) = tie_break(
         &mut spc,
-        |a, b| ps[a].x50 < ps[b].x50,
-        |a, b| ps[a].x50 == ps[b].x50,
+        |a, b| ps[a].walk_distance < ps[b].walk_distance,
+        |a, b| ps[a].walk_distance == ps[b].walk_distance,
     );
     if done {
         return i;
@@ -434,13 +434,13 @@ fn add_stats(end: &MatchEnd, slot: usize, s: &mut GmStats, vs_walk: &mut i32) {
     let sat16 = |a: u16, b: u32| -> u16 { (u32::from(a) + b).min(0xFFFF) as u16 };
     let add = |a: i32, b: u32| -> i32 { (a as u32).wrapping_add(b) as i32 };
     s.sd_count = sat16(s.sd_count, u32::from(p.self_destructs));
-    s.attacks_hit = s.attacks_hit.wrapping_add(p.x38);
-    s.attacks_total = s.attacks_total.wrapping_add(p.x3C);
-    s.damage_dealt = add(s.damage_dealt, p.x40);
-    s.damage_taken = add(s.damage_taken, p.x44);
-    s.damage_recovered = add(s.damage_recovered, p.x48);
-    if u32::from(s.peak_damage) < p.x4C {
-        s.peak_damage = p.x4C as u16;
+    s.attacks_hit = s.attacks_hit.wrapping_add(p.attacks_hit);
+    s.attacks_total = s.attacks_total.wrapping_add(p.attacks_total);
+    s.damage_dealt = add(s.damage_dealt, p.damage_dealt);
+    s.damage_taken = add(s.damage_taken, p.damage_taken);
+    s.damage_recovered = add(s.damage_recovered, p.damage_recovered);
+    if u32::from(s.peak_damage) < p.peak_damage {
+        s.peak_damage = p.peak_damage as u16;
     }
     s.match_count = sat16(s.match_count, 1);
     if slot as i32 == stats_winner(end) {
@@ -456,15 +456,15 @@ fn add_stats(end: &MatchEnd, slot: usize, s: &mut GmStats, vs_walk: &mut i32) {
         .count() as u32;
     let total = s.total_player_count.wrapping_add(count);
     s.total_player_count = if total > 0xFFFF { 0xFFFF } else { total };
-    s.walk_distance = add(s.walk_distance, p.x50);
-    *vs_walk = p.x50.wrapping_add(*vs_walk as u32) as i32;
-    s.run_distance = add(s.run_distance, p.x54);
-    s.fall_distance = add(s.fall_distance, p.x58);
-    s.peak_height = add(s.peak_height, p.x5C);
+    s.walk_distance = add(s.walk_distance, p.walk_distance);
+    *vs_walk = p.walk_distance.wrapping_add(*vs_walk as u32) as i32;
+    s.run_distance = add(s.run_distance, p.run_distance);
+    s.fall_distance = add(s.fall_distance, p.fall_distance);
+    s.peak_height = add(s.peak_height, p.peak_height);
     if end.match_kind == 2 {
-        s.coins_collected = add(s.coins_collected, p.x60);
-        s.coins_swiped = add(s.coins_swiped, p.x64);
-        s.coins_lost = add(s.coins_lost, p.x68);
+        s.coins_collected = add(s.coins_collected, p.coins_collected);
+        s.coins_swiped = add(s.coins_swiped, p.coins_swiped);
+        s.coins_lost = add(s.coins_lost, p.coins_lost);
     }
 }
 
@@ -500,21 +500,21 @@ impl Game {
         }
         for i in 0..4 {
             let p = &ps[i];
-            if p.pkind == 3 || p.x4 == 0x78 {
+            if p.pkind == 3 || p.nametag == 0x78 {
                 continue;
             }
             for j in 0..4 {
                 let q = &ps[j];
-                if i != j && q.pkind != 3 && q.x4 != 0x78 {
-                    let nt = self.game_data.name_tag(usize::from(p.x4));
-                    let at = usize::from(q.x4);
+                if i != j && q.pkind != 3 && q.nametag != 0x78 {
+                    let nt = self.game_data.name_tag(usize::from(p.nametag));
+                    let at = usize::from(q.nametag);
                     let v = (i32::from(p.kills[j]) + i32::from(nt.vs_kos[at])).min(0xFFFF);
                     nt.vs_kos[at] = v as u16;
                 }
             }
             let s = usize::from(selkind(p.ckind as u8));
             let mut walk = self.game_data.thing.save_data.unk_30.x10;
-            let nt = self.game_data.name_tag(usize::from(p.x4));
+            let nt = self.game_data.name_tag(usize::from(p.nametag));
             nt.play_time_by_fighter[s] =
                 nt.play_time_by_fighter[s].wrapping_add(end.frame_count / 60);
             add_stats(end, i, &mut nt.stats, &mut walk);

@@ -356,22 +356,22 @@ impl Running<'_> {
         r.timer_counts_up = true;
         r.time_limit = 0;
         r.timer_shows_hours = true;
-        r.x4_2 = true;
-        r.x2_5 = false;
-        r.x5_0 = false;
-        r.x4_4 = false;
-        r.x4_3 = true;
-        r.x5_1 = true;
+        r.single_player = true;
+        r.damage_display_kos = false;
+        r.endless = false;
+        r.clear_scores = false;
+        r.game_over_scene = true;
+        r.goes_on = true;
         r.is_teams = 1;
         r.stkind = STKIND.id();
-        r.x18 = 0;
+        r.score = 0;
         r.item_freq = 2;
-        r.x2C = 0.5;
-        r.x20 = 0xFFFF_FFFF_FFFB_FCFF;
+        r.quake_scale = 0.5;
+        r.item_switch = 0xFFFF_FFFF_FFFB_FCFF;
         r.on_match_start = Some(CodeRef(ON_MATCH_START));
-        r.x3_3 = true;
-        r.x3_2 = true;
-        r.x0_3 = 6;
+        r.pause_shows_z = true;
+        r.pause_z_retries = true;
+        r.damage_display = 6;
     }
 
     /// The six matches' entries' players (the inline `gmMultiman_InitPlayers`, and Cruel
@@ -449,8 +449,8 @@ impl Running<'_> {
                 r.timer_enabled = false;
                 r.timer_counts_up = false;
                 r.time_limit = 0;
-                r.x5_0 = true;
-                r.x5_1 = false;
+                r.endless = true;
+                r.goes_on = false;
             }
             _ => {}
         }
@@ -526,7 +526,7 @@ impl Running<'_> {
         }
         let s = &mut self.game.game_data.thing.save_data;
         s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
-        self.results_add_coins(i32::from(end.player_standings[0].xE));
+        self.results_add_coins(i32::from(end.player_standings[0].coins));
         self.multi_man_store_result();
         let own = self.multi_man_data().start.players[0].ckind;
         let m = i32::from(mode);

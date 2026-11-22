@@ -1133,7 +1133,7 @@ impl Running<'_> {
             self.game.vs.state.x24C.x0 = tick;
             self.compile_results();
         }
-        self.game.vs.state.x24C.player_standings[slot as usize].x20
+        self.game.vs.state.x24C.player_standings[slot as usize].kos
     }
 
     /// Whether the fighter holds someone, `ftCo_IsGrabbing`: its catch wait, Donkey Kong's

@@ -406,8 +406,8 @@ fn score_ranks(r: &MatchEnd) -> [u8; 7] {
         if p[k].pkind != 3 {
             let sd = i32::from(p[k].self_destructs);
             scores[k] = p[k]
-                .x20
-                .wrapping_sub(p[k].x24.wrapping_sub(sd) as u32)
+                .kos
+                .wrapping_sub(p[k].falls.wrapping_sub(sd) as u32)
                 .wrapping_add(i32::from(r.sd_penalty).wrapping_mul(sd) as u32)
                 as i32;
         }
@@ -476,8 +476,8 @@ impl Game {
         if e.dec_type == DEC_POINT {
             let pl = &p[usize::from(player)];
             return match kind {
-                0xE3 => (pts as u32).wrapping_mul(pl.x20) as i32,
-                0xE4 => pts.wrapping_mul(pl.x24.wrapping_sub(i32::from(pl.self_destructs))),
+                0xE3 => (pts as u32).wrapping_mul(pl.kos) as i32,
+                0xE4 => pts.wrapping_mul(pl.falls.wrapping_sub(i32::from(pl.self_destructs))),
                 0xE5 => pts.wrapping_mul(i32::from(pl.self_destructs)),
                 _ => (pts as u32).wrapping_mul(self.bonus_count(i32::from(player), kind)) as i32,
             };
@@ -605,7 +605,7 @@ impl Running<'_> {
         let bit = |b: u8, n: u32| (b >> n) & 1 != 0;
         let others = |f: &dyn Fn(usize) -> bool| (0..4).any(|i| p[i].pkind != 3 && i != au && f(i));
         let one = |c: bool| i32::from(c);
-        let net = |i: usize| p[i].x24.wrapping_sub(i32::from(p[i].self_destructs));
+        let net = |i: usize| p[i].falls.wrapping_sub(i32::from(p[i].self_destructs));
         // The most of a value, at least three and twice the next (`0xDB`, `0xDD`, `0xDF`,
         // `0xE1`): the values of the slots that play, 0 for the others.
         let most = |f: &dyn Fn(usize) -> i32, mine: i32| {
@@ -638,19 +638,22 @@ impl Running<'_> {
                 }
                 one(self.game.trailed_from_first(a))
             }
-            0xDB => one(p[au].x20 >= 3 && most(&|i| p[i].x20 as i32, p[au].x20 as i32)),
+            0xDB => one(p[au].kos >= 3 && most(&|i| p[i].kos as i32, p[au].kos as i32)),
             0xDC => {
-                if self.standing_decision(r, a, 0xDB) != 0 || others(&|i| p[i].x20 >= p[au].x20) {
+                if self.standing_decision(r, a, 0xDB) != 0 || others(&|i| p[i].kos >= p[au].kos) {
                     return 0;
                 }
-                one(p[au].x20 != 0)
+                one(p[au].kos != 0)
             }
-            0xDD => one(p[au].x40 >= 3 && most(&|i| p[i].x40 as i32, p[au].x40 as i32)),
+            0xDD => one(p[au].damage_dealt >= 3
+                && most(&|i| p[i].damage_dealt as i32, p[au].damage_dealt as i32)),
             0xDE => {
-                if self.standing_decision(r, a, 0xDD) != 0 || others(&|i| p[i].x40 >= p[au].x40) {
+                if self.standing_decision(r, a, 0xDD) != 0
+                    || others(&|i| p[i].damage_dealt >= p[au].damage_dealt)
+                {
                     return 0;
                 }
-                one(p[au].x40 != 0)
+                one(p[au].damage_dealt != 0)
             }
             0xDF => one(net(au) as u32 >= 3 && most(&net, net(au))),
             0xE0 => {
@@ -673,7 +676,7 @@ impl Running<'_> {
                 }
                 one(p[au].self_destructs != 0)
             }
-            0xE3 => one(p[au].x20 != 0),
+            0xE3 => one(p[au].kos != 0),
             0xE4 => one(net(au) != 0),
             0xE5 => one(p[au].self_destructs != 0),
             0xE6 => one(bit(flags[1], 1)),
@@ -718,10 +721,10 @@ impl Running<'_> {
                 one(min < 0.0 && min == self.game.lowest_value(a))
             }
             0xFC => {
-                if others(&|i| p[i].x3_u[0] & 1 != 0) {
+                if others(&|i| p[i].flags[0] & 1 != 0) {
                     return 0;
                 }
-                let unhit = p[au].x3_u[0] & 1 == 0 && p[au].x20 == 0;
+                let unhit = p[au].flags[0] & 1 == 0 && p[au].kos == 0;
                 if r.match_kind == 3 {
                     if others(&|i| ranks[i] == 0) {
                         return 0;

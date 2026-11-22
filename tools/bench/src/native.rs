@@ -919,8 +919,8 @@ mod tests {
                     r.match_kind,
                     r.timer_enabled,
                     r.is_stock,
-                    r.x2_5,
-                    r.x3_0,
+                    r.damage_display_kos,
+                    r.shows_score,
                     r.is_vs,
                 )
             };
@@ -1210,7 +1210,7 @@ mod tests {
                 ours.seed = seed;
                 let (a, b) = (&ours.start.rules, &theirs.start.rules);
                 assert_eq!(a.item_freq, b.item_freq, "case {n}: the frequency");
-                assert_eq!(a.x20, b.x20, "case {n}: the kinds");
+                assert_eq!(a.item_switch, b.item_switch, "case {n}: the kinds");
                 let ours = Match::start(&ours, &mut |name| files.load(name));
                 let theirs = Match::start(&theirs, &mut |name| files.load(name));
                 let (a, b) = (&ours.game.it.spawn, &theirs.game.it.spawn);

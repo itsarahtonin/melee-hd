@@ -983,71 +983,71 @@ pub fn export_start(d: &StartMeleeData) -> [u8; 0x138] {
 
 fn export_rules(o: &mut Bits<0x138>, r: &StartMeleeRules) {
     o.bits(0, 0, 3, u32::from(r.match_kind));
-    o.bits(0, 3, 3, u32::from(r.x0_3));
+    o.bits(0, 3, 3, u32::from(r.damage_display));
     let flags = [
         r.timer_enabled,
         r.timer_counts_up,
-        r.x1_0,
-        r.x1_1,
-        r.x1_2,
-        r.x1_3,
-        r.x1_4,
-        r.x1_5,
+        r.exact_start_frame,
+        r.counts_coins,
+        r.long_countdown,
+        r.alt_go,
+        r.fixed_layout,
+        r.keeps_rumble,
         r.timer_shows_hours,
         r.friendly_fire,
         r.is_stock,
-        r.x2_1,
-        r.x2_2,
+        r.arrows_flag,
+        r.unread_2_2,
         r.single_button,
         r.disable_pausing,
-        r.x2_5,
-        r.x2_6,
-        r.x2_7,
-        r.x3_0,
-        r.x3_1,
-        r.x3_2,
-        r.x3_3,
-        r.x3_4,
-        r.x3_5,
-        r.x3_6,
-        r.x3_7,
-        r.x4_0,
+        r.damage_display_kos,
+        r.damage_displays_on,
+        r.damage_display_fades,
+        r.shows_score,
+        r.pause_shows_stick,
+        r.pause_z_retries,
+        r.pause_shows_z,
+        r.pause_lras_quits,
+        r.pause_shows_lras,
+        r.pause_hides_controls,
+        r.pause_shows_timers,
+        r.pause_camera,
         r.is_vs,
-        r.x4_2,
-        r.x4_3,
-        r.x4_4,
-        r.x4_5,
-        r.x4_6,
-        r.x4_7,
-        r.x5_0,
-        r.x5_1,
-        r.x5_2,
-        r.x5_3,
-        r.x5_4,
-        r.x5_5,
-        r.x5_6,
-        r.x5_7,
+        r.single_player,
+        r.game_over_scene,
+        r.clear_scores,
+        r.allows_continue,
+        r.time_bonus,
+        r.damage_bonus,
+        r.endless,
+        r.goes_on,
+        r.no_fighter_hits,
+        r.stadium_zoom,
+        r.unused_5_4,
+        r.unused_5_5,
+        r.unused_5_6,
+        r.unused_5_7,
     ];
     for (i, &f) in flags.iter().enumerate() {
         o.bits(0, 6 + i as u32, 1, u32::from(f));
     }
-    o.u8(0x6, r.x6);
-    o.u8(0x7, r.x7);
+    o.u8(0x6, r.sudden_death);
+    o.u8(0x7, r.end_kind);
     o.u8(0x8, r.is_teams);
-    o.u8(0x9, r.x9);
-    o.u8(0xA, r.xA);
+    o.u8(0x9, r.run_kind);
+    o.u8(0xA, r.stage_layout);
     o.u8(0xB, r.item_freq as u8);
     o.u8(0xC, r.sd_penalty as u8);
-    o.u8(0xD, r.xD);
+    o.u8(0xD, r.end_wait);
     o.be(0xE, &r.stkind.to_be_bytes());
     o.be(0x10, &r.time_limit.to_be_bytes());
-    o.u8(0x14, r.x14);
-    o.be(0x18, &r.x18.to_be_bytes());
-    o.be(0x1C, &r.x1C_pad[0].to_be_bytes());
-    o.be(0x20, &r.x20.to_be_bytes());
-    o.be(0x28, &r.x28.to_be_bytes());
-    o.be(0x2C, &r.x2C.to_bits().to_be_bytes());
-    o.be(0x30, &r.x30.to_bits().to_be_bytes());
+    o.u8(0x14, r.start_frame);
+    o.be(0x18, &r.score.to_be_bytes());
+    o.be(0x1C, &r.pad_1c[0].to_be_bytes());
+    o.be(0x20, &r.item_switch.to_be_bytes());
+    o.be(0x28, &r.forced_pokemon.to_be_bytes());
+    o.be(0x2C, &r.quake_scale.to_bits().to_be_bytes());
+    o.be(0x30, &r.damage_ratio.to_bits().to_be_bytes());
     o.be(0x34, &r.game_speed.to_bits().to_be_bytes());
     let code = |c: Option<super::handles::CodeRef>| c.map_or(0, |c| c.0).to_be_bytes();
     o.be(0x38, &code(r.on_unpause_override));
@@ -1057,9 +1057,9 @@ fn export_rules(o: &mut Bits<0x138>, r: &StartMeleeRules) {
     o.be(0x48, &code(r.on_frame_start));
     o.be(0x4C, &code(r.on_frame_end));
     o.be(0x50, &code(r.on_match_end));
-    o.be(0x54, &r.x54.0.to_be_bytes());
-    o.be(0x58, &r.x58.0.to_be_bytes());
-    o.be(0x5C, &r.pad_x5C);
+    o.be(0x54, &r.opponent_list.0.to_be_bytes());
+    o.be(0x58, &r.challenger_record.0.to_be_bytes());
+    o.be(0x5C, &r.pad_5c);
 }
 
 fn export_player(o: &mut Bits<0x138>, at: usize, p: &PlayerInitData) {

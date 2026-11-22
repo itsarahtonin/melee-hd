@@ -227,59 +227,59 @@ impl Running<'_> {
         let level = run.player.cpu_level;
         let count = round as u8;
         let r = &mut start.rules;
-        r.x30 = 1.0;
-        r.x4_4 = true;
+        r.damage_ratio = 1.0;
+        r.clear_scores = true;
         match color_kind {
-            0 => r.xA = 0,
-            1 => r.xA = 3,
-            2 => r.xA = 2,
+            0 => r.stage_layout = 0,
+            1 => r.stage_layout = 3,
+            2 => r.stage_layout = 2,
             _ => {}
         }
-        r.x1_1 = true;
-        r.x4_2 = true;
-        r.x4_3 = true;
-        r.x2_5 = false;
-        r.x0_3 = run.stage[3];
+        r.counts_coins = true;
+        r.single_player = true;
+        r.game_over_scene = true;
+        r.damage_display_kos = false;
+        r.damage_display = run.stage[3];
         if time != 0 {
             r.time_limit = time as u32;
             r.timer_enabled = true;
         } else {
             r.timer_enabled = false;
         }
-        r.x18 = run.score as u32;
+        r.score = run.score as u32;
         r.stkind = stkind as u16;
         r.item_freq = Self::one_player_getter(run.getters[0], count, level, 0) as i8;
-        r.x20 = u64::MAX;
+        r.item_switch = u64::MAX;
         let enemies = chars.iter().filter(|&&c| c != NONE).count();
         if enemies == 0 {
-            r.x5_1 = true;
+            r.goes_on = true;
         }
         let x8 = run.stage[0];
         if x8 & 1 != 0 {
-            r.x2_7 = true;
+            r.damage_display_fades = true;
         }
         if x8 & 0x20 != 0 {
-            r.x4_5 = true;
+            r.allows_continue = true;
         }
         if x8 & 0x80 != 0 {
             run.counters[0] = 5;
             match run.stage[1] {
                 1 => {
                     r.on_pause_override = Some(CodeRef(FIXED_CAMERA));
-                    r.x9 = 1;
-                    r.x3_1 = false;
+                    r.run_kind = 1;
+                    r.pause_shows_stick = false;
                     start.players[0].xC_b1 = false;
                 }
                 2 => {
-                    r.x9 = 3;
+                    r.run_kind = 3;
                     r.on_match_start = Some(CodeRef(BONUS_START));
                 }
                 3 => {
-                    r.x9 = 2;
-                    r.x7 = 9;
-                    r.x4_4 = false;
+                    r.run_kind = 2;
+                    r.end_kind = 9;
+                    r.clear_scores = false;
                     r.on_match_end = Some(CodeRef(BONUS_END));
-                    r.xD = 0x30;
+                    r.end_wait = 0x30;
                 }
                 _ => {}
             }
@@ -356,7 +356,7 @@ impl Running<'_> {
             let first = chars[0];
             if first != CharacterKind::Kirby {
                 if (first as u8).wrapping_sub(0x1B) <= 1 {
-                    start.rules.x0_3 = 6;
+                    start.rules.damage_display = 6;
                     horde = 5;
                     colors[0] = 0;
                     special_stage = 1;
@@ -478,12 +478,12 @@ impl Running<'_> {
         }
         if boss_count != 0 {
             let r = &mut start.rules;
-            r.x1_2 = true;
-            r.x1_3 = true;
-            r.x1_4 = true;
-            r.x0_3 = 3;
+            r.long_countdown = true;
+            r.alt_go = true;
+            r.fixed_layout = true;
+            r.damage_display = 3;
             r.disable_pausing = true;
-            r.x7 = 0;
+            r.end_kind = 0;
             r.on_match_start = Some(CodeRef(BOSS_START));
             run.counters[0] = 6;
         }
@@ -531,10 +531,10 @@ impl Running<'_> {
         let r = &mut start.rules;
         r.timer_enabled = true;
         r.timer_counts_up = true;
-        r.x1_0 = true;
+        r.exact_start_frame = true;
         r.time_limit = (a.frames as i32 / 60) as u32;
-        r.x14 = ((a.frames as i32 % 60) + 1) as u8;
-        r.x20 &= 0xFFFF_FFFF_FFFB_FCFF;
+        r.start_frame = ((a.frames as i32 % 60) + 1) as u8;
+        r.item_switch &= 0xFFFF_FFFF_FFFB_FCFF;
         start.players[0].xC_b1 = id == 0;
         if id == 0x60 {
             let level = a.base.player.cpu_level;
@@ -560,8 +560,8 @@ impl Running<'_> {
                 attack,
                 defense,
             );
-            start.rules.x4_5 = true;
-            start.rules.x0_3 = 6;
+            start.rules.allows_continue = true;
+            start.rules.damage_display = 6;
             super::opponents::point_rules(&mut start.rules);
         }
         start.players[0].damage = self.game.one_player.allstar.damage;
@@ -620,9 +620,9 @@ impl Running<'_> {
         let e = &self.game.one_player.match_exit;
         let (end, x0) = (e.match_end.clone(), e.run_value);
         let p = &end.player_standings[0];
-        run.coins = add(u32::from(run.coins), u32::from(p.xE)) as u16;
-        self.results_add_coins(i32::from(p.xE));
-        run.damage_taken = add(run.damage_taken as u32, p.x44) as i32;
+        run.coins = add(u32::from(run.coins), u32::from(p.coins)) as u16;
+        self.results_add_coins(i32::from(p.coins));
+        run.damage_taken = add(run.damage_taken as u32, p.damage_taken) as i32;
         let s = &mut self.game.game_data.thing.save_data;
         s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
         if run.stage[0] & 0x80 == 0 {
@@ -630,7 +630,7 @@ impl Running<'_> {
         }
         run.counters[6] = u8::from(p.ftkind == FighterKind::Seak);
         let g = &*self.game;
-        if g.vs.start.x9 == 2 && super::super::gr::ground::flags(g, 0x20) != 0 {
+        if g.vs.start.run_kind == 2 && super::super::gr::ground::flags(g, 0x20) != 0 {
             run.counters[3] = 1;
         }
         if g.vs_target_test() && g.stage_info.targets_left == 0 {
@@ -754,13 +754,13 @@ impl Running<'_> {
         let r = &mut start.rules;
         r.timer_enabled = false;
         r.timer_counts_up = true;
-        r.x1_0 = true;
+        r.exact_start_frame = true;
         r.time_limit = (a.frames as i32 / 60) as u32;
-        r.x14 = (a.frames as i32 % 60) as u8;
-        r.xD = 120;
+        r.start_frame = (a.frames as i32 % 60) as u8;
+        r.end_wait = 120;
         start.players[0].damage = a.damage;
         start.players[0].xD_b2 = true;
-        start.rules.x7 = 9;
+        start.rules.end_kind = 9;
         for i in 0..count {
             let slot = loop {
                 let s = self.game.objs.rng.below(26) as usize;
@@ -778,16 +778,16 @@ impl Running<'_> {
         a.rest_counts[1] = next_count as u8;
         a.rest_counts[0] = (round + 1) as u8;
         start.players[0].xC_b1 = false;
-        start.rules.x1_2 = true;
-        start.rules.x1_3 = true;
-        start.rules.x4_4 = false;
+        start.rules.long_countdown = true;
+        start.rules.alt_go = true;
+        start.rules.clear_scores = false;
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
         super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
         // `gm_8016A92C`: the list emptied and given to the rules.
         let list = &mut self.game.gm.left;
         list.arr2[0] = -2;
-        start.rules.x58 = super::super::handles::RawPtr(LEFT_LIST);
+        start.rules.challenger_record = super::super::handles::RawPtr(LEFT_LIST);
         // `gm_801B5ACC_inline1`: every character from the next round on (`gm_8016A998`).
         for entry in &table[next..] {
             let list = &mut self.game.gm.left;

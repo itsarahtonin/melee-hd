@@ -198,25 +198,25 @@ pub fn player_defaults() -> PlayerInitData {
 #[doc(alias = "gm_SetupRulesDefaults")]
 pub fn rules_defaults() -> StartMeleeRules {
     StartMeleeRules {
-        x0_3: 4,
+        damage_display: 4,
         sd_penalty: 0,
         item_freq: 2,
-        x20: u64::MAX,
-        x28: 0,
-        x3_1: true,
-        x3_5: true,
-        x3_4: true,
-        x4_0: true,
+        item_switch: u64::MAX,
+        forced_pokemon: 0,
+        pause_shows_stick: true,
+        pause_shows_lras: true,
+        pause_lras_quits: true,
+        pause_camera: true,
         timer_shows_hours: false,
-        x2_5: true,
-        x2_6: true,
-        x2C: 1.0,
-        x30: 1.0,
+        damage_display_kos: true,
+        damage_displays_on: true,
+        quake_scale: 1.0,
+        damage_ratio: 1.0,
         game_speed: 1.0,
-        x4_6: true,
-        x4_7: true,
-        xD: 110,
-        xA: 0,
+        time_bonus: true,
+        damage_bonus: true,
+        end_wait: 110,
+        stage_layout: 0,
         ..StartMeleeRules::default()
     }
 }
@@ -333,14 +333,14 @@ pub fn apply_menu_rules_auto(
     }
     let r = &mut start.rules;
     r.friendly_fire = rules.friendly_fire & 1 != 0;
-    r.x30 = mem(fp::fmuls(reg(0.1), reg(f32::from(rules.damage_ratio))));
+    r.damage_ratio = mem(fp::fmuls(reg(0.1), reg(f32::from(rules.damage_ratio))));
     r.item_freq = prefs.item_freq as i8;
     for (i, &kind) in ITEM_SWITCH_KINDS.iter().enumerate() {
         if kind != NO_ITEM_KIND {
             if prefs.item_mask & (1 << i) != 0 {
-                r.x20 |= 1 << kind;
+                r.item_switch |= 1 << kind;
             } else {
-                r.x20 &= !(1 << kind);
+                r.item_switch &= !(1 << kind);
             }
         }
     }
@@ -351,7 +351,7 @@ pub fn apply_menu_rules_auto(
         _ => {}
     }
     r.disable_pausing = rules.pause == 0;
-    r.x3_0 = rules.score_display != 0 && rules.mode == 0;
+    r.shows_score = rules.score_display != 0 && rules.mode == 0;
 }
 
 /// Whether a player's pad rumbles (`gm_RumbleEnabledForPlayer`): its port's preference
@@ -666,11 +666,11 @@ pub fn stamina_entry(vs: &StartMeleeData) -> StartMeleeData {
     let mut start = StartMeleeData::default();
     start.rules.clone_from(&vs.rules);
     let r = &mut start.rules;
-    r.x2_5 = false;
+    r.damage_display_kos = false;
     r.timer_enabled = false;
     r.match_kind = 1;
     r.on_match_start = Some(CodeRef(super::stamina::ON_MATCH_START));
-    r.x3_0 = false;
+    r.shows_score = false;
     all_player_defaults(&mut start.players);
     for (p, v) in start.players.iter_mut().zip(&vs.players).take(4) {
         p.clone_from(v);
@@ -702,7 +702,7 @@ mod tests {
             assert_eq!(start.rules.item_freq, 3);
             for kind in 0..64u8 {
                 let listed = kind != NO_ITEM_KIND && ITEM_SWITCH_KINDS.contains(&kind);
-                let on = start.rules.x20 >> kind & 1 != 0;
+                let on = start.rules.item_switch >> kind & 1 != 0;
                 assert_eq!(on, !listed || wanted.contains(&kind), "kind {kind:#x}");
             }
         }

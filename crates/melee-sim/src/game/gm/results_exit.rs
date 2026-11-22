@@ -82,7 +82,7 @@ pub fn add_u32_saturating(a: u32, b: u32) -> u32 {
 pub fn update_ko_counts(ko: &mut [u8; 6], end: &MatchEnd) {
     for (i, k) in ko.iter_mut().enumerate() {
         if end.player_standings[i].pkind == PKIND_HUMAN {
-            *k = add_u8_saturating(u32::from(*k), end.player_standings[i].x20 as i32) as u8;
+            *k = add_u8_saturating(u32::from(*k), end.player_standings[i].kos as i32) as u8;
         }
     }
 }
@@ -93,7 +93,7 @@ pub fn human_kos(end: &MatchEnd) -> i32 {
     let mut sum = 0u32;
     for p in &end.player_standings {
         if p.pkind == PKIND_HUMAN {
-            sum = sum.wrapping_add(u32::from(p.xE));
+            sum = sum.wrapping_add(u32::from(p.coins));
         }
     }
     sum as i32
@@ -202,7 +202,7 @@ impl Running<'_> {
         }
         let mut h = [0u8; 4];
         for (i, v) in h.iter_mut().enumerate() {
-            *v = *self.auto_handicap(i, end.player_standings[i].x4) as u8;
+            *v = *self.auto_handicap(i, end.player_standings[i].nametag) as u8;
         }
         let next_state = move_handicaps(end, &mut h, &mut stack);
         if let Some(regs) = stack.regs() {
@@ -210,7 +210,7 @@ impl Running<'_> {
         }
         for (i, &v) in h.iter().enumerate() {
             if end.player_standings[i].pkind != PKIND_NA {
-                *self.auto_handicap(i, end.player_standings[i].x4) = v as i8;
+                *self.auto_handicap(i, end.player_standings[i].nametag) = v as i8;
             }
         }
         next_state
@@ -412,7 +412,7 @@ impl Running<'_> {
         let mut sum = 0u32;
         for p in &end.player_standings {
             if p.pkind == PKIND_HUMAN {
-                sum = add_u32_saturating(sum, p.x50);
+                sum = add_u32_saturating(sum, p.walk_distance);
             }
         }
         if add_u32_saturating(sum, r.x10 as u32) >= 0xF_4240 {
@@ -460,7 +460,7 @@ impl Running<'_> {
                 let mut challenger = false;
                 let idx = smallest_loser(&me);
                 let p = &me.player_standings[idx];
-                let (ck, color, tag) = (p.ckind as u8, p.x3_u[0] >> 2, p.x4);
+                let (ck, color, tag) = (p.ckind as u8, p.flags[0] >> 2, p.nametag);
                 let played = self.game.game_data.thing.save_data.unk_8.x0;
                 let mut cpu = self.challenger_by_matches(played);
                 if cpu == CharacterKind::NONE {

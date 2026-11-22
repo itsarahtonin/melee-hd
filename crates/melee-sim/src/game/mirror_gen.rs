@@ -13727,54 +13727,54 @@ impl Mirror for MatchPlayerData {
             pkind: m.u8(at + 0x0),
             ckind: m.u8(at + 0x1) as i8,
             ftkind: m.u8(at + 0x2) as i8,
-            x3_u: m.bytes(at + 0x3),
-            x4: m.u8(at + 0x4),
+            flags: m.bytes(at + 0x3),
+            nametag: m.u8(at + 0x4),
             is_big_loser: m.u8(at + 0x5),
             is_small_loser: m.u8(at + 0x6),
             team: m.u8(at + 0x7),
             stocks: m.u8(at + 0x8) as i8,
-            x9: m.u8(at + 0x9),
+            remaining_hp: m.u8(at + 0x9),
             self_destructs: m.u16(at + 0xa),
             percent: m.u16(at + 0xc),
-            xE: m.u16(at + 0xe),
+            coins: m.u16(at + 0xe),
             kills: core::array::from_fn(|i0| m.u16(at + 0x10 + i0 as u32 * 0x2)),
-            x18: m.u16(at + 0x18),
-            x1C: m.u32(at + 0x1c) as i32,
-            x20: m.u32(at + 0x20),
-            x24: m.u32(at + 0x24) as i32,
-            x28: m.u32(at + 0x28),
+            kills_rest: m.u16(at + 0x18),
+            coins_held: m.u32(at + 0x1c) as i32,
+            kos: m.u32(at + 0x20),
+            falls: m.u32(at + 0x24) as i32,
+            match_frames: m.u32(at + 0x28),
             score: m.u32(at + 0x2c) as i32,
-            x30: m.u32(at + 0x30),
-            x34: m.u8(at + 0x34),
-            x35_pad: core::array::from_fn(|i0| m.u8(at + 0x35 + i0 as u32 * 0x1)),
-            x38: m.u32(at + 0x38),
-            x3C: m.u32(at + 0x3c),
-            x40: m.u32(at + 0x40),
-            x44: m.u32(at + 0x44),
-            x48: m.u32(at + 0x48),
-            x4C: m.u32(at + 0x4c),
-            x50: m.u32(at + 0x50),
-            x54: m.u32(at + 0x54),
-            x58: m.u32(at + 0x58),
-            x5C: m.u32(at + 0x5c),
-            x60: m.u32(at + 0x60),
-            x64: m.u32(at + 0x64),
-            x68: m.u32(at + 0x68),
-            x6C: m.u32(at + 0x6c),
-            x70: m.u32(at + 0x70),
-            x74: m.u32(at + 0x74),
-            x78: m.u32(at + 0x78),
-            x7C: m.u32(at + 0x7c),
-            x80: m.u32(at + 0x80),
-            x84: m.u32(at + 0x84),
-            x88: m.u32(at + 0x88),
-            x8C: m.u32(at + 0x8c),
-            x90: m.u32(at + 0x90),
-            x94: m.u32(at + 0x94),
-            x98: m.u32(at + 0x98),
-            x9C: m.u32(at + 0x9c) as i32,
-            xA0: m.u32(at + 0xa0) as i32,
-            xA4: m.u32(at + 0xa4),
+            sub_rank: m.u32(at + 0x30),
+            hit_percent: m.u8(at + 0x34),
+            pad_35: core::array::from_fn(|i0| m.u8(at + 0x35 + i0 as u32 * 0x1)),
+            attacks_hit: m.u32(at + 0x38),
+            attacks_total: m.u32(at + 0x3c),
+            damage_dealt: m.u32(at + 0x40),
+            damage_taken: m.u32(at + 0x44),
+            damage_recovered: m.u32(at + 0x48),
+            peak_damage: m.u32(at + 0x4c),
+            walk_distance: m.u32(at + 0x50),
+            run_distance: m.u32(at + 0x54),
+            fall_distance: m.u32(at + 0x58),
+            peak_height: m.u32(at + 0x5c),
+            coins_collected: m.u32(at + 0x60),
+            coins_swiped: m.u32(at + 0x64),
+            coins_lost: m.u32(at + 0x68),
+            air_time: m.u32(at + 0x6c),
+            ground_time: m.u32(at + 0x70),
+            ground_attacks: m.u32(at + 0x74),
+            air_attacks: m.u32(at + 0x78),
+            items_thrown: m.u32(at + 0x7c),
+            specials: m.u32(at + 0x80),
+            grabs: m.u32(at + 0x84),
+            down_attacks: m.u32(at + 0x88),
+            action_stat_112: m.u32(at + 0x8c),
+            items_picked_up: m.u32(at + 0x90),
+            timed_stat_1: m.u32(at + 0x94),
+            timed_stat_2: m.u32(at + 0x98),
+            timed_stat_3: m.u32(at + 0x9c) as i32,
+            timed_stat_4: m.u32(at + 0xa0) as i32,
+            last_attack_stat: m.u32(at + 0xa4),
         }
     }
 
@@ -13801,17 +13801,17 @@ impl Mirror for MatchPlayerData {
                 format!("{:?}", m.u8(at + 0x2) as i8),
             );
         }
-        if self.x3_u != m.bytes::<1>(at + 0x3) {
+        if self.flags != m.bytes::<1>(at + 0x3) {
             cx.mismatch(
-                &format!("{path}.x3_u"),
-                format!("{:02x?}", self.x3_u),
+                &format!("{path}.flags (x3_u)"),
+                format!("{:02x?}", self.flags),
                 format!("{:02x?}", m.bytes::<1>(at + 0x3)),
             );
         }
-        if self.x4 != m.u8(at + 0x4) {
+        if self.nametag != m.u8(at + 0x4) {
             cx.mismatch(
-                &format!("{path}.x4"),
-                format!("{:?}", self.x4),
+                &format!("{path}.nametag (x4)"),
+                format!("{:?}", self.nametag),
                 format!("{:?}", m.u8(at + 0x4)),
             );
         }
@@ -13843,10 +13843,10 @@ impl Mirror for MatchPlayerData {
                 format!("{:?}", m.u8(at + 0x8) as i8),
             );
         }
-        if self.x9 != m.u8(at + 0x9) {
+        if self.remaining_hp != m.u8(at + 0x9) {
             cx.mismatch(
-                &format!("{path}.x9"),
-                format!("{:?}", self.x9),
+                &format!("{path}.remaining_hp (x9)"),
+                format!("{:?}", self.remaining_hp),
                 format!("{:?}", m.u8(at + 0x9)),
             );
         }
@@ -13864,10 +13864,10 @@ impl Mirror for MatchPlayerData {
                 format!("{:?}", m.u16(at + 0xc)),
             );
         }
-        if self.xE != m.u16(at + 0xe) {
+        if self.coins != m.u16(at + 0xe) {
             cx.mismatch(
-                &format!("{path}.xE"),
-                format!("{:?}", self.xE),
+                &format!("{path}.coins (xE)"),
+                format!("{:?}", self.coins),
                 format!("{:?}", m.u16(at + 0xe)),
             );
         }
@@ -13880,38 +13880,38 @@ impl Mirror for MatchPlayerData {
                 );
             }
         }
-        if self.x18 != m.u16(at + 0x18) {
+        if self.kills_rest != m.u16(at + 0x18) {
             cx.mismatch(
-                &format!("{path}.x18"),
-                format!("{:?}", self.x18),
+                &format!("{path}.kills_rest (x18)"),
+                format!("{:?}", self.kills_rest),
                 format!("{:?}", m.u16(at + 0x18)),
             );
         }
-        if self.x1C != m.u32(at + 0x1c) as i32 {
+        if self.coins_held != m.u32(at + 0x1c) as i32 {
             cx.mismatch(
-                &format!("{path}.x1C"),
-                format!("{:?}", self.x1C),
+                &format!("{path}.coins_held (x1C)"),
+                format!("{:?}", self.coins_held),
                 format!("{:?}", m.u32(at + 0x1c) as i32),
             );
         }
-        if self.x20 != m.u32(at + 0x20) {
+        if self.kos != m.u32(at + 0x20) {
             cx.mismatch(
-                &format!("{path}.x20"),
-                format!("{:?}", self.x20),
+                &format!("{path}.kos (x20)"),
+                format!("{:?}", self.kos),
                 format!("{:?}", m.u32(at + 0x20)),
             );
         }
-        if self.x24 != m.u32(at + 0x24) as i32 {
+        if self.falls != m.u32(at + 0x24) as i32 {
             cx.mismatch(
-                &format!("{path}.x24"),
-                format!("{:?}", self.x24),
+                &format!("{path}.falls (x24)"),
+                format!("{:?}", self.falls),
                 format!("{:?}", m.u32(at + 0x24) as i32),
             );
         }
-        if self.x28 != m.u32(at + 0x28) {
+        if self.match_frames != m.u32(at + 0x28) {
             cx.mismatch(
-                &format!("{path}.x28"),
-                format!("{:?}", self.x28),
+                &format!("{path}.match_frames (x28)"),
+                format!("{:?}", self.match_frames),
                 format!("{:?}", m.u32(at + 0x28)),
             );
         }
@@ -13922,222 +13922,222 @@ impl Mirror for MatchPlayerData {
                 format!("{:?}", m.u32(at + 0x2c) as i32),
             );
         }
-        if self.x30 != m.u32(at + 0x30) {
+        if self.sub_rank != m.u32(at + 0x30) {
             cx.mismatch(
-                &format!("{path}.x30"),
-                format!("{:?}", self.x30),
+                &format!("{path}.sub_rank (x30)"),
+                format!("{:?}", self.sub_rank),
                 format!("{:?}", m.u32(at + 0x30)),
             );
         }
-        if self.x34 != m.u8(at + 0x34) {
+        if self.hit_percent != m.u8(at + 0x34) {
             cx.mismatch(
-                &format!("{path}.x34"),
-                format!("{:?}", self.x34),
+                &format!("{path}.hit_percent (x34)"),
+                format!("{:?}", self.hit_percent),
                 format!("{:?}", m.u8(at + 0x34)),
             );
         }
         for i0 in 0..3 {
-            if self.x35_pad[i0] != m.u8(at + 0x35 + i0 as u32 * 0x1) {
+            if self.pad_35[i0] != m.u8(at + 0x35 + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.x35_pad"), i0),
-                    format!("{:?}", self.x35_pad[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_35 (x35_pad)"), i0),
+                    format!("{:?}", self.pad_35[i0]),
                     format!("{:?}", m.u8(at + 0x35 + i0 as u32 * 0x1)),
                 );
             }
         }
-        if self.x38 != m.u32(at + 0x38) {
+        if self.attacks_hit != m.u32(at + 0x38) {
             cx.mismatch(
-                &format!("{path}.x38"),
-                format!("{:?}", self.x38),
+                &format!("{path}.attacks_hit (x38)"),
+                format!("{:?}", self.attacks_hit),
                 format!("{:?}", m.u32(at + 0x38)),
             );
         }
-        if self.x3C != m.u32(at + 0x3c) {
+        if self.attacks_total != m.u32(at + 0x3c) {
             cx.mismatch(
-                &format!("{path}.x3C"),
-                format!("{:?}", self.x3C),
+                &format!("{path}.attacks_total (x3C)"),
+                format!("{:?}", self.attacks_total),
                 format!("{:?}", m.u32(at + 0x3c)),
             );
         }
-        if self.x40 != m.u32(at + 0x40) {
+        if self.damage_dealt != m.u32(at + 0x40) {
             cx.mismatch(
-                &format!("{path}.x40"),
-                format!("{:?}", self.x40),
+                &format!("{path}.damage_dealt (x40)"),
+                format!("{:?}", self.damage_dealt),
                 format!("{:?}", m.u32(at + 0x40)),
             );
         }
-        if self.x44 != m.u32(at + 0x44) {
+        if self.damage_taken != m.u32(at + 0x44) {
             cx.mismatch(
-                &format!("{path}.x44"),
-                format!("{:?}", self.x44),
+                &format!("{path}.damage_taken (x44)"),
+                format!("{:?}", self.damage_taken),
                 format!("{:?}", m.u32(at + 0x44)),
             );
         }
-        if self.x48 != m.u32(at + 0x48) {
+        if self.damage_recovered != m.u32(at + 0x48) {
             cx.mismatch(
-                &format!("{path}.x48"),
-                format!("{:?}", self.x48),
+                &format!("{path}.damage_recovered (x48)"),
+                format!("{:?}", self.damage_recovered),
                 format!("{:?}", m.u32(at + 0x48)),
             );
         }
-        if self.x4C != m.u32(at + 0x4c) {
+        if self.peak_damage != m.u32(at + 0x4c) {
             cx.mismatch(
-                &format!("{path}.x4C"),
-                format!("{:?}", self.x4C),
+                &format!("{path}.peak_damage (x4C)"),
+                format!("{:?}", self.peak_damage),
                 format!("{:?}", m.u32(at + 0x4c)),
             );
         }
-        if self.x50 != m.u32(at + 0x50) {
+        if self.walk_distance != m.u32(at + 0x50) {
             cx.mismatch(
-                &format!("{path}.x50"),
-                format!("{:?}", self.x50),
+                &format!("{path}.walk_distance (x50)"),
+                format!("{:?}", self.walk_distance),
                 format!("{:?}", m.u32(at + 0x50)),
             );
         }
-        if self.x54 != m.u32(at + 0x54) {
+        if self.run_distance != m.u32(at + 0x54) {
             cx.mismatch(
-                &format!("{path}.x54"),
-                format!("{:?}", self.x54),
+                &format!("{path}.run_distance (x54)"),
+                format!("{:?}", self.run_distance),
                 format!("{:?}", m.u32(at + 0x54)),
             );
         }
-        if self.x58 != m.u32(at + 0x58) {
+        if self.fall_distance != m.u32(at + 0x58) {
             cx.mismatch(
-                &format!("{path}.x58"),
-                format!("{:?}", self.x58),
+                &format!("{path}.fall_distance (x58)"),
+                format!("{:?}", self.fall_distance),
                 format!("{:?}", m.u32(at + 0x58)),
             );
         }
-        if self.x5C != m.u32(at + 0x5c) {
+        if self.peak_height != m.u32(at + 0x5c) {
             cx.mismatch(
-                &format!("{path}.x5C"),
-                format!("{:?}", self.x5C),
+                &format!("{path}.peak_height (x5C)"),
+                format!("{:?}", self.peak_height),
                 format!("{:?}", m.u32(at + 0x5c)),
             );
         }
-        if self.x60 != m.u32(at + 0x60) {
+        if self.coins_collected != m.u32(at + 0x60) {
             cx.mismatch(
-                &format!("{path}.x60"),
-                format!("{:?}", self.x60),
+                &format!("{path}.coins_collected (x60)"),
+                format!("{:?}", self.coins_collected),
                 format!("{:?}", m.u32(at + 0x60)),
             );
         }
-        if self.x64 != m.u32(at + 0x64) {
+        if self.coins_swiped != m.u32(at + 0x64) {
             cx.mismatch(
-                &format!("{path}.x64"),
-                format!("{:?}", self.x64),
+                &format!("{path}.coins_swiped (x64)"),
+                format!("{:?}", self.coins_swiped),
                 format!("{:?}", m.u32(at + 0x64)),
             );
         }
-        if self.x68 != m.u32(at + 0x68) {
+        if self.coins_lost != m.u32(at + 0x68) {
             cx.mismatch(
-                &format!("{path}.x68"),
-                format!("{:?}", self.x68),
+                &format!("{path}.coins_lost (x68)"),
+                format!("{:?}", self.coins_lost),
                 format!("{:?}", m.u32(at + 0x68)),
             );
         }
-        if self.x6C != m.u32(at + 0x6c) {
+        if self.air_time != m.u32(at + 0x6c) {
             cx.mismatch(
-                &format!("{path}.x6C"),
-                format!("{:?}", self.x6C),
+                &format!("{path}.air_time (x6C)"),
+                format!("{:?}", self.air_time),
                 format!("{:?}", m.u32(at + 0x6c)),
             );
         }
-        if self.x70 != m.u32(at + 0x70) {
+        if self.ground_time != m.u32(at + 0x70) {
             cx.mismatch(
-                &format!("{path}.x70"),
-                format!("{:?}", self.x70),
+                &format!("{path}.ground_time (x70)"),
+                format!("{:?}", self.ground_time),
                 format!("{:?}", m.u32(at + 0x70)),
             );
         }
-        if self.x74 != m.u32(at + 0x74) {
+        if self.ground_attacks != m.u32(at + 0x74) {
             cx.mismatch(
-                &format!("{path}.x74"),
-                format!("{:?}", self.x74),
+                &format!("{path}.ground_attacks (x74)"),
+                format!("{:?}", self.ground_attacks),
                 format!("{:?}", m.u32(at + 0x74)),
             );
         }
-        if self.x78 != m.u32(at + 0x78) {
+        if self.air_attacks != m.u32(at + 0x78) {
             cx.mismatch(
-                &format!("{path}.x78"),
-                format!("{:?}", self.x78),
+                &format!("{path}.air_attacks (x78)"),
+                format!("{:?}", self.air_attacks),
                 format!("{:?}", m.u32(at + 0x78)),
             );
         }
-        if self.x7C != m.u32(at + 0x7c) {
+        if self.items_thrown != m.u32(at + 0x7c) {
             cx.mismatch(
-                &format!("{path}.x7C"),
-                format!("{:?}", self.x7C),
+                &format!("{path}.items_thrown (x7C)"),
+                format!("{:?}", self.items_thrown),
                 format!("{:?}", m.u32(at + 0x7c)),
             );
         }
-        if self.x80 != m.u32(at + 0x80) {
+        if self.specials != m.u32(at + 0x80) {
             cx.mismatch(
-                &format!("{path}.x80"),
-                format!("{:?}", self.x80),
+                &format!("{path}.specials (x80)"),
+                format!("{:?}", self.specials),
                 format!("{:?}", m.u32(at + 0x80)),
             );
         }
-        if self.x84 != m.u32(at + 0x84) {
+        if self.grabs != m.u32(at + 0x84) {
             cx.mismatch(
-                &format!("{path}.x84"),
-                format!("{:?}", self.x84),
+                &format!("{path}.grabs (x84)"),
+                format!("{:?}", self.grabs),
                 format!("{:?}", m.u32(at + 0x84)),
             );
         }
-        if self.x88 != m.u32(at + 0x88) {
+        if self.down_attacks != m.u32(at + 0x88) {
             cx.mismatch(
-                &format!("{path}.x88"),
-                format!("{:?}", self.x88),
+                &format!("{path}.down_attacks (x88)"),
+                format!("{:?}", self.down_attacks),
                 format!("{:?}", m.u32(at + 0x88)),
             );
         }
-        if self.x8C != m.u32(at + 0x8c) {
+        if self.action_stat_112 != m.u32(at + 0x8c) {
             cx.mismatch(
-                &format!("{path}.x8C"),
-                format!("{:?}", self.x8C),
+                &format!("{path}.action_stat_112 (x8C)"),
+                format!("{:?}", self.action_stat_112),
                 format!("{:?}", m.u32(at + 0x8c)),
             );
         }
-        if self.x90 != m.u32(at + 0x90) {
+        if self.items_picked_up != m.u32(at + 0x90) {
             cx.mismatch(
-                &format!("{path}.x90"),
-                format!("{:?}", self.x90),
+                &format!("{path}.items_picked_up (x90)"),
+                format!("{:?}", self.items_picked_up),
                 format!("{:?}", m.u32(at + 0x90)),
             );
         }
-        if self.x94 != m.u32(at + 0x94) {
+        if self.timed_stat_1 != m.u32(at + 0x94) {
             cx.mismatch(
-                &format!("{path}.x94"),
-                format!("{:?}", self.x94),
+                &format!("{path}.timed_stat_1 (x94)"),
+                format!("{:?}", self.timed_stat_1),
                 format!("{:?}", m.u32(at + 0x94)),
             );
         }
-        if self.x98 != m.u32(at + 0x98) {
+        if self.timed_stat_2 != m.u32(at + 0x98) {
             cx.mismatch(
-                &format!("{path}.x98"),
-                format!("{:?}", self.x98),
+                &format!("{path}.timed_stat_2 (x98)"),
+                format!("{:?}", self.timed_stat_2),
                 format!("{:?}", m.u32(at + 0x98)),
             );
         }
-        if self.x9C != m.u32(at + 0x9c) as i32 {
+        if self.timed_stat_3 != m.u32(at + 0x9c) as i32 {
             cx.mismatch(
-                &format!("{path}.x9C"),
-                format!("{:?}", self.x9C),
+                &format!("{path}.timed_stat_3 (x9C)"),
+                format!("{:?}", self.timed_stat_3),
                 format!("{:?}", m.u32(at + 0x9c) as i32),
             );
         }
-        if self.xA0 != m.u32(at + 0xa0) as i32 {
+        if self.timed_stat_4 != m.u32(at + 0xa0) as i32 {
             cx.mismatch(
-                &format!("{path}.xA0"),
-                format!("{:?}", self.xA0),
+                &format!("{path}.timed_stat_4 (xA0)"),
+                format!("{:?}", self.timed_stat_4),
                 format!("{:?}", m.u32(at + 0xa0) as i32),
             );
         }
-        if self.xA4 != m.u32(at + 0xa4) {
+        if self.last_attack_stat != m.u32(at + 0xa4) {
             cx.mismatch(
-                &format!("{path}.xA4"),
-                format!("{:?}", self.xA4),
+                &format!("{path}.last_attack_stat (xA4)"),
+                format!("{:?}", self.last_attack_stat),
                 format!("{:?}", m.u32(at + 0xa4)),
             );
         }
@@ -14596,66 +14596,66 @@ impl Mirror for StartMeleeRules {
         let _ = (&m, at, &cx);
         StartMeleeRules {
             match_kind: m.bits(at, 0, 3) as u8,
-            x0_3: m.bits(at, 3, 3) as u8,
+            damage_display: m.bits(at, 3, 3) as u8,
             timer_enabled: m.bits(at, 6, 1) != 0,
             timer_counts_up: m.bits(at, 7, 1) != 0,
-            x1_0: m.bits(at, 8, 1) != 0,
-            x1_1: m.bits(at, 9, 1) != 0,
-            x1_2: m.bits(at, 10, 1) != 0,
-            x1_3: m.bits(at, 11, 1) != 0,
-            x1_4: m.bits(at, 12, 1) != 0,
-            x1_5: m.bits(at, 13, 1) != 0,
+            exact_start_frame: m.bits(at, 8, 1) != 0,
+            counts_coins: m.bits(at, 9, 1) != 0,
+            long_countdown: m.bits(at, 10, 1) != 0,
+            alt_go: m.bits(at, 11, 1) != 0,
+            fixed_layout: m.bits(at, 12, 1) != 0,
+            keeps_rumble: m.bits(at, 13, 1) != 0,
             timer_shows_hours: m.bits(at, 14, 1) != 0,
             friendly_fire: m.bits(at, 15, 1) != 0,
             is_stock: m.bits(at, 16, 1) != 0,
-            x2_1: m.bits(at, 17, 1) != 0,
-            x2_2: m.bits(at, 18, 1) != 0,
+            arrows_flag: m.bits(at, 17, 1) != 0,
+            unread_2_2: m.bits(at, 18, 1) != 0,
             single_button: m.bits(at, 19, 1) != 0,
             disable_pausing: m.bits(at, 20, 1) != 0,
-            x2_5: m.bits(at, 21, 1) != 0,
-            x2_6: m.bits(at, 22, 1) != 0,
-            x2_7: m.bits(at, 23, 1) != 0,
-            x3_0: m.bits(at, 24, 1) != 0,
-            x3_1: m.bits(at, 25, 1) != 0,
-            x3_2: m.bits(at, 26, 1) != 0,
-            x3_3: m.bits(at, 27, 1) != 0,
-            x3_4: m.bits(at, 28, 1) != 0,
-            x3_5: m.bits(at, 29, 1) != 0,
-            x3_6: m.bits(at, 30, 1) != 0,
-            x3_7: m.bits(at, 31, 1) != 0,
-            x4_0: m.bits(at, 32, 1) != 0,
+            damage_display_kos: m.bits(at, 21, 1) != 0,
+            damage_displays_on: m.bits(at, 22, 1) != 0,
+            damage_display_fades: m.bits(at, 23, 1) != 0,
+            shows_score: m.bits(at, 24, 1) != 0,
+            pause_shows_stick: m.bits(at, 25, 1) != 0,
+            pause_z_retries: m.bits(at, 26, 1) != 0,
+            pause_shows_z: m.bits(at, 27, 1) != 0,
+            pause_lras_quits: m.bits(at, 28, 1) != 0,
+            pause_shows_lras: m.bits(at, 29, 1) != 0,
+            pause_hides_controls: m.bits(at, 30, 1) != 0,
+            pause_shows_timers: m.bits(at, 31, 1) != 0,
+            pause_camera: m.bits(at, 32, 1) != 0,
             is_vs: m.bits(at, 33, 1) != 0,
-            x4_2: m.bits(at, 34, 1) != 0,
-            x4_3: m.bits(at, 35, 1) != 0,
-            x4_4: m.bits(at, 36, 1) != 0,
-            x4_5: m.bits(at, 37, 1) != 0,
-            x4_6: m.bits(at, 38, 1) != 0,
-            x4_7: m.bits(at, 39, 1) != 0,
-            x5_0: m.bits(at, 40, 1) != 0,
-            x5_1: m.bits(at, 41, 1) != 0,
-            x5_2: m.bits(at, 42, 1) != 0,
-            x5_3: m.bits(at, 43, 1) != 0,
-            x5_4: m.bits(at, 44, 1) != 0,
-            x5_5: m.bits(at, 45, 1) != 0,
-            x5_6: m.bits(at, 46, 1) != 0,
-            x5_7: m.bits(at, 47, 1) != 0,
-            x6: m.u8(at + 0x6),
-            x7: m.u8(at + 0x7),
+            single_player: m.bits(at, 34, 1) != 0,
+            game_over_scene: m.bits(at, 35, 1) != 0,
+            clear_scores: m.bits(at, 36, 1) != 0,
+            allows_continue: m.bits(at, 37, 1) != 0,
+            time_bonus: m.bits(at, 38, 1) != 0,
+            damage_bonus: m.bits(at, 39, 1) != 0,
+            endless: m.bits(at, 40, 1) != 0,
+            goes_on: m.bits(at, 41, 1) != 0,
+            no_fighter_hits: m.bits(at, 42, 1) != 0,
+            stadium_zoom: m.bits(at, 43, 1) != 0,
+            unused_5_4: m.bits(at, 44, 1) != 0,
+            unused_5_5: m.bits(at, 45, 1) != 0,
+            unused_5_6: m.bits(at, 46, 1) != 0,
+            unused_5_7: m.bits(at, 47, 1) != 0,
+            sudden_death: m.u8(at + 0x6),
+            end_kind: m.u8(at + 0x7),
             is_teams: m.u8(at + 0x8),
-            x9: m.u8(at + 0x9),
-            xA: m.u8(at + 0xa),
+            run_kind: m.u8(at + 0x9),
+            stage_layout: m.u8(at + 0xa),
             item_freq: m.u8(at + 0xb) as i8,
             sd_penalty: m.u8(at + 0xc) as i8,
-            xD: m.u8(at + 0xd),
+            end_wait: m.u8(at + 0xd),
             stkind: m.u16(at + 0xe),
             time_limit: m.u32(at + 0x10),
-            x14: m.u8(at + 0x14),
-            x18: m.u32(at + 0x18),
-            x1C_pad: core::array::from_fn(|i0| m.u32(at + 0x1c + i0 as u32 * 0x4)),
-            x20: m.u64(at + 0x20),
-            x28: m.u32(at + 0x28) as i32,
-            x2C: f32::from_bits(m.u32(at + 0x2c)),
-            x30: f32::from_bits(m.u32(at + 0x30)),
+            start_frame: m.u8(at + 0x14),
+            score: m.u32(at + 0x18),
+            pad_1c: core::array::from_fn(|i0| m.u32(at + 0x1c + i0 as u32 * 0x4)),
+            item_switch: m.u64(at + 0x20),
+            forced_pokemon: m.u32(at + 0x28) as i32,
+            quake_scale: f32::from_bits(m.u32(at + 0x2c)),
+            damage_ratio: f32::from_bits(m.u32(at + 0x30)),
             game_speed: f32::from_bits(m.u32(at + 0x34)),
             on_unpause_override: code(m.u32(at + 0x38)),
             on_pause_override: code(m.u32(at + 0x3c)),
@@ -14664,9 +14664,9 @@ impl Mirror for StartMeleeRules {
             on_frame_start: code(m.u32(at + 0x48)),
             on_frame_end: code(m.u32(at + 0x4c)),
             on_match_end: code(m.u32(at + 0x50)),
-            x54: RawPtr(m.u32(at + 0x54)),
-            x58: RawPtr(m.u32(at + 0x58)),
-            pad_x5C: core::array::from_fn(|i0| m.u8(at + 0x5c + i0 as u32 * 0x1)),
+            opponent_list: RawPtr(m.u32(at + 0x54)),
+            challenger_record: RawPtr(m.u32(at + 0x58)),
+            pad_5c: core::array::from_fn(|i0| m.u8(at + 0x5c + i0 as u32 * 0x1)),
         }
     }
 
@@ -14679,10 +14679,10 @@ impl Mirror for StartMeleeRules {
                 format!("{:?}", m.bits(at, 0, 3)),
             );
         }
-        if (self.x0_3 as u32) != m.bits(at, 3, 3) {
+        if (self.damage_display as u32) != m.bits(at, 3, 3) {
             cx.mismatch(
-                &format!("{path}.x0_3"),
-                format!("{:?}", self.x0_3),
+                &format!("{path}.damage_display (x0_3)"),
+                format!("{:?}", self.damage_display),
                 format!("{:?}", m.bits(at, 3, 3)),
             );
         }
@@ -14700,45 +14700,45 @@ impl Mirror for StartMeleeRules {
                 format!("{:?}", m.bits(at, 7, 1)),
             );
         }
-        if (self.x1_0 as u32) != m.bits(at, 8, 1) {
+        if (self.exact_start_frame as u32) != m.bits(at, 8, 1) {
             cx.mismatch(
-                &format!("{path}.x1_0"),
-                format!("{:?}", self.x1_0),
+                &format!("{path}.exact_start_frame (x1_0)"),
+                format!("{:?}", self.exact_start_frame),
                 format!("{:?}", m.bits(at, 8, 1)),
             );
         }
-        if (self.x1_1 as u32) != m.bits(at, 9, 1) {
+        if (self.counts_coins as u32) != m.bits(at, 9, 1) {
             cx.mismatch(
-                &format!("{path}.x1_1"),
-                format!("{:?}", self.x1_1),
+                &format!("{path}.counts_coins (x1_1)"),
+                format!("{:?}", self.counts_coins),
                 format!("{:?}", m.bits(at, 9, 1)),
             );
         }
-        if (self.x1_2 as u32) != m.bits(at, 10, 1) {
+        if (self.long_countdown as u32) != m.bits(at, 10, 1) {
             cx.mismatch(
-                &format!("{path}.x1_2"),
-                format!("{:?}", self.x1_2),
+                &format!("{path}.long_countdown (x1_2)"),
+                format!("{:?}", self.long_countdown),
                 format!("{:?}", m.bits(at, 10, 1)),
             );
         }
-        if (self.x1_3 as u32) != m.bits(at, 11, 1) {
+        if (self.alt_go as u32) != m.bits(at, 11, 1) {
             cx.mismatch(
-                &format!("{path}.x1_3"),
-                format!("{:?}", self.x1_3),
+                &format!("{path}.alt_go (x1_3)"),
+                format!("{:?}", self.alt_go),
                 format!("{:?}", m.bits(at, 11, 1)),
             );
         }
-        if (self.x1_4 as u32) != m.bits(at, 12, 1) {
+        if (self.fixed_layout as u32) != m.bits(at, 12, 1) {
             cx.mismatch(
-                &format!("{path}.x1_4"),
-                format!("{:?}", self.x1_4),
+                &format!("{path}.fixed_layout (x1_4)"),
+                format!("{:?}", self.fixed_layout),
                 format!("{:?}", m.bits(at, 12, 1)),
             );
         }
-        if (self.x1_5 as u32) != m.bits(at, 13, 1) {
+        if (self.keeps_rumble as u32) != m.bits(at, 13, 1) {
             cx.mismatch(
-                &format!("{path}.x1_5"),
-                format!("{:?}", self.x1_5),
+                &format!("{path}.keeps_rumble (x1_5)"),
+                format!("{:?}", self.keeps_rumble),
                 format!("{:?}", m.bits(at, 13, 1)),
             );
         }
@@ -14763,17 +14763,17 @@ impl Mirror for StartMeleeRules {
                 format!("{:?}", m.bits(at, 16, 1)),
             );
         }
-        if (self.x2_1 as u32) != m.bits(at, 17, 1) {
+        if (self.arrows_flag as u32) != m.bits(at, 17, 1) {
             cx.mismatch(
-                &format!("{path}.x2_1"),
-                format!("{:?}", self.x2_1),
+                &format!("{path}.arrows_flag (x2_1)"),
+                format!("{:?}", self.arrows_flag),
                 format!("{:?}", m.bits(at, 17, 1)),
             );
         }
-        if (self.x2_2 as u32) != m.bits(at, 18, 1) {
+        if (self.unread_2_2 as u32) != m.bits(at, 18, 1) {
             cx.mismatch(
-                &format!("{path}.x2_2"),
-                format!("{:?}", self.x2_2),
+                &format!("{path}.unread_2_2 (x2_2)"),
+                format!("{:?}", self.unread_2_2),
                 format!("{:?}", m.bits(at, 18, 1)),
             );
         }
@@ -14791,87 +14791,87 @@ impl Mirror for StartMeleeRules {
                 format!("{:?}", m.bits(at, 20, 1)),
             );
         }
-        if (self.x2_5 as u32) != m.bits(at, 21, 1) {
+        if (self.damage_display_kos as u32) != m.bits(at, 21, 1) {
             cx.mismatch(
-                &format!("{path}.x2_5"),
-                format!("{:?}", self.x2_5),
+                &format!("{path}.damage_display_kos (x2_5)"),
+                format!("{:?}", self.damage_display_kos),
                 format!("{:?}", m.bits(at, 21, 1)),
             );
         }
-        if (self.x2_6 as u32) != m.bits(at, 22, 1) {
+        if (self.damage_displays_on as u32) != m.bits(at, 22, 1) {
             cx.mismatch(
-                &format!("{path}.x2_6"),
-                format!("{:?}", self.x2_6),
+                &format!("{path}.damage_displays_on (x2_6)"),
+                format!("{:?}", self.damage_displays_on),
                 format!("{:?}", m.bits(at, 22, 1)),
             );
         }
-        if (self.x2_7 as u32) != m.bits(at, 23, 1) {
+        if (self.damage_display_fades as u32) != m.bits(at, 23, 1) {
             cx.mismatch(
-                &format!("{path}.x2_7"),
-                format!("{:?}", self.x2_7),
+                &format!("{path}.damage_display_fades (x2_7)"),
+                format!("{:?}", self.damage_display_fades),
                 format!("{:?}", m.bits(at, 23, 1)),
             );
         }
-        if (self.x3_0 as u32) != m.bits(at, 24, 1) {
+        if (self.shows_score as u32) != m.bits(at, 24, 1) {
             cx.mismatch(
-                &format!("{path}.x3_0"),
-                format!("{:?}", self.x3_0),
+                &format!("{path}.shows_score (x3_0)"),
+                format!("{:?}", self.shows_score),
                 format!("{:?}", m.bits(at, 24, 1)),
             );
         }
-        if (self.x3_1 as u32) != m.bits(at, 25, 1) {
+        if (self.pause_shows_stick as u32) != m.bits(at, 25, 1) {
             cx.mismatch(
-                &format!("{path}.x3_1"),
-                format!("{:?}", self.x3_1),
+                &format!("{path}.pause_shows_stick (x3_1)"),
+                format!("{:?}", self.pause_shows_stick),
                 format!("{:?}", m.bits(at, 25, 1)),
             );
         }
-        if (self.x3_2 as u32) != m.bits(at, 26, 1) {
+        if (self.pause_z_retries as u32) != m.bits(at, 26, 1) {
             cx.mismatch(
-                &format!("{path}.x3_2"),
-                format!("{:?}", self.x3_2),
+                &format!("{path}.pause_z_retries (x3_2)"),
+                format!("{:?}", self.pause_z_retries),
                 format!("{:?}", m.bits(at, 26, 1)),
             );
         }
-        if (self.x3_3 as u32) != m.bits(at, 27, 1) {
+        if (self.pause_shows_z as u32) != m.bits(at, 27, 1) {
             cx.mismatch(
-                &format!("{path}.x3_3"),
-                format!("{:?}", self.x3_3),
+                &format!("{path}.pause_shows_z (x3_3)"),
+                format!("{:?}", self.pause_shows_z),
                 format!("{:?}", m.bits(at, 27, 1)),
             );
         }
-        if (self.x3_4 as u32) != m.bits(at, 28, 1) {
+        if (self.pause_lras_quits as u32) != m.bits(at, 28, 1) {
             cx.mismatch(
-                &format!("{path}.x3_4"),
-                format!("{:?}", self.x3_4),
+                &format!("{path}.pause_lras_quits (x3_4)"),
+                format!("{:?}", self.pause_lras_quits),
                 format!("{:?}", m.bits(at, 28, 1)),
             );
         }
-        if (self.x3_5 as u32) != m.bits(at, 29, 1) {
+        if (self.pause_shows_lras as u32) != m.bits(at, 29, 1) {
             cx.mismatch(
-                &format!("{path}.x3_5"),
-                format!("{:?}", self.x3_5),
+                &format!("{path}.pause_shows_lras (x3_5)"),
+                format!("{:?}", self.pause_shows_lras),
                 format!("{:?}", m.bits(at, 29, 1)),
             );
         }
-        if (self.x3_6 as u32) != m.bits(at, 30, 1) {
+        if (self.pause_hides_controls as u32) != m.bits(at, 30, 1) {
             cx.mismatch(
-                &format!("{path}.x3_6"),
-                format!("{:?}", self.x3_6),
+                &format!("{path}.pause_hides_controls (x3_6)"),
+                format!("{:?}", self.pause_hides_controls),
                 format!("{:?}", m.bits(at, 30, 1)),
             );
         }
-        if (self.x3_7 as u32) != m.bits(at, 31, 1) {
+        if (self.pause_shows_timers as u32) != m.bits(at, 31, 1) {
             cx.mismatch(
-                &format!("{path}.x3_7"),
-                format!("{:?}", self.x3_7),
+                &format!("{path}.pause_shows_timers (x3_7)"),
+                format!("{:?}", self.pause_shows_timers),
                 format!("{:?}", m.bits(at, 31, 1)),
             );
         }
-        if (self.x4_0 as u32) != m.bits(at, 32, 1) {
+        if (self.pause_camera as u32) != m.bits(at, 32, 1) {
             cx.mismatch(
-                &format!("{path}.x4_0"),
-                format!("{:?}", self.x4_0),
+                &format!("{path}.pause_camera (x4_0)"),
+                format!("{:?}", self.pause_camera),
                 format!("{:?}", m.bits(at, 32, 1)),
             );
         }
@@ -14882,115 +14882,115 @@ impl Mirror for StartMeleeRules {
                 format!("{:?}", m.bits(at, 33, 1)),
             );
         }
-        if (self.x4_2 as u32) != m.bits(at, 34, 1) {
+        if (self.single_player as u32) != m.bits(at, 34, 1) {
             cx.mismatch(
-                &format!("{path}.x4_2"),
-                format!("{:?}", self.x4_2),
+                &format!("{path}.single_player (x4_2)"),
+                format!("{:?}", self.single_player),
                 format!("{:?}", m.bits(at, 34, 1)),
             );
         }
-        if (self.x4_3 as u32) != m.bits(at, 35, 1) {
+        if (self.game_over_scene as u32) != m.bits(at, 35, 1) {
             cx.mismatch(
-                &format!("{path}.x4_3"),
-                format!("{:?}", self.x4_3),
+                &format!("{path}.game_over_scene (x4_3)"),
+                format!("{:?}", self.game_over_scene),
                 format!("{:?}", m.bits(at, 35, 1)),
             );
         }
-        if (self.x4_4 as u32) != m.bits(at, 36, 1) {
+        if (self.clear_scores as u32) != m.bits(at, 36, 1) {
             cx.mismatch(
-                &format!("{path}.x4_4"),
-                format!("{:?}", self.x4_4),
+                &format!("{path}.clear_scores (x4_4)"),
+                format!("{:?}", self.clear_scores),
                 format!("{:?}", m.bits(at, 36, 1)),
             );
         }
-        if (self.x4_5 as u32) != m.bits(at, 37, 1) {
+        if (self.allows_continue as u32) != m.bits(at, 37, 1) {
             cx.mismatch(
-                &format!("{path}.x4_5"),
-                format!("{:?}", self.x4_5),
+                &format!("{path}.allows_continue (x4_5)"),
+                format!("{:?}", self.allows_continue),
                 format!("{:?}", m.bits(at, 37, 1)),
             );
         }
-        if (self.x4_6 as u32) != m.bits(at, 38, 1) {
+        if (self.time_bonus as u32) != m.bits(at, 38, 1) {
             cx.mismatch(
-                &format!("{path}.x4_6"),
-                format!("{:?}", self.x4_6),
+                &format!("{path}.time_bonus (x4_6)"),
+                format!("{:?}", self.time_bonus),
                 format!("{:?}", m.bits(at, 38, 1)),
             );
         }
-        if (self.x4_7 as u32) != m.bits(at, 39, 1) {
+        if (self.damage_bonus as u32) != m.bits(at, 39, 1) {
             cx.mismatch(
-                &format!("{path}.x4_7"),
-                format!("{:?}", self.x4_7),
+                &format!("{path}.damage_bonus (x4_7)"),
+                format!("{:?}", self.damage_bonus),
                 format!("{:?}", m.bits(at, 39, 1)),
             );
         }
-        if (self.x5_0 as u32) != m.bits(at, 40, 1) {
+        if (self.endless as u32) != m.bits(at, 40, 1) {
             cx.mismatch(
-                &format!("{path}.x5_0"),
-                format!("{:?}", self.x5_0),
+                &format!("{path}.endless (x5_0)"),
+                format!("{:?}", self.endless),
                 format!("{:?}", m.bits(at, 40, 1)),
             );
         }
-        if (self.x5_1 as u32) != m.bits(at, 41, 1) {
+        if (self.goes_on as u32) != m.bits(at, 41, 1) {
             cx.mismatch(
-                &format!("{path}.x5_1"),
-                format!("{:?}", self.x5_1),
+                &format!("{path}.goes_on (x5_1)"),
+                format!("{:?}", self.goes_on),
                 format!("{:?}", m.bits(at, 41, 1)),
             );
         }
-        if (self.x5_2 as u32) != m.bits(at, 42, 1) {
+        if (self.no_fighter_hits as u32) != m.bits(at, 42, 1) {
             cx.mismatch(
-                &format!("{path}.x5_2"),
-                format!("{:?}", self.x5_2),
+                &format!("{path}.no_fighter_hits (x5_2)"),
+                format!("{:?}", self.no_fighter_hits),
                 format!("{:?}", m.bits(at, 42, 1)),
             );
         }
-        if (self.x5_3 as u32) != m.bits(at, 43, 1) {
+        if (self.stadium_zoom as u32) != m.bits(at, 43, 1) {
             cx.mismatch(
-                &format!("{path}.x5_3"),
-                format!("{:?}", self.x5_3),
+                &format!("{path}.stadium_zoom (x5_3)"),
+                format!("{:?}", self.stadium_zoom),
                 format!("{:?}", m.bits(at, 43, 1)),
             );
         }
-        if (self.x5_4 as u32) != m.bits(at, 44, 1) {
+        if (self.unused_5_4 as u32) != m.bits(at, 44, 1) {
             cx.mismatch(
-                &format!("{path}.x5_4"),
-                format!("{:?}", self.x5_4),
+                &format!("{path}.unused_5_4 (x5_4)"),
+                format!("{:?}", self.unused_5_4),
                 format!("{:?}", m.bits(at, 44, 1)),
             );
         }
-        if (self.x5_5 as u32) != m.bits(at, 45, 1) {
+        if (self.unused_5_5 as u32) != m.bits(at, 45, 1) {
             cx.mismatch(
-                &format!("{path}.x5_5"),
-                format!("{:?}", self.x5_5),
+                &format!("{path}.unused_5_5 (x5_5)"),
+                format!("{:?}", self.unused_5_5),
                 format!("{:?}", m.bits(at, 45, 1)),
             );
         }
-        if (self.x5_6 as u32) != m.bits(at, 46, 1) {
+        if (self.unused_5_6 as u32) != m.bits(at, 46, 1) {
             cx.mismatch(
-                &format!("{path}.x5_6"),
-                format!("{:?}", self.x5_6),
+                &format!("{path}.unused_5_6 (x5_6)"),
+                format!("{:?}", self.unused_5_6),
                 format!("{:?}", m.bits(at, 46, 1)),
             );
         }
-        if (self.x5_7 as u32) != m.bits(at, 47, 1) {
+        if (self.unused_5_7 as u32) != m.bits(at, 47, 1) {
             cx.mismatch(
-                &format!("{path}.x5_7"),
-                format!("{:?}", self.x5_7),
+                &format!("{path}.unused_5_7 (x5_7)"),
+                format!("{:?}", self.unused_5_7),
                 format!("{:?}", m.bits(at, 47, 1)),
             );
         }
-        if self.x6 != m.u8(at + 0x6) {
+        if self.sudden_death != m.u8(at + 0x6) {
             cx.mismatch(
-                &format!("{path}.x6"),
-                format!("{:?}", self.x6),
+                &format!("{path}.sudden_death (x6)"),
+                format!("{:?}", self.sudden_death),
                 format!("{:?}", m.u8(at + 0x6)),
             );
         }
-        if self.x7 != m.u8(at + 0x7) {
+        if self.end_kind != m.u8(at + 0x7) {
             cx.mismatch(
-                &format!("{path}.x7"),
-                format!("{:?}", self.x7),
+                &format!("{path}.end_kind (x7)"),
+                format!("{:?}", self.end_kind),
                 format!("{:?}", m.u8(at + 0x7)),
             );
         }
@@ -15001,17 +15001,17 @@ impl Mirror for StartMeleeRules {
                 format!("{:?}", m.u8(at + 0x8)),
             );
         }
-        if self.x9 != m.u8(at + 0x9) {
+        if self.run_kind != m.u8(at + 0x9) {
             cx.mismatch(
-                &format!("{path}.x9"),
-                format!("{:?}", self.x9),
+                &format!("{path}.run_kind (x9)"),
+                format!("{:?}", self.run_kind),
                 format!("{:?}", m.u8(at + 0x9)),
             );
         }
-        if self.xA != m.u8(at + 0xa) {
+        if self.stage_layout != m.u8(at + 0xa) {
             cx.mismatch(
-                &format!("{path}.xA"),
-                format!("{:?}", self.xA),
+                &format!("{path}.stage_layout (xA)"),
+                format!("{:?}", self.stage_layout),
                 format!("{:?}", m.u8(at + 0xa)),
             );
         }
@@ -15029,10 +15029,10 @@ impl Mirror for StartMeleeRules {
                 format!("{:?}", m.u8(at + 0xc) as i8),
             );
         }
-        if self.xD != m.u8(at + 0xd) {
+        if self.end_wait != m.u8(at + 0xd) {
             cx.mismatch(
-                &format!("{path}.xD"),
-                format!("{:?}", self.xD),
+                &format!("{path}.end_wait (xD)"),
+                format!("{:?}", self.end_wait),
                 format!("{:?}", m.u8(at + 0xd)),
             );
         }
@@ -15050,54 +15050,54 @@ impl Mirror for StartMeleeRules {
                 format!("{:?}", m.u32(at + 0x10)),
             );
         }
-        if self.x14 != m.u8(at + 0x14) {
+        if self.start_frame != m.u8(at + 0x14) {
             cx.mismatch(
-                &format!("{path}.x14"),
-                format!("{:?}", self.x14),
+                &format!("{path}.start_frame (x14)"),
+                format!("{:?}", self.start_frame),
                 format!("{:?}", m.u8(at + 0x14)),
             );
         }
-        if self.x18 != m.u32(at + 0x18) {
+        if self.score != m.u32(at + 0x18) {
             cx.mismatch(
-                &format!("{path}.x18"),
-                format!("{:?}", self.x18),
+                &format!("{path}.score (x18)"),
+                format!("{:?}", self.score),
                 format!("{:?}", m.u32(at + 0x18)),
             );
         }
         for i0 in 0..1 {
-            if self.x1C_pad[i0] != m.u32(at + 0x1c + i0 as u32 * 0x4) {
+            if self.pad_1c[i0] != m.u32(at + 0x1c + i0 as u32 * 0x4) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.x1C_pad"), i0),
-                    format!("{:?}", self.x1C_pad[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_1c (x1C_pad)"), i0),
+                    format!("{:?}", self.pad_1c[i0]),
                     format!("{:?}", m.u32(at + 0x1c + i0 as u32 * 0x4)),
                 );
             }
         }
-        if self.x20 != m.u64(at + 0x20) {
+        if self.item_switch != m.u64(at + 0x20) {
             cx.mismatch(
-                &format!("{path}.x20"),
-                format!("{:?}", self.x20),
+                &format!("{path}.item_switch (x20)"),
+                format!("{:?}", self.item_switch),
                 format!("{:?}", m.u64(at + 0x20)),
             );
         }
-        if self.x28 != m.u32(at + 0x28) as i32 {
+        if self.forced_pokemon != m.u32(at + 0x28) as i32 {
             cx.mismatch(
-                &format!("{path}.x28"),
-                format!("{:?}", self.x28),
+                &format!("{path}.forced_pokemon (x28)"),
+                format!("{:?}", self.forced_pokemon),
                 format!("{:?}", m.u32(at + 0x28) as i32),
             );
         }
-        if self.x2C.to_bits() != m.u32(at + 0x2c) {
+        if self.quake_scale.to_bits() != m.u32(at + 0x2c) {
             cx.mismatch(
-                &format!("{path}.x2C"),
-                format!("{:?}", self.x2C),
+                &format!("{path}.quake_scale (x2C)"),
+                format!("{:?}", self.quake_scale),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2c))),
             );
         }
-        if self.x30.to_bits() != m.u32(at + 0x30) {
+        if self.damage_ratio.to_bits() != m.u32(at + 0x30) {
             cx.mismatch(
-                &format!("{path}.x30"),
-                format!("{:?}", self.x30),
+                &format!("{path}.damage_ratio (x30)"),
+                format!("{:?}", self.damage_ratio),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x30))),
             );
         }
@@ -15157,25 +15157,25 @@ impl Mirror for StartMeleeRules {
                 format!("{:#x}", m.u32(at + 0x50)),
             );
         }
-        if self.x54.0 != m.u32(at + 0x54) {
+        if self.opponent_list.0 != m.u32(at + 0x54) {
             cx.mismatch(
-                &format!("{path}.x54"),
-                format!("{:#x}", self.x54.0),
+                &format!("{path}.opponent_list (x54)"),
+                format!("{:#x}", self.opponent_list.0),
                 format!("{:#x}", m.u32(at + 0x54)),
             );
         }
-        if self.x58.0 != m.u32(at + 0x58) {
+        if self.challenger_record.0 != m.u32(at + 0x58) {
             cx.mismatch(
-                &format!("{path}.x58"),
-                format!("{:#x}", self.x58.0),
+                &format!("{path}.challenger_record (x58)"),
+                format!("{:#x}", self.challenger_record.0),
                 format!("{:#x}", m.u32(at + 0x58)),
             );
         }
         for i0 in 0..4 {
-            if self.pad_x5C[i0] != m.u8(at + 0x5c + i0 as u32 * 0x1) {
+            if self.pad_5c[i0] != m.u8(at + 0x5c + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.pad_x5C"), i0),
-                    format!("{:?}", self.pad_x5C[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_5c (pad_x5C)"), i0),
+                    format!("{:?}", self.pad_5c[i0]),
                     format!("{:?}", m.u8(at + 0x5c + i0 as u32 * 0x1)),
                 );
             }

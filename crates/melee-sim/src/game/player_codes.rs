@@ -482,7 +482,7 @@ impl Running<'_> {
             StartRules::Items if at != Scene::Other => {
                 r.item_freq = 3;
                 r.time_limit = 120;
-                r.x20 = r.x20 & 0xFFFF_FF00_0000_0000 | 0x0000_00FD_FFFB_F8FF;
+                r.item_switch = r.item_switch & 0xFFFF_FF00_0000_0000 | 0x0000_00FD_FFFB_F8FF;
             }
             StartRules::Time if at == Scene::Vs => r.time_limit = 180,
             _ => {}

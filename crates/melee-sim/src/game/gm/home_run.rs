@@ -110,20 +110,20 @@ impl Running<'_> {
         r.stkind = crate::game::gr::StKind::HomeRun.id();
         r.match_kind = 1;
         r.timer_enabled = true;
-        r.x1_0 = true;
-        r.x4_2 = false;
-        r.x4_4 = false;
+        r.exact_start_frame = true;
+        r.single_player = false;
+        r.clear_scores = false;
         r.is_teams = 0;
         r.item_freq = -1;
         r.time_limit = 10;
         r.game_speed = 1.0;
-        r.x30 = 1.0;
-        r.x5_0 = true;
-        r.x1_3 = true;
+        r.damage_ratio = 1.0;
+        r.endless = true;
+        r.alt_go = true;
         r.on_match_start = Some(CodeRef(ON_MATCH_START));
-        r.x3_3 = true;
-        r.x3_2 = true;
-        r.x7 = 9;
+        r.pause_shows_z = true;
+        r.pause_z_retries = true;
+        r.end_kind = 9;
         for (p, v) in start.players.iter_mut().zip(&vs.players) {
             p.clone_from(v);
             p.xC_b1 = false;
@@ -161,7 +161,7 @@ impl Running<'_> {
         let me = self.game.vs_melee.exit.match_end.clone();
         let s = &mut self.game.game_data.thing.save_data;
         s.x1A3C = (s.x1A3C as u32).wrapping_add(me.frame_count / 60) as i32;
-        self.results_add_coins(i32::from(me.player_standings[0].xE));
+        self.results_add_coins(i32::from(me.player_standings[0].coins));
         self.homerun_store_records();
         if me.outcome == super::vs::OUTCOME_RETRY {
             self.set_next_game_mode_state_id(1);

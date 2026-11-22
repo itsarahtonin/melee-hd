@@ -354,7 +354,7 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
         rng.below(5) as i8
     };
     if let Some(mask) = chosen.items {
-        rules.x20 = mask;
+        rules.item_switch = mask;
         if rules.item_freq < 0 {
             rules.item_freq = 3;
         }
@@ -371,7 +371,7 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
         rules.is_teams = u8::from(teams);
         rules.friendly_fire = teams && rng.chance(50);
         rules.single_button = rng.chance(10);
-        rules.x30 = if rng.chance(20) {
+        rules.damage_ratio = if rng.chance(20) {
             (0.5 + rng.below(16) as f64 * 0.1) as f32
         } else {
             1.0

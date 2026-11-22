@@ -196,7 +196,7 @@ impl Game {
     #[doc(alias("vs_x4_2"))]
     #[doc(alias = "gm_8016B0E8")]
     pub fn vs_single_player_rules(&self) -> bool {
-        self.vs.start.x4_2
+        self.vs.start.single_player
     }
 
     /// `gm_8016B014`: in a match with the rules' `x4_2` (a single-player run's or Target
@@ -204,7 +204,7 @@ impl Game {
     /// other slot in play).
     #[doc(alias = "gm_8016B014")]
     pub fn single_player_alone(&self) -> bool {
-        self.vs.start.x4_2
+        self.vs.start.single_player
             && !self.gm.opponents.joining()
             && (1..6).all(|i| self.player_state(i) == 0)
     }
@@ -223,7 +223,7 @@ impl Game {
     #[doc(alias("vs_x2_1"))]
     #[doc(alias = "gm_8016B124")]
     pub fn vs_arrows_flag(&self) -> bool {
-        self.vs.start.x2_1
+        self.vs.start.arrows_flag
     }
 
     #[doc(alias = "gm_8016B14C")]
@@ -247,14 +247,14 @@ impl Game {
     #[doc(alias("vs_x9_is_1"))]
     #[doc(alias = "gm_8016B1A8")]
     pub fn vs_target_test(&self) -> bool {
-        self.vs.start.x9 == 1
+        self.vs.start.run_kind == 1
     }
 
     /// Whether fighters' hitboxes hit no fighters (`rules.x5_2`, an event's).
     #[doc(alias("vs_x5_2"))]
     #[doc(alias = "gm_8016B1C4")]
     pub fn vs_no_fighter_hits(&self) -> bool {
-        self.vs.start.x5_2
+        self.vs.start.no_fighter_hits
     }
 
     /// Whether Jigglypuff's Rest asks if the Stadium's screen shows her (`rules.x5_3`, an
@@ -262,7 +262,7 @@ impl Game {
     #[doc(alias("vs_x5_3"))]
     #[doc(alias = "gm_8016B1D8")]
     pub fn vs_stadium_zoom(&self) -> bool {
-        self.vs.start.x5_3
+        self.vs.start.stadium_zoom
     }
 
     /// Whether the match is still on, `gm_8016B1EC`.
@@ -281,13 +281,13 @@ impl Game {
     #[doc(alias("vs_x6"))]
     #[doc(alias = "gm_8016B238")]
     pub fn vs_sudden_death(&self) -> u8 {
-        self.vs.start.x6
+        self.vs.start.sudden_death
     }
 
     /// The damage ratio, `gm_8016B248`.
     #[doc(alias = "gm_8016B248")]
     pub fn vs_damage_ratio(&self) -> f32 {
-        self.vs.start.x30
+        self.vs.start.damage_ratio
     }
 
     /// Whether the slot's fighter shows hearts for its team (`fighters[slot].x4`'s 0x10).
@@ -356,7 +356,7 @@ impl Game {
     #[doc(alias("vs_has_x58"))]
     #[doc(alias = "gm_8016A944")]
     pub fn vs_has_challenger_record(&self) -> bool {
-        self.vs.start.x58.0 != 0
+        self.vs.start.challenger_record.0 != 0
     }
 
     /// Counts down the fighters' spawn-platform slots, `fn_8016758C`.
@@ -438,7 +438,7 @@ impl Game {
     #[doc(alias = "gm_GetFFAOutcome")]
     pub fn ffa_outcome(&self) -> u8 {
         let s = &self.vs;
-        if s.start.x4_2 && self.player_p1_stocks() == 0 {
+        if s.start.single_player && self.player_p1_stocks() == 0 {
             return OUTCOME_1P_GAME_OVER;
         }
         assert!(
@@ -446,8 +446,8 @@ impl Game {
             "single-player horde victories (fn_8016A1E4) aren't ported"
         );
         if s.state.is_singleplayer == 0
-            && !s.start.x5_1
-            && (s.start.match_kind == 1 || s.start.x4_2)
+            && !s.start.goes_on
+            && (s.start.match_kind == 1 || s.start.single_player)
         {
             let (mut out, mut playing) = (0, 0);
             for i in 0..6 {
@@ -469,7 +469,7 @@ impl Game {
     #[doc(alias = "gm_GetTeamBattleOutcome")]
     pub fn team_outcome(&self) -> u8 {
         let s = &self.vs;
-        if s.start.x4_2 {
+        if s.start.single_player {
             if self.player_p1_stocks() == 0 {
                 return OUTCOME_1P_GAME_OVER;
             }
@@ -477,7 +477,7 @@ impl Game {
             if s.state.is_singleplayer == 1 && o.beaten() && !o.goes_on() {
                 return OUTCOME_1P_HORDE_VICTORY;
             }
-            if s.state.is_singleplayer == 0 && !s.start.x5_1 {
+            if s.state.is_singleplayer == 0 && !s.start.goes_on {
                 let (mut enemy_stocks, mut enemies) = (0, 0);
                 for slot in 0..6 {
                     if !self.player_flags_bit1(slot)
@@ -529,7 +529,7 @@ impl Game {
         if s.state.terminate_match == 1 {
             return OUTCOME_TERMINATED;
         }
-        if s.start.x5_0 {
+        if s.start.endless {
             return OUTCOME_NONE;
         }
         if s.start.timer_enabled {
@@ -760,7 +760,7 @@ impl Running<'_> {
         let stkind = i32::from(self.game.vs.start.stkind);
         self.start_stage(stkind);
         self.stadium_go();
-        let kind = if self.game.vs.start.x1_3 { 8 } else { 4 };
+        let kind = if self.game.vs.start.alt_go { 8 } else { 4 };
         self.announce(kind, -1, -1, 0, None, Some(CodeRef(addr::HUD_ON)));
         self.game.unshow_nametags();
     }
@@ -788,7 +788,7 @@ impl Running<'_> {
         if g.vs.state.hud_enabled == 0 {
             return;
         }
-        if !(g.db_pause_flags() == 0 || g.db_frame_step(0) || g.vs.start.x3_7) {
+        if !(g.db_pause_flags() == 0 || g.db_frame_step(0) || g.vs.start.pause_shows_timers) {
             return;
         }
         let s = &mut g.vs.state;
@@ -859,25 +859,25 @@ impl Running<'_> {
         self.lb_audio_call(5);
         self.hide_hud_parts();
         let start = self.game.vs.start.clone();
-        if start.x3_7 {
+        if start.pause_shows_timers {
             self.show_timers();
         }
-        if !start.x3_6 {
+        if !start.pause_hides_controls {
             let mut flag = 0;
-            if start.x3_5 {
+            if start.pause_shows_lras {
                 flag |= 1;
             }
-            if start.x3_3 {
+            if start.pause_shows_z {
                 flag |= 2;
             }
-            if start.x3_1 {
+            if start.pause_shows_stick {
                 flag |= 4;
             }
             let g = &mut *self.game;
             super::pause::show(&mut g.objs, self.data, &mut g.gm.pause, pauser, flag);
         }
         self.game.set_db_pause_flag(bit);
-        if start.x4_0 {
+        if start.pause_camera {
             let slot = self.game.slot_of_port(pauser);
             match start.on_pause_override {
                 Some(f) => {
@@ -909,7 +909,7 @@ impl Running<'_> {
         self.game.hide_pause(i);
         self.game.pads.rumble.unpause_all();
         let start = self.game.vs.start.clone();
-        if start.x4_0 {
+        if start.pause_camera {
             match start.on_unpause_override {
                 Some(f) => {
                     code::call(self, f.0, &[Val::Int(i)]);
@@ -951,14 +951,14 @@ impl Running<'_> {
         for port in 0..4 {
             g.pads.rumble.on(port);
         }
-        if !g.vs.start.x1_5 {
+        if !g.vs.start.keeps_rumble {
             self.lb_audio_music_stop();
         }
         self.sfx_stop_all();
         self.lb_audio_reset();
         self.free_countdown();
         let g = &*self.game;
-        if g.vs.state.match_result == OUTCOME_1P_GAME_OVER && g.vs.start.x4_3 {
+        if g.vs.state.match_result == OUTCOME_1P_GAME_OVER && g.vs.start.game_over_scene {
             let (port, tag) = (g.player_port(0), g.player_nametag(0));
             self.tou_rumble(port as usize, tag, 0xD, 0);
             super::super::camera::request_quake(self, 4, None);
@@ -1020,7 +1020,7 @@ impl Running<'_> {
         self.game.vs.state.match_result = outcome;
         if outcome != OUTCOME_RETRY && self.game.gm.db_level >= super::DB_DEBUG_ROM {
             self.game.clear_db_pause_flag(1);
-            let xd = self.game.vs.start.xD;
+            let xd = self.game.vs.start.end_wait;
             if xd > 1 {
                 self.game.vs.state.unk_30 = xd - 1;
             }
@@ -1063,7 +1063,7 @@ impl Running<'_> {
             };
             let s = &self.game.vs;
             let pauser = s.state.pauser as u8;
-            if s.start.x3_4 && s.state.pause_timer == 0 && s.state.unk_3 == 0 {
+            if s.start.pause_lras_quits && s.state.pause_timer == 0 && s.state.unk_3 == 0 {
                 let g = &*self.game;
                 if quit & g.buttons_triggered(pauser) != 0
                     && quit & g.buttons_pressed(pauser) == quit
@@ -1073,7 +1073,7 @@ impl Running<'_> {
                 }
             }
             let s = &self.game.vs;
-            if s.start.x3_2
+            if s.start.pause_z_retries
                 && s.state.pause_timer == 0
                 && s.state.unk_3 == 0
                 && self.game.buttons_triggered(pauser) & 0x10 != 0
@@ -1135,7 +1135,7 @@ impl Running<'_> {
         let s = &mut self.game.vs.state;
         let wait = s.unk_30;
         s.unk_30 = s.unk_30.wrapping_add(1);
-        if wait <= self.game.vs.start.xD {
+        if wait <= self.game.vs.start.end_wait {
             return;
         }
         if self.game.is_1p_run() {
@@ -1146,9 +1146,9 @@ impl Running<'_> {
         self.game.default_db_pause_handlers();
         let g = &*self.game;
         let s = &g.vs;
-        if s.start.x4_4
+        if s.start.clear_scores
             && s.state.match_result != OUTCOME_TIMEOUT
-            && (s.start.x9 == 1 || g.player_stocks(0) > 0)
+            && (s.start.run_kind == 1 || g.player_stocks(0) > 0)
         {
             self.clear_start();
             self.game.vs.state.unk_0 = 2;
@@ -1173,7 +1173,7 @@ impl Running<'_> {
                 _ => 2,
             };
             if !(run == 0 && g.gm.scene_index == 0x49)
-                && ((g.vs_is_singleplayer() && g.gm.opponents.goes_on()) || g.vs.start.x5_1)
+                && ((g.vs_is_singleplayer() && g.gm.opponents.goes_on()) || g.vs.start.goes_on)
             {
                 result = false;
             }
@@ -1893,15 +1893,19 @@ impl Game {
         let s = &mut self.vs.state;
         s.x24C.match_kind = r.match_kind;
         s.x24C.is_teams = r.is_teams;
-        if r.x7 != 0 {
-            s.unk_B = r.x7;
+        if r.end_kind != 0 {
+            s.unk_B = r.end_kind;
         }
         s.x24C.sd_penalty = r.sd_penalty;
-        self.camera.set_quake_scale(r.x2C);
+        self.camera.set_quake_scale(r.quake_scale);
         let s = &mut self.vs.state;
         if self.vs.start.timer_enabled {
             if self.vs.start.timer_counts_up {
-                s.unk_2C = if r.x14 != 0 { u16::from(r.x14) - 1 } else { 0 };
+                s.unk_2C = if r.start_frame != 0 {
+                    u16::from(r.start_frame) - 1
+                } else {
+                    0
+                };
                 self.vs.start.time_limit = u32::MAX;
                 s.timer_seconds = r.time_limit;
             } else {
@@ -1910,17 +1914,17 @@ impl Game {
                 } else {
                     r.time_limit
                 };
-                s.unk_2C = if r.x14 != 0 {
-                    u16::from(r.x14) - 1
+                s.unk_2C = if r.start_frame != 0 {
+                    u16::from(r.start_frame) - 1
                 } else {
                     0x3B
                 };
             }
-        } else if self.vs.start.x1_0 {
+        } else if self.vs.start.exact_start_frame {
             s.timer_seconds = r.time_limit;
-            s.unk_2C = u16::from(r.x14);
+            s.unk_2C = u16::from(r.start_frame);
         }
-        s.is_singleplayer = u8::from(r.x54.0 != 0);
+        s.is_singleplayer = u8::from(r.opponent_list.0 != 0);
         self.init_all_players();
         match self.vs.state.is_singleplayer {
             // A match the joining opponents' setup fills (`x54`): the human, the other slots
@@ -1949,8 +1953,8 @@ impl Game {
     /// if they make one, else whether every human player holds L or R.
     #[doc(alias = "fn_8016E5C0")]
     pub fn alternate_stage(&self, d: &StartMeleeData) -> i32 {
-        if d.rules.xA != 0 {
-            return i32::from(d.rules.xA);
+        if d.rules.stage_layout != 0 {
+            return i32::from(d.rules.stage_layout);
         }
         let mut human = false;
         for (i, p) in d.players.iter().enumerate() {
@@ -2089,7 +2093,7 @@ impl Running<'_> {
         if let Some(g) = scene {
             self.game.world.setup_proc(g, CodeRef(PROC), 0x14);
         }
-        if !d.rules.x1_4 {
+        if !d.rules.fixed_layout {
             let alt = self.game.alternate_stage(d);
             self.start_stage_music(alt);
         }
@@ -2113,7 +2117,7 @@ impl Running<'_> {
             Some(CodeRef(addr::GO)),
         );
         self.create_timers();
-        self.show_damage_displays(i32::from(d.rules.x0_3));
+        self.show_damage_displays(i32::from(d.rules.damage_display));
     }
 
     /// The VS scene's entry, `gm_Scene_Vs_OnEnter`: the match, then its HUD and timer. The
@@ -2131,7 +2135,7 @@ impl Running<'_> {
         self.player_start_rules(d);
         self.start_vs(d, files, Some(SCENE_F26));
         self.player_end_rules();
-        let lives = if d.rules.x1_2 { 8 } else { 3 };
+        let lives = if d.rules.long_countdown { 8 } else { 3 };
         self.announce(
             lives,
             -1,
@@ -2141,7 +2145,7 @@ impl Running<'_> {
             Some(CodeRef(addr::GO)),
         );
         self.create_timers();
-        self.show_damage_displays(i32::from(d.rules.x0_3));
+        self.show_damage_displays(i32::from(d.rules.damage_display));
     }
 }
 

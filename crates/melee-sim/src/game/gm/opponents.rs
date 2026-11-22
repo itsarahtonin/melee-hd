@@ -405,7 +405,7 @@ impl Opponents {
 /// A match's rules point at the joining opponents (`x54`), `gm_8016A21C`.
 #[doc(alias = "gm_8016A21C")]
 pub fn point_rules(rules: &mut super::super::structs::StartMeleeRules) {
-    rules.x54 = super::super::handles::RawPtr(ADDR);
+    rules.opponent_list = super::super::handles::RawPtr(ADDR);
 }
 
 /// `lbl_8046B488`'s address.

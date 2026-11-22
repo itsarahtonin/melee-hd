@@ -1043,7 +1043,7 @@ impl Running<'_> {
                 p.ckind = s.ckind;
                 p.slot_type = s.pkind;
                 // The costume the screen's fighters take (`x3_u`'s top six bits).
-                p.color = s.x3_u[0] >> 2;
+                p.color = s.flags[0] >> 2;
             }
             return (d, false);
         }

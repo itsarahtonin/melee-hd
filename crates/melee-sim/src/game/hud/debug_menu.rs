@@ -168,7 +168,7 @@ impl DebugVars {
         let mut d = crate::game::structs::StartMeleeData::default();
         let r = &mut d.rules;
         *r = rules_defaults();
-        r.x2_2 = false;
+        r.unread_2_2 = false;
         r.is_teams = w(0xC) as u8;
         let timer = w(0xD0).wrapping_add(w(0xCC).wrapping_mul(60)) as u16;
         let timed = |r: &mut crate::game::structs::StartMeleeRules| {
@@ -198,10 +198,10 @@ impl DebugVars {
             }
         }
         r.stkind = w(0x8) as u16;
-        r.x20 = u64::MAX;
+        r.item_switch = u64::MAX;
         r.item_freq = w(0xD8).wrapping_sub(1) as i8;
         r.sd_penalty = -1;
-        r.x30 = f(0xEC);
+        r.damage_ratio = f(0xEC);
         all_player_defaults(&mut d.players);
         for (i, p) in d.players[..4].iter_mut().enumerate() {
             let i = 4 * i as u32;
@@ -1486,15 +1486,15 @@ impl Running<'_> {
         for i in 0..4 {
             let p = &mut me.player_standings[i];
             p.ckind = ckinds[i];
-            p.x3_u[0] = (p.x3_u[0] & 3) | (color & 0x3F) << 2;
+            p.flags[0] = (p.flags[0] & 3) | (color & 0x3F) << 2;
             let score = 10i32.wrapping_sub(i32::from(ranks[i]));
             p.score = score;
-            p.x30 = score as u32;
+            p.sub_rank = score as u32;
         }
         for i in 0..4 {
             let err = self.game.pads.master[i].err;
             let p = &mut me.player_standings[i];
-            p.x30 = p.x30.wrapping_add(6 - i as u32);
+            p.sub_rank = p.sub_rank.wrapping_add(6 - i as u32);
             p.pkind = if p.ckind == CharacterKind::NONE as i8 {
                 3
             } else if err == 0 {

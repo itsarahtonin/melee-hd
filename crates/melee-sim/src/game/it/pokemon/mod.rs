@@ -188,7 +188,7 @@ pub fn draw(r: &mut Running, ball: GObjId) -> i32 {
 
 /// Which Pokémon comes out (`It_PKind_*` less `It_PKind_Start`), as `it_8027AB64` picks it.
 fn choose(r: &mut Running, ball: GObjId) -> i32 {
-    let forced = r.game.vs.start.x28;
+    let forced = r.game.vs.start.forced_pokemon;
     if forced != 0 {
         if forced == 1 {
             return event_list(r, ball);

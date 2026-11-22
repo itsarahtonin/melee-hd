@@ -171,9 +171,9 @@ impl Running<'_> {
         data.rules = super::vs_mode::rules_defaults();
         data.rules.clone_from(&vs.rules);
         data.rules.on_pause_override = Some(CodeRef(ON_PAUSE));
-        data.rules.x3_6 = true;
-        data.rules.x2_5 = false;
-        data.rules.x2_1 = true;
+        data.rules.pause_hides_controls = true;
+        data.rules.damage_display_kos = false;
+        data.rules.arrows_flag = true;
         super::vs_mode::all_player_defaults(&mut data.players);
         for i in 0..4 {
             data.players[i].clone_from(&vs.players[i]);
@@ -209,8 +209,8 @@ impl Running<'_> {
         r.match_kind = 0;
         r.is_teams = 1;
         r.item_freq = -1;
-        r.x20 = u64::MAX;
-        r.x5_0 = true;
+        r.item_switch = u64::MAX;
+        r.endless = true;
         for i in 0..4 {
             self.game.modes.training_players[i].clone_from(&data.players[i]);
             self.game.training.players[i].clone_from(&data.players[i]);
@@ -229,7 +229,7 @@ impl Running<'_> {
         let end = self.game.training.exit.match_end.clone();
         let p = &end.player_standings[0];
         self.add_1p_time(end.frame_count / 60);
-        self.results_add_coins(i32::from(p.xE));
+        self.results_add_coins(i32::from(p.coins));
         let best = self.training_best(i32::from(p.ckind));
         self.training_record_combo(p.ckind, best as u16);
         self.training_combo_trophies(p.ckind);
@@ -300,7 +300,7 @@ impl Running<'_> {
         self.start_vs(&start, files, None);
         self.vs_ready(0);
         self.vs_go(0);
-        self.show_damage_displays(i32::from(start.rules.x0_3));
+        self.show_damage_displays(i32::from(start.rules.damage_display));
         self.training_menu_setup();
     }
 

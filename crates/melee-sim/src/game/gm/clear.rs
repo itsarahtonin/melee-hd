@@ -204,7 +204,7 @@ impl Running<'_> {
     /// rules give it (`x4_6`).
     #[doc(alias = "fn_8017F09C")]
     fn clear_time_bonus(&self) -> i32 {
-        if !self.game.vs.start.x4_6 || !self.clear_time_shown() {
+        if !self.game.vs.start.time_bonus || !self.clear_time_shown() {
             return 0;
         }
         let p = (self.game.vs.state.timer_seconds as i32)
@@ -216,11 +216,11 @@ impl Running<'_> {
     /// the multiplier, in a match whose rules give it (`x4_7`).
     #[doc(alias = "fn_8017F14C")]
     fn clear_damage_bonus(&self, r: &MatchEnd) -> i32 {
-        if !self.game.vs.start.x4_7 {
+        if !self.game.vs.start.damage_bonus {
             return 0;
         }
         // `x98`: the first player's damage dealt (`player_standings[0].x40`).
-        let v = r.player_standings[0].x40 as i32;
+        let v = r.player_standings[0].damage_dealt as i32;
         v.min(9999)
             .wrapping_mul(i32::from(self.clear().damage_multiplier))
     }
@@ -873,7 +873,7 @@ impl Running<'_> {
     #[doc(alias = "lb_800121FC")]
     pub fn clear_setup(&mut self, score: i32, points: i32, kind: i32, cont: bool) {
         let mut special = 0;
-        let mut coins = self.game.vs.state.x24C.player_standings[0].xE;
+        let mut coins = self.game.vs.state.x24C.player_standings[0].coins;
         self.game.one_player.clear = Clear {
             time_bonus_shown: -1,
             damage_bonus_shown: -1,
@@ -1031,7 +1031,7 @@ impl Running<'_> {
         b.mode = 1;
         b.blur_size = 1;
         b.callback = Some(CodeRef(BLUR_CALLBACK));
-        if self.game.vs.start.x1_1 && coins != 0 {
+        if self.game.vs.start.counts_coins && coins != 0 {
             if self.clear().race_to_finish == 0 {
                 self.game
                     .start_coin_counter(0x5A, 0x1AE, i32::from(coins), 5);
@@ -1040,7 +1040,7 @@ impl Running<'_> {
                     .start_coin_counter(0x86, 0xC8, i32::from(coins), 5);
             }
         }
-        self.game.vs.state.x24C.player_standings[0].xE = coins;
+        self.game.vs.state.x24C.player_standings[0].coins = coins;
         self.clear_list_texts(264.0, 211.0);
     }
 
@@ -1074,7 +1074,7 @@ impl Running<'_> {
             self.game.vs.state.match_over = 1;
         }
         let s = &self.game.vs.start;
-        let (score, kind, cont) = (s.x18 as i32, i32::from(s.x9), s.x4_5);
+        let (score, kind, cont) = (s.score as i32, i32::from(s.run_kind), s.allows_continue);
         self.clear_setup(score, 0, kind, cont);
     }
 }

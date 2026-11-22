@@ -254,7 +254,7 @@ impl Running<'_> {
     pub fn create_timers(&mut self) {
         let data = self.data;
         let rules = &self.game.vs.start;
-        if !rules.x1_0 && !rules.timer_enabled {
+        if !rules.exact_start_frame && !rules.timer_enabled {
             self.game.hud.time.match_timer = None;
             return;
         }

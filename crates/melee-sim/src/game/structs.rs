@@ -7035,9 +7035,11 @@ pub struct MatchPlayerData {
     /// +0x2
     pub ftkind: i8,
     /// +0x3
-    pub x3_u: [u8; 1],
+    #[doc(alias("x3_u"))]
+    pub flags: [u8; 1],
     /// +0x4
-    pub x4: u8,
+    #[doc(alias("x4"))]
+    pub nametag: u8,
     /// +0x5
     pub is_big_loser: u8,
     /// +0x6
@@ -7047,89 +7049,127 @@ pub struct MatchPlayerData {
     /// +0x8
     pub stocks: i8,
     /// +0x9
-    pub x9: u8,
+    #[doc(alias("x9"))]
+    pub remaining_hp: u8,
     /// +0xa
     pub self_destructs: u16,
     /// +0xc
     pub percent: u16,
     /// +0xe
-    pub xE: u16,
+    #[doc(alias("xE"))]
+    pub coins: u16,
     /// +0x10
     pub kills: [u16; 4],
     /// +0x18
-    pub x18: u16,
+    #[doc(alias("x18"))]
+    pub kills_rest: u16,
     /// +0x1c
-    pub x1C: i32,
+    #[doc(alias("x1C"))]
+    pub coins_held: i32,
     /// +0x20
-    pub x20: u32,
+    #[doc(alias("x20"))]
+    pub kos: u32,
     /// +0x24
-    pub x24: i32,
+    #[doc(alias("x24"))]
+    pub falls: i32,
     /// +0x28
-    pub x28: u32,
+    #[doc(alias("x28"))]
+    pub match_frames: u32,
     /// +0x2c
     pub score: i32,
     /// +0x30
-    pub x30: u32,
+    #[doc(alias("x30"))]
+    pub sub_rank: u32,
     /// +0x34
-    pub x34: u8,
+    #[doc(alias("x34"))]
+    pub hit_percent: u8,
     /// +0x35
-    pub x35_pad: [u8; 3],
+    #[doc(alias("x35_pad"))]
+    pub pad_35: [u8; 3],
     /// +0x38
-    pub x38: u32,
+    #[doc(alias("x38"))]
+    pub attacks_hit: u32,
     /// +0x3c
-    pub x3C: u32,
+    #[doc(alias("x3C"))]
+    pub attacks_total: u32,
     /// +0x40
-    pub x40: u32,
+    #[doc(alias("x40"))]
+    pub damage_dealt: u32,
     /// +0x44
-    pub x44: u32,
+    #[doc(alias("x44"))]
+    pub damage_taken: u32,
     /// +0x48
-    pub x48: u32,
+    #[doc(alias("x48"))]
+    pub damage_recovered: u32,
     /// +0x4c
-    pub x4C: u32,
+    #[doc(alias("x4C"))]
+    pub peak_damage: u32,
     /// +0x50
-    pub x50: u32,
+    #[doc(alias("x50"))]
+    pub walk_distance: u32,
     /// +0x54
-    pub x54: u32,
+    #[doc(alias("x54"))]
+    pub run_distance: u32,
     /// +0x58
-    pub x58: u32,
+    #[doc(alias("x58"))]
+    pub fall_distance: u32,
     /// +0x5c
-    pub x5C: u32,
+    #[doc(alias("x5C"))]
+    pub peak_height: u32,
     /// +0x60
-    pub x60: u32,
+    #[doc(alias("x60"))]
+    pub coins_collected: u32,
     /// +0x64
-    pub x64: u32,
+    #[doc(alias("x64"))]
+    pub coins_swiped: u32,
     /// +0x68
-    pub x68: u32,
+    #[doc(alias("x68"))]
+    pub coins_lost: u32,
     /// +0x6c
-    pub x6C: u32,
+    #[doc(alias("x6C"))]
+    pub air_time: u32,
     /// +0x70
-    pub x70: u32,
+    #[doc(alias("x70"))]
+    pub ground_time: u32,
     /// +0x74
-    pub x74: u32,
+    #[doc(alias("x74"))]
+    pub ground_attacks: u32,
     /// +0x78
-    pub x78: u32,
+    #[doc(alias("x78"))]
+    pub air_attacks: u32,
     /// +0x7c
-    pub x7C: u32,
+    #[doc(alias("x7C"))]
+    pub items_thrown: u32,
     /// +0x80
-    pub x80: u32,
+    #[doc(alias("x80"))]
+    pub specials: u32,
     /// +0x84
-    pub x84: u32,
+    #[doc(alias("x84"))]
+    pub grabs: u32,
     /// +0x88
-    pub x88: u32,
+    #[doc(alias("x88"))]
+    pub down_attacks: u32,
     /// +0x8c
-    pub x8C: u32,
+    #[doc(alias("x8C"))]
+    pub action_stat_112: u32,
     /// +0x90
-    pub x90: u32,
+    #[doc(alias("x90"))]
+    pub items_picked_up: u32,
     /// +0x94
-    pub x94: u32,
+    #[doc(alias("x94"))]
+    pub timed_stat_1: u32,
     /// +0x98
-    pub x98: u32,
+    #[doc(alias("x98"))]
+    pub timed_stat_2: u32,
     /// +0x9c
-    pub x9C: i32,
+    #[doc(alias("x9C"))]
+    pub timed_stat_3: i32,
     /// +0xa0
-    pub xA0: i32,
+    #[doc(alias("xA0"))]
+    pub timed_stat_4: i32,
     /// +0xa4
-    pub xA4: u32,
+    #[doc(alias("xA4"))]
+    pub last_attack_stat: u32,
 }
 
 impl Default for MatchPlayerData {
@@ -7138,54 +7178,54 @@ impl Default for MatchPlayerData {
             pkind: 0,
             ckind: 0,
             ftkind: 0,
-            x3_u: [0; 1],
-            x4: 0,
+            flags: [0; 1],
+            nametag: 0,
             is_big_loser: 0,
             is_small_loser: 0,
             team: 0,
             stocks: 0,
-            x9: 0,
+            remaining_hp: 0,
             self_destructs: 0,
             percent: 0,
-            xE: 0,
+            coins: 0,
             kills: [0; 4],
-            x18: 0,
-            x1C: 0,
-            x20: 0,
-            x24: 0,
-            x28: 0,
+            kills_rest: 0,
+            coins_held: 0,
+            kos: 0,
+            falls: 0,
+            match_frames: 0,
             score: 0,
-            x30: 0,
-            x34: 0,
-            x35_pad: [0; 3],
-            x38: 0,
-            x3C: 0,
-            x40: 0,
-            x44: 0,
-            x48: 0,
-            x4C: 0,
-            x50: 0,
-            x54: 0,
-            x58: 0,
-            x5C: 0,
-            x60: 0,
-            x64: 0,
-            x68: 0,
-            x6C: 0,
-            x70: 0,
-            x74: 0,
-            x78: 0,
-            x7C: 0,
-            x80: 0,
-            x84: 0,
-            x88: 0,
-            x8C: 0,
-            x90: 0,
-            x94: 0,
-            x98: 0,
-            x9C: 0,
-            xA0: 0,
-            xA4: 0,
+            sub_rank: 0,
+            hit_percent: 0,
+            pad_35: [0; 3],
+            attacks_hit: 0,
+            attacks_total: 0,
+            damage_dealt: 0,
+            damage_taken: 0,
+            damage_recovered: 0,
+            peak_damage: 0,
+            walk_distance: 0,
+            run_distance: 0,
+            fall_distance: 0,
+            peak_height: 0,
+            coins_collected: 0,
+            coins_swiped: 0,
+            coins_lost: 0,
+            air_time: 0,
+            ground_time: 0,
+            ground_attacks: 0,
+            air_attacks: 0,
+            items_thrown: 0,
+            specials: 0,
+            grabs: 0,
+            down_attacks: 0,
+            action_stat_112: 0,
+            items_picked_up: 0,
+            timed_stat_1: 0,
+            timed_stat_2: 0,
+            timed_stat_3: 0,
+            timed_stat_4: 0,
+            last_attack_stat: 0,
         }
     }
 }
@@ -7376,23 +7416,30 @@ pub struct StartMeleeRules {
     /// +0x0 (bits 0..+3)
     pub match_kind: u8,
     /// +0x0 (bits 3..+3)
-    pub x0_3: u8,
+    #[doc(alias("x0_3"))]
+    pub damage_display: u8,
     /// +0x0 (bits 6..+1)
     pub timer_enabled: bool,
     /// +0x0 (bits 7..+1)
     pub timer_counts_up: bool,
     /// +0x1 (bits 0..+1)
-    pub x1_0: bool,
+    #[doc(alias("x1_0"))]
+    pub exact_start_frame: bool,
     /// +0x1 (bits 1..+1)
-    pub x1_1: bool,
+    #[doc(alias("x1_1"))]
+    pub counts_coins: bool,
     /// +0x1 (bits 2..+1)
-    pub x1_2: bool,
+    #[doc(alias("x1_2"))]
+    pub long_countdown: bool,
     /// +0x1 (bits 3..+1)
-    pub x1_3: bool,
+    #[doc(alias("x1_3"))]
+    pub alt_go: bool,
     /// +0x1 (bits 4..+1)
-    pub x1_4: bool,
+    #[doc(alias("x1_4"))]
+    pub fixed_layout: bool,
     /// +0x1 (bits 5..+1)
-    pub x1_5: bool,
+    #[doc(alias("x1_5"))]
+    pub keeps_rumble: bool,
     /// +0x1 (bits 6..+1)
     pub timer_shows_hours: bool,
     /// +0x1 (bits 7..+1)
@@ -7400,101 +7447,141 @@ pub struct StartMeleeRules {
     /// +0x2 (bits 0..+1)
     pub is_stock: bool,
     /// +0x2 (bits 1..+1)
-    pub x2_1: bool,
+    #[doc(alias("x2_1"))]
+    pub arrows_flag: bool,
     /// +0x2 (bits 2..+1)
-    pub x2_2: bool,
+    #[doc(alias("x2_2"))]
+    pub unread_2_2: bool,
     /// +0x2 (bits 3..+1)
     pub single_button: bool,
     /// +0x2 (bits 4..+1)
     pub disable_pausing: bool,
     /// +0x2 (bits 5..+1)
-    pub x2_5: bool,
+    #[doc(alias("x2_5"))]
+    pub damage_display_kos: bool,
     /// +0x2 (bits 6..+1)
-    pub x2_6: bool,
+    #[doc(alias("x2_6"))]
+    pub damage_displays_on: bool,
     /// +0x2 (bits 7..+1)
-    pub x2_7: bool,
+    #[doc(alias("x2_7"))]
+    pub damage_display_fades: bool,
     /// +0x3 (bits 0..+1)
-    pub x3_0: bool,
+    #[doc(alias("x3_0"))]
+    pub shows_score: bool,
     /// +0x3 (bits 1..+1)
-    pub x3_1: bool,
+    #[doc(alias("x3_1"))]
+    pub pause_shows_stick: bool,
     /// +0x3 (bits 2..+1)
-    pub x3_2: bool,
+    #[doc(alias("x3_2"))]
+    pub pause_z_retries: bool,
     /// +0x3 (bits 3..+1)
-    pub x3_3: bool,
+    #[doc(alias("x3_3"))]
+    pub pause_shows_z: bool,
     /// +0x3 (bits 4..+1)
-    pub x3_4: bool,
+    #[doc(alias("x3_4"))]
+    pub pause_lras_quits: bool,
     /// +0x3 (bits 5..+1)
-    pub x3_5: bool,
+    #[doc(alias("x3_5"))]
+    pub pause_shows_lras: bool,
     /// +0x3 (bits 6..+1)
-    pub x3_6: bool,
+    #[doc(alias("x3_6"))]
+    pub pause_hides_controls: bool,
     /// +0x3 (bits 7..+1)
-    pub x3_7: bool,
+    #[doc(alias("x3_7"))]
+    pub pause_shows_timers: bool,
     /// +0x4 (bits 0..+1)
-    pub x4_0: bool,
+    #[doc(alias("x4_0"))]
+    pub pause_camera: bool,
     /// +0x4 (bits 1..+1)
     pub is_vs: bool,
     /// +0x4 (bits 2..+1)
-    pub x4_2: bool,
+    #[doc(alias("x4_2"))]
+    pub single_player: bool,
     /// +0x4 (bits 3..+1)
-    pub x4_3: bool,
+    #[doc(alias("x4_3"))]
+    pub game_over_scene: bool,
     /// +0x4 (bits 4..+1)
-    pub x4_4: bool,
+    #[doc(alias("x4_4"))]
+    pub clear_scores: bool,
     /// +0x4 (bits 5..+1)
-    pub x4_5: bool,
+    #[doc(alias("x4_5"))]
+    pub allows_continue: bool,
     /// +0x4 (bits 6..+1)
-    pub x4_6: bool,
+    #[doc(alias("x4_6"))]
+    pub time_bonus: bool,
     /// +0x4 (bits 7..+1)
-    pub x4_7: bool,
+    #[doc(alias("x4_7"))]
+    pub damage_bonus: bool,
     /// +0x5 (bits 0..+1)
-    pub x5_0: bool,
+    #[doc(alias("x5_0"))]
+    pub endless: bool,
     /// +0x5 (bits 1..+1)
-    pub x5_1: bool,
+    #[doc(alias("x5_1"))]
+    pub goes_on: bool,
     /// +0x5 (bits 2..+1)
-    pub x5_2: bool,
+    #[doc(alias("x5_2"))]
+    pub no_fighter_hits: bool,
     /// +0x5 (bits 3..+1)
-    pub x5_3: bool,
+    #[doc(alias("x5_3"))]
+    pub stadium_zoom: bool,
     /// +0x5 (bits 4..+1)
-    pub x5_4: bool,
+    #[doc(alias("x5_4"))]
+    pub unused_5_4: bool,
     /// +0x5 (bits 5..+1)
-    pub x5_5: bool,
+    #[doc(alias("x5_5"))]
+    pub unused_5_5: bool,
     /// +0x5 (bits 6..+1)
-    pub x5_6: bool,
+    #[doc(alias("x5_6"))]
+    pub unused_5_6: bool,
     /// +0x5 (bits 7..+1)
-    pub x5_7: bool,
+    #[doc(alias("x5_7"))]
+    pub unused_5_7: bool,
     /// +0x6
-    pub x6: u8,
+    #[doc(alias("x6"))]
+    pub sudden_death: u8,
     /// +0x7
-    pub x7: u8,
+    #[doc(alias("x7"))]
+    pub end_kind: u8,
     /// +0x8
     pub is_teams: u8,
     /// +0x9
-    pub x9: u8,
+    #[doc(alias("x9"))]
+    pub run_kind: u8,
     /// +0xa
-    pub xA: u8,
+    #[doc(alias("xA"))]
+    pub stage_layout: u8,
     /// +0xb
     pub item_freq: i8,
     /// +0xc
     pub sd_penalty: i8,
     /// +0xd
-    pub xD: u8,
+    #[doc(alias("xD"))]
+    pub end_wait: u8,
     /// +0xe
     pub stkind: u16,
     /// +0x10
     pub time_limit: u32,
     /// +0x14
-    pub x14: u8,
+    #[doc(alias("x14"))]
+    pub start_frame: u8,
     /// +0x18
-    pub x18: u32,
+    #[doc(alias("x18"))]
+    pub score: u32,
     /// +0x1c
-    pub x1C_pad: [u32; 1],
+    #[doc(alias("x1C_pad"))]
+    pub pad_1c: [u32; 1],
     /// +0x20
-    pub x20: u64,
+    #[doc(alias("x20"))]
+    pub item_switch: u64,
     /// +0x28
-    pub x28: i32,
+    #[doc(alias("x28"))]
+    pub forced_pokemon: i32,
     /// +0x2c
-    pub x2C: f32,
+    #[doc(alias("x2C"))]
+    pub quake_scale: f32,
     /// +0x30
-    pub x30: f32,
+    #[doc(alias("x30"))]
+    pub damage_ratio: f32,
     /// +0x34
     pub game_speed: f32,
     /// +0x38
@@ -7512,77 +7599,80 @@ pub struct StartMeleeRules {
     /// +0x50
     pub on_match_end: Option<CodeRef>,
     /// +0x54
-    pub x54: RawPtr,
+    #[doc(alias("x54"))]
+    pub opponent_list: RawPtr,
     /// +0x58
-    pub x58: RawPtr,
+    #[doc(alias("x58"))]
+    pub challenger_record: RawPtr,
     /// +0x5c
-    pub pad_x5C: [u8; 4],
+    #[doc(alias("pad_x5C"))]
+    pub pad_5c: [u8; 4],
 }
 
 impl Default for StartMeleeRules {
     fn default() -> Self {
         StartMeleeRules {
             match_kind: 0,
-            x0_3: 0,
+            damage_display: 0,
             timer_enabled: false,
             timer_counts_up: false,
-            x1_0: false,
-            x1_1: false,
-            x1_2: false,
-            x1_3: false,
-            x1_4: false,
-            x1_5: false,
+            exact_start_frame: false,
+            counts_coins: false,
+            long_countdown: false,
+            alt_go: false,
+            fixed_layout: false,
+            keeps_rumble: false,
             timer_shows_hours: false,
             friendly_fire: false,
             is_stock: false,
-            x2_1: false,
-            x2_2: false,
+            arrows_flag: false,
+            unread_2_2: false,
             single_button: false,
             disable_pausing: false,
-            x2_5: false,
-            x2_6: false,
-            x2_7: false,
-            x3_0: false,
-            x3_1: false,
-            x3_2: false,
-            x3_3: false,
-            x3_4: false,
-            x3_5: false,
-            x3_6: false,
-            x3_7: false,
-            x4_0: false,
+            damage_display_kos: false,
+            damage_displays_on: false,
+            damage_display_fades: false,
+            shows_score: false,
+            pause_shows_stick: false,
+            pause_z_retries: false,
+            pause_shows_z: false,
+            pause_lras_quits: false,
+            pause_shows_lras: false,
+            pause_hides_controls: false,
+            pause_shows_timers: false,
+            pause_camera: false,
             is_vs: false,
-            x4_2: false,
-            x4_3: false,
-            x4_4: false,
-            x4_5: false,
-            x4_6: false,
-            x4_7: false,
-            x5_0: false,
-            x5_1: false,
-            x5_2: false,
-            x5_3: false,
-            x5_4: false,
-            x5_5: false,
-            x5_6: false,
-            x5_7: false,
-            x6: 0,
-            x7: 0,
+            single_player: false,
+            game_over_scene: false,
+            clear_scores: false,
+            allows_continue: false,
+            time_bonus: false,
+            damage_bonus: false,
+            endless: false,
+            goes_on: false,
+            no_fighter_hits: false,
+            stadium_zoom: false,
+            unused_5_4: false,
+            unused_5_5: false,
+            unused_5_6: false,
+            unused_5_7: false,
+            sudden_death: 0,
+            end_kind: 0,
             is_teams: 0,
-            x9: 0,
-            xA: 0,
+            run_kind: 0,
+            stage_layout: 0,
             item_freq: 0,
             sd_penalty: 0,
-            xD: 0,
+            end_wait: 0,
             stkind: 0,
             time_limit: 0,
-            x14: 0,
-            x18: 0,
-            x1C_pad: [0; 1],
-            x20: 0,
-            x28: 0,
-            x2C: 0.0,
-            x30: 0.0,
+            start_frame: 0,
+            score: 0,
+            pad_1c: [0; 1],
+            item_switch: 0,
+            forced_pokemon: 0,
+            quake_scale: 0.0,
+            damage_ratio: 0.0,
             game_speed: 0.0,
             on_unpause_override: None,
             on_pause_override: None,
@@ -7591,9 +7681,9 @@ impl Default for StartMeleeRules {
             on_frame_start: None,
             on_frame_end: None,
             on_match_end: None,
-            x54: Default::default(),
-            x58: Default::default(),
-            pad_x5C: [0; 4],
+            opponent_list: Default::default(),
+            challenger_record: Default::default(),
+            pad_5c: [0; 4],
         }
     }
 }

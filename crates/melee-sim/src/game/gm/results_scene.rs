@@ -360,7 +360,7 @@ impl Running<'_> {
         self.results_winners();
         let x6 = usize::from(self.game.results.data.team_best);
         let w = &me.player_standings[x6];
-        if w.pkind == PKIND_HUMAN && !canceled(me.outcome) && w.x3_u[0] & 0x02 != 0 {
+        if w.pkind == PKIND_HUMAN && !canceled(me.outcome) && w.flags[0] & 0x02 != 0 {
             self.alarm_rumble_catch_up();
             self.rumble_start(x6 as u8, 3, 0x20, 0);
         }
@@ -399,7 +399,7 @@ impl Running<'_> {
                 continue;
             }
             self.results_images(i);
-            let f = self.results_fighter(i32::from(p.ckind), i32::from(p.x3_u[0] >> 2), i as i32);
+            let f = self.results_fighter(i32::from(p.ckind), i32::from(p.flags[0] >> 2), i as i32);
             self.game.results.data.players[i].fighter_gobj = f;
             let c = self.results_fighter_camera(i as i32);
             self.game.results.data.players[i].camera = c;

@@ -124,7 +124,7 @@ impl Running<'_> {
             i32::from(s.unk_B) - 1
         } else if s.match_result == OUTCOME_TIMEOUT {
             0
-        } else if self.game.vs.start.x5_1 {
+        } else if self.game.vs.start.goes_on {
             if s.match_result == OUTCOME_1P_BONUS_STAGE_END {
                 7
             } else {

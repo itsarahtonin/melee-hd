@@ -157,11 +157,11 @@ impl Running<'_> {
             }
             self.game.vs.state.match_over = 1;
         }
-        let x0 = if self.game.vs.start.x4_4 {
+        let x0 = if self.game.vs.start.clear_scores {
             // `fn_8017F294`.
             self.game.one_player.clear.new_score as u32
         } else {
-            self.game.vs.start.x18
+            self.game.vs.start.score
         };
         MatchExitInfo {
             run_value: x0,
@@ -204,7 +204,7 @@ impl Running<'_> {
         if trophies > 0 {
             r._x448[2] |= 0x08;
         }
-        if !g.vs.start.x4_5 {
+        if !g.vs.start.allows_continue {
             return;
         }
         let a = &g.one_player.allstar.base;
@@ -218,7 +218,7 @@ impl Running<'_> {
         } else if total < 0x9AB0 {
             r._x448[2] |= 0x80;
         }
-        if a.damage_taken == 0 && r.player_standings[0].x44 == 0 {
+        if a.damage_taken == 0 && r.player_standings[0].damage_taken == 0 {
             r._x448[1] |= 0x02;
         }
         if a.counters[2] != 0 {
@@ -227,7 +227,7 @@ impl Running<'_> {
         if a.counters[3] != 0 {
             r._x448[2] |= 0x10;
         }
-        if (a.damage_taken as u32).wrapping_add(r.player_standings[0].x44)
+        if (a.damage_taken as u32).wrapping_add(r.player_standings[0].damage_taken)
             == g.player_damage(0) as u32
         {
             r._x448[0] |= 0x02;
@@ -260,7 +260,7 @@ impl Running<'_> {
         if trophies > 0 {
             r._x448[2] |= 0x08;
         }
-        if g.vs.start.x4_5 {
+        if g.vs.start.allows_continue {
             let a = &g.one_player.adventure.base;
             let total = a.frames.wrapping_add(g.vs_frame_count());
             r._x448[0] |= 0x40;
@@ -272,7 +272,7 @@ impl Running<'_> {
             } else if total < 0x13560 {
                 r._x448[2] |= 0x80;
             }
-            if a.damage_taken == 0 && r.player_standings[0].x44 == 0 {
+            if a.damage_taken == 0 && r.player_standings[0].damage_taken == 0 {
                 r._x448[1] |= 0x02;
             }
             if a.counters[2] != 0 {
@@ -336,7 +336,7 @@ impl Running<'_> {
         if trophies > 0 {
             r._x448[2] |= 0x08;
         }
-        if g.vs.start.x4_5 {
+        if g.vs.start.allows_continue {
             let a = &g.one_player.classic.base;
             let total = a.frames.wrapping_add(g.vs_frame_count());
             r._x448[0] |= 0x80;
@@ -348,7 +348,7 @@ impl Running<'_> {
             } else if total < 0x5460 {
                 r._x448[2] |= 0x80;
             }
-            if a.damage_taken == 0 && r.player_standings[0].x44 == 0 {
+            if a.damage_taken == 0 && r.player_standings[0].damage_taken == 0 {
                 r._x448[1] |= 0x02;
             }
             if a.counters[2] != 0 {

@@ -135,7 +135,7 @@ impl Running<'_> {
         all_player_defaults(&mut start.players);
         start.rules.timer_enabled = false;
         start.rules.match_kind = MATCH_STOCK;
-        start.rules.x0_3 = 2;
+        start.rules.damage_display = 2;
         start.rules.stkind = challenger_stage(c.cpu_ckind);
         setup_human(
             &mut start.players[0],
@@ -174,7 +174,7 @@ impl Running<'_> {
         let s = &mut self.game.game_data.thing.save_data;
         s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
         let p = &end.player_standings[0];
-        self.results_add_coins(i32::from(p.xE));
+        self.results_add_coins(i32::from(p.coins));
         if !canceled(end.outcome) && p.stocks != 0 {
             self.unlock_character(c.cpu_ckind);
         } else {

@@ -1435,9 +1435,9 @@ impl Running<'_> {
         for (i, &kind) in super::super::vs_mode::ITEM_SWITCH_KINDS.iter().enumerate() {
             if kind != super::super::vs_mode::NO_ITEM_KIND {
                 if prefs_mask & (1 << i) != 0 {
-                    r.x20 |= 1 << kind;
+                    r.item_switch |= 1 << kind;
                 } else {
-                    r.x20 &= !(1 << kind);
+                    r.item_switch &= !(1 << kind);
                 }
             }
         }
@@ -1455,17 +1455,17 @@ impl Running<'_> {
             r.is_stock = true;
         }
         r.timer_counts_up = false;
-        r.x4_2 = false;
-        r.x4_4 = false;
+        r.single_player = false;
+        r.clear_scores = false;
         r.item_freq = prefs_freq as i8;
-        r.x2_2 = false;
-        r.x18 = 0;
+        r.unread_2_2 = false;
+        r.score = 0;
         r.game_speed = 1.0;
-        r.x30 = mem(fp::fmuls(reg(0.1), f(i32::from(rules.damage_ratio))));
-        r.x3_4 = false;
-        r.x3_5 = false;
-        r.x3_2 = false;
-        r.x3_3 = false;
+        r.damage_ratio = mem(fp::fmuls(reg(0.1), f(i32::from(rules.damage_ratio))));
+        r.pause_lras_quits = false;
+        r.pause_shows_lras = false;
+        r.pause_z_retries = false;
+        r.pause_shows_z = false;
         match rules.unk_xc {
             1 => r.sd_penalty = 0,
             0 => r.sd_penalty = -1,
@@ -1473,7 +1473,7 @@ impl Running<'_> {
             _ => {}
         }
         r.disable_pausing = rules.pause == 0;
-        r.x3_0 = rules.score_display != 0 && r.match_kind == 0;
+        r.shows_score = rules.score_display != 0 && r.match_kind == 0;
         super::super::vs_mode::all_player_defaults(&mut d.players);
         for i in 0..4 {
             let tm = self.game.tou.tm.clone();

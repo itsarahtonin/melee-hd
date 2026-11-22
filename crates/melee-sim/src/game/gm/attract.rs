@@ -81,11 +81,11 @@ impl Running<'_> {
         r.match_kind = d.match_kind;
         r.timer_enabled = false;
         r.time_limit = 0;
-        r.x1_0 = false;
-        r.x1_2 = true;
-        r.x1_3 = true;
+        r.exact_start_frame = false;
+        r.long_countdown = true;
+        r.alt_go = true;
         r.disable_pausing = true;
-        r.x7 = 0;
+        r.end_kind = 0;
         r.on_match_start = Some(CodeRef(ON_MATCH_START));
         r.game_speed = 1.0;
         r.stkind = u16::from(d.stkind as u8);
@@ -243,9 +243,9 @@ impl Running<'_> {
         // The mark goes on the scene's own enter data: Tournament mode's is its own
         // (`gm_804876D8`).
         if scene_mode == super::tournament::GM_TOURNAMENT {
-            self.game.tou.start.rules.x6 = 1;
+            self.game.tou.start.rules.sudden_death = 1;
         } else {
-            self.game.vs_melee.start.rules.x6 = 1;
+            self.game.vs_melee.start.rules.sudden_death = 1;
         }
         let (start, files) = self.vs_scene_files(scene_mode);
         self.game.gm.on_frame = Some(CodeRef(super::vs::ON_FRAME));
