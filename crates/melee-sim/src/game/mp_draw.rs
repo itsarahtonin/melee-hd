@@ -74,7 +74,7 @@ fn small_cross(p: Vec3, z: f32) -> Vec<Vec3> {
 }
 
 /// An ECB's four points around `at`, in depth `z`.
-fn diamond(at: Vec3, e: &crate::game::structs::_ftECB, z: f32) -> Vec<Vec3> {
+fn diamond(at: Vec3, e: &crate::mp::coll::Ecb, z: f32) -> Vec<Vec3> {
     [&e.top, &e.right, &e.bottom, &e.left]
         .iter()
         .map(|p| Vec3::new(adds(at.x, p.x), adds(at.y, p.y), z))

@@ -379,6 +379,17 @@ EXTERNAL = {
     "CostumeTObjList": "CostumeTObjList",
 }
 
+# Structs written by hand (design call 3's second half, docs/refactor.md), by C name: their Rust
+# name and path. structgen generates neither them nor their mirrors (`#[derive(Mirror)]` makes
+# those from each field's address, and `game::mirror`'s layout check holds them to the decomp's
+# layout, which lists the same names); the structs it still generates hold them by name, and
+# `game::structs` re-exports them. Their field names live in their source, not in `names.py`.
+OWNED = {
+    "CollData": ("CollData", "crate::mp::coll::CollData"),
+    "_ftECB": ("Ecb", "crate::mp::coll::Ecb"),
+    "SurfaceData": ("Surface", "crate::mp::coll::Surface"),
+}
+
 # Pointee types that live in loaded game data: pointers to them become DataRef.
 DATA_TYPES = {
     "HSD_Joint",

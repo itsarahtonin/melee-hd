@@ -7,32 +7,6 @@ the ports' uses and ssbm-rs. A field nothing reads or writes is `pad_*` (with it
 `unused_*`; one written and never read is `unread_*`.
 """
 
-# A collision (`CollData`, the fighter's `coll_data`, an item's `coll`).
-COLL_DATA = {
-    "x0_gobj": "gobj",
-    # Where the frame's collision started (`mpCollPrev`), drawn by the ECB view.
-    "x28_vec": "frame_start_pos",
-    # `b0` the ECB is set up, `b1234` the ECB's update mode, `b5` a substep met something,
-    # `b6` the ECB is squeezed, `b7` (`X34Flags`).
-    "x34_flags": "ecb_flags",
-    # `b0`: the lines found are the map's current ones, with `map_generation`.
-    "x35_flags": "map_flags",
-    # The map's generation (`mpColl_804D64AC`) the lines were found in: another one finds them
-    # again.
-    "x38": "map_generation",
-    # The fighter's weight, passed to a stage joint's touch callback.
-    "x50": "weight",
-    # The ECB as it was before a squeeze.
-    "x64_ecb": "unsqueezed_ecb",
-    # The ECB as it was before the frame's load.
-    "xE4_ecb": "loaded_from_ecb",
-    # `1 << 4` keeps the ECB as it is (`ftCommon_UnlockECB` clears it), `CLEAR_ECB` zeroes it
-    # at the next load.
-    "x130_flags": "ecb_lock",
-    # Only a collision's copy (`mpCopyCollData`) reads it.
-    "x13C": "unread_13c",
-}
-
 # A hitbox (`HitCapsule`: a fighter's, a thrown fighter's, an item's).
 HIT_CAPSULE = {
     # The hit group: boxes of one group share their victims (`ftColl_80076808`).
@@ -648,7 +622,7 @@ STATIC_PLAYER_FLAGS_AE = {
 
 # The structs by step 3's commits, in order.
 GROUPS = [
-    {"CollData": COLL_DATA, "HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
+    {"HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
     {
         "Camera": CAMERA,
         "Camera_x2D0": CAMERA_X2D0,

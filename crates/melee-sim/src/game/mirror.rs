@@ -1,5 +1,10 @@
 //! Reading the game's structs out of ssbm-rs's memory and comparing them with melee-sim's,
-//! for the oracle and the tests. `structgen` generates each struct's [`Mirror`].
+//! for the oracle and the tests. `structgen` generates the generated structs' [`Mirror`]s, and
+//! `#[derive(melee_derive::Mirror)]` the hand-written ones' ([`layout_check`] holds those to the
+//! decomp's layout).
+
+#[cfg(test)]
+mod layout_check;
 
 use melee_data::archive::DataRef;
 
@@ -70,11 +75,342 @@ pub trait Cx {
     }
 }
 
-/// A struct melee-sim mirrors from the game.
+/// A struct melee-sim mirrors from the game, or a value one holds: its bytes in memory, read
+/// in (`import`) and compared with memory (`compare`, each difference to `cx` by its path).
 pub trait Mirror: Sized {
     const SIZE: u32;
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self;
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx);
+
+    /// A hand-written struct's fields as `#[derive(Mirror)]` places them, for the layout check
+    /// ([`layout_check`]); none for a value, a generated struct or a hand-written mirror.
+    fn layout() -> Option<Layout> {
+        None
+    }
+}
+
+/// Where `#[derive(Mirror)]` places a struct's fields (`melee_derive::Mirror`): what the
+/// layout check compares with the decomp's layout.
+#[derive(Debug)]
+pub struct Layout {
+    /// The decomp's name of the struct, or none for a group of fields with no C struct of its
+    /// own (its fields are checked against the struct around it).
+    pub c_name: Option<&'static str>,
+    pub size: u32,
+    /// The runs of bytes no field holds (offset, bytes): the compiler's padding.
+    pub pads: Vec<(u32, u32)>,
+    pub fields: Vec<FieldLayout>,
+}
+
+/// One field of a [`Layout`].
+#[derive(Debug)]
+pub struct FieldLayout {
+    pub name: &'static str,
+    pub at: u32,
+    /// Its bytes (none for a bitfield).
+    pub size: u32,
+    /// A bitfield's first bit (from the top of the byte at `at`) and its width.
+    pub bits: Option<(u32, u32)>,
+    /// The field's type's own layout, if `#[derive(Mirror)]` made it.
+    pub nested: fn() -> Option<Layout>,
+}
+
+/// A bitfield's value: `#[at(OFFSET, bits(FIRST, COUNT))]` fields read and write through it.
+pub trait BitField: Sized + std::fmt::Debug {
+    fn from_bits(v: u32) -> Self;
+    fn bits(&self) -> u32;
+}
+
+impl BitField for bool {
+    fn from_bits(v: u32) -> Self {
+        v != 0
+    }
+    fn bits(&self) -> u32 {
+        u32::from(*self)
+    }
+}
+
+impl BitField for u8 {
+    fn from_bits(v: u32) -> Self {
+        v as u8
+    }
+    fn bits(&self) -> u32 {
+        u32::from(*self)
+    }
+}
+
+/// A C union `#[derive(Mirror)]` keeps as its bytes (`#[at(OFFSET, union)]`): compared whole.
+pub fn compare_union<const N: usize>(
+    ours: &[u8; N],
+    m: &Mem,
+    at: u32,
+    path: &str,
+    cx: &mut dyn Cx,
+) {
+    let theirs = m.bytes::<N>(at);
+    if *ours != theirs {
+        cx.mismatch(path, format!("{ours:02x?}"), format!("{theirs:02x?}"));
+    }
+}
+
+/// A scalar's bits as memory holds them.
+trait RawBits {
+    type Bits;
+    fn from_raw(b: Self::Bits) -> Self;
+    fn raw(&self) -> Self::Bits;
+}
+
+macro_rules! raw_int {
+    ($($t:ty => $b:ty),*) => {$(
+        impl RawBits for $t {
+            type Bits = $b;
+            fn from_raw(b: $b) -> Self {
+                b as $t
+            }
+            fn raw(&self) -> $b {
+                *self as $b
+            }
+        }
+    )*};
+}
+
+raw_int!(u8 => u8, i8 => u8, u16 => u16, i16 => u16, u32 => u32, i32 => u32);
+
+impl RawBits for f32 {
+    type Bits = u32;
+    fn from_raw(b: u32) -> Self {
+        f32::from_bits(b)
+    }
+    fn raw(&self) -> u32 {
+        self.to_bits()
+    }
+}
+
+/// The C integer and float types, as the generated mirrors read, compare and lay them out.
+macro_rules! scalar {
+    ($($t:ty: $size:literal, $read:ident, $put:ident;)*) => {$(
+        impl Mirror for $t {
+            const SIZE: u32 = $size;
+
+            fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+                <$t>::from_raw(m.$read(at))
+            }
+
+            fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+                let theirs = m.$read(at);
+                if self.raw() != theirs {
+                    cx.mismatch(path, format!("{self:?}"), format!("{:?}", <$t>::from_raw(theirs)));
+                }
+            }
+        }
+
+        impl LayOut for $t {
+            fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn LayCx) {
+                l.$put(at, self.raw());
+            }
+        }
+    )*};
+}
+
+scalar! {
+    u8: 1, u8, put_u8;
+    i8: 1, u8, put_u8;
+    u16: 2, u16, put_u16;
+    i16: 2, u16, put_u16;
+    u32: 4, u32, put_u32;
+    i32: 4, u32, put_u32;
+    f32: 4, u32, put_u32;
+}
+
+impl<T: Mirror, const N: usize> Mirror for [T; N] {
+    const SIZE: u32 = T::SIZE * N as u32;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        core::array::from_fn(|i| T::import(m, at + i as u32 * T::SIZE, cx))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        for (i, v) in self.iter().enumerate() {
+            v.compare(m, at + i as u32 * T::SIZE, &format!("{path}[{i}]"), cx);
+        }
+    }
+}
+
+impl<T: LayOut + Mirror, const N: usize> LayOut for [T; N] {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn LayCx) {
+        for (i, v) in self.iter().enumerate() {
+            v.lay(l, at + i as u32 * T::SIZE, cx);
+        }
+    }
+}
+
+/// A handle the state holds where the original held a pointer to a runtime object: the
+/// caller's `Cx` maps it to and from ssbm-rs's addresses by its kind.
+pub trait Handle: Copy {
+    /// The handle type's name, as `Cx` takes it.
+    const KIND: &'static str;
+    fn from_id(id: u32) -> Self;
+    fn id(self) -> u32;
+}
+
+macro_rules! handles {
+    ($($t:ty),* $(,)?) => {$(
+        impl Handle for $t {
+            const KIND: &'static str = stringify!($t);
+            fn from_id(id: u32) -> Self {
+                Self(id)
+            }
+            fn id(self) -> u32 {
+                self.0
+            }
+        }
+    )*};
+}
+
+handles!(
+    crate::hsd::gobj::GObjId,
+    crate::hsd::jobj::JObjId,
+    super::handles::StartHookId,
+);
+
+impl<H: Handle> Mirror for Option<H> {
+    const SIZE: u32 = 4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        cx.import_handle(H::KIND, m.u32(at)).map(H::from_id)
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        cx.compare_handle(path, H::KIND, self.map(H::id), m.u32(at));
+    }
+}
+
+impl<H: Handle> LayOut for Option<H> {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn LayCx) {
+        l.put_word(at, cx.handle(H::KIND, self.map(H::id)));
+    }
+}
+
+impl Mirror for Option<CodeRef> {
+    const SIZE: u32 = 4;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        code(m.u32(at))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        if self.map_or(0, |c| c.0) != m.u32(at) {
+            cx.mismatch(path, format!("{self:?}"), format!("{:#x}", m.u32(at)));
+        }
+    }
+}
+
+impl LayOut for Option<CodeRef> {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn LayCx) {
+        l.put_u32(at, self.map_or(0, |c| c.0));
+    }
+}
+
+impl Mirror for Option<DataRef> {
+    const SIZE: u32 = 4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        cx.import_data(m.u32(at))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        cx.compare_data(path, *self, m.u32(at));
+    }
+}
+
+impl LayOut for Option<DataRef> {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn LayCx) {
+        l.put_word(at, cx.data(*self));
+    }
+}
+
+/// A C enum held as a Rust enum: each of the decomp's values a variant, and `Other` any other
+/// value the game can store there (a leftover, a value no code names), so every bit pattern
+/// round-trips. It reads, compares, lays out and hashes as the integer it is (the sync test's
+/// hash as the generated struct's integer hashed it), and `Default` is zero's variant.
+#[macro_export]
+macro_rules! c_enum {
+    (
+        $(#[$meta:meta])*
+        $vis:vis enum $name:ident: $raw:ty {
+            $($(#[$vmeta:meta])* $variant:ident = $value:literal,)*
+        }
+    ) => {
+        $(#[$meta])*
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+        $vis enum $name {
+            $($(#[$vmeta])* $variant,)*
+            /// A value the decomp names no variant for, as the game stored it.
+            Other($raw),
+        }
+
+        impl $name {
+            pub const fn from_raw(v: $raw) -> $name {
+                match v {
+                    $($value => $name::$variant,)*
+                    v => $name::Other(v),
+                }
+            }
+
+            pub const fn raw(self) -> $raw {
+                match self {
+                    $($name::$variant => $value,)*
+                    $name::Other(v) => v,
+                }
+            }
+        }
+
+        impl Default for $name {
+            fn default() -> $name {
+                $name::from_raw(0)
+            }
+        }
+
+        impl $crate::game::mirror::Mirror for $name {
+            const SIZE: u32 = <$raw as $crate::game::mirror::Mirror>::SIZE;
+
+            fn import(m: &$crate::game::mirror::Mem, at: u32, cx: &mut dyn $crate::game::mirror::Cx) -> Self {
+                $name::from_raw(<$raw as $crate::game::mirror::Mirror>::import(m, at, cx))
+            }
+
+            fn compare(&self, m: &$crate::game::mirror::Mem, at: u32, path: &str, cx: &mut dyn $crate::game::mirror::Cx) {
+                let theirs = <$raw as $crate::game::mirror::Mirror>::import(m, at, cx);
+                if self.raw() != theirs {
+                    cx.mismatch(path, format!("{self:?}"), format!("{:?}", $name::from_raw(theirs)));
+                }
+            }
+        }
+
+        impl $crate::game::mirror::LayOut for $name {
+            fn lay(&self, l: &mut $crate::hsd::export::Lay, at: u32, cx: &dyn $crate::game::mirror::LayCx) {
+                $crate::game::mirror::LayOut::lay(&self.raw(), l, at, cx);
+            }
+        }
+
+        impl $crate::game::mirror::BitField for $name {
+            fn from_bits(v: u32) -> Self {
+                $name::from_raw(v as $raw)
+            }
+            fn bits(&self) -> u32 {
+                self.raw() as u32
+            }
+        }
+
+        impl $crate::state_eq::StateEq for $name {
+            fn state_diff(&self, other: &Self) -> Option<$crate::state_eq::Diff> {
+                (self != other).then(|| $crate::state_eq::Diff::values(self, other))
+            }
+
+            fn state_hash(&self, h: &mut $crate::state_eq::StateHasher) {
+                $crate::state_eq::StateEq::state_hash(&self.raw(), h);
+            }
+        }
+    };
 }
 
 /// A run of big-endian memory to write a struct into, at address `base`.

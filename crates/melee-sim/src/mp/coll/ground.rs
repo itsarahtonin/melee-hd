@@ -8,7 +8,8 @@ use super::{
     RIGHT_EDGE, RIGHT_LEDGE_SLIP, RIGHT_WALL_MASK, add, point,
 };
 use crate::fpu::{mem, reg};
-use crate::game::structs::{CollData, SurfaceData, ftCollisionBox};
+use super::{CollData, Surface};
+use crate::game::structs::ftCollisionBox;
 use crate::mp::{FLOOR, Kinds, LEFT_WALL, Probe, RIGHT_WALL};
 
 impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
@@ -16,7 +17,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
     /// right to left, as a few in the data do): the original then takes line -1 with the
     /// flags and normal its stack held, which our side leaves as they were and counts as a
     /// stale read (see `docs/engine.md`).
-    pub(super) fn take_edge(&mut self, surface: &mut SurfaceData, p: Option<Probe>) {
+    pub(super) fn take_edge(&mut self, surface: &mut Surface, p: Option<Probe>) {
         match p {
             Some(p) => {
                 surface.index = p.line;

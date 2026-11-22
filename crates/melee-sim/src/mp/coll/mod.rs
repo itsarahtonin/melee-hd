@@ -22,6 +22,9 @@ mod air;
 mod ceiling;
 mod ground;
 mod walls;
+mod data;
+
+pub use data::{CollData, Ecb, Surface};
 
 use gekko_fp as fp;
 
@@ -29,7 +32,7 @@ use super::{Geometry, Kinds};
 use crate::fpu::{copy, mem, reg};
 use crate::game::handles::CodeRef;
 use crate::game::mirror::{Cx, Mem, Mirror};
-use crate::game::structs::{_ftECB, CollData, SurfaceData, Vec2, ftCollisionBox};
+use crate::game::structs::{Vec2, ftCollisionBox};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::math;
@@ -719,8 +722,8 @@ fn set(v: &mut Vec2, x: f32, y: f32) {
 }
 
 /// The default ECB a new source gets: 8 high, 8 wide, standing on its position.
-fn default_ecb() -> _ftECB {
-    let mut e = _ftECB::default();
+fn default_ecb() -> Ecb {
+    let mut e = Ecb::default();
     set(&mut e.top, 0.0, 8.0);
     set(&mut e.bottom, 0.0, 0.0);
     set(&mut e.right, 4.0, 4.0);
@@ -728,8 +731,8 @@ fn default_ecb() -> _ftECB {
     e
 }
 
-fn zero_ecb(e: &mut _ftECB) {
-    *e = _ftECB::default();
+fn zero_ecb(e: &mut Ecb) {
+    *e = Ecb::default();
 }
 
 impl CollData {
@@ -804,7 +807,7 @@ impl CollData {
     #[doc(alias = "mpColl_80042384")]
     pub fn fix_desired_ecb(&mut self) {
         let d = &mut self.desired_ecb;
-        let mid = |d: &_ftECB| mem(fp::fmuls(0.5, add(d.top.y, d.bottom.y)));
+        let mid = |d: &Ecb| mem(fp::fmuls(0.5, add(d.top.y, d.bottom.y)));
         if abs(fp::fsubs(reg(d.top.y), reg(d.bottom.y))) < 1.0 {
             d.top.y = mem(fp::fadds(reg(d.top.y), 1.0));
             let m = mid(d);
@@ -1166,7 +1169,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         cd.floor_skip = -1;
         cd.ledge_id_right = -1;
         cd.ledge_id_left = -1;
-        let surface = |ny: f32| SurfaceData {
+        let surface = |ny: f32| Surface {
             index: -1,
             flags: 0,
             normal: Vec3::new(0.0, ny, 0.0),
@@ -1524,7 +1527,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
     #[doc(alias = "mpCollGetSpeedCeiling")]
     #[doc(alias = "mpCollGetSpeedLeftWall")]
     #[doc(alias = "mpCollGetSpeedRightWall")]
-    pub fn surface_speed(&self, cd: &CollData, surface: &SurfaceData) -> Option<Vec3> {
+    pub fn surface_speed(&self, cd: &CollData, surface: &Surface) -> Option<Vec3> {
         let top = Vec3::new(cd.ecb.top.x, cd.ecb.top.y, 0.0);
         self.g.line_speed(surface.index, top)
     }

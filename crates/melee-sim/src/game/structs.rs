@@ -31,6 +31,11 @@ use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
+// The hand-written structs (`config.OWNED`), which the generated ones hold.
+pub use crate::mp::coll::CollData;
+pub use crate::mp::coll::Ecb;
+pub use crate::mp::coll::Surface;
+
 /// `Vec2`, 0x8 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Vec2 {
@@ -606,175 +611,6 @@ impl Default for FtInputTimers {
         FtInputTimers {
             lstick: Default::default(),
             trigger: 0,
-        }
-    }
-}
-
-/// `_ftECB`, 0x20 bytes.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct _ftECB {
-    /// +0x0
-    pub top: Vec2,
-    /// +0x8
-    pub bottom: Vec2,
-    /// +0x10
-    pub right: Vec2,
-    /// +0x18
-    pub left: Vec2,
-}
-
-impl Default for _ftECB {
-    fn default() -> Self {
-        _ftECB {
-            top: Default::default(),
-            bottom: Default::default(),
-            right: Default::default(),
-            left: Default::default(),
-        }
-    }
-}
-
-/// `SurfaceData`, 0x14 bytes.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct SurfaceData {
-    /// +0x0
-    pub index: i32,
-    /// +0x4
-    pub flags: u32,
-    /// +0x8
-    pub normal: Vec3,
-}
-
-impl Default for SurfaceData {
-    fn default() -> Self {
-        SurfaceData {
-            index: 0,
-            flags: 0,
-            normal: Default::default(),
-        }
-    }
-}
-
-/// `CollData`, 0x19c bytes.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct CollData {
-    /// +0x0
-    #[doc(alias("x0_gobj"))]
-    pub gobj: Option<GObjId>,
-    /// +0x4
-    pub cur_pos: Vec3,
-    /// +0x10
-    pub prev_pos: Vec3,
-    /// +0x1c
-    pub last_pos: Vec3,
-    /// +0x28
-    #[doc(alias("x28_vec"))]
-    pub frame_start_pos: Vec3,
-    /// +0x34
-    #[doc(alias("x34_flags"))]
-    pub ecb_flags: X34Flags,
-    /// +0x35
-    #[doc(alias("x35_flags"))]
-    pub map_flags: X35Flags,
-    /// +0x36
-    pub facing_dir: i16,
-    /// +0x38
-    #[doc(alias("x38"))]
-    pub map_generation: i32,
-    /// +0x3c
-    pub floor_skip: i32,
-    /// +0x40
-    pub ledge_id_right: i32,
-    /// +0x44
-    pub ledge_id_left: i32,
-    /// +0x48
-    pub joint_id_skip: i32,
-    /// +0x4c
-    pub joint_id_only: i32,
-    /// +0x50
-    #[doc(alias("x50"))]
-    pub weight: f32,
-    /// +0x54
-    pub ledge_snap_x: f32,
-    /// +0x58
-    pub ledge_snap_y: f32,
-    /// +0x5c
-    pub ledge_snap_height: f32,
-    /// +0x60
-    pub lstick_x: f32,
-    /// +0x64
-    #[doc(alias("x64_ecb"))]
-    pub unsqueezed_ecb: _ftECB,
-    /// +0x84
-    pub desired_ecb: _ftECB,
-    /// +0xa4
-    pub ecb: _ftECB,
-    /// +0xc4
-    pub prev_ecb: _ftECB,
-    /// +0xe4
-    #[doc(alias("xE4_ecb"))]
-    pub loaded_from_ecb: _ftECB,
-    /// +0x104
-    pub ecb_source: EcbSource,
-    /// +0x130
-    #[doc(alias("x130_flags"))]
-    pub ecb_lock: u32,
-    /// +0x134
-    pub env_flags: i32,
-    /// +0x138
-    pub prev_env_flags: i32,
-    /// +0x13c
-    #[doc(alias("x13C"))]
-    pub unread_13c: i32,
-    /// +0x140
-    pub contact: Vec3,
-    /// +0x14c
-    pub floor: SurfaceData,
-    /// +0x160
-    pub left_facing_wall: SurfaceData,
-    /// +0x174
-    pub right_facing_wall: SurfaceData,
-    /// +0x188
-    pub ceiling: SurfaceData,
-}
-
-impl Default for CollData {
-    fn default() -> Self {
-        CollData {
-            gobj: None,
-            cur_pos: Default::default(),
-            prev_pos: Default::default(),
-            last_pos: Default::default(),
-            frame_start_pos: Default::default(),
-            ecb_flags: Default::default(),
-            map_flags: Default::default(),
-            facing_dir: 0,
-            map_generation: 0,
-            floor_skip: 0,
-            ledge_id_right: 0,
-            ledge_id_left: 0,
-            joint_id_skip: 0,
-            joint_id_only: 0,
-            weight: 0.0,
-            ledge_snap_x: 0.0,
-            ledge_snap_y: 0.0,
-            ledge_snap_height: 0.0,
-            lstick_x: 0.0,
-            unsqueezed_ecb: Default::default(),
-            desired_ecb: Default::default(),
-            ecb: Default::default(),
-            prev_ecb: Default::default(),
-            loaded_from_ecb: Default::default(),
-            ecb_source: Default::default(),
-            ecb_lock: 0,
-            env_flags: 0,
-            prev_env_flags: 0,
-            unread_13c: 0,
-            contact: Default::default(),
-            floor: Default::default(),
-            left_facing_wall: Default::default(),
-            right_facing_wall: Default::default(),
-            ceiling: Default::default(),
         }
     }
 }
