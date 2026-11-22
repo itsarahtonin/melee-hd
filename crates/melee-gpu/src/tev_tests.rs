@@ -607,7 +607,7 @@ fn a_list_s_entries_are_taken_where_this_build_reads_them() {
 }
 
 /// A match's renderer makes what its first frame would otherwise make: the transforms'
-/// pipelines on a thread of their own from when the fast renderer is set up
+/// pipelines on a thread of their own from when the renderer is made
 /// (`Renderer::make_ahead`), taken at the first mesh drawn, and the copy to the XFB's with the
 /// textures prepared before the match.
 #[test]
@@ -616,12 +616,6 @@ fn a_match_s_first_frame_finds_its_renderer_s_own_pipelines_made() {
         eprintln!("skipped: no hardware GPU adapter");
         return;
     };
-    r.make_ahead();
-    assert!(
-        r.making.0.is_none(),
-        "made ahead without the GPU's transforms"
-    );
-    r.gpu_transforms = true;
     r.make_ahead();
     assert!(r.making.0.is_some(), "the transforms not made ahead");
     r.gpu_meshes();
@@ -633,4 +627,46 @@ fn a_match_s_first_frame_finds_its_renderer_s_own_pipelines_made() {
         r.gpu_xfb.is_some(),
         "the copy to the XFB's pipelines not made before the match"
     );
+}
+
+/// A replay's wait before its first frame waits for the player's own lists, not the shipped
+/// one's (1,847 pipelines took the worker's driver 3.6 s with its cache warm): here, with the
+/// shader threads paused, the own pipeline made by hand, the wait returns at once with the
+/// shipped one still to make, and counts only the player's own.
+#[test]
+fn a_replay_s_wait_is_for_the_player_s_own_pipelines() {
+    let Some(mut r) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    r.tev.mode = TevMode::Async;
+    r.tev.pause(true);
+    let mut rng = Rng(0x510E_527F);
+    let mut config = || {
+        let s = state(&mut rng);
+        (Renderer::pipeline_key(&s), tev::Uid::of(&s.bp, MODE_DRAW))
+    };
+    let (a, ua) = config();
+    let (c, uc) = config();
+    let entry = |k: PipelineKey, u: &tev::Uid| {
+        let mut v = k.pack().to_vec();
+        v.extend_from_slice(&u.0);
+        v
+    };
+    r.warm_specialized(&[entry(a, &ua)]);
+    r.warm_shipped(&[entry(c, &uc)]);
+    r.warm_shipped_pipelines(&[c.pack()]);
+    let id = r.tev.request(a, ua, false);
+    r.tev.make_now(&[(a, id)]);
+    let start = std::time::Instant::now();
+    let made = r.finish_specialized_within(std::time::Duration::from_secs(5));
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(2),
+        "waited for the shipped list"
+    );
+    assert_eq!(made, (1, 1));
+    assert!(r.tev.uber(c).is_none());
+    r.tev.pause(false);
+    r.finish_specialized();
+    assert!(r.tev.uber(c).is_some());
 }

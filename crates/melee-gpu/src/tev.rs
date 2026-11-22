@@ -308,6 +308,10 @@ struct Jobs {
     warming: VecDeque<Job>,
     uber: VecDeque<Job>,
     later: VecDeque<Job>,
+    /// Uber pipelines being made: no more than [`uber_threads`] at once, so a flush's
+    /// specialized pipelines made on the spot find threads free (on the worker's NVIDIA driver
+    /// an uber pipeline holds its thread 2 to 3 s with nothing cached).
+    making_uber: usize,
     closed: bool,
     /// The threads take no job (tests: what a draw makes itself).
     paused: bool,
@@ -315,11 +319,15 @@ struct Jobs {
 
 impl Jobs {
     fn next(&mut self) -> Option<Job> {
-        self.needed
-            .pop_front()
-            .or_else(|| self.warming.pop_front())
-            .or_else(|| self.uber.pop_front())
-            .or_else(|| self.later.pop_front())
+        if let Some(j) = self.needed.pop_front().or_else(|| self.warming.pop_front()) {
+            return Some(j);
+        }
+        if self.making_uber >= uber_threads() {
+            return None;
+        }
+        let j = self.uber.pop_front().or_else(|| self.later.pop_front())?;
+        self.making_uber += 1;
+        Some(j)
     }
 }
 
@@ -489,6 +497,8 @@ struct Uber {
     pipeline: Option<wgpu::RenderPipeline>,
     /// A draw asked for it (its job is among the needed, not a list's).
     needed: bool,
+    /// Only the shipped list asked for it: a wait for the player's own lists doesn't wait for it.
+    shipped: bool,
 }
 
 /// What the specialized shaders have done.
@@ -585,6 +595,11 @@ fn threads() -> usize {
     })
 }
 
+/// The most threads making uber pipelines at once: a third of them, at least one.
+fn uber_threads() -> usize {
+    (threads() / 3).max(1)
+}
+
 impl Specializer {
     pub(crate) fn new(mode: TevMode, maker: Maker) -> Specializer {
         Specializer {
@@ -636,7 +651,12 @@ impl Specializer {
                                     jobs = queue.cond.wait(jobs).unwrap();
                                 }
                             };
-                            if tx.send(make(&maker, &modules, &job)).is_err() {
+                            let made = make(&maker, &modules, &job);
+                            if job.id == UBER {
+                                queue.jobs.lock().unwrap().making_uber -= 1;
+                                queue.cond.notify_all();
+                            }
+                            if tx.send(made).is_err() {
                                 return;
                             }
                         }
@@ -755,7 +775,17 @@ impl Specializer {
     /// (where draws wait for theirs anyway), else on the threads (`Jobs`): after the specialized
     /// ones when a draw asks (`needed`), last when a list does.
     pub(crate) fn ask_uber(&mut self, key: PipelineKey, needed: bool) {
+        self.ask_uber_from(key, needed, false);
+    }
+
+    /// [`Specializer::ask_uber`] for the shipped list's.
+    pub(crate) fn ask_uber_shipped(&mut self, key: PipelineKey) {
+        self.ask_uber_from(key, false, true);
+    }
+
+    fn ask_uber_from(&mut self, key: PipelineKey, needed: bool, shipped: bool) {
         if let Some(u) = self.uber.get_mut(&key) {
+            u.shipped &= shipped;
             if needed && !u.needed && u.pipeline.is_none() {
                 u.needed = true;
                 if let Some(w) = &self.workers {
@@ -778,6 +808,7 @@ impl Specializer {
                 Uber {
                     pipeline: shared,
                     needed,
+                    shipped,
                 },
             );
             return;
@@ -787,6 +818,7 @@ impl Specializer {
             Uber {
                 pipeline: None,
                 needed,
+                shipped,
             },
         );
         self.uber_pending += 1;
@@ -820,6 +852,7 @@ impl Specializer {
             e.insert(Uber {
                 pipeline: None,
                 needed: true,
+                shipped: false,
             });
             self.uber_pending += 1;
         }
@@ -949,15 +982,16 @@ impl Specializer {
     /// end of a warm-up, after which no draw waits for its specialized shader unless its
     /// configuration is new.
     pub(crate) fn finish(&mut self) {
-        self.finish_within(None);
+        self.finish_within(None, false);
     }
 
     /// [`Specializer::finish`], waiting at most `limit`: whether every pipeline was made. Those
     /// left go on being made in the order asked.
-    pub(crate) fn finish_within(&mut self, limit: Option<std::time::Duration>) -> bool {
+    /// With `own`, only the player's own: not those only the shipped list asked for.
+    pub(crate) fn finish_within(&mut self, limit: Option<std::time::Duration>, own: bool) -> bool {
         let end = limit.map(|l| std::time::Instant::now() + l);
         let mut done = true;
-        while self.uber_pending > 0 || self.pipelines.values().any(Option::is_none) {
+        while self.waiting(own) {
             let Some(w) = &self.workers else { break };
             let made = match end {
                 None => w.made.recv().ok(),
@@ -983,15 +1017,39 @@ impl Specializer {
         done
     }
 
+    /// Whether a pipeline asked for isn't made: with `own`, one the shipped list alone didn't ask
+    /// for.
+    fn waiting(&self, own: bool) -> bool {
+        if !own {
+            return self.uber_pending > 0 || self.pipelines.values().any(Option::is_none);
+        }
+        self.uber
+            .values()
+            .any(|u| u.pipeline.is_none() && !u.shipped)
+            || self
+                .pipelines
+                .iter()
+                .any(|(k, p)| p.is_none() && !self.unlisted.contains(k))
+    }
+
     /// How many specialized pipelines were asked for (a list's too).
     pub(crate) fn asked(&self) -> usize {
         self.pipelines.len()
     }
 
     /// How many pipelines were asked for, and how many of them are made.
+    /// The shipped list's not counted until a draw asks for one.
     pub(crate) fn made_of(&self) -> (usize, usize) {
-        let made = self.pipelines.values().filter(|p| p.is_some()).count();
-        (made, self.pipelines.len())
+        let own = self
+            .pipelines
+            .iter()
+            .filter(|(k, _)| !self.unlisted.contains(k));
+        let (mut made, mut of) = (0, 0);
+        for (_, p) in own {
+            of += 1;
+            made += usize::from(p.is_some());
+        }
+        (made, of)
     }
 
     /// The pipeline for a draw's specialized shader, once made.

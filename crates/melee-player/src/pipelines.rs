@@ -108,22 +108,24 @@ pub fn renderer(gpu: &Gpu, scale: u32, samples: u32, aspect: Aspect) -> melee_gp
     let mut r = gpu.renderer(scale, samples, aspect);
     let driver = driver_path().and_then(|p| std::fs::read(p).ok());
     r.use_pipeline_cache(driver.as_deref());
-    let mut keys: Vec<[u32; 8]> = keys_path()
+    // The fast renderer's transforms, made beside the lists from here.
+    r.make_ahead();
+    let keys: Vec<[u32; 8]> = keys_path()
         .and_then(|p| std::fs::read(p).ok())
         .map(|b| pipeline_list(&b))
         .unwrap_or_default();
-    let saved = keys.len();
     let shipped = use_shipped();
-    for k in pipeline_list(if shipped { SHIPPED_PIPELINES } else { &[] }) {
-        if !keys.contains(&k) {
-            keys.push(k);
-        }
-    }
+    let more: Vec<[u32; 8]> = pipeline_list(if shipped { SHIPPED_PIPELINES } else { &[] })
+        .into_iter()
+        .filter(|k| !keys.contains(k))
+        .collect();
     let start = std::time::Instant::now();
     r.warm(&keys);
-    if !keys.is_empty() {
+    r.warm_shipped_pipelines(&more);
+    if !keys.is_empty() || !more.is_empty() {
         eprintln!(
-            "pipelines: {} queued ({saved} saved) in {:.0} ms",
+            "pipelines: {} queued ({} saved) in {:.0} ms",
+            keys.len() + more.len(),
             keys.len(),
             start.elapsed().as_secs_f64() * 1000.0
         );

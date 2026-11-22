@@ -1308,6 +1308,17 @@ impl Renderer {
         }
     }
 
+    /// [`Renderer::warm`] for the shipped list's uber pipelines: a wait for the player's own
+    /// ([`Renderer::finish_specialized_within`]) doesn't wait for them.
+    pub fn warm_shipped_pipelines(&mut self, keys: &[[u32; 8]]) {
+        for k in keys {
+            if let Some(mut key) = PipelineKey::unpack(*k) {
+                key.early_z &= self.early_z();
+                self.tev.ask_uber_shipped(key);
+            }
+        }
+    }
+
     /// Whether this renderer's draws test depth before their shaders where they can.
     fn early_z(&self) -> bool {
         self.tev.maker.uber_early.is_some()
@@ -1405,11 +1416,12 @@ impl Renderer {
         self.tev.finish();
     }
 
-    /// [`Renderer::finish_specialized`], waiting at most `limit`; returns how many of the
+    /// [`Renderer::finish_specialized`] for the player's own pipelines (not those the shipped
+    /// list alone asked for), waiting at most `limit`; returns how many of the player's own
     /// specialized pipelines asked for are made, and how many were asked for. The rest go on
     /// being made in the order asked.
     pub fn finish_specialized_within(&mut self, limit: std::time::Duration) -> (usize, usize) {
-        self.tev.finish_within(Some(limit));
+        self.tev.finish_within(Some(limit), true);
         self.tev.made_of()
     }
 
@@ -3143,20 +3155,23 @@ impl Renderer {
         self.take_made_ahead();
         let (device, checks) = (&self.device, self.checks);
         self.gpu_meshes
-            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks))
+            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks, self.cache.as_ref()))
     }
 
     /// Starts making what the fast renderer's first frame would otherwise make: the transforms'
-    /// compute pipelines (`xform.wgsl`, 10 ms on this PC's driver), on a thread of their own, so
-    /// a match's renderer has them by its first frame. Call once `gpu_transforms` is set.
+    /// compute pipelines (`xform.wgsl`: 10 ms on this PC's driver, 3 s on the worker's with
+    /// nothing cached), on a thread of their own, through the driver's pipeline cache, so a
+    /// match's renderer has them by its first frame. The player calls it as it makes each
+    /// renderer, after its pipeline cache (a renderer that stays the exact one keeps them unused,
+    /// two buffers of 1 MB); `Gpu::fast` calls it too.
     pub fn make_ahead(&mut self) {
-        if !self.gpu_transforms || self.gpu_meshes.is_some() || self.making.0.is_some() {
+        if self.gpu_meshes.is_some() || self.making.0.is_some() {
             return;
         }
-        let (device, checks) = (self.device.clone(), self.checks);
+        let (device, checks, cache) = (self.device.clone(), self.checks, self.cache.clone());
         self.making.0 = std::thread::Builder::new()
             .name("transforms' pipelines".to_owned())
-            .spawn(move || gpu_mesh::GpuMeshes::new(&device, checks))
+            .spawn(move || gpu_mesh::GpuMeshes::new(&device, checks, cache.as_ref()))
             .ok();
     }
 
@@ -3215,7 +3230,7 @@ impl Renderer {
         let (device, checks) = (&self.device, self.checks);
         let meshes = self.gpu_meshes.get_or_insert_with(|| {
             let start = std::time::Instant::now();
-            let m = gpu_mesh::GpuMeshes::new(device, checks);
+            let m = gpu_mesh::GpuMeshes::new(device, checks, self.cache.as_ref());
             made::add(made::What::Setup, start);
             m
         });
@@ -3266,7 +3281,7 @@ impl Renderer {
         self.take_made_ahead();
         let (device, checks) = (&self.device, self.checks);
         self.gpu_meshes
-            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks))
+            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks, self.cache.as_ref()))
             .clips(device, &self.queue, state, mesh, &normals, frame)
     }
 

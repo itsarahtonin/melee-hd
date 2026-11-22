@@ -406,7 +406,13 @@ fn storage(read_only: bool, binding: u32) -> wgpu::BindGroupLayoutEntry {
 }
 
 impl GpuMeshes {
-    pub(crate) fn new(device: &wgpu::Device, checks: wgpu::ShaderRuntimeChecks) -> GpuMeshes {
+    /// The transforms' pipelines, through the driver's pipeline cache where there is one (on the
+    /// worker's NVIDIA driver they took 3 s with nothing cached).
+    pub(crate) fn new(
+        device: &wgpu::Device,
+        checks: wgpu::ShaderRuntimeChecks,
+        cache: Option<&wgpu::PipelineCache>,
+    ) -> GpuMeshes {
         // SAFETY: every loop in xform.wgsl is bounded by a constant.
         let module = unsafe {
             device.create_shader_module_trusted(
@@ -438,7 +444,7 @@ impl GpuMeshes {
             module: &module,
             entry_point: Some("cs_main"),
             compilation_options: Default::default(),
-            cache: None,
+            cache,
         });
         let copier_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("mesh indices"),
@@ -456,7 +462,7 @@ impl GpuMeshes {
             module: &module,
             entry_point: Some("cs_indices"),
             compilation_options: Default::default(),
-            cache: None,
+            cache,
         });
         GpuMeshes {
             pipeline,
