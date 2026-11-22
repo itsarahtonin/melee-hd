@@ -73,6 +73,9 @@ enum Packet {
     CopiesToMemory(Vec<u32>),
     /// The end of a warm-up (`Renderer::finish_specialized`), signalled when done.
     FinishSpecialized(mpsc::Sender<()>),
+    /// Textures to make before they're drawn (`Renderer::prepare_textures`), signalled with
+    /// how many were made.
+    Prepare(Vec<crate::TexturePrep>, mpsc::Sender<usize>),
 }
 
 /// A batch of packets, its draws' vertices and the state's changes, which every thread reads.
@@ -521,6 +524,15 @@ impl Threaded {
         let _ = rx.recv();
     }
 
+    /// Makes textures before they're drawn on the render thread (`Renderer::prepare_textures`)
+    /// and waits for them: how many were made.
+    pub fn prepare_textures(&mut self, preps: Vec<crate::TexturePrep>) -> usize {
+        let (tx, rx) = mpsc::channel();
+        self.batch.packets.push(Packet::Prepare(preps, tx));
+        self.send();
+        rx.recv().unwrap_or(0)
+    }
+
     /// How long the last frame's end (its copy to the XFB) waited for the renderer: with
     /// [`Threaded::spawn_synced`], the time it took after the game thread sent the frame.
     pub fn waited(&self) -> std::time::Duration {
@@ -806,6 +818,9 @@ fn run(
                 Packet::FinishSpecialized(done) => {
                     renderer.finish_specialized();
                     let _ = done.send(());
+                }
+                Packet::Prepare(preps, done) => {
+                    let _ = done.send(renderer.prepare_textures(preps));
                 }
                 Packet::Copy(value) => {
                     renderer.copy(&state, *value, &memory);

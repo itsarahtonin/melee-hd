@@ -50,9 +50,6 @@ const WORDS_LCM: u64 = 7560;
 /// Marks an index copy of a draw's own indices (`Batch::copy_cpu`).
 const CPU: u32 = 1 << 31;
 
-/// Frames a mesh no draw used is kept on the GPU (as the mesh cache keeps it).
-const KEPT_FOR: u64 = 600;
-
 /// The XF state's sections: the ranges of XF memory each holds, read from the record's offsets.
 /// Position and texture matrices (to 0x110: matrix index 63's last row), with the normal
 /// matrices (to 0x468: index 31's) after them; the post-transform matrices (to 0x610); the
@@ -93,6 +90,7 @@ impl Pool {
         let at = self.used;
         let need = (at + words) * 4;
         if need > self.buffer.size() {
+            let made = std::time::Instant::now();
             let buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some(self.label),
                 size: need.next_power_of_two(),
@@ -105,6 +103,7 @@ impl Pool {
                 queue.submit(encoder);
             }
             self.buffer = buffer;
+            crate::made::add(crate::made::What::Pool, made);
         }
         self.used += words;
         at
@@ -382,12 +381,14 @@ fn ensure(
     if slot.as_ref().is_some_and(|b| b.size() >= size) {
         return false;
     }
+    let made = std::time::Instant::now();
     *slot = Some(device.create_buffer(&wgpu::BufferDescriptor {
         label: Some(label),
         size: size.next_power_of_two(),
         usage,
         mapped_at_creation: false,
     }));
+    crate::made::add(crate::made::What::Buffer, made);
     true
 }
 
@@ -405,7 +406,13 @@ fn storage(read_only: bool, binding: u32) -> wgpu::BindGroupLayoutEntry {
 }
 
 impl GpuMeshes {
-    pub(crate) fn new(device: &wgpu::Device, checks: wgpu::ShaderRuntimeChecks) -> GpuMeshes {
+    /// The transforms' pipelines, through the driver's pipeline cache where there is one (on the
+    /// worker's NVIDIA driver they took 3 s with nothing cached).
+    pub(crate) fn new(
+        device: &wgpu::Device,
+        checks: wgpu::ShaderRuntimeChecks,
+        cache: Option<&wgpu::PipelineCache>,
+    ) -> GpuMeshes {
         // SAFETY: every loop in xform.wgsl is bounded by a constant.
         let module = unsafe {
             device.create_shader_module_trusted(
@@ -437,7 +444,7 @@ impl GpuMeshes {
             module: &module,
             entry_point: Some("cs_main"),
             compilation_options: Default::default(),
-            cache: None,
+            cache,
         });
         let copier_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("mesh indices"),
@@ -455,7 +462,7 @@ impl GpuMeshes {
             module: &module,
             entry_point: Some("cs_indices"),
             compilation_options: Default::default(),
-            cache: None,
+            cache,
         });
         GpuMeshes {
             pipeline,
@@ -480,6 +487,12 @@ impl GpuMeshes {
         }
     }
 
+    /// How many meshes are on the GPU.
+    #[cfg(test)]
+    pub(crate) fn resident_count(&self) -> usize {
+        self.resident.len()
+    }
+
     /// The mesh on the GPU, uploaded if it isn't; marked used in `frame`.
     fn resident(
         &mut self,
@@ -493,7 +506,10 @@ impl GpuMeshes {
         let uploaded = &mut self.uploaded;
         let res = self.resident.entry(key).or_insert_with(|| {
             *uploaded += 1;
-            Self::upload(device, queue, arena, index, mesh.clone())
+            let made = std::time::Instant::now();
+            let r = Self::upload(device, queue, arena, index, mesh.clone());
+            crate::made::add(crate::made::What::Upload, made);
+            r
         });
         res.used = frame;
         res
@@ -729,15 +745,16 @@ impl GpuMeshes {
         self.batch.clear();
     }
 
-    /// Between frames: meshes no draw used for a while go, and the pools close their gaps once
-    /// they're half gaps, every mesh kept uploaded again in order.
+    /// Between frames: meshes nothing else holds go (the mesh cache dropped them, and no draw
+    /// sent holds them, so none can be drawn again: a mesh decoded again is another), and the
+    /// pools close their gaps once they're half gaps, every mesh kept uploaded again in order.
     pub(crate) fn end_frame(&mut self, device: &wgpu::Device, queue: &Ordered, frame: u64) {
         if !self.batch.records.is_empty() || !frame.is_multiple_of(60) {
             return;
         }
         let dead = &mut self.dead;
         self.resident.retain(|_, r| {
-            let keep = frame.saturating_sub(r.used) < KEPT_FOR;
+            let keep = Arc::strong_count(&r.mesh) > 1;
             if !keep {
                 dead.0 += r.words;
                 dead.1 += r.indices;
@@ -747,6 +764,7 @@ impl GpuMeshes {
         if self.dead.0 * 2 <= self.arena.used && self.dead.1 * 2 <= self.index.used {
             return;
         }
+        let made = std::time::Instant::now();
         self.arena.used = 0;
         self.index.used = 0;
         self.dead = (0, 0);
@@ -756,6 +774,7 @@ impl GpuMeshes {
             new.used = r.used;
             self.resident.insert(key, new);
         }
+        crate::made::add(crate::made::What::Pool, made);
     }
 
     /// The mesh's vertices' clip-space positions as the transforms on the GPU make them, drawn

@@ -160,7 +160,13 @@ impl Uid {
             bp[r] = v;
         }
         let uid = Uid(w);
-        (Uid::of(&bp, w[N_REGS]) == uid && w[N_REGS] != 1 && w[N_REGS] != 3).then_some(uid)
+        // A clear's has no register (`clear_uid`); the debugging silhouettes' none.
+        let mode = match w[N_REGS] {
+            1 => uid == clear_uid(),
+            3 => false,
+            _ => true,
+        };
+        (mode && Uid::of(&bp, w[N_REGS]) == uid).then_some(uid)
     }
 
     /// The specialized shader's source: gx.wgsl with `bp` answering the configuration's bits,
@@ -252,6 +258,12 @@ pub(crate) struct Maker {
     pub cache: Option<wgpu::PipelineCache>,
     pub samples: u32,
     pub checks: wgpu::ShaderRuntimeChecks,
+    /// gx.wgsl's module, the uber shader's pipelines' (`UBER` jobs).
+    pub uber: wgpu::ShaderModule,
+    /// gx.wgsl with its fragment shader promising depth_greater, for the early z pipelines:
+    /// where the device has `SHADER_EARLY_DEPTH_TEST` (Vulkan), the EFB has one sample a pixel
+    /// and `MELEE_EARLY_Z` isn't 0.
+    pub uber_early: Option<wgpu::ShaderModule>,
 }
 
 impl Maker {
@@ -270,6 +282,8 @@ impl Maker {
     }
 }
 
+/// A pipeline to make: a specialized one (`id` its uid's), or the uber shader's (`id` is
+/// `UBER`, `uid` unread).
 struct Job {
     key: PipelineKey,
     id: u32,
@@ -283,12 +297,38 @@ struct Made {
     time: Duration,
 }
 
-/// Jobs waiting: those draws wait for first, then those warming from an earlier run's list.
+/// Jobs waiting: the specialized pipelines draws asked for first, then those warming from a
+/// list, then the uber shader's that draws asked for, then the uber shader's from a list. A
+/// draw is drawn meanwhile with whichever of its two is made, or its specialized one made on the
+/// spot; the uber shader's take the driver longest (seconds on some), so they wait behind the
+/// specialized ones rather than keep the threads from them.
 #[derive(Default)]
 struct Jobs {
     needed: VecDeque<Job>,
     warming: VecDeque<Job>,
+    uber: VecDeque<Job>,
+    later: VecDeque<Job>,
+    /// Uber pipelines being made: no more than [`uber_threads`] at once, so a flush's
+    /// specialized pipelines made on the spot find threads free (on the worker's NVIDIA driver
+    /// an uber pipeline holds its thread 2 to 3 s with nothing cached).
+    making_uber: usize,
     closed: bool,
+    /// The threads take no job (tests: what a draw makes itself).
+    paused: bool,
+}
+
+impl Jobs {
+    fn next(&mut self) -> Option<Job> {
+        if let Some(j) = self.needed.pop_front().or_else(|| self.warming.pop_front()) {
+            return Some(j);
+        }
+        if self.making_uber >= uber_threads() {
+            return None;
+        }
+        let j = self.uber.pop_front().or_else(|| self.later.pop_front())?;
+        self.making_uber += 1;
+        Some(j)
+    }
 }
 
 #[derive(Default)]
@@ -324,28 +364,43 @@ impl Drop for Workers {
 /// threads make them again. A pipeline is what it's made for, its TEV configuration and its
 /// samples a pixel; every renderer's bind group layouts are the same (wgpu dedups equal
 /// layouts), so one renderer's pipeline draws with another's bind groups.
+/// The uber shader's pipelines are shared the same way, by what each is made for and its samples.
 #[derive(Clone, Default)]
 pub struct SharedSpecialized(Arc<Mutex<SharedPipelines>>);
 
-/// The shared pipelines, by what each is made for, its TEV configuration and its samples a pixel.
-type SharedPipelines = FxHashMap<(PipelineKey, Uid, u32), wgpu::RenderPipeline>;
+/// The shared pipelines: the specialized ones by what each is made for, its TEV configuration and
+/// its samples a pixel; the uber shader's by what each is made for and its samples.
+#[derive(Default)]
+struct SharedPipelines {
+    specialized: FxHashMap<(PipelineKey, Uid, u32), wgpu::RenderPipeline>,
+    uber: FxHashMap<(PipelineKey, u32), wgpu::RenderPipeline>,
+}
 
 impl SharedSpecialized {
     fn get(&self, key: PipelineKey, uid: Uid, samples: u32) -> Option<wgpu::RenderPipeline> {
-        self.0.lock().unwrap().get(&(key, uid, samples)).cloned()
+        let s = self.0.lock().unwrap();
+        s.specialized.get(&(key, uid, samples)).cloned()
     }
 
     fn put(&self, key: PipelineKey, uid: Uid, samples: u32, p: &wgpu::RenderPipeline) {
-        self.0
-            .lock()
-            .unwrap()
+        let mut s = self.0.lock().unwrap();
+        s.specialized
             .entry((key, uid, samples))
             .or_insert_with(|| p.clone());
     }
 
-    /// The pipelines held.
+    fn get_uber(&self, key: PipelineKey, samples: u32) -> Option<wgpu::RenderPipeline> {
+        self.0.lock().unwrap().uber.get(&(key, samples)).cloned()
+    }
+
+    fn put_uber(&self, key: PipelineKey, samples: u32, p: &wgpu::RenderPipeline) {
+        let mut s = self.0.lock().unwrap();
+        s.uber.entry((key, samples)).or_insert_with(|| p.clone());
+    }
+
+    /// The specialized pipelines held.
     pub fn len(&self) -> usize {
-        self.0.lock().unwrap().len()
+        self.0.lock().unwrap().specialized.len()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -358,6 +413,26 @@ type Modules = Arc<Mutex<FxHashMap<(Uid, bool), wgpu::ShaderModule>>>;
 
 fn make(maker: &Maker, modules: &Modules, job: &Job) -> Made {
     let start = Instant::now();
+    if job.id == UBER {
+        let module = match &maker.uber_early {
+            Some(m) if job.key.early_z => m,
+            _ => &maker.uber,
+        };
+        let pipeline = crate::make_pipeline(
+            &maker.device,
+            &maker.layout,
+            maker.cache.as_ref(),
+            maker.samples,
+            job.key,
+            module,
+        );
+        return Made {
+            key: job.key,
+            id: UBER,
+            pipeline,
+            time: start.elapsed(),
+        };
+    }
     let module = {
         let found = modules
             .lock()
@@ -397,11 +472,33 @@ pub(crate) struct Specializer {
     uids: Vec<Uid>,
     /// Each pipeline asked for, once made.
     pipelines: FxHashMap<(PipelineKey, u32), Option<wgpu::RenderPipeline>>,
+    /// The pipelines in the order they were first asked for: a saved list keeps it, so the
+    /// next run makes first what it's likely to need first ([`Specializer::keys`]).
+    order: Vec<(PipelineKey, u32)>,
+    /// Pipelines warmed from the shipped list that no draw has asked for yet: not in `order`,
+    /// so a saved list holds only what the player's own runs asked for and its own list held.
+    unlisted: rustc_hash::FxHashSet<(PipelineKey, u32)>,
+    /// The uber shader's pipelines asked for, by what each is made for: made, or being made on
+    /// the threads (`Uber::pipeline` none). A draw whose uber pipeline isn't made yet never
+    /// waits for it (a second or more on some drivers): its specialized pipeline is made on the
+    /// spot instead ([`Specializer::make_now`]).
+    uber: FxHashMap<PipelineKey, Uber>,
+    /// How many of `uber` aren't made yet.
+    uber_pending: usize,
     workers: Option<Workers>,
     modules: Modules,
     /// Pipelines other renderers on the device made, and this one's for them.
     pub shared: Option<SharedSpecialized>,
     pub stats: TevStats,
+}
+
+/// An uber pipeline asked for.
+struct Uber {
+    pipeline: Option<wgpu::RenderPipeline>,
+    /// A draw asked for it (its job is among the needed, not a list's).
+    needed: bool,
+    /// Only the shipped list asked for it: a wait for the player's own lists doesn't wait for it.
+    shipped: bool,
 }
 
 /// What the specialized shaders have done.
@@ -421,6 +518,14 @@ pub struct TevStats {
     /// made yet.
     pub specialized_calls: u64,
     pub uber_calls: u64,
+    /// Specialized pipelines a draw waited for, made on the spot because neither they nor the
+    /// draw's uber pipeline were made ([`Specializer::make_now`]), and the time draws waited.
+    pub on_the_spot: u32,
+    pub waited: Duration,
+    /// The uber shader's pipelines made, and those of them a draw waited for (only where
+    /// nothing else can draw it: `MELEE_TEV=0` or `sync`, the debugging silhouettes).
+    pub uber_made: u32,
+    pub uber_waited: u32,
 }
 
 impl std::fmt::Display for TevStats {
@@ -436,7 +541,16 @@ impl std::fmt::Display for TevStats {
             self.longest.as_secs_f64() * 1000.0,
             self.specialized_calls,
             self.uber_calls
-        )
+        )?;
+        if self.on_the_spot > 0 {
+            write!(
+                f,
+                "; {} made at their draw in {:.0} ms, its uber pipeline not made yet",
+                self.on_the_spot,
+                self.waited.as_secs_f64() * 1000.0
+            )?;
+        }
+        Ok(())
     }
 }
 
@@ -451,8 +565,40 @@ impl Drop for Specializer {
 /// The id of a draw that has no specialized shader: the uber shader always draws it.
 pub(crate) const UBER: u32 = u32::MAX;
 
-/// Threads making pipelines: they wait on the driver's compiler.
-const THREADS: usize = 2;
+/// Who asks for a specialized pipeline: a draw, the player's saved list or the shipped list.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Ask {
+    Draw,
+    Saved,
+    Shipped,
+}
+
+/// The configuration of a clear drawn as a rectangle (its mode, no register read): its
+/// specialized pipeline draws it where its uber pipeline isn't made yet.
+pub(crate) fn clear_uid() -> Uid {
+    Uid::of(&[0; 256], crate::MODE_CLEAR)
+}
+
+/// Threads making pipelines, which mostly wait on the driver's compiler: half the processor's
+/// threads, 2 to 6 (`MELEE_TEV_THREADS` sets it). A cold driver cache takes the 1080 Ti's
+/// driver 175 ms a pipeline, so the saved list's 700 take a minute on two.
+pub(crate) fn threads() -> usize {
+    static N: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *N.get_or_init(|| {
+        std::env::var("MELEE_TEV_THREADS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .filter(|&n| n > 0)
+            .unwrap_or_else(|| {
+                std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(2, 6))
+            })
+    })
+}
+
+/// The most threads making uber pipelines at once: a third of them, at least one.
+fn uber_threads() -> usize {
+    (threads() / 3).max(1)
+}
 
 impl Specializer {
     pub(crate) fn new(mode: TevMode, maker: Maker) -> Specializer {
@@ -462,6 +608,10 @@ impl Specializer {
             ids: FxHashMap::default(),
             uids: Vec::new(),
             pipelines: FxHashMap::default(),
+            order: Vec::new(),
+            unlisted: Default::default(),
+            uber: FxHashMap::default(),
+            uber_pending: 0,
             workers: None,
             modules: Arc::default(),
             shared: None,
@@ -474,8 +624,9 @@ impl Specializer {
         self.workers.get_or_insert_with(|| {
             let queue = Arc::new(Queue::default());
             let (tx, made) = mpsc::channel();
-            let mut threads = Vec::with_capacity(THREADS);
-            for i in 0..THREADS {
+            let n = threads();
+            let mut threads = Vec::with_capacity(n);
+            for i in 0..n {
                 let (queue, tx, maker, modules) = (
                     queue.clone(),
                     tx.clone(),
@@ -492,15 +643,20 @@ impl Specializer {
                                     if jobs.closed {
                                         return;
                                     }
-                                    if let Some(j) =
-                                        jobs.needed.pop_front().or_else(|| jobs.warming.pop_front())
+                                    if !jobs.paused
+                                        && let Some(j) = jobs.next()
                                     {
                                         break j;
                                     }
                                     jobs = queue.cond.wait(jobs).unwrap();
                                 }
                             };
-                            if tx.send(make(&maker, &modules, &job)).is_err() {
+                            let made = make(&maker, &modules, &job);
+                            if job.id == UBER {
+                                queue.jobs.lock().unwrap().making_uber -= 1;
+                                queue.cond.notify_all();
+                            }
+                            if tx.send(made).is_err() {
                                 return;
                             }
                         }
@@ -523,7 +679,27 @@ impl Specializer {
         })
     }
 
+    /// Keeps a pipeline made, here or on a thread; one made twice (on the spot while a thread
+    /// made it too) keeps the first.
     fn note(&mut self, made: Made) {
+        if made.id == UBER {
+            let Some(u) = self.uber.get_mut(&made.key) else {
+                return;
+            };
+            if u.pipeline.is_some() {
+                return;
+            }
+            if let Some(s) = &self.shared {
+                s.put_uber(made.key, self.maker.samples, &made.pipeline);
+            }
+            u.pipeline = Some(made.pipeline);
+            self.uber_pending -= 1;
+            self.stats.uber_made += 1;
+            return;
+        }
+        if matches!(self.pipelines.get(&(made.key, made.id)), Some(Some(_))) {
+            return;
+        }
         self.stats.made += 1;
         self.stats.compile += made.time;
         self.stats.longest = self.stats.longest.max(made.time);
@@ -542,12 +718,31 @@ impl Specializer {
     /// The draw's specialized shader's id, its pipeline asked for if it hasn't been: made now
     /// with `Sync`, else on the threads, first among those waiting when `needed`.
     pub(crate) fn request(&mut self, key: PipelineKey, uid: Uid, needed: bool) -> u32 {
+        self.ask(key, uid, if needed { Ask::Draw } else { Ask::Saved })
+    }
+
+    /// [`Specializer::request`] for a pipeline of the shipped list: made on the threads after
+    /// the saved list's, and kept out of the saved list until a draw asks for it.
+    pub(crate) fn request_shipped(&mut self, key: PipelineKey, uid: Uid) {
+        self.ask(key, uid, Ask::Shipped);
+    }
+
+    fn ask(&mut self, key: PipelineKey, uid: Uid, ask: Ask) -> u32 {
         if self.mode == TevMode::Off {
             return UBER;
         }
         let id = self.intern(uid);
         if self.pipelines.contains_key(&(key, id)) {
+            if ask != Ask::Shipped && !self.unlisted.is_empty() && self.unlisted.remove(&(key, id))
+            {
+                self.order.push((key, id));
+            }
             return id;
+        }
+        if ask == Ask::Shipped {
+            self.unlisted.insert((key, id));
+        } else {
+            self.order.push((key, id));
         }
         if let Some(p) = self
             .shared
@@ -567,14 +762,219 @@ impl Specializer {
         }
         let w = self.workers();
         let mut jobs = w.queue.jobs.lock().unwrap();
-        if needed {
-            jobs.needed.push_back(job);
-        } else {
-            jobs.warming.push_back(job);
+        match ask {
+            Ask::Draw => jobs.needed.push_back(job),
+            Ask::Saved | Ask::Shipped => jobs.warming.push_back(job),
         }
         drop(jobs);
         w.queue.cond.notify_one();
         id
+    }
+
+    /// Asks for the uber shader's pipeline made for `key`: at once with `MELEE_TEV=0` or `sync`
+    /// (where draws wait for theirs anyway), else on the threads (`Jobs`): after the specialized
+    /// ones when a draw asks (`needed`), last when a list does.
+    pub(crate) fn ask_uber(&mut self, key: PipelineKey, needed: bool) {
+        self.ask_uber_from(key, needed, false);
+    }
+
+    /// [`Specializer::ask_uber`] for the shipped list's.
+    pub(crate) fn ask_uber_shipped(&mut self, key: PipelineKey) {
+        self.ask_uber_from(key, false, true);
+    }
+
+    fn ask_uber_from(&mut self, key: PipelineKey, needed: bool, shipped: bool) {
+        if let Some(u) = self.uber.get_mut(&key) {
+            u.shipped &= shipped;
+            if needed && !u.needed && u.pipeline.is_none() {
+                u.needed = true;
+                if let Some(w) = &self.workers {
+                    let mut jobs = w.queue.jobs.lock().unwrap();
+                    if let Some(at) = jobs.later.iter().position(|j| j.key == key) {
+                        let job = jobs.later.remove(at).expect("the job");
+                        jobs.uber.push_back(job);
+                    }
+                }
+            }
+            return;
+        }
+        let shared = self
+            .shared
+            .as_ref()
+            .and_then(|s| s.get_uber(key, self.maker.samples));
+        if shared.is_some() {
+            self.uber.insert(
+                key,
+                Uber {
+                    pipeline: shared,
+                    needed,
+                    shipped,
+                },
+            );
+            return;
+        }
+        self.uber.insert(
+            key,
+            Uber {
+                pipeline: None,
+                needed,
+                shipped,
+            },
+        );
+        self.uber_pending += 1;
+        if self.mode != TevMode::Async {
+            self.uber_now(key);
+            return;
+        }
+        let job = Job {
+            key,
+            id: UBER,
+            uid: Uid([0; UID_WORDS]),
+        };
+        let w = self.workers();
+        let mut jobs = w.queue.jobs.lock().unwrap();
+        if needed {
+            jobs.uber.push_back(job);
+        } else {
+            jobs.later.push_back(job);
+        }
+        drop(jobs);
+        w.queue.cond.notify_one();
+    }
+
+    /// Makes the uber pipeline for `key` here and now, if it isn't made: a draw that waits for
+    /// it (`MELEE_TEV=0` or `sync`, or a draw only the uber shader draws).
+    pub(crate) fn uber_now(&mut self, key: PipelineKey) {
+        if self.uber.get(&key).is_some_and(|u| u.pipeline.is_some()) {
+            return;
+        }
+        if let std::collections::hash_map::Entry::Vacant(e) = self.uber.entry(key) {
+            e.insert(Uber {
+                pipeline: None,
+                needed: true,
+                shipped: false,
+            });
+            self.uber_pending += 1;
+        }
+        let start = Instant::now();
+        let job = Job {
+            key,
+            id: UBER,
+            uid: Uid([0; UID_WORDS]),
+        };
+        let made = make(&self.maker, &self.modules, &job);
+        self.note(made);
+        self.stats.uber_waited += 1;
+        crate::made::add(crate::made::What::Pipeline, start);
+    }
+
+    /// The uber shader's pipeline made for `key`, once made.
+    pub(crate) fn uber(&self, key: PipelineKey) -> Option<&wgpu::RenderPipeline> {
+        self.uber.get(&key)?.pipeline.as_ref()
+    }
+
+    /// Whether any uber pipeline asked for isn't made yet.
+    pub(crate) fn uber_pending(&self) -> bool {
+        self.uber_pending > 0
+    }
+
+    /// Every uber pipeline asked for, made or not.
+    pub(crate) fn uber_keys(&self) -> impl Iterator<Item = &PipelineKey> {
+        self.uber.keys()
+    }
+
+    /// Makes the specialized pipelines `wanted` names (each asked for, by what it's made for and
+    /// its id) that aren't made, waiting for them: those a flush draws whose uber pipeline isn't
+    /// made either. They're taken out of the queues and put first, so the threads make them
+    /// beside this one, which makes any still waiting. A specialized shader takes the driver
+    /// milliseconds where the uber shader can take seconds.
+    pub(crate) fn make_now(&mut self, wanted: &[(PipelineKey, u32)]) {
+        self.collect();
+        let mut want: rustc_hash::FxHashSet<(PipelineKey, u32)> = wanted
+            .iter()
+            .copied()
+            .filter(|w| w.1 != UBER && matches!(self.pipelines.get(w), Some(None)))
+            .collect();
+        if want.is_empty() {
+            return;
+        }
+        let start = Instant::now();
+        let n = want.len();
+        self.stats.on_the_spot += n as u32;
+        let queue = self.workers.as_ref().map(|w| w.queue.clone());
+        if let Some(q) = &queue {
+            let mut guard = q.jobs.lock().unwrap();
+            let jobs = &mut *guard;
+            let mut ours = Vec::new();
+            for list in [&mut jobs.needed, &mut jobs.warming] {
+                let mut i = 0;
+                while i < list.len() {
+                    let j = &list[i];
+                    if j.id != UBER && want.contains(&(j.key, j.id)) {
+                        ours.push(list.remove(i).expect("a job"));
+                    } else {
+                        i += 1;
+                    }
+                }
+            }
+            for j in ours.into_iter().rev() {
+                jobs.needed.push_front(j);
+            }
+            drop(guard);
+            q.cond.notify_all();
+        }
+        loop {
+            want.retain(|w| matches!(self.pipelines.get(w), Some(None)));
+            if want.is_empty() {
+                break;
+            }
+            // One still waiting is made here; with none, the threads are making them.
+            let job = queue.as_ref().and_then(|q| {
+                let mut jobs = q.jobs.lock().unwrap();
+                let at = jobs
+                    .needed
+                    .iter()
+                    .position(|j| j.id != UBER && want.contains(&(j.key, j.id)))?;
+                jobs.needed.remove(at)
+            });
+            let made = match job {
+                Some(j) => Some(make(&self.maker, &self.modules, &j)),
+                None => self.workers.as_ref().and_then(|w| w.made.recv().ok()),
+            };
+            match made {
+                Some(m) => self.note(m),
+                None => {
+                    // No threads (none were asked for): each made here.
+                    for &(key, id) in &want {
+                        let job = Job {
+                            key,
+                            id,
+                            uid: self.uids[id as usize],
+                        };
+                        let m = make(&self.maker, &self.modules, &job);
+                        self.note(m);
+                    }
+                }
+            }
+        }
+        self.stats.waited += start.elapsed();
+        crate::made::add_n(crate::made::What::OnTheSpot, n as u64, start);
+    }
+
+    /// How many uber pipelines the threads are making (tests).
+    #[cfg(test)]
+    pub(crate) fn making_uber(&self) -> usize {
+        self.workers
+            .as_ref()
+            .map_or(0, |w| w.queue.jobs.lock().unwrap().making_uber)
+    }
+
+    /// Pauses or resumes the threads (tests: what a flush makes itself).
+    #[cfg(test)]
+    pub(crate) fn pause(&mut self, paused: bool) {
+        let w = self.workers();
+        w.queue.jobs.lock().unwrap().paused = paused;
+        w.queue.cond.notify_all();
     }
 
     /// Takes the pipelines the threads have made since.
@@ -590,15 +990,74 @@ impl Specializer {
     /// end of a warm-up, after which no draw waits for its specialized shader unless its
     /// configuration is new.
     pub(crate) fn finish(&mut self) {
-        while self.pipelines.values().any(Option::is_none) {
+        self.finish_within(None, false);
+    }
+
+    /// [`Specializer::finish`], waiting at most `limit`: whether every pipeline was made. Those
+    /// left go on being made in the order asked.
+    /// With `own`, only the player's own: not those only the shipped list asked for.
+    pub(crate) fn finish_within(&mut self, limit: Option<std::time::Duration>, own: bool) -> bool {
+        let end = limit.map(|l| std::time::Instant::now() + l);
+        let mut done = true;
+        while self.waiting(own) {
             let Some(w) = &self.workers else { break };
-            match w.made.recv() {
-                Ok(m) => self.note(m),
-                Err(_) => break,
+            let made = match end {
+                None => w.made.recv().ok(),
+                Some(end) => {
+                    let left = end.saturating_duration_since(std::time::Instant::now());
+                    match w.made.recv_timeout(left) {
+                        Ok(m) => Some(m),
+                        Err(mpsc::RecvTimeoutError::Timeout) => {
+                            done = false;
+                            break;
+                        }
+                        Err(mpsc::RecvTimeoutError::Disconnected) => None,
+                    }
+                }
+            };
+            match made {
+                Some(m) => self.note(m),
+                None => break,
             }
         }
         self.stats.specialized_calls = 0;
         self.stats.uber_calls = 0;
+        done
+    }
+
+    /// Whether a pipeline asked for isn't made: with `own`, one the shipped list alone didn't ask
+    /// for.
+    fn waiting(&self, own: bool) -> bool {
+        if !own {
+            return self.uber_pending > 0 || self.pipelines.values().any(Option::is_none);
+        }
+        self.uber
+            .values()
+            .any(|u| u.pipeline.is_none() && !u.shipped)
+            || self
+                .pipelines
+                .iter()
+                .any(|(k, p)| p.is_none() && !self.unlisted.contains(k))
+    }
+
+    /// How many specialized pipelines were asked for (a list's too).
+    pub(crate) fn asked(&self) -> usize {
+        self.pipelines.len()
+    }
+
+    /// How many pipelines were asked for, and how many of them are made.
+    /// The shipped list's not counted until a draw asks for one.
+    pub(crate) fn made_of(&self) -> (usize, usize) {
+        let own = self
+            .pipelines
+            .iter()
+            .filter(|(k, _)| !self.unlisted.contains(k));
+        let (mut made, mut of) = (0, 0);
+        for (_, p) in own {
+            of += 1;
+            made += usize::from(p.is_some());
+        }
+        (made, of)
     }
 
     /// The pipeline for a draw's specialized shader, once made.
@@ -609,19 +1068,17 @@ impl Specializer {
         self.pipelines.get(&(key, id))?.as_ref()
     }
 
-    /// Every pipeline asked for: what it's made for (`PipelineKey::pack`), then its uid.
+    /// Every pipeline asked for, in the order first asked for: what it's made for
+    /// (`PipelineKey::pack`), then its uid.
     pub(crate) fn keys(&self) -> Vec<Vec<u32>> {
-        let mut keys: Vec<Vec<u32>> = self
-            .pipelines
-            .keys()
+        self.order
+            .iter()
             .map(|(k, id)| {
                 let mut v = k.pack().to_vec();
                 v.extend_from_slice(&self.uids[*id as usize].0);
                 v
             })
-            .collect();
-        keys.sort_unstable();
-        keys
+            .collect()
     }
 
     pub(crate) fn stats(&self) -> TevStats {

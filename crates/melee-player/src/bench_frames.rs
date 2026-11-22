@@ -7,6 +7,7 @@ use std::fmt::Write as _;
 use std::time::Duration;
 
 use melee_gpu::gpu_time::{FrameGpu, Stage};
+use melee_gpu::made::{Made, What};
 
 /// 144 Hz's interval, Sarah's target (2026-11-20).
 pub const INTERVAL: Duration = Duration::from_nanos(1_000_000_000 / 144);
@@ -25,6 +26,8 @@ pub struct Row {
     pub wait: Duration,
     /// The frame's passes' times on the GPU, when timed.
     pub gpu: Option<FrameGpu>,
+    /// What the renderer made over the frame ([`melee_gpu::made`]).
+    pub made: Made,
 }
 
 impl Row {
@@ -161,13 +164,18 @@ impl Frames {
             });
             let _ = writeln!(
                 out,
-                "  tick {} frame {}: {:.3} = drawing {:.3} + submitting {:.3} + waiting {:.3}; {gpu}",
+                "  tick {} frame {}: {:.3} = drawing {:.3} + submitting {:.3} + waiting {:.3}; {gpu}{}",
                 r.tick,
                 r.k,
                 ms(r.presented()),
                 ms(r.draw),
                 ms(r.submit),
-                ms(r.wait)
+                ms(r.wait),
+                if r.made.any() {
+                    format!("; made {}", r.made.summary())
+                } else {
+                    String::new()
+                }
             );
         }
         out
@@ -178,6 +186,9 @@ impl Frames {
         let mut out = String::from("tick,k,draw,submit,wait,gpu_busy,gpu_span");
         for s in Stage::ALL {
             let _ = write!(out, ",{0},{0}_passes", s.name().replace(' ', "_"));
+        }
+        for w in What::ALL {
+            let _ = write!(out, ",{0},{0}_us", w.name());
         }
         out.push('\n');
         let us = |d: Duration| d.as_micros();
@@ -199,6 +210,9 @@ impl Frames {
                     }
                 }
                 None => out.push_str(&",".repeat(2 + 2 * Stage::ALL.len())),
+            }
+            for w in What::ALL {
+                let _ = write!(out, ",{},{}", r.made.count(w), us(r.made.time(w)));
             }
             out.push('\n');
         }
@@ -270,6 +284,7 @@ mod tests {
                     submit: Duration::ZERO,
                     wait,
                     gpu: Some(gpu(1000)),
+                    made: Made::default(),
                 });
             }
         }

@@ -50,6 +50,12 @@ impl<R> Handoff<R> {
         self.menus.is_some()
     }
 
+    /// The menus' renderer set aside, if a live match draws (a benchmark ending in one saves
+    /// both renderers' pipelines).
+    pub fn into_menus(self) -> Option<R> {
+        self.menus.map(|(_, r, _)| r)
+    }
+
     /// Follows the session after a tick: `live` is whether it runs a live match now. At the
     /// handoff the menus' frame builder and renderer (`frames`, `renderer`, made as `shape`)
     /// go aside and `fresh` makes the match's; at the handback they come back.

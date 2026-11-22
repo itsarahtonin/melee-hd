@@ -22,6 +22,7 @@ mod gpu_mesh;
 #[cfg(test)]
 mod gpu_mesh_tests;
 pub mod gpu_time;
+pub mod made;
 mod material;
 #[cfg(test)]
 mod material_tests;
@@ -35,6 +36,8 @@ pub mod testing;
 mod tev;
 #[cfg(test)]
 mod tev_tests;
+#[cfg(test)]
+mod texture_cache_tests;
 mod thread;
 #[cfg(test)]
 mod vertex_tests;
@@ -307,6 +310,94 @@ struct TexEntry {
     _texture: wgpu::Texture,
     levels: u32,
     last_used: u64,
+    /// Its texels' bytes, for a texture decoded from memory; 0 for a copy from the EFB's.
+    decoded: u64,
+}
+
+/// Bytes of texels decoded from memory kept while nothing samples them: past this, the least
+/// recently used go first ([`to_evict`]). A match's textures take about 15 MB (Fountain of
+/// Dreams with Fox and Marth), so a match keeps every texture it has drawn, and one that comes
+/// back (a joint shown again, an effect used again) isn't decoded again.
+const TEXTURE_BUDGET: u64 = 128 << 20;
+
+/// Frames a copy from the EFB's texture is kept while nothing samples it.
+const COPY_KEPT_FOR: u64 = 120;
+
+/// The textures to drop at frame `frame`, of `entries` (each its slot, the frame it was last
+/// used and its decoded bytes, 0 for a copy's): copies unused for [`COPY_KEPT_FOR`] frames, and
+/// while the decoded ones hold more than `budget` bytes, those not used this frame, least
+/// recently used first.
+fn to_evict(entries: &[(usize, u64, u64)], frame: u64, budget: u64) -> Vec<usize> {
+    let mut gone: Vec<usize> = entries
+        .iter()
+        .filter(|&&(_, used, decoded)| decoded == 0 && used + COPY_KEPT_FOR < frame)
+        .map(|e| e.0)
+        .collect();
+    let mut held: u64 = entries.iter().map(|e| e.2).sum();
+    if held > budget {
+        let mut old: Vec<&(usize, u64, u64)> = entries
+            .iter()
+            .filter(|&&(_, used, decoded)| decoded > 0 && used < frame)
+            .collect();
+        old.sort_by_key(|e| e.1);
+        for &&(slot, _, decoded) in &old {
+            if held <= budget {
+                break;
+            }
+            gone.push(slot);
+            held -= decoded;
+        }
+    }
+    gone
+}
+
+/// A texture by what it's decoded from: its size, format and levels, the palette's format (0
+/// without a palette) and the hash of its bytes and palette's, as [`TexKey`] has them.
+type Content = (u32, u32, u32, u32, u32, u64);
+
+/// A texture to make before it's drawn ([`Renderer::prepare_textures`]): an image's bytes (its
+/// levels) and, for a palette format, its palette as texture memory holds it once loaded.
+#[derive(Clone, Debug)]
+pub struct TexturePrep {
+    pub width: u32,
+    pub height: u32,
+    pub format: u32,
+    pub levels: u32,
+    pub tlut_format: u32,
+    pub tlut: Vec<u8>,
+    pub bytes: Arc<[u8]>,
+}
+
+impl TexturePrep {
+    /// What it's decoded from as a draw's texture would key it ([`Content`]), the bytes its
+    /// levels take; None when its bytes or palette are short of what a draw reads.
+    fn content(&self) -> Option<(Content, usize)> {
+        let max_levels = 32 - self.width.max(self.height).leading_zeros();
+        let image = Image {
+            address: 0,
+            width: self.width,
+            height: self.height,
+            format: self.format,
+            levels: self.levels.clamp(1, max_levels),
+        };
+        let size = image.size() as usize;
+        let mut hash = hash_bytes(self.bytes.get(..size)?);
+        let mut tlut_format = 0;
+        if let Some(entries) = texture::palette_entries(self.format) {
+            let len = entries as usize * 2;
+            hash ^= hash_bytes(self.tlut.get(..len)?).rotate_left(17);
+            tlut_format = self.tlut_format;
+        }
+        let c = (
+            image.width,
+            image.height,
+            image.format,
+            image.levels,
+            tlut_format,
+            hash,
+        );
+        Some((c, size))
+    }
 }
 
 /// A texture as the cache keys it: its image, its palette, and a hash of their bytes.
@@ -487,6 +578,9 @@ impl Digest {
 pub type Unsupported = HashMap<&'static str, u64>;
 
 pub struct Renderer {
+    /// The transforms being made ahead on a thread ([`Renderer::make_ahead`]): first, so a
+    /// renderer let go joins that thread before anything else of it drops.
+    making: Making,
     device: wgpu::Device,
     /// The queue, its writes to buffers and its submissions in order (on a thread of their
     /// own on the render thread: `submit`).
@@ -497,16 +591,10 @@ pub struct Renderer {
     efb_msaa: Option<wgpu::TextureView>,
     samples: u32,
     depth_view: wgpu::TextureView,
-    module: wgpu::ShaderModule,
-    /// gx.wgsl with its fragment shader promising depth_greater, for the early z pipelines:
-    /// where the device has `SHADER_EARLY_DEPTH_TEST` (Vulkan), the EFB has one sample a pixel
-    /// and `MELEE_EARLY_Z` isn't 0.
-    early_module: Option<wgpu::ShaderModule>,
-    layout: wgpu::PipelineLayout,
     uniform_layout: wgpu::BindGroupLayout,
     texture_layout: wgpu::BindGroupLayout,
-    pipelines: FxHashMap<PipelineKey, wgpu::RenderPipeline>,
-    /// Pipelines with shaders specialized to the draws' TEV configurations.
+    /// The pipelines: the uber shader's (gx.wgsl's, by what each is made for) and those with
+    /// shaders specialized to the draws' TEV configurations.
     tev: tev::Specializer,
     /// The vertices' words (`GpuVertex::write`).
     vertices: Vec<u32>,
@@ -529,6 +617,9 @@ pub struct Renderer {
     uniform_buffer: Option<(wgpu::Buffer, wgpu::BindGroup)>,
     textures: Vec<Option<TexEntry>>,
     texture_ids: FxHashMap<TexKey, u32>,
+    /// Each texture by what it's decoded from, wherever it is ([`Content`]): a texture prepared
+    /// before it's drawn ([`Renderer::prepare_textures`]), or one at another address.
+    by_content: FxHashMap<Content, u32>,
     bind_groups: FxHashMap<[u32; 8], wgpu::BindGroup>,
     /// Hashes of memory ranges this frame, so a texture's bytes hash once a frame.
     hashes: FxHashMap<(u32, u32), u64>,
@@ -607,7 +698,8 @@ pub struct Renderer {
     /// default: the exact renderer's, and F2's, whose meshes are transformed on the CPU as the
     /// exact renderer's draws are.
     pub gpu_transforms: bool,
-    /// The meshes on the GPU and the transforms, made at the first mesh drawn.
+    /// The meshes on the GPU and the transforms, made at the first mesh drawn, or ahead on a
+    /// thread of their own ([`Renderer::make_ahead`]).
     gpu_meshes: Option<gpu_mesh::GpuMeshes>,
     mesh_runs: Vec<(mesh::Kind, std::ops::Range<u32>)>,
     mesh_geometry: Vec<Geometry>,
@@ -737,6 +829,47 @@ fn iround(x: f32) -> f32 {
 /// centers sample where the GameCube's rasterizer does (9/16 into a pixel, as Dolphin's has it).
 fn snap(v: f32) -> f32 {
     (iround(16.0 * v) - 1.0) / 16.0
+}
+
+/// Makes sure every command has a pipeline to draw with: where its uber pipeline isn't made
+/// yet (it's made on the shader threads), its specialized one made on the spot, the commands'
+/// together on every shader thread and this one; a command only the uber shader draws waits for
+/// its own. Nothing to do once every uber pipeline asked for is made.
+fn ready(commands: &[Command], tev: &mut tev::Specializer) {
+    if !tev.uber_pending() {
+        return;
+    }
+    let mut wanted = Vec::new();
+    let mut uber = Vec::new();
+    for c in commands {
+        if tev.uber(c.pipeline).is_some() || tev.pipeline(c.pipeline, c.tev).is_some() {
+            continue;
+        }
+        if c.tev == tev::UBER {
+            uber.push(c.pipeline);
+        } else {
+            wanted.push((c.pipeline, c.tev));
+        }
+    }
+    if !wanted.is_empty() {
+        tev.make_now(&wanted);
+    }
+    for key in uber {
+        tev.uber_now(key);
+    }
+}
+
+/// The transforms being made ahead on a thread ([`Renderer::make_ahead`]), joined if the renderer
+/// goes first: the thread holds the device, which mustn't be dropped last by a thread the
+/// process's exit races (see `tev::Workers`).
+struct Making(Option<std::thread::JoinHandle<gpu_mesh::GpuMeshes>>);
+
+impl Drop for Making {
+    fn drop(&mut self) {
+        if let Some(h) = self.0.take() {
+            let _ = h.join();
+        }
+    }
 }
 
 /// A pipeline drawing with `module`'s `vs_main` and `fs_main` for what `key` says.
@@ -1037,10 +1170,12 @@ impl Renderer {
             tev::TevMode::from_env(),
             tev::Maker {
                 device: device.clone(),
-                layout: layout.clone(),
+                layout,
                 cache: None,
                 samples,
                 checks,
+                uber: module,
+                uber_early: early_module,
             },
         );
         let mut r = Renderer {
@@ -1051,12 +1186,8 @@ impl Renderer {
             efb: targets.efb,
             device,
             queue: submit::Ordered::new(queue),
-            module,
-            early_module,
-            layout,
             uniform_layout,
             texture_layout,
-            pipelines: FxHashMap::default(),
             tev,
             vertices: Vec::new(),
             indices: Vec::new(),
@@ -1073,6 +1204,7 @@ impl Renderer {
             uniform_buffer: None,
             textures: Vec::new(),
             texture_ids: FxHashMap::default(),
+            by_content: FxHashMap::default(),
             bind_groups: FxHashMap::default(),
             hashes: FxHashMap::default(),
             stable_hashes: FxHashMap::default(),
@@ -1116,6 +1248,7 @@ impl Renderer {
             timer: None,
             gpu_transforms: false,
             gpu_meshes: None,
+            making: Making(None),
             mesh_runs: Vec::new(),
             mesh_geometry: Vec::new(),
             checks,
@@ -1160,19 +1293,37 @@ impl Renderer {
     /// The pipelines made so far, by what they're made for, to make again at the next run's
     /// start ([`Renderer::warm`]): a frame never waits for a pipeline it has needed before.
     pub fn pipeline_keys(&self) -> Vec<[u32; 8]> {
-        let mut keys: Vec<[u32; 8]> = self.pipelines.keys().map(|k| k.pack()).collect();
+        let mut keys: Vec<[u32; 8]> = self.tev.uber_keys().map(|k| k.pack()).collect();
         keys.sort_unstable();
         keys
     }
 
-    /// Makes the pipelines `keys` name, as [`Renderer::pipeline_keys`] gave them.
+    /// Makes the pipelines `keys` name, as [`Renderer::pipeline_keys`] gave them, on the shader
+    /// threads after the specialized ones (at once with `MELEE_TEV=0` or `sync`): a draw whose
+    /// uber pipeline isn't made yet has its specialized one made on the spot instead.
     pub fn warm(&mut self, keys: &[[u32; 8]]) {
         for k in keys {
             if let Some(mut key) = PipelineKey::unpack(*k) {
-                key.early_z &= self.early_module.is_some();
-                self.pipeline(key);
+                key.early_z &= self.early_z();
+                self.tev.ask_uber(key, false);
             }
         }
+    }
+
+    /// [`Renderer::warm`] for the shipped list's uber pipelines: a wait for the player's own
+    /// ([`Renderer::finish_specialized_within`]) doesn't wait for them.
+    pub fn warm_shipped_pipelines(&mut self, keys: &[[u32; 8]]) {
+        for k in keys {
+            if let Some(mut key) = PipelineKey::unpack(*k) {
+                key.early_z &= self.early_z();
+                self.tev.ask_uber_shipped(key);
+            }
+        }
+    }
+
+    /// Whether this renderer's draws test depth before their shaders where they can.
+    fn early_z(&self) -> bool {
+        self.tev.maker.uber_early.is_some()
     }
 
     /// The pipelines with specialized shaders asked for so far, each what it's made for
@@ -1189,21 +1340,56 @@ impl Renderer {
     }
 
     /// Makes the pipelines `keys` name, as [`Renderer::specialized_keys`] gave them, on the
-    /// shader threads behind any a draw needs (at once with `MELEE_TEV=sync`).
-    pub fn warm_specialized(&mut self, keys: &[Vec<u32>]) {
+    /// shader threads behind any a draw needs (at once with `MELEE_TEV=sync`). An entry that
+    /// isn't one this build reads is left out; one made for early z, on a renderer whose draws
+    /// can't test depth early (no `SHADER_EARLY_DEPTH_TEST`, or samples), is made without it, as
+    /// its draws ask for it there. Returns how many pipelines it asked for that weren't before.
+    pub fn warm_specialized(&mut self, keys: &[Vec<u32>]) -> usize {
+        self.warm_list(keys, false)
+    }
+
+    /// [`Renderer::warm_specialized`] for the shipped list (`data/pipelines`): made after the
+    /// saved list's, and kept out of [`Renderer::specialized_keys`] until a draw asks for one.
+    pub fn warm_shipped(&mut self, keys: &[Vec<u32>]) -> usize {
+        self.warm_list(keys, true)
+    }
+
+    fn warm_list(&mut self, keys: &[Vec<u32>], shipped: bool) -> usize {
+        let early_z = self.early_z();
+        let before = self.tev.asked();
         for k in keys {
-            let (Some(key), Some(uid)) = (
-                k.get(..8)
-                    .and_then(|k| PipelineKey::unpack(k.try_into().unwrap())),
-                k.get(8..).and_then(tev::Uid::from_words),
-            ) else {
+            let Some((mut key, uid)) = Self::specialized_entry(k) else {
                 continue;
             };
-            if key.early_z && self.early_module.is_none() {
-                continue;
+            key.early_z &= early_z;
+            if shipped {
+                self.tev.request_shipped(key, uid);
+            } else {
+                self.tev.request(key, uid, false);
             }
-            self.tev.request(key, uid, false);
         }
+        self.tev.asked() - before
+    }
+
+    /// A saved list's entry, if it's one this build reads: what its pipeline is made for and its
+    /// TEV configuration.
+    fn specialized_entry(k: &[u32]) -> Option<(PipelineKey, tev::Uid)> {
+        let (n, _) = Self::specialized_key_format();
+        if k.len() != n {
+            return None;
+        }
+        let key = PipelineKey::unpack(k[..8].try_into().unwrap())?;
+        Some((key, tev::Uid::from_words(&k[8..])?))
+    }
+
+    /// Whether `k` is a saved list's entry this build reads ([`Renderer::warm_specialized`]).
+    pub fn reads_specialized_entry(k: &[u32]) -> bool {
+        Self::specialized_entry(k).is_some()
+    }
+
+    /// Whether `k` is an uber pipeline's key this build reads ([`Renderer::warm`]).
+    pub fn reads_pipeline_key(k: &[u32; 8]) -> bool {
+        PipelineKey::unpack(*k).is_some()
     }
 
     /// What the specialized shaders have done.
@@ -1230,6 +1416,15 @@ impl Renderer {
     /// with and without them from here: the end of a warm-up.
     pub fn finish_specialized(&mut self) {
         self.tev.finish();
+    }
+
+    /// [`Renderer::finish_specialized`] for the player's own pipelines (not those the shipped
+    /// list alone asked for), waiting at most `limit`; returns how many of the player's own
+    /// specialized pipelines asked for are made, and how many were asked for. The rest go on
+    /// being made in the order asked.
+    pub fn finish_specialized_within(&mut self, limit: std::time::Duration) -> (usize, usize) {
+        self.tev.finish_within(Some(limit), true);
+        self.tev.made_of()
     }
 
     /// How draws get their specialized shaders from now on.
@@ -1274,6 +1469,7 @@ impl Renderer {
     }
 
     fn add_texture(&mut self, width: u32, height: u32, levels: &[Vec<u8>]) -> u32 {
+        let decoded = levels.iter().map(|l| l.len() as u64).sum::<u64>().max(1);
         let mip_count = levels.len() as u32;
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: None,
@@ -1319,16 +1515,79 @@ impl Renderer {
                 },
             );
         }
-        self.insert_texture(texture, mip_count)
+        self.insert_texture(texture, mip_count, decoded)
+    }
+
+    /// Makes the textures `preps` describe that aren't made yet, before anything draws them: a
+    /// draw of the same bytes takes the one made ([`Content`]) rather than decoding its own.
+    /// They're decoded on several threads. Returns how many were made.
+    /// Makes the copy to the XFB on the GPU's pipelines and buffers, if they aren't (2.5 ms on
+    /// this PC's driver): at the first copy, or ahead of a match's first frame
+    /// ([`Renderer::prepare_textures`]).
+    fn make_xfb(&mut self) {
+        if self.gpu_xfb.is_none() {
+            let start = std::time::Instant::now();
+            let mut x = xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view);
+            x.timer = self.timer.clone();
+            self.gpu_xfb = Some(x);
+            made::add(made::What::Setup, start);
+        }
+    }
+
+    /// The textures `preps` describe, made before a match's first frame (see
+    /// [`TexturePrep`]); with the copy to the XFB on the GPU, its pipelines too, which the
+    /// first frame would make. Returns how many textures were made.
+    pub fn prepare_textures(&mut self, preps: &[TexturePrep]) -> usize {
+        if self.xfb_on_gpu {
+            self.make_xfb();
+        }
+        let mut todo: Vec<(&TexturePrep, Content)> = Vec::new();
+        for p in preps {
+            if let Some((c, _)) = p.content()
+                && !self.by_content.contains_key(&c)
+                && !todo.iter().any(|t| t.1 == c)
+            {
+                todo.push((p, c));
+            }
+        }
+        let threads = std::thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .min(8);
+        let chunk = todo.len().div_ceil(threads).max(1);
+        let decoded: Vec<Vec<Vec<u8>>> = std::thread::scope(|scope| {
+            let jobs: Vec<_> = todo
+                .chunks(chunk)
+                .map(|part| {
+                    scope.spawn(move || {
+                        part.iter()
+                            .map(|(p, c)| {
+                                texture::decode(
+                                    &p.bytes, p.width, p.height, c.3, p.format, &p.tlut, c.4,
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            jobs.into_iter()
+                .flat_map(|j| j.join().expect("a texture decoded"))
+                .collect()
+        });
+        for ((p, c), levels) in todo.iter().zip(&decoded) {
+            let id = self.add_texture(p.width, p.height, levels);
+            self.by_content.insert(*c, id);
+        }
+        todo.len()
     }
 
     /// Gives `texture` an id, reusing a free one.
-    fn insert_texture(&mut self, texture: wgpu::Texture, levels: u32) -> u32 {
+    fn insert_texture(&mut self, texture: wgpu::Texture, levels: u32, decoded: u64) -> u32 {
         let entry = TexEntry {
             view: texture.create_view(&Default::default()),
             _texture: texture,
             levels,
             last_used: self.frame,
+            decoded,
         };
         let free = self
             .textures
@@ -1405,7 +1664,14 @@ impl Renderer {
         let image = sampled_image(state, map);
         let tlut_reg = state.bp[texture::reg(texture::SETTLUT, map)];
         let tlut_offset = ((tlut_reg & 0x3FF) << 9) as usize;
-        let tlut_format = bits(tlut_reg, 10, 2);
+        // The palette's format only for an image that reads one: another's key doesn't hold
+        // what the last palette's texture left in the register (decoding never reads it), so
+        // the texture isn't made again after a palette texture of another format.
+        let tlut_format = if texture::palette_entries(image.format).is_some() {
+            bits(tlut_reg, 10, 2)
+        } else {
+            0
+        };
         let size = image.size();
         // A copy the game has written over since is gone, even within the frame.
         if self.track_copies
@@ -1475,6 +1741,24 @@ impl Renderer {
             entry.last_used = self.frame;
             return (id, entry.levels, per_frame);
         }
+        // Made already from the same bytes: prepared, or at another address.
+        let content = (
+            image.width,
+            image.height,
+            image.format,
+            image.levels,
+            tlut_format,
+            hash,
+        );
+        if let Some(&id) = self.by_content.get(&content)
+            && let Some(Some(entry)) = self.textures.get_mut(id as usize)
+        {
+            entry.last_used = self.frame;
+            let levels = entry.levels;
+            self.texture_ids.insert(key, id);
+            return (id, levels, per_frame);
+        }
+        let made = std::time::Instant::now();
         let read;
         let data = match stable {
             Some(bytes) => bytes,
@@ -1494,6 +1778,8 @@ impl Renderer {
         );
         let id = self.add_texture(image.width, image.height, &levels);
         self.texture_ids.insert(key, id);
+        self.by_content.insert(content, id);
+        made::add(made::What::Texture, made);
         (id, image.levels, per_frame)
     }
 
@@ -1501,6 +1787,7 @@ impl Renderer {
         if self.bind_groups.contains_key(&ids) {
             return;
         }
+        let made = std::time::Instant::now();
         let views: Vec<_> = ids
             .iter()
             .map(|&id| {
@@ -1524,6 +1811,7 @@ impl Renderer {
             entries: &entries,
         });
         self.bind_groups.insert(ids, group);
+        made::add(made::What::BindGroup, made);
     }
 
     fn uniforms_of(state: &State, levels: [u32; 8], mode: [u32; 4]) -> Uniforms {
@@ -1727,23 +2015,11 @@ impl Renderer {
         test && (!ztex || early) && vp.z_range == 16_777_215.0 && vp.far_z == 16_777_215.0
     }
 
+    /// Asks for the draw's uber pipeline: made on the shader threads, the draw waiting for it
+    /// only where nothing else can draw it (`MELEE_TEV=0` or `sync`); until it's made, a draw
+    /// is drawn with its specialized pipeline, made on the spot if it isn't (`ready`).
     fn pipeline(&mut self, key: PipelineKey) {
-        if self.pipelines.contains_key(&key) {
-            return;
-        }
-        let module = match &self.early_module {
-            Some(m) if key.early_z => m,
-            _ => &self.module,
-        };
-        let pipeline = make_pipeline(
-            &self.device,
-            &self.layout,
-            self.cache.as_ref(),
-            self.samples,
-            key,
-            module,
-        );
-        self.pipelines.insert(key, pipeline);
+        self.tev.ask_uber(key, true);
     }
 
     /// The draw's specialized shader (`tev::UBER` for none), asked for if it hasn't been.
@@ -1859,9 +2135,19 @@ impl Renderer {
         let uniform = self.push_uniforms(&u);
         self.pipeline(key);
         self.bind_group([0; 8]);
+        // The uber shader draws it, or where its pipeline isn't made yet a clear's specialized
+        // one (the clear reads no register).
+        if self.tev.uber(key).is_none() {
+            self.tev.collect();
+        }
+        let tev = if self.tev.uber(key).is_none() && mode[0] == MODE_CLEAR {
+            self.tev.request(key, tev::clear_uid(), true)
+        } else {
+            tev::UBER
+        };
         self.push_command(Command {
             pipeline: key,
-            tev: tev::UBER,
+            tev,
             texgens: 0,
             uniform,
             textures: [0; 8],
@@ -1969,6 +2255,7 @@ impl Renderer {
                 .as_ref()
                 .is_none_or(|(b, _)| b.size() < vbytes.len() as u64)
         {
+            let made = std::time::Instant::now();
             let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("vertices"),
                 size: (vbytes.len() as u64).max(16).next_power_of_two(),
@@ -1984,12 +2271,14 @@ impl Renderer {
                 }],
             });
             self.vertex_buffer = Some((buffer, group));
+            made::add(made::What::Buffer, made);
         }
         if self
             .uniform_buffer
             .as_ref()
             .is_none_or(|(b, _)| b.size() < self.uniforms.len() as u64)
         {
+            let made = std::time::Instant::now();
             let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("uniforms"),
                 size: (self.uniforms.len().max(UNIFORM_STRIDE) as u64).next_power_of_two(),
@@ -2009,6 +2298,7 @@ impl Renderer {
                 }],
             });
             self.uniform_buffer = Some((buffer, group));
+            made::add(made::What::Buffer, made);
         }
         let ibytes: &[u8] = bytemuck::cast_slice(&self.indices);
         if place.is_none()
@@ -2017,12 +2307,14 @@ impl Renderer {
                 .as_ref()
                 .is_none_or(|b| b.size() < ibytes.len() as u64)
         {
+            let made = std::time::Instant::now();
             self.index_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("indices"),
                 size: (ibytes.len() as u64).max(16).next_power_of_two(),
                 usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
+            made::add(made::What::Buffer, made);
         }
         // The vertex and index buffers, and where the draws' own words and indices are in them.
         let (vgroup, ibuf, (words_at, indices_at)) = match (&self.gpu_meshes, place) {
@@ -2042,7 +2334,9 @@ impl Renderer {
         let (ubuf, ugroup) = self.uniform_buffer.as_ref().unwrap();
         self.queue.write_bytes(ubuf, 0, &mut self.uniforms);
         self.tev.collect();
+        ready(&self.commands, &mut self.tev);
         let mut changes = [0u64; 4];
+        let (mut specialized_calls, mut uber_calls) = (0, 0);
         {
             let mut pass = self.efb_pass(&mut encoder, clear);
             pass.set_bind_group(2, vgroup, &[]);
@@ -2053,25 +2347,24 @@ impl Renderer {
             let mut textures = None;
             let mut scissor = None;
             for c in &self.commands {
-                // The specialized shader where it's made, else the uber shader, which draws the same.
-                let tev = match self.tev.pipeline(c.pipeline, c.tev) {
-                    Some(_) => {
-                        self.tev.stats.specialized_calls += 1;
-                        c.tev
+                // The specialized shader where it's made, else the uber shader, which draws the
+                // same (`ready` made one of them).
+                let (tev, pipeline) = match self.tev.pipeline(c.pipeline, c.tev) {
+                    Some(p) => {
+                        specialized_calls += 1;
+                        (c.tev, p)
                     }
                     None => {
                         if c.tev != tev::UBER {
-                            self.tev.stats.uber_calls += 1;
+                            uber_calls += 1;
+                            made::count(made::What::UberDraw);
                         }
-                        tev::UBER
+                        let p = self.tev.uber(c.pipeline).expect("a pipeline made");
+                        (tev::UBER, p)
                     }
                 };
                 if last != Some((c.pipeline, tev)) {
-                    pass.set_pipeline(
-                        self.tev
-                            .pipeline(c.pipeline, tev)
-                            .unwrap_or(&self.pipelines[&c.pipeline]),
-                    );
+                    pass.set_pipeline(pipeline);
                     last = Some((c.pipeline, tev));
                     changes[0] += 1;
                 }
@@ -2103,6 +2396,8 @@ impl Renderer {
                 pass.draw_indexed(first..first + c.count, base, c.texgens..c.texgens + 1);
             }
         }
+        self.tev.stats.specialized_calls += specialized_calls;
+        self.tev.stats.uber_calls += uber_calls;
         if let Some(p) = &mut self.profile {
             for (n, c) in p.changes.iter_mut().zip(changes) {
                 *n += c;
@@ -2200,6 +2495,7 @@ impl Renderer {
 
     /// A texture a copy from the EFB is made into.
     fn copy_texture(&mut self, width: u32, height: u32) -> u32 {
+        let made = std::time::Instant::now();
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("efb copy"),
             size: wgpu::Extent3d {
@@ -2216,7 +2512,9 @@ impl Renderer {
                 | wgpu::TextureUsages::COPY_SRC,
             view_formats: &[],
         });
-        self.insert_texture(texture, 1)
+        let id = self.insert_texture(texture, 1, 0);
+        made::add(made::What::CopyTexture, made);
+        id
     }
 
     /// Makes a copy from the EFB into a texture of its own, on the GPU: at the game's size,
@@ -2427,6 +2725,8 @@ impl Renderer {
         let textures = &self.textures;
         self.texture_ids
             .retain(|_, id| textures[*id as usize].is_some());
+        self.by_content
+            .retain(|_, id| textures[*id as usize].is_some());
         self.bind_groups
             .retain(|ids, _| ids.iter().all(|&id| textures[id as usize].is_some()));
         self.copies.clear();
@@ -2436,23 +2736,28 @@ impl Renderer {
         self.materials.clear();
     }
 
-    /// Drops textures unused for a while.
+    /// Drops textures unused for a while ([`to_evict`]).
     fn evict(&mut self) {
-        let frame = self.frame;
-        let mut dropped = false;
-        for slot in self.textures.iter_mut().skip(1) {
-            if slot.as_ref().is_some_and(|e| e.last_used + 120 < frame) {
-                *slot = None;
-                dropped = true;
-            }
+        let entries: Vec<(usize, u64, u64)> = self
+            .textures
+            .iter()
+            .enumerate()
+            .skip(1)
+            .filter_map(|(i, e)| e.as_ref().map(|e| (i, e.last_used, e.decoded)))
+            .collect();
+        let gone = to_evict(&entries, self.frame, TEXTURE_BUDGET);
+        for &slot in &gone {
+            self.textures[slot] = None;
         }
-        if dropped {
+        if !gone.is_empty() {
             let textures = &self.textures;
             self.gpu_copies.retain(|_, c| {
                 textures[c.id as usize].is_some()
                     && c.scaled.is_none_or(|(s, _)| textures[s as usize].is_some())
             });
             self.texture_ids
+                .retain(|_, id| textures[*id as usize].is_some());
+            self.by_content
                 .retain(|_, id| textures[*id as usize].is_some());
             self.bind_groups
                 .retain(|ids, _| ids.iter().all(|&id| textures[id as usize].is_some()));
@@ -2849,9 +3154,38 @@ impl Renderer {
     }
 
     fn gpu_meshes(&mut self) -> &mut gpu_mesh::GpuMeshes {
+        self.take_made_ahead();
         let (device, checks) = (&self.device, self.checks);
         self.gpu_meshes
-            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks))
+            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks, self.cache.as_ref()))
+    }
+
+    /// Starts making what the fast renderer's first frame would otherwise make: the transforms'
+    /// compute pipelines (`xform.wgsl`: 10 ms on this PC's driver, 3 s on the worker's with
+    /// nothing cached), on a thread of their own, through the driver's pipeline cache, so a
+    /// match's renderer has them by its first frame. The player calls it as it makes each
+    /// renderer, after its pipeline cache (a renderer that stays the exact one keeps them unused,
+    /// two buffers of 1 MB); `Gpu::fast` calls it too.
+    pub fn make_ahead(&mut self) {
+        if self.gpu_meshes.is_some() || self.making.0.is_some() {
+            return;
+        }
+        let (device, checks, cache) = (self.device.clone(), self.checks, self.cache.clone());
+        self.making.0 = std::thread::Builder::new()
+            .name("transforms' pipelines".to_owned())
+            .spawn(move || gpu_mesh::GpuMeshes::new(&device, checks, cache.as_ref()))
+            .ok();
+    }
+
+    /// Takes the transforms made ahead, waiting for them if they're still being made.
+    fn take_made_ahead(&mut self) {
+        if let Some(h) = self.making.0.take() {
+            let start = std::time::Instant::now();
+            if let Ok(m) = h.join() {
+                self.gpu_meshes.get_or_insert(m);
+            }
+            made::add(made::What::Setup, start);
+        }
     }
 
     /// Draws a mesh with its vertices transformed on the GPU (docs/fast-renderer.md, F3): the
@@ -2894,10 +3228,14 @@ impl Renderer {
         let tg = texgens(state) as u32;
         let frame = self.frame;
         let mut runs = std::mem::take(&mut self.mesh_runs);
+        self.take_made_ahead();
         let (device, checks) = (&self.device, self.checks);
-        let meshes = self
-            .gpu_meshes
-            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks));
+        let meshes = self.gpu_meshes.get_or_insert_with(|| {
+            let start = std::time::Instant::now();
+            let m = gpu_mesh::GpuMeshes::new(device, checks, self.cache.as_ref());
+            made::add(made::What::Setup, start);
+            m
+        });
         meshes.draw(
             device,
             &self.queue,
@@ -2942,9 +3280,10 @@ impl Renderer {
     /// harness's geometry, read back from the GPU at once.
     pub fn mesh_clips(&mut self, state: &State, mesh: &Arc<mesh::Mesh>) -> Vec<[f32; 4]> {
         let (frame, normals) = (self.frame, self.scratch.normals);
+        self.take_made_ahead();
         let (device, checks) = (&self.device, self.checks);
         self.gpu_meshes
-            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks))
+            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks, self.cache.as_ref()))
             .clips(device, &self.queue, state, mesh, &normals, frame)
     }
 
@@ -3073,7 +3412,7 @@ impl Renderer {
         self.bind_group(ids);
 
         let mut key = Self::pipeline_key(state);
-        key.early_z = self.early_module.is_some() && Self::depth_follows_raster(state);
+        key.early_z = self.early_z() && Self::depth_follows_raster(state);
         if self.opaque {
             key.blend = None;
         }
@@ -3105,7 +3444,7 @@ impl Renderer {
             let uniform = self.push_uniforms(&u);
             for g in geometry {
                 let c = call(key, tev::UBER, uniform, g);
-                self.pipeline(c.pipeline);
+                self.tev.uber_now(c.pipeline);
                 self.push_command(c);
             }
             return;
@@ -3190,11 +3529,8 @@ impl Renderer {
             }
             let rect = [left, top, right, bottom];
             let (frame, t2) = if self.xfb_on_gpu {
-                let gpu = self.gpu_xfb.get_or_insert_with(|| {
-                    let mut x = xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view);
-                    x.timer = self.timer.clone();
-                    x
-                });
+                self.make_xfb();
+                let gpu = self.gpu_xfb.as_mut().expect("the XFB copy");
                 let (texture, width, height) = gpu.copy(
                     &self.device,
                     &self.queue,

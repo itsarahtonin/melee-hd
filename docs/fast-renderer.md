@@ -843,3 +843,124 @@ melee-hd --disc D --replay R --ticks 1980 --mute --renderer fast --high-refresh 
 - **The first frame after new content** (the 8 to 17 ms frames above): what the CPU does when a mesh or texture first appears, which a warm-up of the match's meshes and textures before it starts could take, as the specialized pipelines' list does for shaders.
 - **The uber shader at 4K** (20 to 25 ms a frame on the 1080 Ti): a configuration the saved list lacks still draws with it until its pipeline is made, a frame or a few; a cheaper fallback, or making that pipeline at once for the first draw that wants it, would remove the hitch.
 - **The CPU frame's 1 ms** (unchanged this round): records from the `Draw` list to shorten the stream thread, and the frame's end (0.3 ms), as the second round left them.
+
+## F5: the whole scene (fourth round)
+
+The fourth round took the hitches left after the third round met the 4K/144 target in steady play: the frames that make something the first time it shows, a cold driver cache and a replay's start, and a configuration the saved list lacks. The CPU frame's 1 ms (records from the `Draw` list, the frame's end) wasn't reached.
+
+**What a frame makes** (`melee_gpu::made`). The renderers count what they make and the time it takes, process-wide: textures decoded and made, meshes decoded and put on the GPU, the meshes' pools grown or closed up, bind groups, buffers grown, uber-shader pipelines made at a draw, copies' textures, materials' records, and the draw calls drawn with the uber shader while their specialized pipeline is made. The paced bench takes each frame's difference into its CSV and its slowest frames' lines.
+
+**Made again, not new.** On Fountain of Dreams at 2 frames a tick, the match made 1,491 textures and 1,125 meshes; 967 of the textures and over half the meshes were ones it had made before: a texture went after 120 frames unused (under a second at 144 Hz) and a mesh after 600, and the frames at ticks 585, 890, 1143, 1220, 1295, 1759 and 1934 were those coming back. Two keys held what decoding doesn't read: a mesh's held the vertex formats of attributes its shape doesn't send, which the shapes drawn before leave behind (Fox's and Sheik's models were decoded again after a respawn, five times one list), and an RGB texture's held the palette format the last palette texture left (Fox's 28 textures at tick 714). Now:
+
+- Decoded textures stay while they fit 128 MB of texels (a match takes about 15 MB), the least recently used going past it; copies from the EFB still go after 120 frames unused (`to_evict`). Meshes stay while they fit 64 MB (`Meshes::begin_frame`), and a mesh stays on the GPU while the cache or a draw sent holds it (`GpuMeshes::end_frame`).
+- A mesh's key holds only the formats of the attributes its descriptor sends (`format_key`); a texture's holds the palette format only for a palette image.
+- Checked: `texture_cache_tests::*` (the budget, a copy's 120 frames, the palette format), `meshes::tests::meshes_are_kept_within_the_budget_and_the_oldest_go_past_it`, `meshes::tests::formats_of_attributes_not_sent_leave_the_mesh_as_it_is`, `gpu_mesh_tests::a_mesh_stays_on_the_gpu_while_the_cache_holds_it`; each fails with its change undone.
+
+**The match's start, made before its first frame** (`Gpu::prepare_textures`, `Gpu::prepare_meshes`). What was left were the first frames: ticks 0, 5 and 10 on Fountain of Dreams decoded about 190 textures and 390 meshes as the stage, the fighters and the interface first drew. At a match's start (the handoff into a live match, or a replay's or a command-line match's first tick) the player makes the textures of every texture object the game holds and decodes the meshes of every shape, shown or not yet, on several threads: on the worker 198 textures and 605 meshes in 21 to 28 ms on Fountain of Dreams, 171 and 466 on `fox-marth-ps`. A texture is now also kept by what it's decoded from (its size, format, levels, palette format and the hash of its bytes and palette), so a draw takes a prepared texture wherever its image is, and two images of the same bytes share one (213 of Fountain of Dreams' textures). A prepared mesh is keyed as its draw keys it: the shape's display list and arrays, and the formats its vertex descriptions set (`setupVtxDesc`'s, in a scratch `Gx`). A shape whose draw keys it otherwise (a shape animation's, a rewritten list) is decoded when drawn, as before. Checked by `prepare_tests::a_prepared_match_draws_the_same_frames_and_decodes_next_to_nothing` (the bench replay's first 30 ticks: every frame the prepared renderer draws is the one a renderer that prepared nothing draws, and it decodes a tenth or less of the meshes at its draws; with the meshes not prepared it fails) and `texture_cache_tests::a_draw_takes_the_texture_prepared_from_its_bytes`.
+
+### The frames over 6.94 ms, by tick (the worker, 2026-11-21)
+
+The worker's exclusive runner (15:14 to 15:46 UTC), release with line tables, the GTX 1080 Ti through Vulkan, the paced bench at 3840 by 2160 (internal 5x), Interpolate at 2 frames a tick, 1,980 ticks; round 3's build (`b7bab235`) against the branch before the match's start was prepared (`96d8be71`) and with it (`8ad4b762`). Each cell gives the frames over 6.94 ms with presenting, and their ticks (with one frame in flight, as the player presents; two rounds alike):
+
+| Replay | Round 3 | Kept and keyed (`96d8be71`) | And prepared (`8ad4b762`) |
+| --- | --- | --- | --- |
+| Fountain of Dreams | 14: ticks 0 (35.6 and 19.4 ms), 5, 10, 84, 233, 585, 714, 890, 1143, 1220, 1295, 1759, 1934 (7.8 to 15.8 ms) | 3: ticks 0 (33.4 ms), 5 (7.8), 10 (11.4) | 1: tick 0 (20.3 ms) |
+| `fox-marth-ps` | 4: ticks 0 (34.4), 5, 10, 1830 | 3: ticks 0 (34.1), 5, 10 | 1: tick 0 (19.9) |
+| Fountain of Dreams, Extrapolate | | 3: ticks 0, 5, 10 | 2: ticks 0 (20.9), 1018 (7.0) |
+
+The rest of each frame is unchanged: in flight, p50 2.9 ms and p99 4.5 to 4.6 on Fountain of Dreams, p50 3.9 and p99 5.6 to 5.7 on `fox-marth-ps`, a frame's drawing p99 4.4 to 4.5. Waiting for each frame (the CPU's and the GPU's time added) Fountain of Dreams went from 32 to 37 frames over to 21 to 26, and `fox-marth-ps` stays at 200 to 260, the GPU's frame on Pokémon Stadium's transformations (4.3 to 5.1 ms, the third round's finding). What's left is the match's first frame, 20 ms: its game thread's first build and run (the address space's archives mapped, the threads' first frame), with almost nothing made in it.
+
+### A cold driver cache, and a replay's start
+
+**Measured** (the paced bench's wait for the saved list, Fountain of Dreams' 686 specialized pipelines): with the driver's caches warm, 1.82 to 1.83 s on two shader threads and 0.63 s on six; cold (no `driver-pipelines.bin`, NVIDIA's shader disk cache an empty folder), 37.3 s on two (109 ms a pipeline) and 16.0 s on six (140 ms each, the driver's compiles sharing the processor). So:
+
+- **More threads**: half the processor's threads, 2 to 6 (`MELEE_TEV_THREADS`); a cold cache is made 2.3 times as fast, a warm one 2.9.
+- **The order a run needs them**: the saved list keeps the order its pipelines were first asked for, and the next run makes them in it (`Specializer::keys`, checked by `tev_tests::the_saved_list_keeps_the_order_first_asked_for`).
+- **A short wait before a replay**: a replay or a command-line match has no menus to make the list during, so it waits for it before its window opens, 3 s at most (`pipelines::SAVED_LIST_WAIT`), the rest made while it draws. Nothing is shown meanwhile but the window opening later; the player's log says how many were made.
+
+The player in its window on the worker (fullscreen, internal 5x, paced for 144, Fountain of Dreams from the replay's start, 600 ticks; the perf report's frames from tick 180): round 3's build drew 36,313 calls with the uber shader in its first seconds with the caches warm, the branch none (686 of 686 made in 633 ms before the first frame); with the caches cold, round 3's made 200 in the 10 s and drew every call with the uber shader (44 frames a second), the branch made 113 in its 3 s wait and the rest by the run's end (75 frames a second over the measured frames, p50 7.6 ms). The full replay (1,980 ticks, warm): 143.9 frames a second, p99 9.4 to 9.9 ms between presents (the pacing's spread without a 144 Hz display, as in the third round).
+
+### A configuration the saved list lacks
+
+One cache folder kept through the runs, as a player's is, from an empty list: the four bench matches, Fountain of Dreams, then a dozen of the corpus's replays (every 17th; two of them don't start, "index out of bounds: the len is 33 but the index is 49", outside this task). Each new match added 5 to 36 specialized pipelines to the list and drew with the uber shader in 0 to 166 frames, 0 to 68 of them over 6.94 ms (mostly its first second); by the last replays, 1 to 3 frames over.
+
+The deciding finding is the **uber shader's own pipelines** (one per blending, writes and depth test, `pipelines.bin`): one the list lacks is made at the draw that needs it, and the NVIDIA driver took **1.4 to 2.8 s** each on the worker (a run from an empty list stopped 17.4 s at its first frame, making 9; a bench run whose list came from other matches stopped 2.8 s at tick 1692 of `fox-marth-fd`). A specialized pipeline the list lacks costs a few frames with the uber shader, at 4K 7 to 13 ms each. The list's coverage fixes both for a player who has played those matches; a first match of a new kind hitches. What would fix it for the first time too, not done this round: make the specialized pipeline at once for a draw whose uber pipeline is missing (a specialized shader compiles in 6 to 140 ms against the uber shader's seconds) and the uber one on the threads, or ship a list made from the corpus.
+
+The commands (the worker's scripts in `fast-f5/w4`: `s1.sh` round 3 against the branch, `s2.sh` the saved list warm and cold and the window, `s3.sh` the corpus, `s4.sh` the branch prepared):
+
+```sh
+# Each frame by tick, with what it made, in flight or waiting.
+MELEE_BENCH_IN_FLIGHT=1 MELEE_BENCH_FRAMES=out.csv melee-hd --disc D --replay R --bench 1980 \
+    --size 3840x2160 --renderer fast --high-refresh interpolate --frames-per-tick 2
+# The saved list cold: no driver-pipelines.bin in the cache folder, NVIDIA's disk cache empty.
+XDG_CACHE_HOME=cold __GL_SHADER_DISK_CACHE_PATH=cold/nv MELEE_TEV_THREADS=2 melee-hd ... --bench 120
+# A replay's start in the window.
+melee-hd --disc D --replay R --ticks 600 --mute --renderer fast --high-refresh interpolate \
+    --present immediate --refresh 144 --fullscreen --scale 5 --perf-report out.txt
+```
+
+**Indicative, on this PC** (the RTX 5070 Ti, other agents' work running; these decide nothing): the same bench on Fountain of Dreams made 1,491 textures (967 again) and 1,125 meshes before this round, 183 and 93 at draws after it, with 198 textures and 605 meshes made before the match in 17 ms.
+
+### What's left (after F5's fourth round)
+
+- **The uber shader's pipelines a list lacks**: 1.4 to 2.8 s each at a draw on the worker's driver; the faster path above.
+- **The match's first frame** (20 ms on the worker): the game thread's first build and run.
+- **A cold driver cache**: 16 s for the list on six threads; the first run after a driver or build change.
+- **A 144 Hz display at 4K**, as before.
+- **The CPU frame's 1 ms**: records from the `Draw` list (the stream thread) and the frame's end, not started.
+
+## F5: the whole scene (fifth round)
+
+The fifth round took the fourth's findings: an uber-shader pipeline a list lacks, which a draw made at once (1.4 to 2.8 s on the worker's NVIDIA driver, 17 s at a run's first frame from an empty list), a shipped list of pipelines so most never come up (the coordinator's answer, 2026-11-21: both), and what was left in a match's first frame.
+
+**No draw waits for an uber pipeline.** The uber shader's pipelines are made on the shader threads like the specialized ones (`Specializer::ask_uber`): the threads take the specialized pipelines draws asked for first, then a list's specialized ones, then the uber pipelines draws asked for, then a list's (an uber pipeline takes the driver longest, so it waits behind the specialized ones rather than keep the threads from them). A draw is drawn with its specialized pipeline where it's made, else its uber pipeline; where neither is made, the flush makes the draw's specialized pipeline on the spot (`ready`, `Specializer::make_now`), all of the flush's at once on every shader thread and the render thread, taken out of the queues and put first. A specialized shader compiles in milliseconds where the uber shader takes the driver seconds, and the uber pipelines take no more than a third of the shader threads at once (`uber_threads`), so a flush's specialized pipelines find threads free (an uber pipeline held a thread 2 to 3 s on the worker with nothing cached; `uber_pipelines_take_a_third_of_the_threads_at_most`, which fails with no cap). A clear drawn as a rectangle has a specialized pipeline too (`tev::clear_uid`: the clear's mode, which reads no register). Only `MELEE_TEV=0` or `sync`, and the debugging silhouettes, wait for an uber pipeline (`uber_now`, counted as `pipelines` in the bench's CSV); the specialized pipelines made on the spot are its `on_the_spot` column. A device's renderers share the uber pipelines as they share the specialized ones (`SharedSpecialized`). The saved list's uber pipelines are no longer made before the first frame but queued last. Checked by `tev_tests::a_draw_whose_uber_pipeline_isnt_made_draws_with_its_specialized_one_made_on_the_spot` (with the shader threads paused: the draw and a clear drawn with their specialized pipelines made by the flush, the frame the uber shader's bit for bit, the uber pipelines made by the threads after; it fails with the uber pipeline made at the draw, and with the clear left to the uber shader) and `a_list_s_uber_pipelines_are_made_on_the_threads` (fails with a list's made at once).
+
+**The shipped list** (`data/pipelines`). The uber and specialized pipelines the fast renderer asked for over a corpus, in the cache folder's own format (`pipelines.bin`: 8-word keys; `specialized-pipelines.bin`: a mark, then each key and its TEV configuration's 84 words): what each pipeline is made for (blending, writes, depth, culling, early z) and its configuration's register bits, nothing of the game's. The player builds it in (`include_bytes!`) and queues it after its own saved list (`Renderer::warm_shipped`); a shipped pipeline enters the player's saved list only when a draw asks for it (`Specializer::unlisted`), so the saved list stays what the player's runs asked for. A list from another build is safe: its mark (`tev::LIST_MARK`, which changes with what a configuration holds) must be this build's or the list is left out whole, each entry is taken only if this build reads it (its key's mark and ranges, its configuration's words what `Uid::of` gives back), and an early-z entry is taken without early z where the renderer's draws can't test depth early (D3D12, Metal, MSAA), as they'd ask for it there. The keys don't depend on the driver; the driver's own cache (`driver-pipelines.bin`) is wgpu's, which starts afresh on another device. A replay's or a command-line match's wait before its first frame (3 s at most, as before) waits for the player's own lists, not the shipped one's (`finish_specialized_within`; `a_replay_s_wait_is_for_the_player_s_own_pipelines`, which fails waiting for them all), and its log line counts the player's own. Saving also changed: each renderer's save now adds to the saved list rather than replacing it (`pipelines::merged`): before, the menus' renderer, saving after a match's, dropped the match's new pipelines. Checked by `tev_tests::a_list_s_entries_are_taken_where_this_build_reads_them` (fails with early-z entries skipped, and with the shipped list listed), `pipelines::tests::the_shipped_list_is_one_this_build_reads` (its mark this build's, every entry read, none twice, under 2 MB: fails with the mark changed, until the list is made again), `a_list_from_another_build_is_left_out` and `saving_adds_to_the_saved_list`.
+
+The list in the repository (2026-11-22): 30 uber and 1,847 specialized pipelines, 960 bytes and 680 KB, from the six bench matches, the idle power-on and 13 menu sessions (the main menu, the gallery, the attract mode, the character and stage selects, the results screens, Options, the trophy collection, Data) under both rulesets, and the verify list's 359 replays, collected on the worker's GTX 1080 Ti through Vulkan (393 runs, three players at once, about 4.7 h). A list made there suits every platform: it holds keys, not the driver's binaries, and the worker's draws test depth early as this PC's do through Vulkan. Making it again: `tools/bench/collect-pipelines.sh` plays the bench matches, the console from power-on under both rulesets (idle, then the menu sessions given) and the replays given, headless at internal 1x, from an empty cache folder (`MELEE_HD_CACHE`, `MELEE_SHIPPED_PIPELINES=0`), `JOBS` players at once, and merges their lists (`merge-pipelines.py`). Make it where draws test depth early (Vulkan).
+
+**The match's first frame.** What was left of its 20 ms on the render thread were the renderer's own pipelines, made at their first use: the transforms' compute pipelines (`xform.wgsl`, 10 ms on this PC, 3 s on the worker with nothing cached) at the first mesh and the copy to the XFB's (2.5 ms) at the first copy. The transforms' are now made on a thread of their own from the player's making of each renderer (`Renderer::make_ahead`, in `pipelines::renderer`, and `Gpu::fast`), through the driver's pipeline cache (they had none), so a match's renderer has them by its first frame; the XFB copy's are made with the textures prepared before the match (`prepare_textures`). Checked by `tev_tests::a_match_s_first_frame_finds_its_renderer_s_own_pipelines_made` (fails without either).
+
+### The first frames, from nothing cached to a saved list (the worker, 2026-11-22)
+
+The worker's exclusive runner, release with line tables, the GTX 1080 Ti through Vulkan, the paced bench at 3840 by 2160 (internal 5x), Interpolate at 2 frames a tick, one frame in flight, 1,980 ticks; round 4's build (`3cc1d46f`) against the branch (`3dbb51d5`). Five matches: Fountain of Dreams, `fox-marth-ps` (a bench match, in the list's corpus) and three corpus replays the list wasn't made from (`2026-05/Game_20260531T183731`, `2026-06/Game_20260605T220445`, `2026-08/Game_20260807T222514`: c1 to c3). Each cell: the first frame's time with presenting, then the frames over 6.94 ms (of 3,958 to 3,960). The bench waits for the lists before the match as the menus would.
+
+| What's cached | Build, list | Fountain of Dreams | `fox-marth-ps` | c1 | c2 | c3 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Nothing (a player's first run: an empty cache folder, NVIDIA's disk cache in it) | round 4 | 23.2 s, 70 | 20.2 s, 76 | 17.5 s, 103 | 20.5 s, 167 | 17.6 s, 26 |
+| | branch, no shipped list | 4.7 s, 26 | 4.5 s, 57 | 3.7 s, 69 | 4.5 s, 89 | 3.7 s, 50 |
+| | branch, shipped list (82 s before the match) | 16.7 ms, 5 | 15.7 ms, 7 | 10.5 ms, 6 | 15.7 ms, 9 | 10.5 ms, 6 |
+| The driver's cache warm, no list of ours | round 4 | 95.1 ms, 6 | 91.4 ms, 17 | 82.8 ms, 12 | 97.4 ms, 17 | 81.4 ms, 9 |
+| | branch, no shipped list | 77.6 ms, 5 | 90.9 ms, 17 | 65.7 ms, 14 | 92.4 ms, 17 | 62.2 ms, 11 |
+| | branch, shipped list (3.6 s before the match) | 11.0 ms, 2 | 12.1 ms, 3 | 10.3 ms, 1 | 12.2 ms, 5 | 9.3 ms, 1 |
+| A saved list (the run before's) | round 4 | 19.9 ms, 1 | 19.9 ms, 2 | | | |
+| | branch | 11.5 ms, 1 | 13.7 ms, 1 | | | |
+| | branch, and the shipped list (2.6 s) | 10.8 ms, 1 | 13.1 ms, 2 | | | |
+
+- **Nothing cached**: round 4's first frame made the uber pipelines at the draw (9 to 11 of them, 14 to 20 s) and its later frames stopped up to 3 s each for another (ticks 5, 760, 1763...). The branch never makes one at a draw: its first frame is the specialized pipelines made on the spot (25 to 48, at 140 to 150 ms each with nothing cached), 3.7 to 4.7 s, and the frames after it 1 s or less each (120 to 161 made on the spot over the run, 6.9 to 10.3 s in all). With the shipped list none is made at a draw, on matches it wasn't made from too; the slowest frames left are the match's first two (39 to 44 ms), whose time is the GPU's (its scene and the copy to the XFB 16 and 13 ms against 1.3 and 0.7 later: the first frames a cold GPU draws).
+- **The driver's cache warm, no list**: an uber pipeline cached by the driver takes it 5 ms, so round 4's first frame was 81 to 97 ms (16 to 19 uber pipelines) and the branch's 62 to 92 (35 to 50 specialized on the spot); with the shipped list, 9 to 12 ms.
+- **The saved list**: the match's first frame 19.9 ms -> 11.5 to 13.7 ms (item 3). Left in it: what a match makes at its first draws that the preparation doesn't (6 to 11 textures, the texture animations' tables among them, 0.8 to 2.7 ms; 149 to 224 meshes put on the GPU, 0.3 to 1.9 ms; 66 to 73 bind groups, 0.3 ms) and the threads' first frame.
+- **The shipped list's making**: 1,847 pipelines on six threads take 82 s with nothing cached (204 ms each, on the threads while the menus run), 3.6 s with the driver's cache warm and 2.6 s with the player's `driver-pipelines.bin`. A replay waits only for the player's own lists, so the shipped list never holds up a replay's first frame; what isn't made by then is made while the match draws.
+
+The commands (the worker's scripts in `fast-f5/w5`: `collect.sh` the list, `s1.sh` and `s3.sh` the table; `s3.sh` keeps NVIDIA's disk cache in a folder of its own for the warm rows):
+
+```sh
+# Nothing cached: an empty cache folder (NVIDIA's disk cache lives in it too, on Linux).
+XDG_CACHE_HOME=empty MELEE_SHIPPED_PIPELINES=0 MELEE_BENCH_IN_FLIGHT=1 MELEE_BENCH_FRAMES=out.csv \
+    melee-hd --disc D --replay R --bench 1980 --size 3840x2160 --renderer fast \
+    --high-refresh interpolate --frames-per-tick 2
+# The driver's cache warm, no list of ours: the same with __GL_SHADER_DISK_CACHE_PATH=warm.
+# The shipped list: without MELEE_SHIPPED_PIPELINES=0.
+# The list: on the worker, three players at once.
+JOBS=3 MELEE_HD=target/release/melee-hd bash tools/bench/collect-pipelines.sh REPLAY.slp... SESSION.inputs...
+```
+
+**Indicative, on this PC** (the RTX 5070 Ti, other agents' work running; these decide nothing): the transforms' pipelines took 10.4 ms and the XFB copy's 2.5 ms of the first frame's 18 to 23 at 4K; made ahead, the first frame was 11 to 13 ms. From an empty list the first frame made 34 specialized pipelines on the spot in 58 ms.
+
+### What's left (after F5's fifth round)
+
+- **A first run with nothing cached** still takes 3.7 to 4.7 s at the first frame without the shipped list, and the shipped list's 82 s on six threads to make, which the menus at a first boot or a replay's match draw beside. The driver's compiles are the cost; a smaller first set (the shipped list in first-needed order, as the saved list is) would let a first replay's first seconds find more of theirs made.
+- **The first frame's last 10 ms** with a saved list: the textures and meshes the preparation doesn't reach (the texture animations' tables, the meshes' upload to the GPU) and the threads' first frame.
+- **Renderers making the same pipelines**: a match's renderer made while the menus' is still making the lists (a cold first run) makes those not yet shared again on its own threads.
+- **A 144 Hz display at 4K**, as before.
+- **The CPU frame's 1 ms** (records from the `Draw` list, the frame's end): not started this round.

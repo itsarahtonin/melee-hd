@@ -93,6 +93,8 @@ mod power;
 mod power_tests;
 #[cfg(test)]
 mod predict_tests;
+#[cfg(test)]
+mod prepare_tests;
 mod present;
 mod quick;
 #[cfg(test)]
@@ -1092,6 +1094,12 @@ impl Session {
         matches!(&self.run, power::Run::Console(s) if s.in_live_match())
     }
 
+    /// Whether it's a match's own session (a replay, or a match from the command line), whose
+    /// first tick starts the match.
+    fn is_match(&self) -> bool {
+        matches!(&self.run, power::Run::Match(_))
+    }
+
     /// The ruleset the console runs (none for a match's session).
     fn ruleset(&self) -> Option<Ruleset> {
         match &self.run {
@@ -1648,6 +1656,13 @@ impl App {
         let length = session.length;
         let tick = engine_tick(session.game());
         self.follow_live();
+        // A match's own session: its first tick starts the match.
+        if self.ticks == 0
+            && let (Some(r), Some(s)) = (&mut self.renderer, &self.session)
+            && s.is_match()
+        {
+            prepare_match(r, &self.frames, s);
+        }
         self.give_snapshot(&f.draws);
         let session = self.session.as_mut().expect("a match");
         self.jit.ran(&plan);
@@ -2165,6 +2180,12 @@ impl App {
                 let r = pipelines::renderer(gpu, shape.scale, shape.msaa, aspect);
                 (frames, Some(gpu_for(r, one_thread, shape.fast)))
             });
+        if live
+            && matches!(moved, handoff::Moved::Off | handoff::Moved::Stayed)
+            && let (Some(r), Some(s)) = (&mut self.renderer, &self.session)
+        {
+            prepare_match(r, &self.frames, s);
+        }
         if let handoff::Moved::Back {
             shape: was,
             renderer,
@@ -3099,6 +3120,18 @@ fn scale_for(asked: u32, size: (u32, u32), aspect: present::Aspect) -> u32 {
     scale.clamp(1, aspect.max_scale())
 }
 
+/// A match's renderer makes the textures and meshes of what the game holds before the match's
+/// first frame (`Gpu::prepare_textures`, `Gpu::prepare_meshes`), so its first frames don't.
+fn prepare_match(renderer: &mut Gpu, frames: &Frames, session: &Session) {
+    let start = Instant::now();
+    let textures = renderer.prepare_textures(session.game(), session.data());
+    let meshes = renderer.prepare_meshes(&frames.space, session.game(), session.data());
+    eprintln!(
+        "before the match: {textures} textures and {meshes} meshes made in {:.0} ms",
+        start.elapsed().as_secs_f64() * 1000.0
+    );
+}
+
 /// The benchmark's [`App::follow_live`]: into a live match, a frame builder and renderer of its
 /// own (at the renderer's `shape` now); out of one, the menus' back, resized to `shape`.
 fn bench_follow(
@@ -3123,6 +3156,10 @@ fn bench_follow(
         (f, gpu_for(r, args.one_thread, shape.fast))
     };
     let moved = handoff.follow(live, frames, renderer, shape, fresh);
+    // Into a live match, with a fresh renderer or the one there was (a replay has no menus).
+    if live && matches!(moved, handoff::Moved::Off | handoff::Moved::Stayed) {
+        prepare_match(renderer, frames, session);
+    }
     if let handoff::Moved::Back {
         shape: was,
         renderer: r,
@@ -3216,6 +3253,9 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             &gpu,
             args,
         );
+        if tick == 0 && session.is_match() {
+            prepare_match(&mut renderer, &frames, &session);
+        }
         give_snapshot(&mut console_view, &gpu, &session, &f.draws);
         round += t1 - t0;
         if !f.draws.is_empty() {
@@ -3287,6 +3327,9 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             .unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
     pipelines::save(&renderer.into_renderer());
+    if let Some(r) = handoff.into_menus() {
+        pipelines::save(&r.into_renderer());
+    }
     let ms = |d: Duration| d.as_secs_f64() * 1000.0 / f64::from(n.max(1));
     println!(
         "a frame: GX stream {:.3} ms, renderer {:.3} ms, presenting (with the GPU's wait) {:.3} ms",
@@ -3398,6 +3441,9 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
             after.clear();
             predictor.clear();
         }
+        if tick == 0 && session.is_match() {
+            prepare_match(&mut renderer, &frames, &session);
+        }
         if !f.draws.is_empty() {
             if extrapolate {
                 match session.predict(&mut predictor, pads) {
@@ -3422,6 +3468,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 } else {
                     Blend { from: &before, t }
                 };
+                let made = melee_gpu::made::Made::now();
                 let ta = Instant::now();
                 // The fast renderer builds the frame as it runs it: all of it in the run's time.
                 let (images, tb) = if renderer.is_fast() {
@@ -3464,6 +3511,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     submit: submitted - tc,
                     wait: td - submitted,
                     gpu: None,
+                    made: made.since(),
                 });
                 rows.gpu(&gpu.gpu_times(), usize::from(in_flight));
             }
@@ -3543,6 +3591,9 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
             .unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
     pipelines::save(&renderer.into_renderer());
+    if let Some(r) = handoff.into_menus() {
+        pipelines::save(&r.into_renderer());
+    }
     ExitCode::SUCCESS
 }
 
@@ -3782,13 +3833,21 @@ fn run(args: Args) -> ExitCode {
     if app.front.is_some() {
         app.power_on();
     }
-    // The pipelines the last runs needed, made before the first tick.
+    // The pipelines the last runs needed, made before the first tick. A replay or a match from
+    // the command line has no menus to make the saved specialized pipelines during, so it waits
+    // for them before its window opens, a few seconds at most (a cold driver cache can take a
+    // minute); the rest are made while the match draws with the uber shader.
     if app.session.is_some() {
-        app.renderer = Some(gpu_for(
-            pipelines::renderer(&app.gpu, app.scale, app.msaa, app.aspect),
-            app.one_thread,
-            app.fast,
-        ));
+        let mut r = pipelines::renderer(&app.gpu, app.scale, app.msaa, app.aspect);
+        let start = Instant::now();
+        let (made, of) = r.finish_specialized_within(pipelines::SAVED_LIST_WAIT);
+        if of > 0 {
+            eprintln!(
+                "specialized pipelines: {made} of {of} made in {:.0} ms before the first frame",
+                start.elapsed().as_secs_f64() * 1000.0
+            );
+        }
+        app.renderer = Some(gpu_for(r, app.one_thread, app.fast));
     }
     let r = event_loop.run_app(&mut app);
     app.inputs.close();
