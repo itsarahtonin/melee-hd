@@ -1577,6 +1577,17 @@ GROUPS = [
         "un_804A1F58_t": SCORE_DISPLAYS,
         "un_804A1F58_x8_t": SCORE_DISPLAY,
     },
+    {
+        "HSD_ObjAllocUnk": ITEM_COUNTS,
+        "BgFlashData": BG_FLASH_DATA,
+        "BgFlashUserData": BG_FLASH_USER_DATA,
+        "lb_00F9_UnkDesc0": SWING_LINK,
+        "DynamicsData": DYNAMICS_DATA,
+        "SpawnItem": SPAWN_ITEM,
+        "LbShadow": LB_SHADOW,
+        "controller_map": CONTROLLER_MAP,
+        "gm_controller_map": GM_CONTROLLER_MAP,
+    },
 ]
 
 # The port's names for the decomp's address-named structs (C name to Rust name), which
@@ -1607,6 +1618,8 @@ TYPE_NAMES = {
     "un_804A1F10_t": "OffscreenArrows",
     "un_804A1F58_t": "ScoreDisplays",
     "un_804A1F58_x8_t": "ScoreDisplay",
+    "HSD_ObjAllocUnk": "ItemCounts",
+    "lb_00F9_UnkDesc0": "SwingLink",
 }
 
 STEP_3 = {}

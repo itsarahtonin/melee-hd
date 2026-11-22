@@ -169,12 +169,12 @@ pub fn spawn(
     spawn.pos = spawn.prev_pos;
     // `Item_InitSpawnCommonFields`, with a first collision.
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = owner;
-    spawn.x4_parent_gobj2 = owner;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = owner;
+    spawn.maker = owner;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
     ip.cmd_var3 = 0;

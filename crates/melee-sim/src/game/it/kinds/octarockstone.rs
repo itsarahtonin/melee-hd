@@ -216,11 +216,11 @@ pub fn spawn(
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);
     spawn.pos = lib26b1::ecb_center(r.game, gobj);
     spawn.facing_dir = mem(fp::frsp(f64::from(dir)));
-    spawn.x3C_damage = 0;
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = Some(gobj);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.damage = 0;
+    spawn.owner = None;
+    spawn.maker = Some(gobj);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     // The original never sets the spawn's velocity, a stack vector whose x holds a RAM address
     // an earlier call left (a negative float). The spawn reads only that sign, for the spin's
     // way (`it_80274658`), before [`aim`] sets all three.

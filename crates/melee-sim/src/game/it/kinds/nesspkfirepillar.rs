@@ -84,11 +84,11 @@ pub fn spawn(r: &mut Running, bolt: GObjId, owner: Option<GObjId>, pos: Vec3, fa
     spawn.pos = spawn.prev_pos;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
-    spawn.x0_parent_gobj = owner;
-    spawn.x4_parent_gobj2 = Some(bolt);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.damage = 0;
+    spawn.owner = owner;
+    spawn.maker = Some(bolt);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     if let Some(gobj) = spawn_air(r, &mut spawn) {
         debug_owner_bubbles(r.game, gobj, owner);
         start(r, gobj);

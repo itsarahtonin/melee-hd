@@ -135,12 +135,12 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, smash: bool, facing_dir
     spawn.pos = lib26b1::parent_ecb_center(r.game, parent);
     // `Item_InitSpawnCommonFields(&spawn, gobj, facing_dir, true)`.
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(parent);
+    spawn.maker = spawn.owner;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let Some(missile) = spawn_air(r, &mut spawn) else {
         return;
     };

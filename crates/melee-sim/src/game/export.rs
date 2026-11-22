@@ -883,8 +883,8 @@ pub fn bg_flash(game: &Game, img: &mut Image) {
 /// The background flash's user data's fields laid out into `l` (its block at `l`'s start):
 /// its alpha and color overlay.
 pub fn bg_flash_fields(img: &Image, l: &mut Lay, u: &super::structs::BgFlashUserData) {
-    l.u8(0, u.x0);
-    color_overlay(img, l, 4, &u.x4);
+    l.u8(0, u.alpha);
+    color_overlay(img, l, 4, &u.overlay);
 }
 
 /// A Pokémon Stadium screen's user data (`grStadium_801D2BEC`'s `TextWrapper`, 0x20;

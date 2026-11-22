@@ -2608,7 +2608,7 @@ pub fn read_inputs(game: &Game, slot: i32) -> Inputs {
     if slot == 5 {
         return Inputs::default();
     }
-    let map = &game.controller_map.x0;
+    let map = &game.controller_map.ports;
     if slot == 4 {
         let pushed = |x: f32| {
             let mut x = reg(x);

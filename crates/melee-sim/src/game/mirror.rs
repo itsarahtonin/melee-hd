@@ -328,9 +328,10 @@ mod label_tests {
     #[test]
     fn step_3s_renamed_fields_label_gives_the_originals_name() {
         use crate::game::structs::{
-            _StaticPlayer, Announcement, Camera, EventData, GameData, GmSaveData, Ground,
-            GroundParam, JoinerTally, MatchPlayerData, OffscreenArrows, PlayerInitData, SceneLoop,
-            StageInfo, StaleMoveTable, StartMeleeRules, VsSceneState,
+            _StaticPlayer, Announcement, Camera, ControllerMap, EventData, GameData, GmSaveData,
+            Ground, GroundParam, ItemCounts, JoinerTally, LbShadow, MatchPlayerData,
+            OffscreenArrows, PlayerInitData, SceneLoop, StageInfo, StaleMoveTable, StartMeleeRules,
+            SwingLink, VsSceneState,
         };
         assert_eq!(
             labels_after::<Fighter>("fighter", |fp| {
@@ -498,6 +499,22 @@ mod label_tests {
         assert_eq!(
             labels_after::<OffscreenArrows>("arrows", |a| a.sides[1] = 1),
             ["arrows.sides (x28)[1]"]
+        );
+        assert_eq!(
+            labels_after::<ItemCounts>("counts", |c| c.pokemon_limit = 1),
+            ["counts.pokemon_limit (x20)"]
+        );
+        assert_eq!(
+            labels_after::<SwingLink>("link", |l| l.ease_axis = 1),
+            ["link.ease_axis (unk_54)"]
+        );
+        assert_eq!(
+            labels_after::<LbShadow>("shadow", |s| s.off_by_stage = true),
+            ["shadow.off_by_stage (x0_b4)"]
+        );
+        assert_eq!(
+            labels_after::<ControllerMap>("pads", |m| m.ports[1].held_frames = 1),
+            ["pads.ports (x0)[1].held_frames (x2C)"]
         );
     }
 }

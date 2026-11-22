@@ -169,12 +169,12 @@ fn spawn_desc(p1: Option<GObjId>, p2: Option<GObjId>, pos: Vec3, vel: Vec3) -> S
     };
     s.prev_pos = pos;
     s.pos = s.prev_pos;
-    s.x3C_damage = 0;
+    s.damage = 0;
     s.vel = vel;
-    s.x0_parent_gobj = p1;
-    s.x4_parent_gobj2 = p2;
-    s.x44_flag[0] |= 0x80;
-    s.x40 = 0;
+    s.owner = p1;
+    s.maker = p2;
+    s.flags[0] |= 0x80;
+    s.ignore_id = 0;
     s
 }
 
@@ -418,7 +418,7 @@ pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802E6658")]
 pub fn limit_coins(r: &mut Running) {
     let limit = super::super::item::common_data(r.game).u32(r.data, 0x20);
-    if r.game.it.counts.x50 as u32 >= limit.wrapping_sub(2) {
+    if r.game.it.counts.coins as u32 >= limit.wrapping_sub(2) {
         let last = super::super::spawn::find_kind(r.game, ItKind::VsCoin.id());
         super::super::item::destroy(r, last.expect("it_802E6658: no coin to take off"));
     }

@@ -245,12 +245,12 @@ pub fn shoot(r: &mut Running, gobj: GObjId, kind: i32, speed: f32) -> Option<GOb
     let ip = item(r.game, gobj);
     let (facing, owner) = (ip.facing_dir, ip.owner);
     spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = aim(r, gobj, speed);
-    spawn.x0_parent_gobj = owner;
-    spawn.x4_parent_gobj2 = Some(gobj);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = owner;
+    spawn.maker = Some(gobj);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     spawn_air(r, &mut spawn)
 }
 

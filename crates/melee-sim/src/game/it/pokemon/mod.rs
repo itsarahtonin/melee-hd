@@ -257,15 +257,15 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
         vel: Vec3::new(0.0, up, 0.0),
         prev_pos,
         pos: center,
-        x3C_damage: 0,
+        damage: 0,
         facing_dir: facing,
         kind: kind.wrapping_add(ItKind::FIRST_POKEMON.id()),
-        x0_parent_gobj: owner,
-        x4_parent_gobj2: Some(ball),
-        x40: 0,
+        owner: owner,
+        maker: Some(ball),
+        ignore_id: 0,
         ..Default::default()
     };
-    spawn.x44_flag[0] |= 0x80;
+    spawn.flags[0] |= 0x80;
     if spawn.kind == ItKind::Celebi {
         r.record_rare_pokemon(RECORD_CEREBI);
     }

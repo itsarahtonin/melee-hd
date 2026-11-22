@@ -105,10 +105,10 @@ pub fn spawn_at(r: &mut Running, from: Option<GObjId>, kind: i32, pos: Vec3) -> 
         prev_pos,
         pos: at,
         facing_dir,
-        x4_parent_gobj2: parent2,
+        maker: parent2,
         ..SpawnItem::default()
     };
-    spawn.x44_flag[0] |= 0x80;
+    spawn.flags[0] |= 0x80;
     let g = spawn_air(r, &mut spawn)?;
     let x70 = common_data(r.game).f32(r.data, common::X70);
     super::lib2725::clamp_fall(r.game, g, x70);
@@ -125,7 +125,7 @@ pub fn drop_monster(
     vel: Option<Vec3>,
 ) -> Option<GObjId> {
     let n = &r.game.it.counts;
-    if n.x2C >= n.x30 {
+    if n.monsters >= n.monsters_limit {
         return None;
     }
     let chance = common_data(r.game).i32(r.data, common::X124);

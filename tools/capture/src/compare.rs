@@ -979,7 +979,7 @@ impl<'a> Comparer<'a> {
                     && self.game.ft.dynamics_block != 0
                     && self.game.ft.dynamics_pixels.contains(&(d.0 as u16))
                 {
-                    link.desc.unk_54 = self.u32(theirs + 0x54) as i32;
+                    link.desc.ease_axis = self.u32(theirs + 0x54) as i32;
                 }
                 link.compare(
                     &mem,

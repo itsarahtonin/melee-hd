@@ -12,7 +12,7 @@ use melee_sim::game::it::spawn::{PickTable, Spawner, Tables};
 use melee_sim::game::it::{BoneTable, CHAR_ARTICLES, ItemVars, Member, vars_kind};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::structs::{
-    HSD_ObjAllocUnk, Item, Item_FtTrack, PokemonSelectionState, db_ItemAndPokemonMenu_t,
+    Item, Item_FtTrack, ItemCounts, PokemonSelectionState, db_ItemAndPokemonMenu_t,
 };
 
 use crate::MEM1;
@@ -233,7 +233,7 @@ impl Importer<'_> {
     pub fn items(&mut self) {
         let cap = self.cap;
         let m = mem(&cap.call.mem1);
-        self.game.it.counts = HSD_ObjAllocUnk::import(&m, sym("Item_804A0C64"), self);
+        self.game.it.counts = ItemCounts::import(&m, sym("Item_804A0C64"), self);
         self.game.it.ft_track = Item_FtTrack::import(&m, sym("Item_804A0CCC"), self);
         self.game.it.made = cap.u32(sym("it_804D6D10")) as i32;
         self.game.it.next_attack_id = cap.u32(sym("it_804D6D14"));

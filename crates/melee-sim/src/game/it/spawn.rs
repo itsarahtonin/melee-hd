@@ -117,7 +117,7 @@ pub fn pick(game: &mut Game, table: &PickTable) -> i32 {
 /// have them), `it_8026C704`.
 #[doc(alias = "it_8026C704")]
 pub fn poke_balls_full(game: &Game) -> bool {
-    game.it.counts.x1C >= game.it.counts.x20 || !kind_on(game, ItKind::PokeBall.id())
+    game.it.counts.pokemon >= game.it.counts.pokemon_limit || !kind_on(game, ItKind::PokeBall.id())
 }
 
 /// Draws a kind from a table, `it_8026C75C`; -1 for none. While no more Poké Balls may
@@ -182,7 +182,7 @@ pub fn proc_spawn(r: &mut Running, _gobj: GObjId) {
             ..SpawnItem::default()
         };
         // The rest of the original's stack copy is never read.
-        spawn.x44_flag[0] |= 0x80;
+        spawn.flags[0] |= 0x80;
         if let Some(g) = super::item::spawn_air(r, &mut spawn) {
             crate::game::ef::spawn(r, 0x420, Some(g), &[crate::game::ef::Arg::Vec(pos)]);
             super::lib2725::count_spawned(r.game);
@@ -378,7 +378,7 @@ pub const PROC_SPAWN: u32 = 0x8026_C88C;
 /// Drops an item of `kind` at `pos`, if fewer are out than allowed, `it_8026D258`.
 #[doc(alias = "it_8026D258")]
 pub fn drop_at(r: &mut Running, pos: Vec3, kind: i32) -> bool {
-    if r.game.it.counts.x60 >= r.game.it.counts.x64 {
+    if r.game.it.counts.training_items >= r.game.it.counts.training_items_limit {
         return false;
     }
     let prev_pos = Vec3::new(pos.x, pos.y, 0.0);
@@ -390,7 +390,7 @@ pub fn drop_at(r: &mut Running, pos: Vec3, kind: i32) -> bool {
         facing_dir,
         ..SpawnItem::default()
     };
-    spawn.x44_flag[0] |= 0x80;
+    spawn.flags[0] |= 0x80;
     super::item::spawn_ground_marked(r, &mut spawn);
     true
 }

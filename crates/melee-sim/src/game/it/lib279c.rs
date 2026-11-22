@@ -60,8 +60,8 @@ fn carry_record(game: &mut Game, from: RenderOf, to: crate::game::handles::ItemI
 #[doc(alias = "it_8027B0C4")]
 pub fn track_spawn(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let game = &mut *r.game;
-    if is_fighter(game, spawn.x0_parent_gobj) {
-        let p2 = spawn.x4_parent_gobj2;
+    if is_fighter(game, spawn.owner) {
+        let p2 = spawn.maker;
         if is_fighter(game, p2) {
             copy_fighter_attack(game, gobj, p2.unwrap());
         } else {

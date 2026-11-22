@@ -62,12 +62,12 @@ pub fn spawn(
     spawn.prev_pos = prev;
     spawn.pos = prev;
     spawn.facing_dir = owner::facing_for(r.game, r.data, prev);
-    spawn.x3C_damage = 0;
-    spawn.x44_flag[0] |= 0x80;
+    spawn.damage = 0;
+    spawn.flags[0] |= 0x80;
     spawn.vel = vel.unwrap_or(Vec3::new(0.0, 0.0, 0.0));
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.ignore_id = 0;
     let gobj = if use_init {
         spawn_air(r, &mut spawn)
     } else {

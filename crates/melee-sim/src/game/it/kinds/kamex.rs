@@ -298,15 +298,15 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
     spawn.prev_pos = prev;
     spawn.pos = lib26b1::ecb_center(r.game, gobj);
     spawn.facing_dir = mem(facing);
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(mem(fp::fmuls(reg(speed), facing)), 0.0, 0.0);
     let v = pokemon::vars(r.game, gobj);
     let cannon = v.i32(CANNON);
     v.set_i32(CANNON, cannon ^ 1);
-    spawn.x0_parent_gobj = owner;
-    spawn.x4_parent_gobj2 = Some(gobj);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = owner;
+    spawn.maker = Some(gobj);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     if spawn_air(r, &mut spawn).is_some() {
         let sfx = if facing == 1.0 { 0x271D } else { 0x271C };
         r.lb_create_sound_object(&SoundParams {

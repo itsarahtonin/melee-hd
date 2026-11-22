@@ -2174,21 +2174,29 @@ impl Default for Struct2074 {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct LbShadow {
     /// +0x0 (bits 0..+1)
-    pub x0_b0: bool,
+    #[doc(alias("x0_b0"))]
+    pub off_no_light: bool,
     /// +0x0 (bits 1..+1)
-    pub x0_b1: bool,
+    #[doc(alias("x0_b1"))]
+    pub off_unset: bool,
     /// +0x0 (bits 2..+1)
-    pub x0_b2: bool,
+    #[doc(alias("x0_b2"))]
+    pub off_over_limit: bool,
     /// +0x0 (bits 3..+1)
-    pub x0_b3: bool,
+    #[doc(alias("x0_b3"))]
+    pub off_nothing_drawn: bool,
     /// +0x0 (bits 4..+1)
-    pub x0_b4: bool,
+    #[doc(alias("x0_b4"))]
+    pub off_by_stage: bool,
     /// +0x0 (bits 5..+1)
-    pub x0_b5: bool,
+    #[doc(alias("x0_b5"))]
+    pub off_by_debug: bool,
     /// +0x0 (bits 6..+1)
-    pub x0_b6: bool,
+    #[doc(alias("x0_b6"))]
+    pub unused_b6: bool,
     /// +0x0 (bits 7..+1)
-    pub x0_b7: bool,
+    #[doc(alias("x0_b7"))]
+    pub unused_b7: bool,
     /// +0x4
     pub shadow: Option<ShadowId>,
 }
@@ -2196,14 +2204,14 @@ pub struct LbShadow {
 impl Default for LbShadow {
     fn default() -> Self {
         LbShadow {
-            x0_b0: false,
-            x0_b1: false,
-            x0_b2: false,
-            x0_b3: false,
-            x0_b4: false,
-            x0_b5: false,
-            x0_b6: false,
-            x0_b7: false,
+            off_no_light: false,
+            off_unset: false,
+            off_over_limit: false,
+            off_nothing_drawn: false,
+            off_by_stage: false,
+            off_by_debug: false,
+            unused_b6: false,
+            unused_b7: false,
             shadow: None,
         }
     }
@@ -6975,7 +6983,8 @@ pub struct GmControllerMap {
     /// +0x28
     pub repeat_timer: i32,
     /// +0x2c
-    pub x2C: i32,
+    #[doc(alias("x2C"))]
+    pub held_frames: i32,
 }
 
 impl Default for GmControllerMap {
@@ -6987,7 +6996,7 @@ impl Default for GmControllerMap {
             release: 0,
             repeat2: 0,
             repeat_timer: 0,
-            x2C: 0,
+            held_frames: 0,
         }
     }
 }
@@ -6997,34 +7006,42 @@ impl Default for GmControllerMap {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct ControllerMap {
     /// +0x0
-    pub x0: [GmControllerMap; 5],
+    #[doc(alias("x0"))]
+    pub ports: [GmControllerMap; 5],
     /// +0xf0
-    pub xF0: Option<CodeRef>,
+    #[doc(alias("xF0"))]
+    pub repeat_fn: Option<CodeRef>,
     /// +0xf4
-    pub xF4: u16,
+    #[doc(alias("xF4"))]
+    pub repeat_delay: u16,
     /// +0xf6
-    pub xF6: u8,
+    #[doc(alias("xF6"))]
+    pub slow_repeat: u8,
     /// +0xf8
-    pub xF8: u16,
+    #[doc(alias("xF8"))]
+    pub mid_after: u16,
     /// +0xfa
-    pub xFA: u8,
+    #[doc(alias("xFA"))]
+    pub mid_repeat: u8,
     /// +0xfc
-    pub xFC: u16,
+    #[doc(alias("xFC"))]
+    pub fast_after: u16,
     /// +0xfe
-    pub xFE: u8,
+    #[doc(alias("xFE"))]
+    pub fast_repeat: u8,
 }
 
 impl Default for ControllerMap {
     fn default() -> Self {
         ControllerMap {
-            x0: core::array::from_fn(|_| Default::default()),
-            xF0: None,
-            xF4: 0,
-            xF6: 0,
-            xF8: 0,
-            xFA: 0,
-            xFC: 0,
-            xFE: 0,
+            ports: core::array::from_fn(|_| Default::default()),
+            repeat_fn: None,
+            repeat_delay: 0,
+            slow_repeat: 0,
+            mid_after: 0,
+            mid_repeat: 0,
+            fast_after: 0,
+            fast_repeat: 0,
         }
     }
 }
@@ -7993,11 +8010,12 @@ impl Default for VsSceneController {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct DynamicsData {
     /// +0x0
-    pub desc: lb_00F9_UnkDesc0,
+    pub desc: SwingLink,
     /// +0x90
     pub next: Option<DynamicsId>,
     /// +0x94
-    pub unk_94: i32,
+    #[doc(alias("unk_94"))]
+    pub unread_94: i32,
 }
 
 impl Default for DynamicsData {
@@ -8005,14 +8023,15 @@ impl Default for DynamicsData {
         DynamicsData {
             desc: Default::default(),
             next: None,
-            unk_94: 0,
+            unread_94: 0,
         }
     }
 }
 
 /// `lb_00F9_UnkDesc0`, 0x90 bytes.
+#[doc(alias("lb_00F9_UnkDesc0"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct lb_00F9_UnkDesc0 {
+pub struct SwingLink {
     /// +0x0
     pub jobj: Option<JObjId>,
     /// +0x4
@@ -8022,56 +8041,70 @@ pub struct lb_00F9_UnkDesc0 {
     /// +0x20
     pub scale: Vec3,
     /// +0x2c
-    pub unk_2C: Vec3,
+    #[doc(alias("unk_2C"))]
+    pub joint_pos: Vec3,
     /// +0x38
-    pub unk_38: Vec3,
+    #[doc(alias("unk_38"))]
+    pub spin_axis: Vec3,
     /// +0x44
-    pub unk_44: f32,
+    #[doc(alias("unk_44"))]
+    pub spin: f32,
     /// +0x48
-    pub unk_48: f32,
+    #[doc(alias("unk_48"))]
+    pub length: f32,
     /// +0x4c
-    pub unk_4C: f32,
+    #[doc(alias("unk_4C"))]
+    pub stiffness: f32,
     /// +0x50
-    pub unk_50: f32,
+    #[doc(alias("unk_50"))]
+    pub return_rate: f32,
     /// +0x54
-    pub unk_54: i32,
+    #[doc(alias("unk_54"))]
+    pub ease_axis: i32,
     /// +0x58
-    pub unk_58: Quat,
+    #[doc(alias("unk_58"))]
+    pub rest_rotation: Quat,
     /// +0x68
-    pub unk_68: f32,
+    #[doc(alias("unk_68"))]
+    pub max_angle: f32,
     /// +0x6c
-    pub unk_6C: Vec3,
+    #[doc(alias("unk_6C"))]
+    pub unread_6c: Vec3,
     /// +0x78
-    pub unk_78: Vec3,
+    #[doc(alias("unk_78"))]
+    pub unread_78: Vec3,
     /// +0x84
-    pub unk_84: f32,
+    #[doc(alias("unk_84"))]
+    pub spin_damping: f32,
     /// +0x88
-    pub unk_88: f32,
+    #[doc(alias("unk_88"))]
+    pub max_swing: f32,
     /// +0x8c
-    pub unk_8C: f32,
+    #[doc(alias("unk_8C"))]
+    pub gravity: f32,
 }
 
-impl Default for lb_00F9_UnkDesc0 {
+impl Default for SwingLink {
     fn default() -> Self {
-        lb_00F9_UnkDesc0 {
+        SwingLink {
             jobj: None,
             rotate: Default::default(),
             translate: Default::default(),
             scale: Default::default(),
-            unk_2C: Default::default(),
-            unk_38: Default::default(),
-            unk_44: 0.0,
-            unk_48: 0.0,
-            unk_4C: 0.0,
-            unk_50: 0.0,
-            unk_54: 0,
-            unk_58: Default::default(),
-            unk_68: 0.0,
-            unk_6C: Default::default(),
-            unk_78: Default::default(),
-            unk_84: 0.0,
-            unk_88: 0.0,
-            unk_8C: 0.0,
+            joint_pos: Default::default(),
+            spin_axis: Default::default(),
+            spin: 0.0,
+            length: 0.0,
+            stiffness: 0.0,
+            return_rate: 0.0,
+            ease_axis: 0,
+            rest_rotation: Default::default(),
+            max_angle: 0.0,
+            unread_6c: Default::default(),
+            unread_78: Default::default(),
+            spin_damping: 0.0,
+            max_swing: 0.0,
+            gravity: 0.0,
         }
     }
 }
@@ -8335,91 +8368,118 @@ impl Default for SceneLoop {
 }
 
 /// `HSD_ObjAllocUnk`, 0x68 bytes.
+#[doc(alias("HSD_ObjAllocUnk"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct HSD_ObjAllocUnk {
+pub struct ItemCounts {
     /// +0x0
-    pub x0: i32,
+    #[doc(alias("x0"))]
+    pub common: i32,
     /// +0x4
-    pub x4: i32,
+    #[doc(alias("x4"))]
+    pub common_limit: i32,
     /// +0x8
-    pub x8: i32,
+    #[doc(alias("x8"))]
+    pub common_shots: i32,
     /// +0xc
-    pub xC: i32,
+    #[doc(alias("xC"))]
+    pub common_shots_limit: i32,
     /// +0x10
-    pub x10: i32,
+    #[doc(alias("x10"))]
+    pub food: i32,
     /// +0x14
-    pub x14: i32,
+    #[doc(alias("x14"))]
+    pub food_limit: i32,
     /// +0x18
-    pub x18: u32,
+    #[doc(alias("x18"))]
+    pub fighter_articles: u32,
     /// +0x1c
-    pub x1C: i32,
+    #[doc(alias("x1C"))]
+    pub pokemon: i32,
     /// +0x20
-    pub x20: i32,
+    #[doc(alias("x20"))]
+    pub pokemon_limit: i32,
     /// +0x24
-    pub x24: i32,
+    #[doc(alias("x24"))]
+    pub pokemon_shots: i32,
     /// +0x28
-    pub x28: i32,
+    #[doc(alias("x28"))]
+    pub pokemon_shots_limit: i32,
     /// +0x2c
-    pub x2C: i32,
+    #[doc(alias("x2C"))]
+    pub monsters: i32,
     /// +0x30
-    pub x30: i32,
+    #[doc(alias("x30"))]
+    pub monsters_limit: i32,
     /// +0x34
-    pub x34: i32,
+    #[doc(alias("x34"))]
+    pub monster_shots: i32,
     /// +0x38
-    pub x38: i32,
+    #[doc(alias("x38"))]
+    pub monster_shots_limit: i32,
     /// +0x3c
-    pub x3C: i32,
+    #[doc(alias("x3C"))]
+    pub stage_items: i32,
     /// +0x40
-    pub x40: i32,
+    #[doc(alias("x40"))]
+    pub stage_shots: i32,
     /// +0x44
-    pub x44: i32,
+    #[doc(alias("x44"))]
+    pub stage_shots_limit: i32,
     /// +0x48
-    pub x48: i32,
+    #[doc(alias("x48"))]
+    pub trophies: i32,
     /// +0x4c
-    pub x4C: i32,
+    #[doc(alias("x4C"))]
+    pub trophies_limit: i32,
     /// +0x50
-    pub x50: i32,
+    #[doc(alias("x50"))]
+    pub coins: i32,
     /// +0x54
-    pub x54: i32,
+    #[doc(alias("x54"))]
+    pub coins_limit: i32,
     /// +0x58
-    pub x58: i32,
+    #[doc(alias("x58"))]
+    pub stage_hurtboxes: i32,
     /// +0x5c
-    pub x5C: i32,
+    #[doc(alias("x5C"))]
+    pub stage_hurtboxes_limit: i32,
     /// +0x60
-    pub x60: i32,
+    #[doc(alias("x60"))]
+    pub training_items: i32,
     /// +0x64
-    pub x64: i32,
+    #[doc(alias("x64"))]
+    pub training_items_limit: i32,
 }
 
-impl Default for HSD_ObjAllocUnk {
+impl Default for ItemCounts {
     fn default() -> Self {
-        HSD_ObjAllocUnk {
-            x0: 0,
-            x4: 0,
-            x8: 0,
-            xC: 0,
-            x10: 0,
-            x14: 0,
-            x18: 0,
-            x1C: 0,
-            x20: 0,
-            x24: 0,
-            x28: 0,
-            x2C: 0,
-            x30: 0,
-            x34: 0,
-            x38: 0,
-            x3C: 0,
-            x40: 0,
-            x44: 0,
-            x48: 0,
-            x4C: 0,
-            x50: 0,
-            x54: 0,
-            x58: 0,
-            x5C: 0,
-            x60: 0,
-            x64: 0,
+        ItemCounts {
+            common: 0,
+            common_limit: 0,
+            common_shots: 0,
+            common_shots_limit: 0,
+            food: 0,
+            food_limit: 0,
+            fighter_articles: 0,
+            pokemon: 0,
+            pokemon_limit: 0,
+            pokemon_shots: 0,
+            pokemon_shots_limit: 0,
+            monsters: 0,
+            monsters_limit: 0,
+            monster_shots: 0,
+            monster_shots_limit: 0,
+            stage_items: 0,
+            stage_shots: 0,
+            stage_shots_limit: 0,
+            trophies: 0,
+            trophies_limit: 0,
+            coins: 0,
+            coins_limit: 0,
+            stage_hurtboxes: 0,
+            stage_hurtboxes_limit: 0,
+            training_items: 0,
+            training_items_limit: 0,
         }
     }
 }
@@ -8481,15 +8541,18 @@ impl Default for Item_FtTrack {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct SpawnItem {
     /// +0x0
-    pub x0_parent_gobj: Option<GObjId>,
+    #[doc(alias("x0_parent_gobj"))]
+    pub owner: Option<GObjId>,
     /// +0x4
-    pub x4_parent_gobj2: Option<GObjId>,
+    #[doc(alias("x4_parent_gobj2"))]
+    pub maker: Option<GObjId>,
     /// +0x8
     pub kind: i32,
     /// +0xc
     pub hold_kind: i32,
     /// +0x10
-    pub x10: i32,
+    #[doc(alias("x10"))]
+    pub origin: i32,
     /// +0x14
     pub pos: Vec3,
     /// +0x20
@@ -8499,43 +8562,51 @@ pub struct SpawnItem {
     /// +0x38
     pub facing_dir: f32,
     /// +0x3c
-    pub x3C_damage: i16,
+    #[doc(alias("x3C_damage"))]
+    pub damage: i16,
     /// +0x3e
-    pub x3E: i16,
+    #[doc(alias("x3E"))]
+    pub unused_3e: i16,
     /// +0x40
-    pub x40: i32,
+    #[doc(alias("x40"))]
+    pub ignore_id: i32,
     /// +0x44
-    pub x44_flag: [u8; 1],
+    #[doc(alias("x44_flag"))]
+    pub flags: [u8; 1],
     /// +0x45
-    pub x45_flag: [u8; 1],
+    #[doc(alias("x45_flag"))]
+    pub unread_45: [u8; 1],
     /// +0x46
-    pub x46_flag: [u8; 1],
+    #[doc(alias("x46_flag"))]
+    pub unused_46: [u8; 1],
     /// +0x47
-    pub x47_flag: [u8; 1],
+    #[doc(alias("x47_flag"))]
+    pub unused_47: [u8; 1],
     /// +0x48
-    pub x48_ground_or_air: i32,
+    #[doc(alias("x48_ground_or_air"))]
+    pub ground_or_air: i32,
 }
 
 impl Default for SpawnItem {
     fn default() -> Self {
         SpawnItem {
-            x0_parent_gobj: None,
-            x4_parent_gobj2: None,
+            owner: None,
+            maker: None,
             kind: 0,
             hold_kind: 0,
-            x10: 0,
+            origin: 0,
             pos: Default::default(),
             prev_pos: Default::default(),
             vel: Default::default(),
             facing_dir: 0.0,
-            x3C_damage: 0,
-            x3E: 0,
-            x40: 0,
-            x44_flag: [0; 1],
-            x45_flag: [0; 1],
-            x46_flag: [0; 1],
-            x47_flag: [0; 1],
-            x48_ground_or_air: 0,
+            damage: 0,
+            unused_3e: 0,
+            ignore_id: 0,
+            flags: [0; 1],
+            unread_45: [0; 1],
+            unused_46: [0; 1],
+            unused_47: [0; 1],
+            ground_or_air: 0,
         }
     }
 }
@@ -13441,33 +13512,47 @@ pub struct BgFlashData {
     /// +0x1
     pub pad1: [u8; 3],
     /// +0x4
-    pub x4: _GXColor,
+    #[doc(alias("x4"))]
+    pub from: _GXColor,
     /// +0x8
-    pub x8: _GXColor,
+    #[doc(alias("x8"))]
+    pub to: _GXColor,
     /// +0xc
-    pub xC: _GXColor,
+    #[doc(alias("xC"))]
+    pub color: _GXColor,
     /// +0x10
-    pub x10: [f32; 4],
+    #[doc(alias("x10"))]
+    pub channels: [f32; 4],
     /// +0x20
-    pub x20: [f32; 4],
+    #[doc(alias("x20"))]
+    pub steps: [f32; 4],
     /// +0x30
-    pub x30: u8,
+    #[doc(alias("x30"))]
+    pub wipe_held: u8,
     /// +0x31
-    pub x31: u8,
+    #[doc(alias("x31"))]
+    pub wipe_step: u8,
     /// +0x32
-    pub x32: u8,
+    #[doc(alias("x32"))]
+    pub wipe_strip_height: u8,
     /// +0x33
-    pub x33: u8,
+    #[doc(alias("x33"))]
+    pub wipe_done: u8,
     /// +0x34
-    pub x34: i32,
+    #[doc(alias("x34"))]
+    pub wipe_x: i32,
     /// +0x38
-    pub x38: i32,
+    #[doc(alias("x38"))]
+    pub wipe_y: i32,
     /// +0x3c
-    pub x3C: i32,
+    #[doc(alias("x3C"))]
+    pub wipe_speed: i32,
     /// +0x40
-    pub x40: Option<GObjId>,
+    #[doc(alias("x40"))]
+    pub gobj: Option<GObjId>,
     /// +0x44
-    pub x44: Option<GObjId>,
+    #[doc(alias("x44"))]
+    pub camera: Option<GObjId>,
 }
 
 impl Default for BgFlashData {
@@ -13475,20 +13560,20 @@ impl Default for BgFlashData {
         BgFlashData {
             state: Default::default(),
             pad1: [0; 3],
-            x4: Default::default(),
-            x8: Default::default(),
-            xC: Default::default(),
-            x10: [0.0; 4],
-            x20: [0.0; 4],
-            x30: 0,
-            x31: 0,
-            x32: 0,
-            x33: 0,
-            x34: 0,
-            x38: 0,
-            x3C: 0,
-            x40: None,
-            x44: None,
+            from: Default::default(),
+            to: Default::default(),
+            color: Default::default(),
+            channels: [0.0; 4],
+            steps: [0.0; 4],
+            wipe_held: 0,
+            wipe_step: 0,
+            wipe_strip_height: 0,
+            wipe_done: 0,
+            wipe_x: 0,
+            wipe_y: 0,
+            wipe_speed: 0,
+            gobj: None,
+            camera: None,
         }
     }
 }
@@ -13497,19 +13582,21 @@ impl Default for BgFlashData {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct BgFlashUserData {
     /// +0x0
-    pub x0: u8,
+    #[doc(alias("x0"))]
+    pub alpha: u8,
     /// +0x1
     pub pad_01: [u8; 3],
     /// +0x4
-    pub x4: ColorOverlay,
+    #[doc(alias("x4"))]
+    pub overlay: ColorOverlay,
 }
 
 impl Default for BgFlashUserData {
     fn default() -> Self {
         BgFlashUserData {
-            x0: 0,
+            alpha: 0,
             pad_01: [0; 3],
-            x4: Default::default(),
+            overlay: Default::default(),
         }
     }
 }

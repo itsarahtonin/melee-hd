@@ -84,12 +84,12 @@ pub fn fire(r: &mut Running, owner: GObjId, pos: Vec3, charge: i32, facing: f32)
     spawn.pos = lib26b1::parent_ecb_center(r.game, owner);
     // `Item_InitSpawnCommonFields`.
     spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(owner);
-    spawn.x4_parent_gobj2 = Some(owner);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(owner);
+    spawn.maker = Some(owner);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return;
     };

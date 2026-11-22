@@ -230,12 +230,12 @@ pub fn spawn(
     spawn.prev_pos = pos;
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(owner);
-    spawn.x4_parent_gobj2 = Some(owner);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(owner);
+    spawn.maker = Some(owner);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
     ip.cmd_var3 = 0;

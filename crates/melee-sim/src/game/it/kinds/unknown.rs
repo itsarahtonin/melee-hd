@@ -346,15 +346,15 @@ pub fn spawn_swarm(r: &mut Running, gobj: GObjId) {
         prev_pos: Vec3::new(x, y, edge.z),
         pos: lib26b1::ecb_center(r.game, gobj),
         facing_dir: facing,
-        x3C_damage: 0,
+        damage: 0,
         vel: pokemon::vars(r.game, gobj).vec(SWARM_VEL),
-        x40: 0,
+        ignore_id: 0,
         kind: ItKind::UnownSwarm.id(),
-        x0_parent_gobj: owner,
-        x4_parent_gobj2: Some(gobj),
+        owner: owner,
+        maker: Some(gobj),
         ..Default::default()
     };
-    spawn.x44_flag[0] &= !0x80;
+    spawn.flags[0] &= !0x80;
     spawn_air(r, &mut spawn);
 }
 

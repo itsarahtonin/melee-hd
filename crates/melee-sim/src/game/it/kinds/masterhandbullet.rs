@@ -67,12 +67,12 @@ pub fn spawn(
     spawn.prev_pos = prev_pos;
     spawn.pos = pos;
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(mem(fp::fmuls(reg(speed_x), reg(facing_dir))), speed_y, 0.0);
-    spawn.x0_parent_gobj = Some(owner);
-    spawn.x4_parent_gobj2 = Some(owner);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = next_attack_id(r.game) as i32;
+    spawn.owner = Some(owner);
+    spawn.maker = Some(owner);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = next_attack_id(r.game) as i32;
     let g = spawn_air(r, &mut spawn).expect("a bullet's spawn reads a null item");
     start(r, g, i32::from(fast));
     debug_owner_bubbles(r.game, g, Some(owner));

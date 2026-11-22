@@ -216,15 +216,15 @@ pub fn puff(r: &mut Running, gobj: GObjId, kind: i32, speed: f32) {
     spawn.prev_pos = pos;
     spawn.pos = lib26b1::ecb_center(r.game, gobj);
     spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     let rad = mem(fp::fmuls(reg(0.017453292f32), deg));
     let vx = mem(fp::fmuls(reg(speed), reg(crate::math::cos(rad))));
     let vy = mem(fp::fmuls(reg(speed), reg(crate::math::sin(rad))));
     spawn.vel = Vec3::new(vx, vy, 0.0);
-    spawn.x0_parent_gobj = owner;
-    spawn.x4_parent_gobj2 = Some(gobj);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = owner;
+    spawn.maker = Some(gobj);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     if spawn_air(r, &mut spawn).is_some() {
         let v = pokemon::vars(r.game, gobj);
         let turn = v.i32(SOUND_TURN) ^ 1;
