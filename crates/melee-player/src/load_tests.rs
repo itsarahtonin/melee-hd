@@ -19,6 +19,9 @@ fn console(inputs: Option<&str>) -> Option<Session> {
     let disc = std::env::var("SSBM_DISC").ok()?;
     melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
     let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");
+    // The scripted ways in are Vanilla's (the memory card scene, the hardware's floating point),
+    // whatever the player's default ruleset.
+    args.ruleset = melee_sim::game::state::Ruleset::Vanilla;
     args.disc = disc;
     args.mute = true;
     args.bench = Some(0);

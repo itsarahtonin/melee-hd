@@ -21,9 +21,10 @@ use crate::pacing::Mode;
 use crate::present::{Aspect, Present};
 
 /// The ruleset a player's Melee starts with until they pick one (design call 2 of
-/// `docs/slippi-ruleset.md`): Vanilla until the Slippi ruleset's milestone is done, then Slippi.
-/// The one place the default is set.
-pub const DEFAULT_RULESET: Ruleset = Ruleset::Vanilla;
+/// `docs/slippi-ruleset.md`): Slippi since the Slippi ruleset's milestone was done (Sarah,
+/// 2026-11-22, after the spot check in Slippi Dolphin), Vanilla before. The one place the default
+/// is set.
+pub const DEFAULT_RULESET: Ruleset = Ruleset::Slippi;
 
 /// The file that keeps the settings.
 pub const FILE: &str = "settings.txt";
