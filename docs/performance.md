@@ -15,7 +15,7 @@ Measured with `tools/bench` (`melee-bench`), release builds, other applications 
 | Ticks | no allocations (counting-allocator test); lock-free scaling over cores |
 | Player | p99 simulation and rendering < 8 ms at 1440p |
 
-**Which machine (Sarah, 2026-11-19).** The targets in milliseconds are met on [the worker](#machine), the slower reference (a 2017 processor running the simulation at about half this machine's speed), since the aim is a game that runs on low-end PCs; the ratios (to Dolphin, a branch against its base) hold on any machine but are taken there too. The worker's numbers, 2026-11-19: the snapshot, its clone and restore are well inside their targets; restore and 8 ticks, 4.07 to 4.57 ms on the worst states at `c6e274d5`, is 2.1 to 3.9 ms at main `160ae506` (after task 1's callback table) on every state but one, Fox–Marth on Pokémon Stadium at tick 12,500, which is at the line (3.96 to 4.09 ms, one run of three over; [below](#baselines-on-the-worker-2026-11-19)). Since the refactor's task 20 (2026-11-21) every state of the benchmark matches and Sarah's replay is under it, at most 3.76 ms, and no tick, display pass or restore allocates ([below](#pokémon-stadiums-allocations-and-its-worst-state-2026-11-21)). The player's p99 is to be measured there in the fast renderer's F5 round. `ics-peach-ps`, measured since 2026-11-21, is over on four of its five states (4.2 to 5.9 ms), most of it Peach's dress; after `perf/rollback-ics` and `perf/stadium-allocs` two states are left over, 4.68 and 5.00 ms ([below](#the-ice-climbers-rollback-windows-2026-11-21)).
+**Which machine (Sarah, 2026-11-19).** The targets in milliseconds are met on [the worker](#machine), the slower reference (a 2017 processor running the simulation at about half this machine's speed), since the aim is a game that runs on low-end PCs; the ratios (to Dolphin, a branch against its base) hold on any machine but are taken there too. The worker's numbers, 2026-11-19: the snapshot, its clone and restore are well inside their targets; restore and 8 ticks, 4.07 to 4.57 ms on the worst states at `c6e274d5`, is 2.1 to 3.9 ms at main `160ae506` (after task 1's callback table) on every state but one, Fox–Marth on Pokémon Stadium at tick 12,500, which is at the line (3.96 to 4.09 ms, one run of three over; [below](#baselines-on-the-worker-2026-11-19)). Since the refactor's task 20 (2026-11-21) every state of the benchmark matches and Sarah's replay is under it, at most 3.76 ms, and no tick, display pass or restore allocates ([below](#pokémon-stadiums-allocations-and-its-worst-state-2026-11-21)). The player's p99 is to be measured there in the fast renderer's F5 round. `ics-peach-ps`, measured since 2026-11-21, is over on four of its five states (4.2 to 5.9 ms), most of it Peach's dress; after `perf/rollback-ics` and `perf/stadium-allocs` two states are left over, 4.68 and 5.00 ms ([below](#the-ice-climbers-rollback-windows-2026-11-21)). `PSMTXConcat` in wide lanes (2026-11-22) took them to 4.39 to 4.46 and 4.73 to 4.82 ms, still over ([below](#psmtxconcat-in-wide-lanes-2026-11-22-the-worker)).
 
 ## Machine
 
@@ -622,6 +622,64 @@ PERF_CTL_FIFO=ctl PERF_ACK_FIFO=ack perf record -g -F 2000 -D -1 --control fifo:
 ```
 
 On this PC, with other agents' work running (indicative only): `rollback-split --every 2500 --runs 100 ics-peach-ps`, three rounds alternating, moved by up to 0.8 ms from round to round of one build (12,500: 5.03 to 5.83 ms on the base), more than the change, so it shows nothing either way.
+
+## `PSMTXConcat` in wide lanes (2026-11-22, the worker)
+
+[The refactor's](refactor.md#proposed-tasks) task 19 again, `perf/ics-chains` from batch 14 at `f9143517`: one round of about four hours on `ics-peach-ps`'s windows (Sarah: "if we're trying to draw blood from a stone so to speak then we can move on"), keeping a change only if it saves at least 3% of restore and 8 ticks at the worst states.
+
+**Where the time went at `f9143517`** (call-graph profile of 1,500 windows at 12,500, frame pointers, 2 kHz, inclusive shares of the windows): the swing chains 26.3% (`swing_chain` 19.7%, Slippi's dynamics fix 6.3%), spread thin: the matrix products 3.4%, the parent's matrix made again for each chain 2.1% (nearly all of it matrix products, first makes), `acosf` 2.0%, the floor searches 2.0%, `lbVector_RotateAboutUnitAxis` 1.7%, `lbVector_CreateEulerMatrix` 1.6%, the normalizations 1.5%, the angles' lengths 1.4%. Across the whole window one routine stood out: `PSMTXConcat` (`Mtx34::concat`) was 10.0%, in the chains, in every joint's made matrix (`HSD_JObjMakeMatrix`, 13.0% with its memo's misses), in the dynamics fix and in the display passes.
+
+**Kept: `PSMTXConcat`'s lanes two at a time.** `gekko_fp::mtx_concat` runs the routine's paired-single steps (`ps_muls0`, then `ps_madds1`, `ps_madds0` and, for the translation pair, `ps_madds1` with `(0, 1)`) on two columns at once in 128-bit AVX2/FMA3 lanes: the same operations in the same order, fused exactly where the paired singles fuse and rounded to single exactly where they round. What the scalar ops do beyond plain IEEE arithmetic stays theirs: an input that isn't a normal float or zero, an output that isn't a normal single or zero (NaN, infinity, a subnormal, which the two float modes store differently), and a fused sum exactly halfway between two singles whose double rounding lost something (the Gekko's fix-up in `fmadds`, which Slippi's Dolphin doesn't make; the lanes work the error out as the scalar op does) all send the call to the scalar lanes, `Mtx34::concat_scalar`, the routine as it was. Halfway sums with nothing lost are common (16% of the calls at 12,500 had one: products of short mantissas), and both modes round them to even as the lanes do.
+
+**Its two paths.** The wide lanes run on any x86-64 processor with AVX2 and FMA3 (the same 128-bit instructions on every one: there is no wider variant), the scalar lanes elsewhere, on a thread with the portable fused multiply-add (`set_portable_fma`), or with `GEKKO_SCALAR_LANES` set (or `gekko_fp::set_wide_lanes(false)`). Two machines of a netplay pair may take different paths, so they must give the same bits:
+
+- `concat_paths_agree` (melee-sim) runs every path on the same inputs in both float modes: the wide lanes, the scalar lanes with them off, and the scalar lanes on the portable fused multiply-add, on 200,000 pairs of matrices of the game's values, of any bits, of edge cases alone (quiet and signaling NaNs with payloads, infinities, zeros of both signs, subnormals, the largest and smallest normals) and of edge cases mixed into game values, and on a sum the fix-up decides. `gekko_fp`'s own tests compare the lanes with the paired-single ops on 400,000 more, short mantissas over a wide range of exponents among them (halfway sums, both kinds), and on two built halfway sums, one with an error (handed back) and one exact (rounded to even by both). Mutation-tested: without the halfway hand-back, with the error test inverted, without the output check, with the translation pair's fourth step dropped or with a step reading the unrounded sum, a test fails.
+- Per-tick whole-state hashes, base (`f9143517`) against the branch, each tick's hash of the whole `Game` (`golden::state_hash`) written out by a scratch patch to the oracle's golden check (not committed): on this PC (Zen 5) through the wide lanes, all 330 of the verify list's replay diffs, 3,552,272 ticks, every hash equal; on this PC with the scalar lanes forced (`GEKKO_SCALAR_LANES=1`, which the lanes' test shows turns them off: "the wide lanes ran 0 times"), every third diff and every Ice Climbers' or Peach's one, 135 diffs and 1,350,107 ticks, every hash equal; and on the worker (Skylake-X, Linux) through its wide lanes, the 12 diffs whose traces it holds, every hash equal to its own base's and to this PC's base's. `sync-test --rollback 7` on `ics-peach-ps` and `fox-marth-ps` on the worker: no difference. (The base's goldens of an earlier branch were stale and their full diffs would have taken about five hours on this busy PC, so the base wasn't diffed against the traces again: 22 of the 330, the first, were, each with no difference and no stale read.)
+
+**Tried and dropped.** The same steps in 256-bit lanes (four columns at once) and in 128-bit lanes that handed every halfway sum to the scalar lanes were both slower than the base on every state of `ics-peach-ps`, by 4.7 to 7.1% and 1.1 to 3.0%, their display passes by 11 to 13% and 9 to 11% (the 16% of calls that fell back paid for both paths). (256-bit fused multiply-adds can also lower an AVX-512 processor's clock, the worker's among them; that cost wasn't measured apart, and the kept lanes are 128 bits wide.) The profile's other leads were each under the 3% bar, so none was tried: the angles' lengths computed again within a link (`current`'s, `natural`'s, `saved`'s and the downward vector's, about 4 of a link's 14 square roots: about 0.5% of the window), the floor searches under the chains (1.9%, already passed over by the box test of `perf/stadium-allocs`), `HSD_MtxSRT` (2.3% with its memo) and `lbVector_CreateEulerMatrix` (1.6%, a memo of it was slower in task 19's first round).
+
+**`ics-peach-ps`, restore and 8 ticks per state** (`rollback-split --every 2500 --runs 200`, three rounds in one exclusive reservation, the order turned each round; the median and the rounds' range, in ms):
+
+| State | `f9143517` | 256-bit lanes | 128-bit lanes, every halfway sum handed back | Kept: 128-bit lanes |
+| --- | --- | --- | --- | --- |
+| 2,500 | 4.03 (4.02 to 4.16) | 4.20 (4.11 to 4.27) | 4.15 (4.10 to 4.16) | 3.75 (3.72 to 3.77), -6.9% |
+| 5,000 | 4.75 (4.72 to 4.77) | 4.87 (4.78 to 4.93) | 4.80 (4.78 to 4.82) | **4.39** (4.38 to 4.47), -7.6% |
+| 7,500 | 3.96 (3.95 to 3.97) | 4.12 (4.04 to 4.14) | 4.06 (4.05 to 4.07) | 3.71 (3.70 to 3.74), -6.3% |
+| 10,000 | 3.64 (3.64 to 3.65) | 3.79 (3.72 to 3.80) | 3.74 (3.73 to 3.74) | 3.40 (3.40 to 3.64), -6.6% |
+| 12,500 | 5.09 (5.04 to 5.10) | 5.27 (5.19 to 5.29) | 5.22 (5.20 to 5.24) | **4.73** (4.70 to 4.76), -7.1% |
+
+(The 256-bit lanes come from an earlier reservation of their own, where the base measured 3.92, 4.65, 3.85, 3.59 and 4.98 ms; the other columns from one reservation.) In the kept build's profile at 12,500 the lanes are 5.1% of the window where the routine was 10.0%; the engine ticks went from 4.00 to 3.68 ms there, the display passes 0.84 to 0.84. **The target isn't met:** 5,000 and 12,500 stay over 4 ms, by about 0.4 and 0.7 ms.
+
+**Every benchmark match, before and after** (`f9143517` against the branch's `1f31811a`, one exclusive reservation, three rounds alternating; `rollback-split --every 2500`, 200 runs a state for `ics-peach-ps` and 100 for the others; the median of each state's three rounds):
+
+| Match | Base: worst state, every state | Branch: worst state, every state | Each state |
+| --- | --- | --- | --- |
+| `fox-fox-fd` | 5,000: 3.65 ms; 2.65 to 3.65 | 5,000: 3.41 ms; 2.55 to 3.41 | -3.8 to -7.9% |
+| `fox-marth-bf` | 15,000: 3.31; 1.91 to 3.31 | 15,000: 3.04; 1.81 to 3.04 | -0.4 to -8.2% |
+| `fox-marth-fd` | 15,000: 3.40; 2.73 to 3.40 | 2,500: 3.02; 2.48 to 3.02 | -5.1 to -11.8% |
+| `fox-marth-ps` | 12,500: 3.66; 3.08 to 3.66 | 5,000: 3.42; 2.99 to 3.42 | -2.9 to -9.2% |
+| `ics-peach-ps` | 12,500: 5.03; 3.67 to 5.03 | 12,500: 4.82; 3.39 to 4.82 | -4.2 to -7.6% |
+| `ganon-captain-fd` | 7,500: 3.12; 2.97 to 3.12 | 7,500: 2.94; 2.71 to 2.94 | -5.8 to -9.4% |
+
+`ics-peach-ps`'s two worst states here: 4.70 to 4.46 ms at 5,000 (-5.1%) and 5.03 to 4.82 at 12,500 (-4.2%, one round of the branch's three at 5.12); in the reservation above, -7.6 and -7.1%.
+
+**Simulation speed** (`melee-bench native --runs 5`, the same reservation; the median of 15 runs, their range; every run in sync):
+
+| Match | `f9143517` | Branch | |
+| --- | --- | --- | --- |
+| `fox-fox-fd` | 2,784 (2,711 to 2,804) | 2,956 (2,931 to 3,003) | +6.2% |
+| `fox-marth-bf` | 2,642 (2,621 to 2,675) | 2,820 (2,803 to 2,857) | +6.7% |
+| `fox-marth-fd` | 2,497 (2,463 to 2,534) | 2,681 (2,657 to 2,707) | +7.4% |
+| `fox-marth-ps` | 2,292 (2,268 to 2,312) | 2,428 (2,406 to 2,452) | +5.9% |
+| `ics-peach-ps` | 1,797 (1,782 to 1,808) | 1,910 (1,883 to 1,936) | +6.3% |
+| `ganon-captain-fd` | 2,548 (2,525 to 2,569) | 2,698 (2,657 to 2,724) | +5.9% |
+
+```sh
+melee-bench rollback-split --every 2500 --runs 200 ics-peach-ps      # 100 runs for the other matches
+melee-bench native --runs 5 fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ics-peach-ps ganon-captain-fd
+# the profiles: a build with RUSTFLAGS="-C force-frame-pointers=yes", then
+PERF_CTL_FIFO=ctl PERF_ACK_FIFO=ack perf record -g -F 2000 -D -1 --control fifo:ctl,ack -- melee-bench rollback-split --at 12500 --runs 1500 ics-peach-ps
+```
 
 ## Benchmark matches
 

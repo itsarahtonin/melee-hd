@@ -89,9 +89,20 @@ impl Mtx34 {
         out
     }
 
-    /// `self · b`, `PSMTXConcat`.
+    /// `self · b`, `PSMTXConcat`. Its lanes run four at a time where the processor can
+    /// (`gekko_fp::mtx_concat`: the same operations in the same order, any input or result
+    /// the scalar ops treat apart left to them), else as [`Mtx34::concat_scalar`] runs them.
     #[doc(alias = "PSMTXConcat")]
+    #[inline]
     pub fn concat(&self, b: &Mtx34) -> Mtx34 {
+        match fp::mtx_concat(&self.m, &b.m) {
+            Some(m) => Mtx34 { m },
+            None => self.concat_scalar(b),
+        }
+    }
+
+    /// [`Mtx34::concat`] lane by lane, as the routine's paired singles run.
+    pub fn concat_scalar(&self, b: &Mtx34) -> Mtx34 {
         use fp::{ps_madds0 as madds0, ps_madds1 as madds1, ps_muls0 as muls0};
         let a = self;
         let unit01 = Ps::new(0.0, 1.0);
