@@ -73,6 +73,10 @@ pub enum Src {
     Raw { archive: ArchiveId, offset: u32 },
     /// Bytes an object laid out as the game keeps it, from `offset` of `bytes`.
     Bytes { bytes: Arc<[u8]>, offset: u32 },
+    /// A word an allocator wrote into a block (a free list's link, [`Image::word`]), from byte
+    /// `offset` of it: [`Src::Bytes`] of four bytes, held in place rather than in a buffer of
+    /// its own, and hashed as those.
+    Word { word: [u8; 4], offset: u32 },
     /// Bytes code wrote into `archive`'s file where it was loaded ([`Image::file_bytes`]),
     /// from `offset` of `bytes`: still the file's place, so a later edit writes over them.
     Edit {
@@ -143,6 +147,10 @@ impl Src {
                 bytes: bytes.clone(),
                 offset: offset + n,
             },
+            &Src::Word { word, offset } => Src::Word {
+                word,
+                offset: offset + n,
+            },
             Src::Edit {
                 archive,
                 bytes,
@@ -175,6 +183,7 @@ impl Src {
             Src::Bytes { bytes, offset } | Src::Edit { bytes, offset, .. } => {
                 bytes.get((offset + i) as usize).copied()
             }
+            Src::Word { word, offset } => word.get((offset + i) as usize).copied(),
         }
     }
 }
@@ -422,11 +431,17 @@ impl Page {
         if lo <= self.base {
             return None;
         }
-        let last = self.chunks_in(self.base, lo).end;
-        (0..last)
+        // `lo`'s own chunk (the one holding `lo - 1`) is searched; every run of an earlier
+        // chunk starts before `lo`, so there the last run is the answer.
+        let at = self.chunks_in(self.base, lo).end - 1;
+        if let Some(found) = self.chunks[at].as_deref().and_then(|c| c.last_before(lo)) {
+            return Some(found);
+        }
+        self.chunks[..at]
+            .iter()
             .rev()
-            .filter_map(|i| self.chunks[i].as_deref())
-            .find_map(|c| c.last_before(lo))
+            .filter_map(|c| c.as_deref())
+            .find_map(|c| c.runs.last().map(|(k, s)| (k, s)))
     }
 
     fn get(&self, k: u32) -> Option<&Span> {
@@ -827,6 +842,10 @@ fn hash_spans(spans: &Spans, h: &mut StateHasher) {
             Src::Bytes { bytes, offset } => {
                 h.word(3 << 48 | u64::from(*offset));
                 h.bytes(bytes);
+            }
+            Src::Word { word, offset } => {
+                h.word(3 << 48 | u64::from(*offset));
+                h.bytes(word);
             }
             Src::RenderTarget => h.word(4 << 48),
             Src::Copied(p) => h.word(6 << 48 | *p as u64),
@@ -1442,7 +1461,10 @@ impl Image {
 
     /// The allocators write a word into a block (a free list's link).
     pub fn word(&mut self, at: u32, w: u32) {
-        self.put(at, &w.to_be_bytes());
+        if self.on {
+            let word = w.to_be_bytes();
+            write(&mut self.live, at, at + 4, Src::Word { word, offset: 0 });
+        }
     }
 
     /// An object's bytes laid out as the game keeps them, at `at` of a block now allocated.
@@ -1759,7 +1781,7 @@ impl Image {
                         Src::Unknown(_) => "unknown",
                         Src::File { .. } | Src::Edit { .. } => "file",
                         Src::Raw { .. } => "raw file",
-                        Src::Bytes { .. } => "object",
+                        Src::Bytes { .. } | Src::Word { .. } => "object",
                         Src::RenderTarget => "render target",
                         Src::Copied(_) => "copied pixels",
                     },
@@ -2130,6 +2152,27 @@ mod tests {
             assert!(h >= super::super::pool::UNKNOWN);
             assert_eq!(img.unknown_word(h), Some(w));
         }
+    }
+
+    #[test]
+    fn a_word_written_reads_and_hashes_as_its_four_bytes() {
+        // An allocator's word, held in place, against the same four bytes put as an object:
+        // the same bytes read (whole and from a cut's tail), the same hash.
+        let data = Archives::default();
+        let (mut a, mut b) = (Image::power_on(), Image::power_on());
+        a.word(0x8040_0010, 0x8123_4567);
+        b.put(0x8040_0010, &0x8123_4567u32.to_be_bytes());
+        for img in [&mut a, &mut b] {
+            img.release(0x8040_000E, 0x8040_0012);
+        }
+        assert_eq!(a.bytes(&data, 0x8040_000C, 8), b.bytes(&data, 0x8040_000C, 8));
+        assert_eq!(a.bytes(&data, 0x8040_0012, 2).0, [0x45, 0x67]);
+        let hash = |i: &Image| {
+            let mut h = StateHasher::new();
+            i.state_hash(&mut h);
+            h.finish()
+        };
+        assert_eq!(hash(&a), hash(&b));
     }
 
     #[test]
