@@ -418,6 +418,7 @@ pub struct Timeline {
     pub game: [crate::input::controller::Status; 4],
     pub rumble: crate::input::rumble::Rumble,
     pub rumble_ahead: u32,
+    pub ahead_motors: [Option<crate::input::rumble::Motor>; 4],
 }
 
 impl Game {
@@ -433,6 +434,7 @@ impl Game {
             game: p.game,
             rumble: p.rumble.clone(),
             rumble_ahead: p.rumble_ahead,
+            ahead_motors: p.ahead_motors,
         }
     }
 
@@ -462,6 +464,7 @@ impl Game {
         if let Some(d) = self.rumble_data {
             p.rumble = at.rumble.with_data_in(d.archive);
             p.rumble_ahead = at.rumble_ahead;
+            p.ahead_motors = at.ahead_motors;
         }
     }
 }

@@ -287,7 +287,7 @@ impl Running<'_> {
             // `HSD_PadRumbleRemoveId`: the pad library's rumble is simulation state, and its
             // motors reach the frontend through the poll's requests.
             let port = fp.pad_port;
-            self.game.pads.rumble.remove_id(port, (id + 2) as u32);
+            self.rumble_mut().remove_id(port, (id + 2) as u32);
         }
     }
 

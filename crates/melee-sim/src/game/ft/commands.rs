@@ -1236,10 +1236,16 @@ impl Running<'_> {
         let script = self.data.ptr(entry).expect("a rumble pattern's script");
         let pri = self.data.u8(entry.at(4));
         let frame = if frames != 0 { frames } else { -2 };
-        self.game
-            .pads
-            .rumble
+        self.rumble_mut()
             .add(port, id as u32, frame, pri, Script::Data(script));
+    }
+
+    /// The pad library's rumble, for the game's code to change: the pad alarm's firings
+    /// the timeline took before it run their frames first
+    /// ([`alarm_rumble_catch_up`](crate::game::gm::scene::alarm_rumble_catch_up)).
+    pub fn rumble_mut(&mut self) -> &mut crate::input::rumble::Rumble {
+        crate::game::gm::scene::alarm_rumble_catch_up(self.game, self.data);
+        &mut self.game.pads.rumble
     }
 
     /// Takes the fighter into the air as falling off something, `ftCommon_8007D5D4`.

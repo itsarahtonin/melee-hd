@@ -764,7 +764,7 @@ pub fn stop_owner_rumble(r: &mut Running, gobj: GObjId) {
             .rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
         {
             let port = fp.pad_port;
-            r.game.pads.rumble.remove_id(port, 1);
+            r.rumble_mut().remove_id(port, 1);
         }
     }
 }

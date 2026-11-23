@@ -1451,15 +1451,7 @@ impl Running<'_> {
     /// ahead of their reads ([`Self::take_alarm_reads`]): a rumble the entry starts begins
     /// after them, as the original's alarm handlers ran each in its time.
     pub fn alarm_rumble_catch_up(&mut self) {
-        let Some(c) = self.game.audio.clock.as_ref() else {
-            return;
-        };
-        let p = &mut self.game.pads;
-        let due = c.pads.saturating_sub(u32::from(p.lib.qcount));
-        for _ in p.rumble_ahead..due {
-            p.rumble.interpret(self.data);
-            p.rumble_ahead += 1;
-        }
+        super::gm::scene::alarm_rumble_catch_up(self.game, self.data);
     }
 
     /// `HSD_PadRenewStatus` from the game's code (the trophy screens'): the pad alarm's reads

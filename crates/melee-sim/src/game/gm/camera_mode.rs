@@ -704,7 +704,7 @@ impl Running<'_> {
             } else {
                 self.lb_audio_hold(false);
                 self.show_hud_parts();
-                self.game.pads.rumble.unpause_all();
+                self.rumble_mut().unpause_all();
             }
             let s = &mut self.game.vs.state;
             s.hud_enabled = 1;
@@ -746,7 +746,7 @@ impl Running<'_> {
         } else {
             self.lb_audio_hold(true);
             self.hide_hud_parts();
-            self.game.pads.rumble.pause_all();
+            self.rumble_mut().pause_all();
         }
         let s = &mut self.game.vs.state;
         s.hud_enabled = 0;

@@ -314,6 +314,25 @@ fn queue_alarm_polls(r: &mut Running, taking: u32, polls: &mut dyn FnMut() -> Pa
     }
 }
 
+/// The pad alarm's firings the timeline has taken and the pad library hasn't queued yet run
+/// their frames of rumble now ([`Controllers::rumble_frame_ahead`](crate::input::controller::Controllers::rumble_frame_ahead)),
+/// ahead of their polls: the original's alarm handler ran each frame when the alarm fired,
+/// so a rumble the game's code starts or stops after an alarm that fired inside its tick (at
+/// an interrupt check: a perf timer read, an ARAM load's chunk) takes its first frame from
+/// the next alarm, not from that one. A scene's entry (`Session::alarm_rumble_catch_up`) and
+/// the rumble's starts and stops in a tick (`Running::rumble_start`, `Running::rumble_mut`)
+/// run it.
+pub fn alarm_rumble_catch_up(game: &mut Game, data: &melee_data::archive::Archives) {
+    let Some(c) = game.audio.clock.as_ref() else {
+        return;
+    };
+    let p = &mut game.pads;
+    let due = c.pads.saturating_sub(u32::from(p.lib.qcount));
+    for _ in p.rumble_ahead..due {
+        p.rumble_frame_ahead(data);
+    }
+}
+
 /// The tick's first part: the oldest poll into the master statuses and, when the game
 /// clock comes due, the game and copy statuses.
 pub fn begin_tick(r: &mut Running) {
