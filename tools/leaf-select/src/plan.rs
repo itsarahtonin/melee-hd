@@ -15,6 +15,9 @@ pub struct Job {
     pub test: String,
     /// `(K, N)`, K from 1.
     pub shard: Option<(usize, usize)>,
+    /// The other families whose names end in this one's, which its filter also matches
+    /// (`link::` matches `young_link::`'s tests): skipped.
+    pub skips: Vec<String>,
 }
 
 impl Job {
@@ -25,9 +28,15 @@ impl Job {
             .unwrap_or_default()
     }
 
-    /// The test binary's filter that runs the family's tests alone: its module's path.
-    pub fn filter(&self) -> String {
-        format!("{}::", self.test)
+    /// The test binary's arguments that run the family's tests alone: its module's path as the
+    /// filter (libtest's filters match anywhere in a name), and `--skip` for each family that
+    /// filter also matches.
+    pub fn filter(&self) -> Vec<String> {
+        let mut v = vec![format!("{}::", self.test)];
+        for s in &self.skips {
+            v.extend(["--skip".to_owned(), format!("{s}::")]);
+        }
+        v
     }
 }
 
@@ -87,17 +96,24 @@ pub fn jobs(root: &Path) -> Vec<Job> {
         );
     }
     let mut out = Vec::new();
+    let all = tests.clone();
     for t in tests {
+        let skips: Vec<String> = (all.iter())
+            .filter(|g| **g != t && g.ends_with(t.as_str()))
+            .cloned()
+            .collect();
         match shards.iter().find(|(n, _)| *n == t) {
             Some(&(_, n)) => out.extend((1..=n).map(|k| Job {
                 name: format!("{t}.{k}of{n}"),
                 test: t.clone(),
                 shard: Some((k, n)),
+                skips: skips.clone(),
             })),
             None => out.push(Job {
                 name: t.clone(),
                 test: t,
                 shard: None,
+                skips,
             }),
         }
     }
@@ -209,6 +225,15 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn a_familys_filter_skips_the_families_it_also_matches() {
+        let jobs = jobs(&root());
+        let link = jobs.iter().find(|j| j.name == "link").unwrap();
+        assert_eq!(link.filter(), ["link::", "--skip", "young_link::"]);
+        let fox = jobs.iter().find(|j| j.name == "fox").unwrap();
+        assert_eq!(fox.filter(), ["fox::"]);
     }
 
     #[test]

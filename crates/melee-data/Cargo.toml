@@ -19,3 +19,7 @@ thiserror = "2"
 num-traits = { version = "0.2.19", default-features = false, features = ["libm"] }
 zerocopy = { version = "0.8.60", default-features = false, features = ["simd"] }
 zstd-sys = { version = "2.1.0", default-features = false, features = ["legacy", "std", "zdict_builder"] }
+
+# The same on Linux and macOS: winit's `nix` turns on libc's `extra_traits`.
+[target.'cfg(unix)'.dependencies]
+libc = { version = "0.2.190", default-features = false, features = ["extra_traits", "std"] }

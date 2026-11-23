@@ -230,7 +230,7 @@ pub fn run(tree: &Tree, job: &Job, exe: &Path, reach_dir: &Path, o: &RunOpts) ->
         cmd.stdout(log.try_clone().unwrap()).stderr(log);
     }
     let status = cmd
-        .arg(job.filter())
+        .args(job.filter())
         .arg(format!("--test-threads={}", o.threads))
         .current_dir(&leaf)
         .envs(job.env())
