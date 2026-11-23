@@ -259,6 +259,10 @@ pub struct Session {
     /// Whether a live match follows playback's camera beside its own
     /// (`Game::follow_playback_camera`): the oracle's, off in the player.
     pub follow_playback_camera: bool,
+    /// The song [`Session::read_song`] last looked up and its entry number: not state, a
+    /// memo of the disc's file table, so a tick whose song the music stream has already asks
+    /// the disc nothing.
+    pub song_read: Option<([u8; 0x40], i32)>,
 }
 
 /// The menus' session set aside across a live match's scene ([`Session::aside`]): its game
@@ -515,6 +519,7 @@ impl Session {
             live_files: Vec::new(),
             live_model: false,
             follow_playback_camera: false,
+            song_read: None,
         }
     }
 
@@ -542,6 +547,7 @@ impl Session {
             live_files: Vec::new(),
             live_model: false,
             follow_playback_camera: false,
+            song_read: None,
         }
     }
 
@@ -1145,8 +1151,17 @@ impl Session {
     /// Reads the song the scene's entry or its last tick started (`cur_hps_stem`: a match's
     /// stage's, the sound test's) unless the music stream has it already: its first reads come
     /// in the ticks after, behind the disc's latency.
+    ///
+    /// The session asks after every tick of a scene, so the song it last looked up is kept with
+    /// its entry number ([`Session::song_read`]): while the stem names it and the stream has
+    /// its entry, the disc's lookup (and its file's bytes, which only a song not had yet
+    /// takes) would find nothing to add, and isn't made.
     fn read_song(&mut self, console: &mut dyn Console) {
-        read_song(&mut self.game, &mut self.data, console);
+        let stem = self.game.audio.lb.stem;
+        if song_had(self.song_read, &stem, &self.game.audio.devcom.files) {
+            return;
+        }
+        self.song_read = read_song(&mut self.game, &mut self.data, console).map(|e| (stem, e));
     }
 
     /// The VS scene about to enter starts a live match of the Slippi ruleset
@@ -1352,12 +1367,25 @@ impl Session {
     }
 }
 
-/// [`Session::read_song`] for `game`, its file added to `data`.
-fn read_song(game: &mut Game, data: &mut Archives, console: &mut dyn Console) {
+/// Whether the song `stem` names is one the music stream has (`files`, by entry number),
+/// known without the disc: the last song looked up (`read`, with its entry number) is `stem`'s
+/// and its entry is there. A different song, or the same one after a restore took its entry
+/// away, is looked up on the disc again.
+fn song_had(
+    read: Option<([u8; 0x40], i32)>,
+    stem: &[u8; 0x40],
+    files: &[(i32, melee_data::archive::ArchiveId)],
+) -> bool {
+    read.is_some_and(|(r, entrynum)| r == *stem && files.iter().any(|f| f.0 == entrynum))
+}
+
+/// [`Session::read_song`] for `game`, its file added to `data`: the song's entry number, none
+/// when no song is named.
+fn read_song(game: &mut Game, data: &mut Archives, console: &mut dyn Console) -> Option<i32> {
     let stem = game.audio.lb.stem;
     let len = stem.iter().position(|&c| c == 0).unwrap_or(stem.len());
     if len <= 1 {
-        return;
+        return None;
     }
     let path = std::str::from_utf8(&stem[1..len]).expect("a music path");
     let file = console.file(path);
@@ -1370,6 +1398,7 @@ fn read_song(game: &mut Game, data: &mut Archives, console: &mut dyn Console) {
         };
         game.audio.devcom.files.push((file.entrynum, id));
     }
+    Some(file.entrynum)
 }
 
 impl Running<'_> {
@@ -1534,4 +1563,30 @@ fn db_level(level: i32, console: &mut dyn Console) -> i32 {
     }
     assert_eq!(level, DB_NO_DEBUG_ROM, "DbLevel == DbLKind_NoDebugRom");
     DB_MASTER
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use melee_data::archive::ArchiveId;
+
+    fn stem(name: &str) -> [u8; 0x40] {
+        let mut s = [0; 0x40];
+        s[..name.len()].copy_from_slice(name.as_bytes());
+        s
+    }
+
+    #[test]
+    fn a_song_had_skips_the_disc_only_while_its_entry_is_there() {
+        let menu = stem("/menu01.hps");
+        let files = [(5, ArchiveId(1)), (9, ArchiveId(2))];
+        // Nothing looked up yet: the disc.
+        assert!(!song_had(None, &menu, &files));
+        // The song looked up last, its entry in the stream: no lookup.
+        assert!(song_had(Some((menu, 9)), &menu, &files));
+        // Another song named: looked up.
+        assert!(!song_had(Some((menu, 9)), &stem("/fod.hps"), &files));
+        // The same song after a restore took its entry away: looked up again.
+        assert!(!song_had(Some((menu, 9)), &menu, &files[..1]));
+    }
 }

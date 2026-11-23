@@ -22,7 +22,6 @@
 //! copies lists of pages; what the scenes before left is one layer, the scene's own changes
 //! two beside it, which the scene's end folds in.
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use melee_data::archive::{ArchiveId, Archives};
@@ -73,6 +72,10 @@ pub enum Src {
     Raw { archive: ArchiveId, offset: u32 },
     /// Bytes an object laid out as the game keeps it, from `offset` of `bytes`.
     Bytes { bytes: Arc<[u8]>, offset: u32 },
+    /// A word an allocator wrote into a block (a free list's link, [`Image::word`]), from byte
+    /// `offset` of it: [`Src::Bytes`] of four bytes, held in place rather than in a buffer of
+    /// its own, and hashed as those.
+    Word { word: [u8; 4], offset: u32 },
     /// Bytes code wrote into `archive`'s file where it was loaded ([`Image::file_bytes`]),
     /// from `offset` of `bytes`: still the file's place, so a later edit writes over them.
     Edit {
@@ -143,6 +146,10 @@ impl Src {
                 bytes: bytes.clone(),
                 offset: offset + n,
             },
+            &Src::Word { word, offset } => Src::Word {
+                word,
+                offset: offset + n,
+            },
             Src::Edit {
                 archive,
                 bytes,
@@ -175,6 +182,7 @@ impl Src {
             Src::Bytes { bytes, offset } | Src::Edit { bytes, offset, .. } => {
                 bytes.get((offset + i) as usize).copied()
             }
+            Src::Word { word, offset } => word.get((offset + i) as usize).copied(),
         }
     }
 }
@@ -235,12 +243,240 @@ struct Span {
     src: Src,
 }
 
-/// Runs by start within one page of main memory, none overlapping.
-type Page = BTreeMap<u32, Span>;
-
 /// A page's size, as a shift: no run crosses a page's end, so a snapshot shares every page
 /// nothing has written since.
 const PAGE_SHIFT: u32 = 16;
+
+/// A chunk's size, as a shift: a page keeps its runs by the chunk their start is in, each
+/// chunk shared between snapshots apart, so a write copies only its chunk's runs, not the
+/// page's (a run still ends at most at its page's end, and may reach over chunks).
+const CHUNK_SHIFT: u32 = 10;
+
+/// A page's chunks.
+const CHUNKS: usize = 1 << (PAGE_SHIFT - CHUNK_SHIFT);
+
+/// A chunk's runs by start, sorted: a few dozen at most, so a copy (a write to a chunk a snapshot
+/// shares) is one allocation and a copy of its entries, and a lookup a binary search.
+#[derive(Clone, Debug, Default)]
+struct Chunk {
+    runs: Vec<(u32, Span)>,
+    /// What it holds, as a number no other chunk's holding has had ([`next_version`]), so a
+    /// restore takes only the chunks that changed ([`Spans::clone_from`]). Not state.
+    ver: u64,
+}
+
+impl PartialEq for Chunk {
+    fn eq(&self, other: &Self) -> bool {
+        self.runs == other.runs
+    }
+}
+
+/// A number for what a chunk or a page holds after a write, unique to it: two holding the
+/// same number hold the same runs (a copy of one, or one shared).
+fn next_version() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
+
+impl Chunk {
+    /// Where the first run starting at or after `k` is.
+    fn at(&self, k: u32) -> usize {
+        self.runs.partition_point(|e| e.0 < k)
+    }
+
+    fn range(&self, lo: u32, hi: u32) -> impl Iterator<Item = (&u32, &Span)> + '_ {
+        let (a, b) = (self.at(lo), self.at(hi));
+        self.runs[a..b.max(a)].iter().map(|(k, s)| (k, s))
+    }
+
+    fn last_before(&self, lo: u32) -> Option<(&u32, &Span)> {
+        let i = self.at(lo).checked_sub(1)?;
+        let (k, s) = &self.runs[i];
+        Some((k, s))
+    }
+
+    fn find(&self, k: u32) -> Option<usize> {
+        self.runs.binary_search_by_key(&k, |e| e.0).ok()
+    }
+
+    fn get(&self, k: u32) -> Option<&Span> {
+        self.find(k).map(|i| &self.runs[i].1)
+    }
+
+    fn get_mut(&mut self, k: u32) -> Option<&mut Span> {
+        self.find(k).map(|i| &mut self.runs[i].1)
+    }
+
+    /// A run at `k`, in place of one there.
+    fn insert(&mut self, k: u32, s: Span) {
+        match self.runs.binary_search_by_key(&k, |e| e.0) {
+            Ok(i) => self.runs[i].1 = s,
+            Err(i) => self.runs.insert(i, (k, s)),
+        }
+    }
+
+    fn remove(&mut self, k: u32) -> Option<Span> {
+        self.find(k).map(|i| self.runs.remove(i).1)
+    }
+
+    fn iter(&self) -> impl Iterator<Item = (&u32, &Span)> + '_ {
+        self.runs.iter().map(|(k, s)| (k, s))
+    }
+
+    fn len(&self) -> usize {
+        self.runs.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.runs.is_empty()
+    }
+}
+
+/// Runs by start within one page of main memory, none overlapping, kept by the chunk each
+/// starts in: the same runs, by the same keys, a `BTreeMap` of the page would hold, with the
+/// lookups the image makes of one.
+#[derive(Clone, Debug)]
+struct Page {
+    /// The page's first address.
+    base: u32,
+    chunks: [Option<Arc<Chunk>>; CHUNKS],
+    /// As a chunk's ([`Chunk::ver`]): what the page holds, renewed at every write. Not state.
+    ver: u64,
+}
+
+impl PartialEq for Page {
+    fn eq(&self, other: &Self) -> bool {
+        self.chunks
+            .iter()
+            .zip(&other.chunks)
+            .all(|(a, b)| match (a.as_deref(), b.as_deref()) {
+                (Some(a), Some(b)) => std::ptr::eq(a, b) || a == b,
+                (Some(c), None) | (None, Some(c)) => c.is_empty(),
+                (None, None) => true,
+            })
+    }
+}
+
+impl Page {
+    fn new(base: u32) -> Page {
+        Page {
+            base,
+            chunks: std::array::from_fn(|_| None),
+            ver: next_version(),
+        }
+    }
+
+    /// The chunk `a` is in, `a` within the page.
+    fn chunk_of(&self, a: u32) -> usize {
+        (a.wrapping_sub(self.base) >> CHUNK_SHIFT) as usize
+    }
+
+    /// The chunks holding the runs that start in `[lo, hi)`, which may reach past the page.
+    fn chunks_in(&self, lo: u32, hi: u32) -> std::ops::Range<usize> {
+        let end = u64::from(self.base) + (1 << PAGE_SHIFT);
+        if hi <= lo || hi <= self.base || u64::from(lo) >= end {
+            return 0..0;
+        }
+        let first = if lo <= self.base {
+            0
+        } else {
+            self.chunk_of(lo)
+        };
+        let last = if u64::from(hi) >= end {
+            CHUNKS - 1
+        } else {
+            self.chunk_of(hi - 1)
+        };
+        first..last + 1
+    }
+
+    fn chunk_mut(&mut self, i: usize) -> &mut Chunk {
+        let c = Arc::make_mut(self.chunks[i].get_or_insert_with(Default::default));
+        c.ver = next_version();
+        c
+    }
+
+    /// A restore of the page from `o`, a page of the same place: each chunk `o` shares with
+    /// it already, or that holds what `o`'s holds, is left; one this page holds alone takes
+    /// `o`'s runs into its own storage, so the two stay apart and a write to either copies
+    /// nothing; the rest share `o`'s.
+    fn restore_from(&mut self, o: &Page) {
+        if self.ver == o.ver {
+            return;
+        }
+        for (a, b) in self.chunks.iter_mut().zip(&o.chunks) {
+            match (a, b) {
+                (Some(x), Some(y)) if Arc::ptr_eq(x, y) || x.ver == y.ver => {}
+                (Some(x), Some(y)) if Arc::strong_count(x) == 1 => {
+                    let x = Arc::get_mut(x).expect("held alone");
+                    x.runs.clone_from(&y.runs);
+                    x.ver = y.ver;
+                }
+                (a, b) => a.clone_from(b),
+            }
+        }
+        self.ver = o.ver;
+    }
+
+    /// The runs starting in `[lo, hi)`, by start.
+    fn range(&self, lo: u32, hi: u32) -> impl Iterator<Item = (&u32, &Span)> + '_ {
+        self.chunks_in(lo, hi)
+            .filter_map(move |i| self.chunks[i].as_deref())
+            .flat_map(move |c| c.range(lo, hi))
+    }
+
+    /// The last run starting before `lo`.
+    fn last_before(&self, lo: u32) -> Option<(&u32, &Span)> {
+        if lo <= self.base {
+            return None;
+        }
+        // `lo`'s own chunk (the one holding `lo - 1`) is searched; every run of an earlier
+        // chunk starts before `lo`, so there the last run is the answer.
+        let at = self.chunks_in(self.base, lo).end - 1;
+        if let Some(found) = self.chunks[at].as_deref().and_then(|c| c.last_before(lo)) {
+            return Some(found);
+        }
+        self.chunks[..at]
+            .iter()
+            .rev()
+            .filter_map(|c| c.as_deref())
+            .find_map(|c| c.runs.last().map(|(k, s)| (k, s)))
+    }
+
+    fn get(&self, k: u32) -> Option<&Span> {
+        // A key at the page's end (a write's end there) is no run of the page.
+        self.chunks.get(self.chunk_of(k))?.as_deref()?.get(k)
+    }
+
+    fn get_mut(&mut self, k: u32) -> Option<&mut Span> {
+        let i = self.chunk_of(k);
+        self.chunks.get(i)?.as_ref()?;
+        self.chunk_mut(i).get_mut(k)
+    }
+
+    fn insert(&mut self, k: u32, s: Span) {
+        let i = self.chunk_of(k);
+        self.chunk_mut(i).insert(k, s);
+    }
+
+    fn remove(&mut self, k: u32) -> Option<Span> {
+        let i = self.chunk_of(k);
+        self.chunks[i].as_ref()?;
+        self.chunk_mut(i).remove(k)
+    }
+
+    fn iter(&self) -> impl Iterator<Item = (&u32, &Span)> + '_ {
+        self.chunks.iter().flatten().flat_map(|c| c.iter())
+    }
+
+    fn len(&self) -> usize {
+        self.chunks.iter().flatten().map(|c| c.len()).sum()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.chunks.iter().flatten().all(|c| c.is_empty())
+    }
+}
 
 /// Runs by start, none overlapping, kept by 64 KiB page of main memory (none crossing a
 /// page's end), each page shared between snapshots until something writes it; memory no run
@@ -257,8 +493,25 @@ impl Clone for Spans {
         }
     }
 
+    /// A restore: each page `other` shares with this one already is left as it is (most of
+    /// them, between a state and its copy); one this holds alone is restored chunk by chunk
+    /// ([`Page::restore_from`]), so a state and the copy restored from it each tick (the
+    /// player's prediction) keep the chunks they write apart and copy only what changed; the
+    /// rest are shared.
     fn clone_from(&mut self, other: &Self) {
-        self.pages.clone_from(&other.pages);
+        self.pages.truncate(other.pages.len());
+        for (a, b) in self.pages.iter_mut().zip(&other.pages) {
+            match (a, b) {
+                (Some(x), Some(y)) if Arc::ptr_eq(x, y) => {}
+                (Some(x), Some(y)) if Arc::strong_count(x) == 1 => {
+                    Arc::get_mut(x).expect("held alone").restore_from(y);
+                }
+                (None, None) => {}
+                (a, b) => a.clone_from(b),
+            }
+        }
+        let n = self.pages.len();
+        self.pages.extend_from_slice(&other.pages[n..]);
     }
 }
 
@@ -295,7 +548,10 @@ impl Spans {
         if self.pages.len() <= i {
             self.pages.resize(i + 1, None);
         }
-        Arc::make_mut(self.pages[i].get_or_insert_with(Default::default))
+        let base = MEM1.start + ((i as u32) << PAGE_SHIFT);
+        let p = Arc::make_mut(self.pages[i].get_or_insert_with(|| Arc::new(Page::new(base))));
+        p.ver = next_version();
+        p
     }
 
     /// The runs overlapping `[lo, hi)`, by start.
@@ -308,7 +564,7 @@ impl Spans {
         };
         pages
             .filter_map(move |i| self.page(i))
-            .flat_map(move |p| p.range(first(p, lo)..hi).map(|(&k, s)| (k, s)))
+            .flat_map(move |p| p.range(first(p, lo), hi).map(|(&k, s)| (k, s)))
     }
 
     /// Every run, by start.
@@ -331,8 +587,7 @@ impl Spans {
 /// The start of the run `lo` falls in, else `lo`.
 fn first(spans: &Page, lo: u32) -> u32 {
     spans
-        .range(..lo)
-        .next_back()
+        .last_before(lo)
         .filter(|(_, s)| s.end > lo)
         .map(|(&k, _)| k)
         .unwrap_or(lo)
@@ -340,26 +595,28 @@ fn first(spans: &Page, lo: u32) -> u32 {
 
 /// Cuts `[lo, hi)` out of `spans`, keeping what the runs it overlaps hold either side.
 fn cut(spans: &mut Page, lo: u32, hi: u32) {
-    let hit: Vec<u32> = spans.range(first(spans, lo)..hi).map(|(&k, _)| k).collect();
-    for k in hit {
-        let s = spans.remove(&k).unwrap();
-        if k < lo {
-            spans.insert(
-                k,
-                Span {
-                    end: lo,
-                    src: s.src.clone(),
-                },
-            );
+    // The runs hit, by start: a few at most, kept on the stack while there's room.
+    let (mut few, mut n, mut more) = ([0u32; 8], 0, Vec::new());
+    for (&k, _) in spans.range(first(spans, lo), hi) {
+        if n < few.len() {
+            few[n] = k;
+            n += 1;
+        } else {
+            more.push(k);
         }
-        if s.end > hi {
-            spans.insert(
-                hi,
-                Span {
-                    end: s.end,
-                    src: s.src.advance(hi - k),
-                },
-            );
+    }
+    for k in few[..n].iter().chain(&more).copied() {
+        // A run starting before the cut keeps its start and ends at it, so it stays in place.
+        let (end, tail) = if k < lo {
+            let s = spans.get_mut(k).expect("a run hit");
+            let end = std::mem::replace(&mut s.end, lo);
+            (end, (end > hi).then(|| s.src.advance(hi - k)))
+        } else {
+            let s = spans.remove(k).expect("a run hit");
+            (s.end, (s.end > hi).then(|| s.src.advance(hi - k)))
+        };
+        if let Some(src) = tail {
+            spans.insert(hi, Span { end, src });
         }
     }
 }
@@ -370,15 +627,15 @@ fn write_page(spans: &mut Page, lo: u32, hi: u32, src: Src) {
     // An unknown run joins an unknown neighbour of the same owner.
     let (mut lo, mut hi) = (lo, hi);
     if src.is_unknown() {
-        if let Some((&k, s)) = spans.range(..lo).next_back()
+        if let Some((&k, s)) = spans.last_before(lo)
             && s.end == lo
             && s.src == src
         {
-            spans.remove(&k);
+            spans.remove(k);
             lo = k;
         }
-        if spans.get(&hi).is_some_and(|s| s.src == src) {
-            hi = spans.remove(&hi).unwrap().end;
+        if spans.get(hi).is_some_and(|s| s.src == src) {
+            hi = spans.remove(hi).unwrap().end;
         }
     }
     spans.insert(lo, Span { end: hi, src });
@@ -584,6 +841,10 @@ fn hash_spans(spans: &Spans, h: &mut StateHasher) {
             Src::Bytes { bytes, offset } => {
                 h.word(3 << 48 | u64::from(*offset));
                 h.bytes(bytes);
+            }
+            Src::Word { word, offset } => {
+                h.word(3 << 48 | u64::from(*offset));
+                h.bytes(word);
             }
             Src::RenderTarget => h.word(4 << 48),
             Src::Copied(p) => h.word(6 << 48 | *p as u64),
@@ -1199,7 +1460,10 @@ impl Image {
 
     /// The allocators write a word into a block (a free list's link).
     pub fn word(&mut self, at: u32, w: u32) {
-        self.put(at, &w.to_be_bytes());
+        if self.on {
+            let word = w.to_be_bytes();
+            write(&mut self.live, at, at + 4, Src::Word { word, offset: 0 });
+        }
     }
 
     /// An object's bytes laid out as the game keeps them, at `at` of a block now allocated.
@@ -1516,7 +1780,7 @@ impl Image {
                         Src::Unknown(_) => "unknown",
                         Src::File { .. } | Src::Edit { .. } => "file",
                         Src::Raw { .. } => "raw file",
-                        Src::Bytes { .. } => "object",
+                        Src::Bytes { .. } | Src::Word { .. } => "object",
                         Src::RenderTarget => "render target",
                         Src::Copied(_) => "copied pixels",
                     },
@@ -1529,12 +1793,205 @@ impl Image {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
 
     fn bytes(b: &[u8]) -> Src {
         Src::Bytes {
             bytes: b.into(),
             offset: 0,
         }
+    }
+
+    /// The runs of a page kept in one map, as they were before the pages had chunks: `first`,
+    /// `cut` and `write_page` over a `BTreeMap`, for [`chunked_pages_hold_what_one_map_holds`].
+    mod one_map {
+        use super::super::{Span, Src};
+        use std::collections::BTreeMap;
+
+        pub fn first(spans: &BTreeMap<u32, Span>, lo: u32) -> u32 {
+            spans
+                .range(..lo)
+                .next_back()
+                .filter(|(_, s)| s.end > lo)
+                .map(|(&k, _)| k)
+                .unwrap_or(lo)
+        }
+
+        pub fn cut(spans: &mut BTreeMap<u32, Span>, lo: u32, hi: u32) {
+            let hit: Vec<u32> = spans.range(first(spans, lo)..hi).map(|(&k, _)| k).collect();
+            for k in hit {
+                let s = spans.remove(&k).unwrap();
+                if k < lo {
+                    let src = s.src.clone();
+                    spans.insert(k, Span { end: lo, src });
+                }
+                if s.end > hi {
+                    let src = s.src.advance(hi - k);
+                    spans.insert(hi, Span { end: s.end, src });
+                }
+            }
+        }
+
+        pub fn write_page(spans: &mut BTreeMap<u32, Span>, lo: u32, hi: u32, src: Src) {
+            cut(spans, lo, hi);
+            let (mut lo, mut hi) = (lo, hi);
+            if src.is_unknown() {
+                if let Some((&k, s)) = spans.range(..lo).next_back()
+                    && s.end == lo
+                    && s.src == src
+                {
+                    spans.remove(&k);
+                    lo = k;
+                }
+                if spans.get(&hi).is_some_and(|s| s.src == src) {
+                    hi = spans.remove(&hi).unwrap().end;
+                }
+            }
+            spans.insert(lo, Span { end: hi, src });
+        }
+    }
+
+    #[test]
+    fn chunked_pages_hold_what_one_map_holds() {
+        // Random writes and takes over three pages, runs short and long (over chunks and
+        // pages), against the same done to one map a page; the runs, every lookup's answer
+        // and the bytes read agree after each step.
+        let lo0 = 0x8040_0000u32;
+        let span = 3 << PAGE_SHIFT;
+        let mut x = 7u32;
+        let mut next = |n: u32| {
+            x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            (x >> 8) % n
+        };
+        let mut img = Spans::default();
+        let mut model: Vec<BTreeMap<u32, Span>> = vec![BTreeMap::new(); 3];
+        let data = Archives::default();
+        for step in 0..4000 {
+            let a = lo0 + next(span);
+            let len = match next(4) {
+                0 => 1 + next(16),
+                1 => 1 + next(1 << CHUNK_SHIFT),
+                2 => 1 + next(3 << CHUNK_SHIFT),
+                _ => 1 + next(1 << PAGE_SHIFT),
+            };
+            let b = (a + len).min(lo0 + span);
+            if next(3) == 0 {
+                let got = take(&mut img, a, b);
+                let mut want = Vec::new();
+                let mut p = a;
+                while p < b {
+                    let e = page_end(p).min(b);
+                    let m = &mut model[page_of(p) - page_of(lo0)];
+                    for (&k, s) in m.range(one_map::first(m, p)..e) {
+                        let from = k.max(p);
+                        want.push((from, s.end.min(e), s.src.advance(from - k)));
+                    }
+                    one_map::cut(m, p, e);
+                    p = e;
+                }
+                assert_eq!(got, want, "step {step}: take {a:#x}..{b:#x}");
+            } else {
+                let src = match next(4) {
+                    0 => Src::Unknown("a"),
+                    1 => Src::Unknown("b"),
+                    2 => Src::RenderTarget,
+                    _ => bytes(&vec![next(256) as u8; len as usize]),
+                };
+                write(&mut img, a, b, src.clone());
+                let mut p = a;
+                while p < b {
+                    let e = page_end(p).min(b);
+                    let m = &mut model[page_of(p) - page_of(lo0)];
+                    one_map::write_page(m, p, e, src.advance(p - a));
+                    p = e;
+                }
+            }
+            let runs: Vec<(u32, Span)> = img.iter().map(|(k, s)| (k, s.clone())).collect();
+            let want: Vec<(u32, Span)> = (model.iter())
+                .flat_map(|m| m.iter().map(|(&k, s)| (k, s.clone())))
+                .collect();
+            assert_eq!(runs, want, "step {step}");
+            let q = lo0 + next(span);
+            let (r, w) = (q.saturating_sub(next(5000)), q + next(5000));
+            let got: Vec<u32> = img.range(r, w).map(|(k, _)| k).collect();
+            let m = &model[page_of(q) - page_of(lo0)];
+            assert_eq!(
+                img.page(page_of(q)).map_or(q, |p| first(p, q)),
+                one_map::first(m, q),
+                "step {step}: first {q:#x}"
+            );
+            let mut want = Vec::new();
+            let mut p = r.max(lo0);
+            while p < w.min(lo0 + span) {
+                let e = page_end(p).min(w);
+                let m = &model[page_of(p) - page_of(lo0)];
+                want.extend(m.range(one_map::first(m, p)..e).map(|(&k, _)| k));
+                p = e;
+            }
+            assert_eq!(got, want, "step {step}: range {r:#x}..{w:#x}");
+            let (mut out, mut known) = (vec![0; 64], vec![false; 64]);
+            read(&img, &data, q, &mut out, &mut known);
+            assert!(out.len() == 64 && known.len() == 64);
+        }
+        // A write copies its chunk alone: a snapshot shares the page's other chunks.
+        let snap = img.clone();
+        write(&mut img, lo0 + 0x10, lo0 + 0x20, Src::Unknown("c"));
+        let (p, q) = (
+            img.page(page_of(lo0)).unwrap(),
+            snap.page(page_of(lo0)).unwrap(),
+        );
+        let shared = |i: usize| match (&p.chunks[i], &q.chunks[i]) {
+            (Some(a), Some(b)) => Arc::ptr_eq(a, b),
+            (None, None) => true,
+            _ => false,
+        };
+        assert!(!shared(0) && (1..CHUNKS).all(shared));
+        // A restore takes what differs and leaves what's shared: a copy written apart, one
+        // with pages past the state's, and one with fewer, each restored, hold the state's runs.
+        let runs = |s: &Spans| s.iter().map(|(k, s)| (k, s.clone())).collect::<Vec<_>>();
+        let mut apart = snap.clone();
+        write(&mut apart, lo0 + 0x800, lo0 + 0x900, Src::Unknown("d"));
+        let mut longer = img.clone();
+        write(&mut longer, 0x8170_0000, 0x8170_0010, Src::Unknown("e"));
+        let mut shorter = Spans::default();
+        write(&mut shorter, lo0, lo0 + 4, Src::RenderTarget);
+        for mut c in [apart, longer, shorter] {
+            c.clone_from(&img);
+            assert_eq!(runs(&c), runs(&img));
+            assert_eq!(c.pages.len(), img.pages.len());
+        }
+        // The player's prediction: a copy restored from the state every tick, each written
+        // apart in between, in the same chunks and in others. Restored, the copy holds the
+        // state's runs; once both have written a chunk, neither shares it, so a write copies
+        // nothing; a chunk neither wrote stays shared.
+        let mut state = img.clone();
+        let mut copy = state.clone();
+        let chunk = |s: &Spans, a: u32| {
+            let p = s.page(page_of(a)).unwrap();
+            p.chunks[p.chunk_of(a)].clone().unwrap()
+        };
+        for t in 0..6u32 {
+            let at = lo0 + 0x40 * t;
+            write(&mut state, at, at + 8, bytes(&[t as u8; 8]));
+            write(&mut copy, at + 4, at + 12, bytes(&[0xEE; 8]));
+            write(
+                &mut copy,
+                lo0 + 0x2000 + t,
+                lo0 + 0x2001 + t,
+                Src::Unknown("f"),
+            );
+            copy.clone_from(&state);
+            assert_eq!(runs(&copy), runs(&state), "tick {t}");
+        }
+        assert!(!Arc::ptr_eq(&chunk(&copy, lo0), &chunk(&state, lo0)));
+        assert!(Arc::ptr_eq(
+            &chunk(&copy, lo0 + 0x4000),
+            &chunk(&state, lo0 + 0x4000)
+        ));
+        let page = |s: &Spans| s.pages[page_of(lo0)].clone().unwrap();
+        assert!(
+            Arc::strong_count(&page(&state)) == 2 && Arc::strong_count(&chunk(&state, lo0)) == 2
+        );
     }
 
     #[test]
@@ -1695,6 +2152,30 @@ mod tests {
             assert!(h >= super::super::pool::UNKNOWN);
             assert_eq!(img.unknown_word(h), Some(w));
         }
+    }
+
+    #[test]
+    fn a_word_written_reads_and_hashes_as_its_four_bytes() {
+        // An allocator's word, held in place, against the same four bytes put as an object:
+        // the same bytes read (whole and from a cut's tail), the same hash.
+        let data = Archives::default();
+        let (mut a, mut b) = (Image::power_on(), Image::power_on());
+        a.word(0x8040_0010, 0x8123_4567);
+        b.put(0x8040_0010, &0x8123_4567u32.to_be_bytes());
+        for img in [&mut a, &mut b] {
+            img.release(0x8040_000E, 0x8040_0012);
+        }
+        assert_eq!(
+            a.bytes(&data, 0x8040_000C, 8),
+            b.bytes(&data, 0x8040_000C, 8)
+        );
+        assert_eq!(a.bytes(&data, 0x8040_0012, 2).0, [0x45, 0x67]);
+        let hash = |i: &Image| {
+            let mut h = StateHasher::new();
+            i.state_hash(&mut h);
+            h.finish()
+        };
+        assert_eq!(hash(&a), hash(&b));
     }
 
     #[test]
