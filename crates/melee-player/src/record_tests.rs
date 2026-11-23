@@ -1606,11 +1606,12 @@ fn song_moves(disc: &str, path: &str, speed: &str, ticks: u32) -> (u32, Option<u
     (moves, last)
 }
 
-/// At Dolphin's own fast disc speed (`DiscSpeed::DolphinFast`) the two benchmark replays whose
-/// songs ssbm-rs's flat fast speed cuts 1.8 s in keep them, as Slippi Dolphin plays them: the
-/// stream's start (`stream_header`'s `AXSetVoiceAddr`, its loop flag) and its first box's
-/// addresses five reads later reach the DSP in separate audio frames. At `fast` the last box
-/// moves at tick 109 (docs/player.md, "The music the fast speed cuts").
+/// At the fast disc speed (`DiscSpeed::Fast`, Slippi Dolphin's), which a replay reads at by
+/// default, the two benchmark replays whose songs ssbm-rs's flat model of it cut 1.8 s in keep
+/// them, as Slippi Dolphin plays them: the stream's start (`stream_header`'s `AXSetVoiceAddr`,
+/// its loop flag) and its first box's addresses five reads later reach the DSP in separate
+/// audio frames. At the flat model (`fast-flat`) the last box moves at tick 109
+/// (docs/player.md, "The music the fast speed cuts").
 #[test]
 fn replays_keep_their_songs_at_dolphins_fast_disc_speed() {
     crate::on_game_stack(|| {
@@ -1620,15 +1621,15 @@ fn replays_keep_their_songs_at_dolphins_fast_disc_speed() {
         };
         for name in ["fox-marth-fd", "fox-marth-ps"] {
             let path = format!("{}/../../data/bench/{name}.slp", env!("CARGO_MANIFEST_DIR"));
-            let (moves, last) = song_moves(&disc, &path, "dolphin-fast", 400);
+            let (moves, last) = song_moves(&disc, &path, "fast", 400);
             assert!(
                 last.is_some_and(|t| t > 300),
                 "{name} at Dolphin's fast disc speed: {moves} box moves, the last at {last:?}"
             );
-            let (moves, last) = song_moves(&disc, &path, "fast", 400);
+            let (moves, last) = song_moves(&disc, &path, "fast-flat", 400);
             assert!(
                 last.is_some_and(|t| t < 200),
-                "{name} at ssbm-rs's fast speed no longer cuts its song ({moves} box moves, the last at {last:?})"
+                "{name} at the flat model no longer cuts its song ({moves} box moves, the last at {last:?})"
             );
         }
     });

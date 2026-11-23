@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 
 use melee_sim::audio::clock::{DRIVE_RATE, DiscSpeed};
 use melee_sim::audio::dsp::DspModel;
-use melee_sim::game::inputs::{CARD, MAGIC, SLIPPI_RULESET, SOUND};
+use melee_sim::game::inputs::{CARD, DOLPHIN_DISC, MAGIC, SLIPPI_RULESET, SOUND};
 use melee_sim::game::session::Setup;
 use melee_sim::game::state::Ruleset;
 use melee_sim::input::controller::PadData;
@@ -67,11 +67,12 @@ fn encode(pads: &PadData) -> [u8; 4 * PAD_BYTES] {
 pub fn header(setup: &Setup, card: bool) -> Vec<u8> {
     let mut h = MAGIC.to_vec();
     h.extend_from_slice(&2u32.to_le_bytes());
-    let rate = match setup.disc {
-        DiscSpeed::Drive => u64::from(DRIVE_RATE),
-        DiscSpeed::Fast => 0,
-        // ssbm-rs's file names a rate or its fast speed, and a session reads at a drive's pace.
-        DiscSpeed::DolphinFast => panic!("a session recorded at Dolphin's fast disc speed"),
+    // ssbm-rs's marks (its `05d550a`): a rate for a drive's pace, none and the flag for
+    // Dolphin's fast speed, none alone for the flat model.
+    let (rate, disc) = match setup.disc {
+        DiscSpeed::Drive => (u64::from(DRIVE_RATE), 0),
+        DiscSpeed::Fast => (0, DOLPHIN_DISC),
+        DiscSpeed::FastFlat => (0, 0),
     };
     h.extend_from_slice(&rate.to_le_bytes());
     let sound = if setup.dsp == DspModel::Samples {
@@ -90,7 +91,7 @@ pub fn header(setup: &Setup, card: bool) -> Vec<u8> {
         Ruleset::Vanilla => 0,
         Ruleset::Slippi => SLIPPI_RULESET,
     };
-    h.push(sound | if card { CARD } else { 0 } | ruleset | develop);
+    h.push(sound | if card { CARD } else { 0 } | ruleset | develop | disc);
     h.extend_from_slice(&setup.power_on.to_le_bytes());
     // The SRAM's language: Melee never reads it (its language is the save's).
     h.extend_from_slice(&[u8::from(setup.dtv), 0, setup.sram_flags]);
@@ -302,5 +303,29 @@ mod tests {
         assert_eq!(header(&setup, false)[20], 0x01);
         let vanilla = crate::power::setup(vec![0; 16], 0, 4, Ruleset::Vanilla);
         assert!(vanilla.card.is_some() && vanilla.develop.is_some());
+    }
+
+    /// A session at Dolphin's fast disc speed is marked as ssbm-rs's `05d550a` marks it, no
+    /// rate and flag 0x80, and plays back at it; the flat model's sessions (no rate, no flag:
+    /// every recording before it) play back at the flat model; a drive's pace keeps its rate.
+    #[test]
+    fn the_disc_speed_is_marked() {
+        let mut setup = crate::power::setup(Vec::new(), 0, 0, Ruleset::Vanilla);
+        for (disc, rate, flag) in [
+            (DiscSpeed::Fast, 0, DOLPHIN_DISC),
+            (DiscSpeed::FastFlat, 0, 0),
+            (DiscSpeed::Drive, u64::from(DRIVE_RATE), 0),
+        ] {
+            setup.disc = disc;
+            let bytes = header(&setup, false);
+            assert_eq!(
+                u64::from_le_bytes(bytes[12..20].try_into().unwrap()),
+                rate,
+                "{disc:?}"
+            );
+            assert_eq!(bytes[20] & DOLPHIN_DISC, flag, "{disc:?}");
+            let rec = Recording::parse(&bytes, Path::new("s.inputs")).unwrap();
+            assert_eq!(rec.disc(), Ok(disc));
+        }
     }
 }

@@ -174,7 +174,12 @@ fn sfx_table(m: &Mem) -> Vec<Vec<Sfx>> {
 /// part of memory; [`import_clock`] estimates it.
 pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     let m = Mem(mem1);
-    let mut a = Audio::default();
+    // The captured calls' runs read at the flat model of the fast disc speed (every capture
+    // was made before ssbm-rs's `05d550a`); a trace's import sets its own (`melee-oracle`).
+    let mut a = Audio {
+        disc: DiscSpeed::FastFlat,
+        ..Audio::default()
+    };
     let vpbs = sym("__AXVPB");
     let vpb = |p: u32| index(vpbs, VPB_SIZE, AX_VOICES, p);
     // AX.
@@ -967,14 +972,15 @@ fn compare_devcom(m: &Mem, d: &DevCom, diffs: &mut Vec<String>) {
 
 /// The timeline at a captured call inside a tick: the time base from the registers, the
 /// next audio frame from the last one's start (`__AXLocalProfile.axFrameStart`), the pad
-/// alarm and the pad queue from memory. A disc read in flight finishes at Slippi's fast disc
-/// speed ([`import_clock_at`] takes another).
+/// alarm and the pad queue from memory. A disc read in flight finishes at the flat model of
+/// the fast disc speed, as the captured calls' runs read (every capture was made before
+/// ssbm-rs's `05d550a`); [`import_clock_at`] takes another.
 pub fn import_clock(mem1: &[u8], tb: u64) -> Clock {
-    import_clock_at(mem1, tb, DiscSpeed::Fast)
+    import_clock_at(mem1, tb, DiscSpeed::FastFlat)
 }
 
-/// [`import_clock`] for a run whose disc read at `disc`: a read in flight also takes its
-/// bytes' transfer time, the device command's chunk of them.
+/// [`import_clock`] for a run whose disc read at `disc`: a read in flight takes that speed's
+/// time for the device command's chunk, at its place on the disc.
 pub fn import_clock_at(mem1: &[u8], tb: u64, disc: DiscSpeed) -> Clock {
     import_clock_on(mem1, tb, disc, 0)
 }
@@ -1036,7 +1042,12 @@ pub fn import_clock_on(mem1: &[u8], tb: u64, disc: DiscSpeed, power_on: u64) -> 
             melee_sim::audio::devcom::BUF_SIZE
         };
         c.schedule(
-            issued + 16 + disc.read_time(dc.size.min(chunk)),
+            issued
+                + 16
+                + disc.read_time(
+                    melee_sim::audio::clock::disc_offset(dc.file, dc.src),
+                    dc.size.min(chunk),
+                ),
             melee_sim::audio::clock::EventKind::DiscDone,
         );
         c.disc_timeout = Some(c.schedule(

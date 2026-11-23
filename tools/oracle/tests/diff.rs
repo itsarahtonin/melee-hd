@@ -12,7 +12,7 @@ use std::process::Command;
 
 use melee_local_data::{bench_replay, slippi_replays, ssbm_rs_local};
 
-const TRACE: &str = "traces/v5-mixed/Game_20260129T133652.trc";
+const TRACE: &str = "traces/v6-dolphin-mem/Game_20260129T133652.trc";
 const REPLAY: &str = "2026-01/Game_20260129T133652.slp";
 
 /// A trace ssbm-rs made reading the disc at a drive's pace (`DISC_RATE=3000000`), of the Fox
@@ -134,6 +134,33 @@ fn drive_pace_from_the_boot() {
     );
     assert!(out.contains("the trace ends after tick 4159"), "{out}");
     assert!(out.contains("4159 ticks compared, no difference"), "{out}");
+    assert!(out.contains("no stale reads"), "{out}");
+}
+
+/// A trace ssbm-rs made at Slippi Dolphin's fast disc speed (its `05d550a`, the default since),
+/// of the Fox vs Marth benchmark match on Final Destination, whose song the flat model cut,
+/// with memory over its first 4,500 fields, in `$SSBM_RS_LOCAL` (`melee-audio-check`'s
+/// reference too).
+const DOLPHIN_TRACE: &str = "player/audio-dolphin-fox-marth-fd.trc";
+
+#[test]
+fn dolphin_speed_from_the_boot() {
+    let Some(out) = diff_of(
+        &ssbm_rs_local(DOLPHIN_TRACE),
+        &bench_replay("fox-marth-fd").to_string_lossy(),
+        &["--fp", "hardware", "--boot-audio"],
+    ) else {
+        return;
+    };
+    // At Dolphin's speed, a replay's default, melee-sim's boot leaves what ssbm-rs's does, its
+    // timeline included (each read timed at its place on the disc), and the match, its music
+    // playing on, compares to the trace's end.
+    assert!(
+        out.contains("the boot's audio setup against the boot state: 0 differences"),
+        "{out}"
+    );
+    assert!(out.contains("the trace ends after tick 4452"), "{out}");
+    assert!(out.contains("4452 ticks compared, no difference"), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
 

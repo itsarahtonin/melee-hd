@@ -130,6 +130,7 @@ pub fn seed(
     }
     let bank = melee_capture::audio::find_bank(mem, archives);
     game.audio = melee_capture::audio::import(mem, bank);
+    game.audio.disc = disc;
     game.audio.clock = Some(melee_capture::audio::import_clock_at(mem, tb, disc));
 }
 

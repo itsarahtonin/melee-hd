@@ -285,6 +285,14 @@ fn traced_trace(name: &str) -> &'static str {
     }
 }
 
+/// The folder of ssbm-rs's playback of a replay-made trace at Slippi Dolphin's fast disc
+/// speed, as replays read since ssbm-rs's `05d550a` (`DiscSpeed::Fast`): the original folder's
+/// `-v6mem` sibling, remade with memory every tick and the replay check's log beside each. The
+/// sessions' own traces stay where they were, on the flat model they were recorded at.
+fn v6mem(dir: &str) -> String {
+    format!("{dir}-v6mem")
+}
+
 /// Each live match's recording, as ssbm-rs plays it with Slippi's playback codes and float mode
 /// (`traces/DIR/NAME.trc`, its recording in `lockstep/DIR/traced`, [`traced_trace`]), compares clean
 /// with melee-hd's playback, the allocator model included, and ssbm-rs's replay check finds
@@ -302,13 +310,13 @@ fn the_live_matches_play_back_as_ssbm_rs_does() {
         ("matches-a-3", 1030, 5),
         ("matches-a-4", 1829, 0),
         ("matches-a-5", 7428, 0),
-        ("matches-b-1", 1531, 6),
+        ("matches-b-1", 1531, 7),
         ("matches-b-2", 2732, 0),
         ("matches-b-3", 1530, 2),
         ("matches-b-4", 1531, 4),
         ("matches-b-5", 1539, 0),
     ] {
-        let (dir, at) = (traced(name), traced_trace(name));
+        let (dir, at) = (traced(name), v6mem(traced_trace(name)));
         let trace = ssbm_rs_local(&format!("traces/{at}/{name}.trc"));
         let slp = ssbm_rs_local(&format!("lockstep/{dir}/traced/{name}.slp"));
         let log = ssbm_rs_local(&format!("traces/{at}/{name}.check.log"));
@@ -344,14 +352,23 @@ fn the_live_matches_play_back_as_ssbm_rs_does() {
             let mark = line
                 .contains("state flags (+0x29) original [C0, 00, 00, 00], ours [40, 00, 00, 00]")
                 && (-122..=-119).contains(&frame);
+            // The live match ran at the flat model, its playback at Dolphin's disc speed: the
+            // sound handle Peach's port keeps in its state's misc word in frame 387 comes from
+            // another voice (docs/oracle.md, "The replay traces at Dolphin's disc speed").
+            let handle = name == "matches-b-1"
+                && frame == 387
+                && line.contains(": post-frame port 2: hitstun (+0x2c)");
             assert!(
-                (height && line.contains(": position y (+0x")) || mark,
+                (height && line.contains(": position y (+0x")) || mark || handle,
                 "{name}: {line}"
             );
         }
     }
     // The pause's: the scene frame counts from it and a mark after it.
-    let log = std::fs::read_to_string(ssbm_rs_local("traces/m6s-stall/matches-a-1.check.log"));
+    let log = std::fs::read_to_string(ssbm_rs_local(&format!(
+        "traces/{}/matches-a-1.check.log",
+        v6mem("m6s-stall")
+    )));
     if let Ok(log) = log {
         assert!(
             log.contains("1 x post-frame state flags, first on frame 506")
@@ -402,9 +419,10 @@ fn the_paused_live_matches_record_as_the_console_does() {
     for (name, compared, check, diverging, ticks) in cases {
         let trace = ssbm_rs_local(&format!("traces/m6s-pause/{name}.trc"));
         let inputs = ssbm_rs_local(&format!("lockstep/m6s-pause/{name}.inputs"));
+        let at = v6mem("m6s-stall");
         let played = ssbm_rs_local(&format!("lockstep/m6s-stall/traced/{name}-1.slp"));
-        let played_trace = ssbm_rs_local(&format!("traces/m6s-stall/{name}-1.trc"));
-        let log = ssbm_rs_local(&format!("traces/m6s-stall/{name}-1.check.log"));
+        let played_trace = ssbm_rs_local(&format!("traces/{at}/{name}-1.trc"));
+        let log = ssbm_rs_local(&format!("traces/{at}/{name}-1.check.log"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
             eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
             return;
@@ -475,8 +493,9 @@ fn the_slow_mo_live_match_plays_back_as_ssbm_rs_does() {
     let trace = ssbm_rs_local("traces/m6s-followups/slomo.trc");
     let inputs = ssbm_rs_local("lockstep/m6s-followups/slomo.inputs");
     let played = ssbm_rs_local("lockstep/m6s-followups/traced/slomo-1.slp");
-    let played_trace = ssbm_rs_local("traces/m6s-followups/slomo-1.trc");
-    let log = ssbm_rs_local("traces/m6s-followups/slomo-1.check.log");
+    let at = v6mem("m6s-followups");
+    let played_trace = ssbm_rs_local(&format!("traces/{at}/slomo-1.trc"));
+    let log = ssbm_rs_local(&format!("traces/{at}/slomo-1.check.log"));
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
         eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
         return;
@@ -596,7 +615,8 @@ fn the_players_own_session_compares_clean() {
         out.contains("frame -118 is tick 1032; 427 frames checked to the recording's end (854 post-frame updates, 81 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count"),
         "{out}"
     );
-    let log = std::fs::read_to_string(ssbm_rs_local("traces/m6s-player/player-fd-1.check.log"))
+    let at = v6mem("m6s-player");
+    let log = std::fs::read_to_string(ssbm_rs_local(&format!("traces/{at}/player-fd-1.check.log")))
         .expect("the replay check's log");
     for d in [
         "252 diverge (0 known)",
@@ -605,7 +625,7 @@ fn the_players_own_session_compares_clean() {
     ] {
         assert!(log.contains(d), "{log}");
     }
-    let played_trace = ssbm_rs_local("traces/m6s-player/player-fd-1.trc");
+    let played_trace = ssbm_rs_local(&format!("traces/{at}/player-fd-1.trc"));
     let out = oracle(&["diff", &played_trace, &saved, "--fp", "slippi", "--heap"]);
     assert!(out.contains("434 ticks compared, no difference"), "{out}");
 }

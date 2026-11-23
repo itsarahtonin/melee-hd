@@ -550,12 +550,14 @@ impl Session {
         let file = console.file(SOUND_BANK);
         let bank = crate::lb::audio::SoundBank {
             len: file.bytes.len() as u32,
+            entrynum: file.entrynum,
             archive: self.data.add(Archive::raw(&file.bytes)),
         };
         // Japanese's, which the language options load.
         let file = console.file(SOUND_BANK_JP);
         let bank_jp = crate::lb::audio::SoundBank {
             len: file.bytes.len() as u32,
+            entrynum: file.entrynum,
             archive: self.data.add(Archive::raw(&file.bytes)),
         };
         // The executable's data the dummy stage points into (the results screen's).

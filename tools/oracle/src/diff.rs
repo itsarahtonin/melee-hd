@@ -499,7 +499,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 disc_speed = it
                     .next()
                     .and_then(|s| DiscSpeed::parse(s))
-                    .expect("--disc-speed fast|drive")
+                    .expect("--disc-speed fast|fast-flat|drive")
             }
             "--all" => all = true,
             "--heap" => COMPARE_HEAP.with(|c| c.set(true)),
@@ -533,7 +533,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     }
     let [trace_path, replay_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive]"
+            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|fast-flat|drive]"
         );
         eprintln!(
             "                         [--heap] [--write-golden | --golden-check] [--golden FILE] [--times] [--check-rescan N]"

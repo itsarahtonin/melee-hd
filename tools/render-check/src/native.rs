@@ -204,8 +204,11 @@ pub(crate) fn drive_predicting(
     let disc = Disc::open(disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
-    let settings = Settings::from_replay(&melee_slippi::start(&replay))
+    let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
+    // ssbm-rs drew the references at its flat model of the fast disc speed (before its
+    // `05d550a`), and which ticks draw follows the timeline, so the replay reads at it.
+    settings.disc = melee_sim::audio::clock::DiscSpeed::FastFlat;
     let mut cache: HashMap<String, (i32, Vec<u8>)> = HashMap::new();
     let mut load = |name: &str| {
         let (entrynum, bytes) = cache.entry(name.to_owned()).or_insert_with(|| {
