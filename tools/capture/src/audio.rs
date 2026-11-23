@@ -1036,7 +1036,7 @@ pub fn import_clock_on(mem1: &[u8], tb: u64, disc: DiscSpeed, power_on: u64) -> 
             melee_sim::audio::devcom::BUF_SIZE
         };
         c.schedule(
-            issued + 16 + melee_sim::audio::clock::DISC_LATENCY + disc.transfer(dc.size.min(chunk)),
+            issued + 16 + disc.read_time(dc.size.min(chunk)),
             melee_sim::audio::clock::EventKind::DiscDone,
         );
         c.disc_timeout = Some(c.schedule(

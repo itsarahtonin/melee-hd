@@ -4,7 +4,7 @@
 //! melee-hd [--saves DIR] [--no-session-record]     boots Melee from power-on with the native save
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread]
-//!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
+//!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast|dolphin-fast] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
 //! melee-hd --settings-shot FILE.png [--size WxH] draws the settings panel to a PNG
@@ -284,7 +284,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast|dolphin-fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
@@ -491,7 +491,9 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.given.fullscreen = true;
             }
             "--disc-speed" => {
-                a.disc_speed = Some(DiscSpeed::parse(&value()?).ok_or("--disc-speed drive|fast")?)
+                a.disc_speed = Some(
+                    DiscSpeed::parse(&value()?).ok_or("--disc-speed drive|fast|dolphin-fast")?,
+                )
             }
             "--widescreen" => {
                 a.aspect = present::Aspect::wide(16.0 / 9.0);

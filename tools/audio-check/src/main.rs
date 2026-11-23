@@ -1,5 +1,5 @@
 //! `melee-audio-check TRACE REPLAY.slp AUDIO.wav [--fp hardware|slippi] [--ticks N]
-//! [--window SECONDS] [--disc-speed fast|drive] [--out MIX.wav]`: plays a replay natively from
+//! [--window SECONDS] [--disc-speed fast|drive|dolphin-fast] [--out MIX.wav]`: plays a replay natively from
 //! the boot state in ssbm-rs's state trace (version 5, with memory over the boot tick), mixes
 //! its audio with melee-audio, and compares the samples with ssbm-rs's recording of the same
 //! run's audio interface (`AUDIO_OUT=AUDIO.wav ssbm-run ...`), which starts at power-on: the
@@ -183,7 +183,8 @@ fn run(args: &[String]) -> Result<bool, String> {
             "--out" => out = Some(value()?.clone()),
             "--port" => port = true,
             "--disc-speed" => {
-                disc_speed = DiscSpeed::parse(value()?).ok_or("--disc-speed fast|drive")?
+                disc_speed =
+                    DiscSpeed::parse(value()?).ok_or("--disc-speed fast|drive|dolphin-fast")?
             }
             "--fp" => {
                 fp_mode = match value()?.as_str() {
@@ -197,7 +198,7 @@ fn run(args: &[String]) -> Result<bool, String> {
     }
     let [trace_path, replay_path, wav_path] = pos[..] else {
         return Err(
-            "usage: melee-audio-check TRACE|- REPLAY.slp AUDIO.wav [--port] [--fp hardware|slippi] [--ticks N] [--window SECONDS] [--disc-speed fast|drive] [--out MIX.wav]"
+            "usage: melee-audio-check TRACE|- REPLAY.slp AUDIO.wav [--port] [--fp hardware|slippi] [--ticks N] [--window SECONDS] [--disc-speed fast|drive|dolphin-fast] [--out MIX.wav]"
                 .into(),
         );
     };
