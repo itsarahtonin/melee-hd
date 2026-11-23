@@ -57,7 +57,7 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::fox::ext as fox_ext;
 use melee_sim::game::ft::seak::special_n::SEAK;
 use melee_sim::game::handles::{CodeRef, FighterId};
-use melee_sim::game::it::kinds::{seakchain, seakneedleheld, seakneedlethrown, seakvanish};
+use melee_sim::game::it::kinds::{seakchain, seakneedleheld, seakneedlethrown, seakvanish, strand};
 use melee_sim::game::state::Running;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
@@ -307,7 +307,7 @@ fn run_sheik(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802BAF2C" => {
             let gobj = item_arg(g, maps, call);
             let j = (r(1) != 0).then(|| maps.jobjs[&r(1)]);
-            seakchain::make_links(g, gobj, j);
+            strand::make_links(g, gobj, j, &seakchain::CHAIN);
             Ret::Nothing
         }
         "it_802BB938" | "it_802BBAEC" => {
@@ -337,7 +337,12 @@ fn run_sheik(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             Ret::Nothing
         }
         "itSeakChain_Logic54_EvtUnk" => {
-            seakchain::forget(g, gobj_arg(maps, call), gobj_in(maps, call, 4));
+            strand::forget(
+                g,
+                gobj_arg(maps, call),
+                gobj_in(maps, call, 4),
+                &seakchain::CHAIN,
+            );
             Ret::Nothing
         }
         // Vanish's flash.

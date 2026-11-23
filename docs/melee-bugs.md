@@ -478,6 +478,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 82).
 
+### Ness: the yo-yo's drag runs the link behind's collision
+
+- **Where:** `it_802BF4A0` (the yo-yo dragged along the ground during a smash's charge), `crates/melee-sim/src/game/it/kinds/nessyoyo.rs` (`drag`, the step it gives `strand::walk_out`).
+- **Defect:** for each link out past the yo-yo, the step moves the link, then runs the airborne collision pass (`it_802BF030`) on the link before it (`cur`), which has already had its pass, not on the link it just moved (`next`).
+- **Effect:** the link before gets a second pass from where its last left it, and the moved link meets the stage only through its own pass from 1.5 above the hand's point's height (`it_802A42F4`); what that changes in the string's shape on uneven ground hasn't been looked at.
+- **melee-hd:** modeled.
+- **Fix:** pass `next`.
+- **Fix impact:** may move the yo-yo's string links while charging, and with them the yo-yo's place and hitbox; breaks replay and Slippi compatibility where it does.
+- **Source:** `crates/melee-sim/src/game/it/kinds/nessyoyo.rs:392`; the decompilation's `it_802BF4A0` (`it_802BF030(cur, 0, size)` in the loop).
+
 ### Sheik: the needles' bounce draws twice
 
 - **Where:** `itSeakneedlethrown_UnkMotion0_Coll` and `it_2725_Logic109_HitShield` (and the hit hooks sharing it), `crates/melee-sim/src/game/it/kinds/seakneedlethrown.rs` (`random_abs`).
@@ -2356,7 +2366,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A fixed handicap of 0 | `gm_80167BC8`, `game/gm/vs_mode.rs` (`apply_menu_rules`) | Reads the handicap table one entry before its start (`handicap - 1` as an unsigned index); the menus set handicaps 1 to 9 | `crates/melee-sim/src/game/gm/vs_mode.rs` (`apply_menu_rules`) |
 | Kirby's aerial Thunder Jolt for another copy | `ftKb_PkSpecialAirN_Anim`, `game/ft/pikachu/special_n.rs` (`pk_special_air_n_anim` with Kirby's `KindFrom::Copy`) | Takes the landing lag from `f31`, which its caller left, for a copy other than Pikachu's or Pichu's; only those two copies enter the state (ssbm-rs transliterates the function from its machine code for it) | `crates/melee-sim/src/game/ft/pikachu/special_n.rs:162` |
 | Held needles of another kind | `it_802B18B0`, `game/it/kinds/seakneedleheld.rs` | Shows as many needles as a count it never set for a kind other than Sheik's and Kirby's copy's; only those two make them | `crates/melee-sim/src/game/it/kinds/seakneedleheld.rs:63` |
-| Sheik's chain with no link out | `it_802BC080`, `game/it/kinds/seakchain.rs` | Stores a register its caller set (`env_flags`) when its loop doesn't run | `crates/melee-sim/src/game/it/kinds/seakchain.rs:796` |
+| Sheik's chain with no link out | `it_802BC080`, `game/it/kinds/seakchain.rs` | Stores a register its caller set (`env_flags`) when its loop doesn't run | `crates/melee-sim/src/game/it/kinds/seakchain.rs:634` |
+| The chain's, the string's and the yo-yo's line-ups with no link out | `it_802BCB88`, `it_802C3520`, `it_802BFAFC`, `game/it/kinds/strand.rs` (`line_up`) | Walk from the hand's link toward the tip for the first link out without a null test, so with every link in they read through a null link; their states line up only with a link out (the tip, or the last link a draw-in keeps) | `crates/melee-sim/src/game/it/kinds/strand.rs` (`line_up` stops by name) |
 | A floor probe that misses | `ftCo_800DC920`, `game/ft/co/grab.rs` | Leaves the offset a stack word it then compares | `crates/melee-sim/src/game/ft/co/grab.rs:503` |
 | Rumble scripts | `HSD_PadRumbleInterpret1`, `input/rumble.rs` | Reads through a null pointer for a loop end before any loop start, and spins forever on opcodes 6 and 7 or a command that doesn't wait; no script in the game has these | `crates/melee-sim/src/input/rumble.rs:115`; `tools/leaf-check/tests/rumble.rs:64` |
 | Particle commands past their tables | `hsd_8039930C` and the bank lookups, `hsd/particle.rs` | A texture group past the bank's table takes an unrelocated word for an address; a point joint past the table reads the particle links as joints; a callback index faults on the null `psCallback` | `crates/melee-sim/src/hsd/particle.rs:236`, `:850`, `:1602` |

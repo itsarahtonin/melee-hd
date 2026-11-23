@@ -158,6 +158,7 @@ pub mod star;
 pub mod starrod;
 pub mod starrodstar;
 pub mod steeredshot;
+pub mod strand;
 pub mod suikun;
 pub mod sword;
 pub mod taru;

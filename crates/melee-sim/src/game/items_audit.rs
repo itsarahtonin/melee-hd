@@ -331,6 +331,7 @@ pub const MODULES: &[&str] = &[
     "it/kinds/starrod",
     "it/kinds/starrodstar",
     "it/kinds/steeredshot",
+    "it/kinds/strand",
     "it/kinds/suikun",
     "it/kinds/sword",
     "it/kinds/taru",
@@ -388,10 +389,13 @@ const PROBE_BELOW: &str = "it_802759DC probes the floor mpLib_8005199C_Floor fou
 const ENEMY_KINDS: &str = "an enemy of another kind: in a VS match only a container (the monsters' table, it_8026CF04: Goomba, ReDead, Octorok, Topi) and the offered stages' own enemies (Shy Guys, Tingle, Klap Traps) spawn one; the rest come from the stage enemy spawner or adventure stages";
 const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001 onto the line it last stood on (mpLib_8004DD90_Floor), so the first line's length to its end is positive unless that lift is lost to rounding (2,048 units or more from the origin) and its sideways distance squares to 0 (closer than 4e-23), which no stage's lines give. A walk reaches its end only on a line neither a wall nor a ceiling, so on a floor (every line has one kind: the data's, or the one mpJointUpdateDynamics gives a dynamic line); the walk of 0 goes back and ends on its first line with positive length: from a floor, there with its normal; from a wall (a dynamic line tilted into one) the wall's length added to f27, 0 there (PROC_F27), passes the walk's limit of 0 and stops it short, as it stops the walk ahead, which then doesn't read the normals";
 
+const STRAND_LINKS: &str = "the chain's, the string's and the yo-yo's link counts (it::kinds::strand::make_links) are the first word of each item's attributes, fixed data from the disc that no match changes: with one link the strand's tip (the last link made after the first) would be unset and every state's first frame would stop on it, which none of the oracle replays and sessions that throw a chain, a string or a yo-yo does; the chain's line-up also divides by a third of its count";
+
 /// Functions, units (for every function of one not named on its own) and stops no items-on
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
 /// sudden death), each with why.
 pub const UNREACHED: &[(&str, &str)] = &[
+    ("a strand of fewer than two links", STRAND_LINKS),
     ("it_8026BE84", DROP_BY_KIND),
     ("it_80279AF0", COLANIM),
     ("it_80279B10", COLANIM),

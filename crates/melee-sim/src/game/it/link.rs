@@ -223,6 +223,46 @@ pub fn apply_vel(game: &mut Game, l: ItemLinkId) {
     k.pos.z = mem(fp::fadds(reg(k.pos.z), reg(k.vel.z)));
 }
 
+/// `Item_RetractChain`: from the hand's link `l`, past the links already in, the links out
+/// within `speed` of the hand's point `at` go in, the last of them kept; that link, what's left
+/// of its distance from `at` past `speed` (at most `max`), and the link past it, none once every
+/// link is in. The chain's, the string's, the yo-yo's and the grapple beam's draw-ins start with
+/// it.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub fn retract_chain(
+    r: &mut Running,
+    l: ItemLinkId,
+    at: Vec3,
+    speed: f64,
+    max: f64,
+) -> (Option<ItemLinkId>, ItemLinkId, f64) {
+    let mut cur = l;
+    let mut next = link(r.game, l).prev;
+    while let Some(n) = next {
+        if link(r.game, cur).out {
+            break;
+        }
+        cur = n;
+        next = link(r.game, n).prev;
+    }
+    let mut dir = Vec3::default();
+    let mut d = direction(link(r.game, cur).pos, at, &mut dir);
+    while let Some(n) = next {
+        if !(speed > d) {
+            break;
+        }
+        link_mut(r.game, cur).out = false;
+        d = direction(link(r.game, n).pos, at, &mut dir);
+        cur = n;
+        next = link(r.game, n).prev;
+    }
+    let mut rest = fp::fsubs(d, speed);
+    if rest > max {
+        rest = max;
+    }
+    (next, cur, rest)
+}
+
 /// Points a joint along `dir` (normalized in place) at `pos`, `it_802A6DC8`: its own matrix,
 /// independent of its parent's.
 #[doc(alias = "it_802A6DC8")]
