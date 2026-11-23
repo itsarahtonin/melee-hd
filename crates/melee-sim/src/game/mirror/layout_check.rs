@@ -640,6 +640,48 @@ mod proof {
         );
     }
 
+    /// A flag byte's one bitfield, its other seven bits the compiler's padding:
+    /// `{ int a; float b; short c; u8 d:1; /* pad */ }`.
+    #[derive(melee_derive::Mirror, Debug, Default)]
+    #[mirror(c = "T", size = 12, pad(10, bits(1, 7)), pad(11, 1))]
+    struct BitPad {
+        #[at(0)]
+        a: i32,
+        #[at(4)]
+        b: f32,
+        #[at(8)]
+        c: i16,
+        #[at(10, bits(0, 1))]
+        d: bool,
+    }
+
+    /// The same padding declared over the whole byte, the bitfield's bit too.
+    #[derive(melee_derive::Mirror, Debug, Default)]
+    #[mirror(c = "T", size = 12, pad(10, bits(0, 8)), pad(11, 1))]
+    struct BitPadOver {
+        #[at(0)]
+        a: i32,
+        #[at(4)]
+        b: f32,
+        #[at(8)]
+        c: i16,
+        #[at(10, bits(0, 1))]
+        d: bool,
+    }
+
+    /// A pad of bits covers exactly the bits a bitfield's byte leaves over.
+    #[test]
+    fn a_pad_of_bits_covers_what_a_bitfield_leaves() {
+        let mut c = c_record();
+        c.fields.truncate(4);
+        assert_eq!(
+            check(&BitPad::layout().unwrap(), &c, "T"),
+            Vec::<String>::new()
+        );
+        let e = check(&BitPadOver::layout().unwrap(), &c, "T");
+        assert!(e.iter().any(|e| e.contains("overlaps")), "{e:?}");
+    }
+
     /// A handle's kind is its type's own name, as the generated mirrors and every `Cx` take it
     /// (leaf-check's collision `Cx` stops on any other).
     #[test]
