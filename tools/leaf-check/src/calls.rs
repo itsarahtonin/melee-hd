@@ -206,7 +206,8 @@ fn run_checks(
         return Vec::new();
     };
     if paths.is_empty() {
-        melee_local_data::skip!(
+        // A set without this function's calls is one of many a check runs, not missing data.
+        eprintln!(
             "no saved calls of {func}: skipping ({})",
             melee_capture::pack::holdings(dir)
         );
@@ -527,7 +528,8 @@ pub fn run_variants_in(dir: &str, func: &str, variants: &[Variant]) -> Vec<Vec<R
         return variants.iter().map(|_| Vec::new()).collect();
     };
     if paths.is_empty() {
-        melee_local_data::skip!(
+        // A set without this function's calls is one of many a check runs, not missing data.
+        eprintln!(
             "no saved calls of {func}: skipping ({})",
             melee_capture::pack::holdings(dir)
         );

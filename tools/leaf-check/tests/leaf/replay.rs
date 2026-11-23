@@ -494,7 +494,7 @@ fn settings_from_game_start() {
     for (dir, _, ours) in replays() {
         let calls = leaf_check::calls::saved_calls(&dir, "fn_8016DCC0");
         let Some(path) = calls.first() else {
-            melee_local_data::skip!("no capture of fn_8016DCC0 in {dir}: skipping");
+            eprintln!("no capture of fn_8016DCC0 in {dir}: skipping");
             continue;
         };
         let cap = melee_capture::Capture::read(path);
