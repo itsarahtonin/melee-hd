@@ -311,7 +311,7 @@ impl Running<'_> {
         g.bgflash.gobj = Some(gobj);
         g.bgflash.scale = 1.0;
         g.bgflash.user = Some(BgFlashUserData {
-            alpha: alpha,
+            alpha,
             ..BgFlashUserData::default()
         });
         let addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::BgFlash);
@@ -333,10 +333,7 @@ impl Running<'_> {
         if let Some(left) =
             crate::game::leftovers::import::<BgFlashUserData>(self.data, addr, fresh)
         {
-            g.bgflash.user = Some(BgFlashUserData {
-                alpha: alpha,
-                ..left
-            });
+            g.bgflash.user = Some(BgFlashUserData { alpha, ..left });
         }
         // `lbArchive_LoadSymbols("LbBf.dat", ...)`.
         self.disc_load("LbBf.dat", crate::game::ft::data::MAIN_MEMORY);

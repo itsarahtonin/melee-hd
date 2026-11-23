@@ -342,7 +342,7 @@ pub fn spawn_flame(r: &mut Running, gobj: GObjId, pos: Vec3, attack_id: u32, fac
         facing_dir,
         damage: 0,
         vel: Vec3::new(0.0, 0.0, 0.0),
-        owner: owner,
+        owner,
         maker: Some(gobj),
         ignore_id: attack_id as i32,
         ..Default::default()

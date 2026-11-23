@@ -260,7 +260,7 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
         damage: 0,
         facing_dir: facing,
         kind: kind.wrapping_add(ItKind::FIRST_POKEMON.id()),
-        owner: owner,
+        owner,
         maker: Some(ball),
         ignore_id: 0,
         ..Default::default()
