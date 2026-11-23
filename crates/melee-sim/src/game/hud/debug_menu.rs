@@ -1547,7 +1547,6 @@ impl Running<'_> {
         use crate::game::gm::vs_mode::{player_defaults, rules_defaults};
         // The oracle's test hook (`oracle_hooks`): does nothing in the player, which never
         // installs one.
-        #[cfg(feature = "oracle-hooks")]
         crate::game::oracle_hooks::reach(
             self.game,
             crate::game::oracle_hooks::Entry::OnEnterDebugVs,
@@ -1600,7 +1599,7 @@ mod tests {
     #[test]
     fn tables_match_the_executable() {
         let Ok(path) = std::env::var("SSBM_DISC") else {
-            eprintln!("no SSBM_DISC: skipping");
+            melee_local_data::skip!("no SSBM_DISC: skipping");
             return;
         };
         let dol = melee_data::disc::Disc::open(&path)

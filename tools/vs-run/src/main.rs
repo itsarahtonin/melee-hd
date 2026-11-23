@@ -9,7 +9,7 @@
 //! `vs_match::Match::start`, loading files from the disc. With `--from`, it takes up a state
 //! ssbm-rs captured while playing the same replay, at a call of
 //! `gm_EvaluateAllControllerInputs` (the button maps, partway into an engine tick; see
-//! `tools/leaf-check/tests/vs.rs` for how to make captures): it finishes that tick, then steps
+//! `tools/leaf-check/tests/leaf/vs.rs` for how to make captures): it finishes that tick, then steps
 //! on. Either way it runs engine ticks until `--frames` run out, the match ends, or the match
 //! reaches code no port covers yet, which it names.
 

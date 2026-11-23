@@ -73,7 +73,6 @@ impl Running<'_> {
     /// each kind's own setup. The pools need no setting up here.
     #[doc(alias = "Fighter_FirstInitialize_80067A84")]
     pub fn fighter_first_init(&mut self) {
-        #[cfg(feature = "stubs")]
         if code::stubbed(addr::FIRST_INITIALIZE, &[]).is_some() {
             return;
         }

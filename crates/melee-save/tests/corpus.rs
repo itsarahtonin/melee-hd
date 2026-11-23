@@ -24,7 +24,7 @@ use melee_save::{Gci, tasks};
 fn corpus() -> Option<Vec<PathBuf>> {
     let root = PathBuf::from(melee_local_data::ssbm_rs_local(""));
     if !root.join("lockstep/cards").is_dir() {
-        eprintln!("no card corpus under {}: skipping", root.display());
+        melee_local_data::skip!("no card corpus under {}: skipping", root.display());
         return None;
     }
     let mut paths = Vec::new();

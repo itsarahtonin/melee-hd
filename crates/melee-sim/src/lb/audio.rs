@@ -678,7 +678,6 @@ impl Running<'_> {
     #[doc(alias = "lbAudioAx_80023F28")]
     #[doc(alias = "fn_80023ED4")]
     pub fn lb_play_music(&mut self, bgm: i32) -> bool {
-        #[cfg(feature = "stubs")]
         if let Some(v) =
             crate::game::code::stubbed(0x8002_3F28, &[crate::game::code::Val::Int(bgm)])
         {
@@ -1531,7 +1530,6 @@ impl crate::game::state::Running<'_> {
     pub fn load_announcer(&mut self) {
         // The oracle's test hook (`oracle_hooks`): does nothing in the player, which never
         // installs one.
-        #[cfg(feature = "oracle-hooks")]
         crate::game::oracle_hooks::reach(
             self.game,
             crate::game::oracle_hooks::Entry::LoadAnnouncer,

@@ -35,7 +35,7 @@ const STACK: usize = 512 << 20;
 /// The disc, or none (the test skips) without `SSBM_DISC`.
 fn disc() -> Option<Disc> {
     let Ok(path) = std::env::var("SSBM_DISC") else {
-        eprintln!("SSBM_DISC isn't set: skipping");
+        melee_local_data::skip!("SSBM_DISC isn't set: skipping");
         return None;
     };
     Some(Disc::open(&path).unwrap_or_else(|e| panic!("{path}: {e}")))
@@ -506,7 +506,7 @@ fn grapple_swing_stops_by_name_without_the_model() {
     let dir = melee_local_data::ssbm_rs_local("bench/oracle-m4-grapple");
     let path = std::path::Path::new(&dir).join("grapple-samus-bf.slp");
     if !path.exists() {
-        eprintln!("{}: not here, skipping", path.display());
+        melee_local_data::skip!("{}: not here, skipping", path.display());
         return;
     }
     let mut bench = Bench::open_path(disc, &path);
@@ -554,7 +554,7 @@ fn a_live_match_with_samus_reads_her_swing_from_the_model() {
     let dir = melee_local_data::ssbm_rs_local("bench/oracle-m4-grapple");
     let path = std::path::Path::new(&dir).join("grapple-samus-bf.slp");
     if !path.exists() {
-        eprintln!("{}: not here, skipping", path.display());
+        melee_local_data::skip!("{}: not here, skipping", path.display());
         return;
     }
     let mut bench = Bench::open_path(disc, &path);
@@ -633,7 +633,7 @@ fn slippi_super_scope_stand_in_matches_the_model() {
     for (name, wants_refill) in [("sscope-fd", true), ("sscope-click-fd", false)] {
         let path = std::path::Path::new(&dir).join(format!("{name}.slp"));
         if !path.exists() {
-            eprintln!("{}: not here, skipping", path.display());
+            melee_local_data::skip!("{}: not here, skipping", path.display());
             return;
         }
         let mut bench = Bench::open_path(disc.take().unwrap(), &path);
@@ -768,7 +768,7 @@ fn slippi_onett_cars_note_the_other_phase() {
     let path = melee_local_data::ssbm_rs_local("bench/oracle-m4/stage-onett.slp");
     let path = std::path::Path::new(&path);
     if !path.exists() {
-        eprintln!("{}: not here, skipping", path.display());
+        melee_local_data::skip!("{}: not here, skipping", path.display());
         return;
     }
     let mut bench = Bench::open_path(disc, path);
@@ -921,7 +921,7 @@ fn doubled_round_notes(
 ) {
     let Some(disc) = disc() else { return };
     if !path.exists() {
-        eprintln!("{}: not here, skipping", path.display());
+        melee_local_data::skip!("{}: not here, skipping", path.display());
         return;
     }
     let mut bench = Bench::open_path(disc, path);
@@ -1123,7 +1123,7 @@ fn off_course_notes(
 ) {
     let Some(disc) = disc() else { return };
     if !path.exists() {
-        eprintln!("{}: not here, skipping", path.display());
+        melee_local_data::skip!("{}: not here, skipping", path.display());
         return;
     }
     let mut bench = Bench::open_path(disc, path);

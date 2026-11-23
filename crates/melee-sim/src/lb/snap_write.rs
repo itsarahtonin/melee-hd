@@ -686,7 +686,7 @@ mod tests {
     #[ignore]
     fn the_headless_snapshot_fits_wherever_the_main_menu_lies() {
         let Ok(path) = std::env::var("SSBM_DISC") else {
-            eprintln!("no SSBM_DISC: skipping");
+            melee_local_data::skip!("no SSBM_DISC: skipping");
             return;
         };
         let disc = melee_data::disc::Disc::open(&path).expect("the disc");

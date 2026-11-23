@@ -12,8 +12,9 @@ publish.workspace = true
 gekko-fp.workspace = true
 melee-capture = { path = "../capture" }
 melee-data.workspace = true
+melee-local-data = { path = "../local-data" }
 melee-slippi = { path = "../../crates/melee-slippi" }
-melee-sim = { workspace = true, features = ["stubs"] }
+melee-sim.workspace = true
 ssbm-disc.workspace = true
 ssbm-game.workspace = true
 ssbm-ppc.workspace = true
@@ -22,6 +23,5 @@ ssbm-slippi.workspace = true
 ssbm-types.workspace = true
 
 [dev-dependencies]
-melee-local-data = { path = "../local-data" }
 melee-save = { path = "../../crates/melee-save" }
 zstd = "0.13"

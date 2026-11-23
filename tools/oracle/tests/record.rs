@@ -13,7 +13,7 @@ use melee_local_data::bench_replay;
 /// the disc.
 fn record(replay: &Path, out: &Path) -> Option<(bool, String)> {
     if std::env::var("SSBM_DISC").is_err() || !replay.exists() {
-        eprintln!("no SSBM_DISC or no {}: skipping", replay.display());
+        melee_local_data::skip!("no SSBM_DISC or no {}: skipping", replay.display());
         return None;
     }
     let run = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))

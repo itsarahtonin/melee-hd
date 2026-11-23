@@ -437,7 +437,6 @@ impl Val {
 /// order, an output vector's pointer standing for the vector it returns; until a subsystem's
 /// port adds its arms here, reaching one stops the simulation.
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
-    #[cfg(feature = "stubs")]
     if let Some(v) = stubs::get(f) {
         stubs::log(f, args);
         return v;
@@ -495,9 +494,9 @@ fn held_item_call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     })
 }
 
-/// A ported function stood in for in a check (feature `stubs`), as [`call`] stands in for an
+/// A ported function stood in for in a check ([`stubs`]), as [`call`] stands in for an
 /// unported one: its value if a stand-in is registered, the call logged with its arguments.
-#[cfg(feature = "stubs")]
+#[inline]
 pub fn stubbed(f: u32, args: &[Val]) -> Option<Val> {
     let v = stubs::get(f)?;
     stubs::log(f, args);
@@ -508,20 +507,27 @@ pub fn stubbed(f: u32, args: &[Val]) -> Option<Val> {
 pub const OS_REPORT: u32 = 0x8034_56A8;
 
 /// `OSReport`: a line on the debugger's console, which the simulation leaves out. A check that
-/// stands in for it (feature `stubs`) sees the call, as the original's.
+/// stands in for it ([`stubs`]) sees the call, as the original's.
 #[doc(alias = "OSReport")]
 pub fn os_report() {
-    #[cfg(feature = "stubs")]
     let _ = stubbed(OS_REPORT, &[]);
 }
 
-/// Stand-ins for unported functions in checks (feature `stubs`): a stubbed function returns
-/// its value instead of stopping, and the calls are logged with their arguments for the check
-/// to compare with the original's. The simulation itself never registers any.
-#[cfg(feature = "stubs")]
+/// Stand-ins for unported functions in checks: a stubbed function returns its value instead of
+/// stopping, and the calls are logged with their arguments for the check to compare with the
+/// original's. The simulation itself never registers any.
+///
+/// A run-time switch, not a cargo feature (the refactor's task 26), so the checks and the
+/// player link one build of the simulation: the first [`set`] in the process turns the
+/// lookups on, and until then [`get`] is one relaxed load of a static, the player's whole
+/// cost (`melee-bench native`, docs/refactor.md's task 26).
 pub mod stubs {
     use super::Val;
     use std::cell::RefCell;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    /// Whether any thread has registered a stand-in: never in the player.
+    static ON: AtomicBool = AtomicBool::new(false);
 
     thread_local! {
         static STUBS: RefCell<Vec<(u32, Val)>> = const { RefCell::new(Vec::new()) };
@@ -530,6 +536,7 @@ pub mod stubs {
 
     /// Makes `f` return `ret` on this thread.
     pub fn set(f: u32, ret: Val) {
+        ON.store(true, Ordering::Relaxed);
         STUBS.with(|s| {
             let mut s = s.borrow_mut();
             s.retain(|&(a, _)| a != f);
@@ -542,7 +549,18 @@ pub mod stubs {
         LOG.with(|l| l.borrow_mut().clear());
     }
 
+    /// `f`'s stand-in on this thread, if one is registered.
+    #[inline]
     pub fn get(f: u32) -> Option<Val> {
+        if !ON.load(Ordering::Relaxed) {
+            return None;
+        }
+        lookup(f)
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn lookup(f: u32) -> Option<Val> {
         STUBS.with(|s| s.borrow().iter().find(|&&(a, _)| a == f).map(|&(_, v)| v))
     }
 

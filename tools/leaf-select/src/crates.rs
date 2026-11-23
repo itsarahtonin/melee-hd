@@ -10,6 +10,9 @@ use std::path::Path;
 /// The crate the jobs test.
 pub const HARNESS: &str = "tools/leaf-check";
 
+/// leaf-check's one test binary (`tests/leaf/main.rs`), each family of checks a module of it.
+pub const BINARY: &str = "leaf";
+
 /// Crates keyed whole by choice: every job runs most of them (the importer and comparer, the
 /// archives, the float operations, the data paths), so keying them by unit would skip
 /// almost nothing, and their hot loops (scanning and comparing all of memory) ran about five

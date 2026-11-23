@@ -206,7 +206,6 @@ impl Running<'_> {
     fn run_game_mode(&mut self) {
         // The oracle's test hook (`oracle_hooks`): does nothing in the player, which never
         // installs one.
-        #[cfg(feature = "oracle-hooks")]
         crate::game::oracle_hooks::reach(self.game, crate::game::oracle_hooks::Entry::RunGameMode);
         let mode = self.game.machine.routing.curr_mode;
         self.game.game_mode = mode;

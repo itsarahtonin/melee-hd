@@ -135,7 +135,7 @@ fn play(rule: bool, ticks: u64) -> Option<Played> {
 fn vs_mode_entry_plays_every_sample_it_mixes() {
     crate::on_game_stack(|| {
         let Some(now) = play(true, 1700) else {
-            eprintln!("skipped: no disc");
+            melee_local_data::skip!("skipped: no disc");
             return;
         };
         for (t, length, n) in &now.long {
@@ -247,7 +247,7 @@ fn present(
 fn a_scene_s_load_holds_the_frame_from_before_it() {
     crate::on_game_stack(|| {
         let Some((shown, long, blends)) = present(1700) else {
-            eprintln!("skipped: no disc");
+            melee_local_data::skip!("skipped: no disc");
             return;
         };
         let tick = Duration::from_secs_f64(1.0 / crate::TICK_RATE);
@@ -339,7 +339,7 @@ fn explore() {
     crate::on_game_stack(|| {
         let inputs = std::env::var("LOAD_INPUTS").ok();
         let Some(mut s) = console(inputs.as_deref()) else {
-            eprintln!("skipped: no disc");
+            melee_local_data::skip!("skipped: no disc");
             return;
         };
         let holds = Holds::parse(&std::env::var("LOAD_HOLDS").unwrap_or_default()).unwrap();

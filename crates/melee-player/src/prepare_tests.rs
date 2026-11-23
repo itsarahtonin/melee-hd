@@ -16,7 +16,7 @@ fn renderer(gpu: &crate::present::Gpu) -> Gpu {
 fn a_prepared_match_draws_the_same_frames_and_decodes_next_to_nothing() {
     crate::on_game_stack(|| {
         let Ok(disc) = std::env::var("SSBM_DISC") else {
-            eprintln!("skipped: no disc");
+            melee_local_data::skip!("skipped: no disc");
             return;
         };
         let Some((instance, adapter)) = melee_gpu::testing::instance_and_adapter() else {

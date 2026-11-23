@@ -5,11 +5,15 @@
 //! writes its runner makes at a function's entry. A session recorded from such a run plays back
 //! only with the same writes at the same points, which the oracle's hook makes from these.
 //!
-//! Test-only, behind the feature `oracle-hooks`, which only `melee-oracle` turns on: the
-//! simulation never installs a hook, and the player and a recording can't. Each entry point is
-//! named for the original function whose entry ssbm-rs's hook runs at.
+//! Test-only: the simulation never installs a hook or sets a mutation, and the player and a
+//! recording can't; only `melee-oracle` does. A run-time switch, not a cargo feature (the
+//! refactor's task 26), so the oracle, the checks and the player link one build of the
+//! simulation: the first setter called in the process turns the reads on, and until then each
+//! entry point and mutation read is one relaxed load of a static. Each entry point is named for
+//! the original function whose entry ssbm-rs's hook runs at.
 
 use std::cell::Cell;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::state::Game;
 use super::structs::StartMeleeData;
@@ -33,6 +37,18 @@ pub enum Entry {
 /// A hook: what the oracle writes at an entry point.
 pub type Hook = fn(&mut Game, Entry);
 
+/// Whether any thread has installed a hook or set a mutation: never in the player.
+static ON: AtomicBool = AtomicBool::new(false);
+
+fn turn_on() {
+    ON.store(true, Ordering::Relaxed);
+}
+
+#[inline]
+fn on() -> bool {
+    ON.load(Ordering::Relaxed)
+}
+
 thread_local! {
     static HOOK: Cell<Option<Hook>> = const { Cell::new(None) };
     static NO_DYNAMICS_FIX: Cell<bool> = const { Cell::new(false) };
@@ -44,45 +60,55 @@ thread_local! {
 /// thread, where it takes the console's: the oracle's mutation (`melee-oracle session --mutate
 /// fresh-counters`), to see its comparison find them.
 pub fn set_fresh_counters(on: bool) {
+    turn_on();
     FRESH_COUNTERS.with(|n| n.set(on));
 }
 
 /// Whether [`set_fresh_counters`] left them fresh.
+#[inline]
 pub(crate) fn fresh_counters() -> bool {
-    FRESH_COUNTERS.with(Cell::get)
+    on() && FRESH_COUNTERS.with(Cell::get)
 }
 
 /// Leaves out the statics a live match's handback takes back (`Game::take_match_statics`) on
 /// this thread: the oracle's mutation (`melee-oracle session --mutate no-handback-statics`),
 /// to see its comparison past the handback find them.
 pub fn set_handback_statics_off(off: bool) {
+    turn_on();
     NO_HANDBACK_STATICS.with(|n| n.set(off));
 }
 
 /// Whether [`set_handback_statics_off`] left them out.
+#[inline]
 pub(crate) fn handback_statics_off() -> bool {
-    NO_HANDBACK_STATICS.with(Cell::get)
+    on() && NO_HANDBACK_STATICS.with(Cell::get)
 }
 
 /// Turns Slippi's DynamicsFix off on this thread (`Game::dynamics_fix`): the oracle's mutation
 /// (`melee-oracle session --mutate no-dynamics-fix`), to see what its comparison finds
 /// without the code.
 pub fn set_dynamics_fix_off(off: bool) {
+    turn_on();
     NO_DYNAMICS_FIX.with(|n| n.set(off));
 }
 
 /// Whether [`set_dynamics_fix_off`] turned DynamicsFix off.
+#[inline]
 pub(crate) fn dynamics_fix_off() -> bool {
-    NO_DYNAMICS_FIX.with(Cell::get)
+    on() && NO_DYNAMICS_FIX.with(Cell::get)
 }
 
 /// Runs `hook` at every entry point on this thread from now on (none with `None`).
 pub fn install(hook: Option<Hook>) {
+    turn_on();
     HOOK.with(|h| h.set(hook));
 }
 
 /// The installed hook's run at `at`, if one is installed.
 pub(crate) fn reach(game: &mut Game, at: Entry) {
+    if !on() {
+        return;
+    }
     if let Some(hook) = HOOK.with(Cell::get) {
         hook(game, at);
     }

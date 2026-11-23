@@ -107,7 +107,7 @@ const STACK_TOP: u32 = 0x817F_0000;
 /// when `SSBM_DISC` is unset.
 pub fn reference() -> Option<Ctx> {
     let Ok(path) = std::env::var("SSBM_DISC") else {
-        eprintln!("SSBM_DISC is unset: skipping the comparison with ssbm-rs");
+        melee_local_data::skip!("SSBM_DISC is unset: skipping the comparison with ssbm-rs");
         return None;
     };
     // The executable, read (and its hash checked) once: each check's workers make their own
@@ -146,7 +146,12 @@ pub fn disc_index() -> Option<&'static melee_capture::DiscIndex> {
         std::sync::OnceLock::new();
     INDEX
         .get_or_init(|| {
-            let path = std::env::var("SSBM_DISC").ok()?;
+            let Ok(path) = std::env::var("SSBM_DISC") else {
+                melee_local_data::skip!(
+                    "SSBM_DISC is unset: skipping the checks that read the disc's archives"
+                );
+                return None;
+            };
             let disc =
                 melee_data::disc::Disc::open(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
             Some(melee_capture::disc_index(&disc))

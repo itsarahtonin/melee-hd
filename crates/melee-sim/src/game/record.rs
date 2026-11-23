@@ -1323,7 +1323,7 @@ mod tests {
     #[test]
     fn offline_replays_game_starts() {
         let Some(dir) = std::env::var_os("SLIPPI_REPLAYS") else {
-            eprintln!("skipped: SLIPPI_REPLAYS isn't set");
+            melee_local_data::skip!("skipped: SLIPPI_REPLAYS isn't set");
             return;
         };
         let names = [
@@ -1339,7 +1339,7 @@ mod tests {
                 .join("2026-05")
                 .join(format!("{name}.slp"));
             let Ok(file) = std::fs::read(&path) else {
-                eprintln!("skipped: {} isn't there", path.display());
+                melee_local_data::skip!("skipped: {} isn't there", path.display());
                 return;
             };
             let (sizes, start, list) = raw_parts(&file);

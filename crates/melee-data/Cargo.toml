@@ -11,3 +11,11 @@ publish.workspace = true
 [dependencies]
 nod = "=2.0.0-alpha.9"
 thiserror = "2"
+# Not used here: features other crates turn on in nod's dependencies (naga's `half` turns on
+# num-traits' `libm`, egui's `ahash` zerocopy's `simd`, the checks' `zstd` zstd-sys's three),
+# on in every build, so the checks, the bench and the player all link one build of melee-data
+# and melee-sim. Cargo unifies features only among the packages of one build, and without these
+# a check building leaf-check or the oracle alone builds melee-sim again (the refactor's task 26).
+num-traits = { version = "0.2.19", default-features = false, features = ["libm"] }
+zerocopy = { version = "0.8.60", default-features = false, features = ["simd"] }
+zstd-sys = { version = "2.1.0", default-features = false, features = ["legacy", "std", "zdict_builder"] }

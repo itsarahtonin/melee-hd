@@ -1181,10 +1181,7 @@ impl Session {
         }
         settings.follow_playback_camera = self.follow_playback_camera;
         settings.record = self.game.recorder.is_some().then_some(setup);
-        #[cfg(feature = "oracle-hooks")]
         let fresh = super::oracle_hooks::fresh_counters();
-        #[cfg(not(feature = "oracle-hooks"))]
-        let fresh = false;
         settings.counters = (!fresh).then_some(counters);
         let mut m = super::live::with_entry_sounds(sounds, || {
             super::vs_match::Match::start(&settings, &mut |n| console.file(n))

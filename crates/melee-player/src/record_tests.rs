@@ -1319,7 +1319,7 @@ fn a_ruleset_session_saves_its_live_matches() {
     crate::on_game_stack(|| {
         let Some((disc, path)) = crate::live_tests::ruleset_session("m6s-match/matches-a.inputs")
         else {
-            eprintln!("skipped: no disc or no ruleset sessions");
+            melee_local_data::skip!("skipped: no disc or no ruleset sessions");
             return;
         };
         let dir = std::env::temp_dir().join(format!("melee-hd-ruleset-{}", std::process::id()));
@@ -1420,7 +1420,7 @@ fn only_a_slippi_session_saves_replays() {
             crate::live_tests::ruleset_session("vanilla-sessions/menus-ics-fox-fod.inputs"),
             crate::live_tests::ruleset_session("m6s-player/player-fd.inputs"),
         ) else {
-            eprintln!("skipped: no disc or no sessions");
+            melee_local_data::skip!("skipped: no disc or no sessions");
             return;
         };
         let (saved, in_match, recorded) =
@@ -1528,7 +1528,7 @@ fn a_ruleset_match_ignores_the_disc_pace() {
 fn a_stadium_replay_plays_to_its_end_at_the_default_settings() {
     crate::on_game_stack(|| {
         let Ok(disc) = std::env::var("SSBM_DISC") else {
-            eprintln!("skipped: SSBM_DISC names no disc");
+            melee_local_data::skip!("skipped: SSBM_DISC names no disc");
             return;
         };
         let path = concat!(

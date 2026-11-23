@@ -46,7 +46,7 @@ fn decode(path: &Path) -> (u32, u32, Vec<u8>) {
 /// checks the last frames are the same.
 fn same_as_from_the_start(name: &str, ticks: u32, start: &str, resizes: &[&str], extra: &[&str]) {
     if std::env::var_os("SSBM_DISC").is_none() {
-        eprintln!("skipped: SSBM_DISC names no disc");
+        melee_local_data::skip!("skipped: SSBM_DISC names no disc");
         return;
     }
     // The player draws on the adapter it picks; not without a GPU or on a software adapter.

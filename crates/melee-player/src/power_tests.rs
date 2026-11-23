@@ -25,7 +25,7 @@ fn recording(name: &str) -> Option<(String, PathBuf)> {
 fn a_played_session_records_its_reads_again() {
     crate::on_game_stack(|| {
         let Some((disc, path)) = recording("2026-10-06_17-13-21.inputs") else {
-            eprintln!("skipped: no disc or no recordings");
+            melee_local_data::skip!("skipped: no disc or no recordings");
             return;
         };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
@@ -99,7 +99,7 @@ fn a_played_session_records_its_reads_again() {
 fn a_replay_leaves_melee_as_it_was() {
     crate::on_game_stack(|| {
         let Some((disc, path)) = recording("2026-10-06_17-13-21.inputs") else {
-            eprintln!("skipped: no disc or no recordings");
+            melee_local_data::skip!("skipped: no disc or no recordings");
             return;
         };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
@@ -191,7 +191,7 @@ fn the_slippi_ruleset_boots_past_the_card() {
     use melee_sim::game::state::Ruleset;
     crate::on_game_stack(|| {
         let Ok(disc) = std::env::var("SSBM_DISC") else {
-            eprintln!("skipped: no disc");
+            melee_local_data::skip!("skipped: no disc");
             return;
         };
         let d = melee_data::disc::Disc::open(&disc).unwrap();

@@ -1018,7 +1018,6 @@ impl Running<'_> {
                 sub,
                 transformation: transformation & 1 != 0,
             };
-            #[cfg(feature = "stubs")]
             if let Some(v) = code::stubbed(
                 super::super::ft::create::addr::FIGHTER_CREATE,
                 &[

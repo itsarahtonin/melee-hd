@@ -20,7 +20,7 @@ const CLEAN: &str = "1794 ticks checked, rolled back 7 each, no difference";
 /// without the disc or the replay.
 fn sync_test_of(replay: &str, fp: &str, args: &[&str]) -> Option<(bool, String)> {
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(replay).exists() {
-        eprintln!("no SSBM_DISC or no {replay}: skipping");
+        melee_local_data::skip!("no SSBM_DISC or no {replay}: skipping");
         return None;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))

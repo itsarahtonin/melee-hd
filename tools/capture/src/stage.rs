@@ -1771,7 +1771,7 @@ impl Comparer<'_> {
         );
     }
 
-    /// The collision geometry, as `tools/leaf-check/tests/mplib/state.rs` compares it.
+    /// The collision geometry, as `tools/leaf-check/tests/leaf/mplib/state.rs` compares it.
     fn geometry(&mut self, g: &gr::Geometry) {
         let g = g.raw_parts();
         let coll = coll_data(self.u32(sym("stage_info") + 0x6AC));

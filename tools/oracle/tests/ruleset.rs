@@ -14,6 +14,116 @@ use std::process::Command;
 
 use melee_local_data::ssbm_rs_local;
 
+/// The sessions split over processes run at once (the refactor's task 26): `RULESET_SHARD=K/N`
+/// runs the K-th of N shards (K from 1) of the units, each a session of a test (`TEST/NAME`) or
+/// a test of one session (`TEST`); unset, every unit runs. Each session already runs in its own
+/// `melee-oracle` process, so a shard shares nothing with another but the machine; the shards
+/// split the units by their cost ([`shard::COSTS`], each unit's seconds on the worker), the
+/// longest first, each to the shard with the least so far, so N shards take about 1/N of the
+/// whole and every unit runs in exactly one.
+mod shard {
+    /// Each unit and its seconds alone on the worker (2026-11-23). A unit missing here fails
+    /// its test: add it with its time.
+    pub const COSTS: &[(&str, u32)] = &[
+        ("the_ruleset_sessions_compare_clean/menu-tour", 60),
+        ("the_ruleset_sessions_compare_clean/classic-cstick", 60),
+        ("without_dynamics_fix_nothing_is_named/menu-tour", 60),
+        ("without_dynamics_fix_nothing_is_named/classic-cstick", 60),
+        ("the_c_stick_rule_off_zooms", 60),
+        ("vs_menus_hands_off_its_match", 60),
+        ("the_live_match_sessions_run_on/matches-a", 60),
+        ("the_live_match_sessions_run_on/matches-b", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-a-1", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-a-2", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-a-3", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-a-4", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-a-5", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-b-1", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-b-2", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-b-3", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-b-4", 60),
+        ("the_live_matches_play_back_as_ssbm_rs_does/matches-b-5", 60),
+        (
+            "the_paused_live_matches_record_as_the_console_does/pause-fd",
+            60,
+        ),
+        (
+            "the_paused_live_matches_record_as_the_console_does/pause-far",
+            60,
+        ),
+        ("the_slow_mo_live_match_plays_back_as_ssbm_rs_does", 60),
+        ("the_players_own_session_compares_clean", 60),
+        ("past_the_handback_only_the_named_differ/pause-fd", 60),
+        ("past_the_handback_only_the_named_differ/pause-far", 60),
+        ("past_the_handback_only_the_named_differ/player-fd", 60),
+        ("past_the_handback_only_the_named_differ/slomo", 60),
+        ("past_the_handback_only_the_named_differ/matches-a", 60),
+        ("past_the_handback_only_the_named_differ/matches-b", 60),
+        ("past_the_handback_the_statics_compare", 60),
+        ("a_later_live_match_takes_the_consoles_counters", 60),
+    ];
+
+    /// This process's shard, `(index from 0, count)`, from `RULESET_SHARD`.
+    fn current() -> Option<(usize, usize)> {
+        let v = std::env::var("RULESET_SHARD").ok()?;
+        let parsed = v.split_once('/').and_then(|(k, n)| {
+            let (k, n): (usize, usize) = (k.trim().parse().ok()?, n.trim().parse().ok()?);
+            (1..=n).contains(&k).then_some((k - 1, n))
+        });
+        Some(parsed.unwrap_or_else(|| panic!("RULESET_SHARD={v}: expected K/N, 1 <= K <= N")))
+    }
+
+    /// Each unit's shard of `n`: the costliest first, each to the least loaded (the earlier
+    /// shard on a tie).
+    pub fn owners(n: usize) -> Vec<usize> {
+        let mut order: Vec<usize> = (0..COSTS.len()).collect();
+        order.sort_by_key(|&i| (std::cmp::Reverse(COSTS[i].1), COSTS[i].0));
+        let (mut load, mut owner) = (vec![0u64; n], vec![0; COSTS.len()]);
+        for i in order {
+            let k = (0..n).min_by_key(|&k| (load[k], k)).unwrap();
+            load[k] += u64::from(COSTS[i].1);
+            owner[i] = k;
+        }
+        owner
+    }
+
+    /// Whether this process runs `unit`.
+    pub fn runs(unit: &str) -> bool {
+        let i = (COSTS.iter().position(|(u, _)| *u == unit))
+            .unwrap_or_else(|| panic!("{unit}: not in the ruleset tests' shard::COSTS"));
+        let Some((k, n)) = current() else {
+            eprintln!("unit {unit}");
+            return true;
+        };
+        let mine = owners(n)[i] == k;
+        eprintln!(
+            "shard {}/{n}: unit {unit} {}",
+            k + 1,
+            if mine { "runs" } else { "is another's" }
+        );
+        mine
+    }
+}
+
+/// Every unit has one shard, and three shards' loads are within the costliest unit of each
+/// other.
+#[test]
+fn the_shards_split_the_units() {
+    for n in 1..=4 {
+        let owners = shard::owners(n);
+        let mut load = vec![0u64; n];
+        for (i, &k) in owners.iter().enumerate() {
+            assert!(k < n);
+            load[k] += u64::from(shard::COSTS[i].1);
+        }
+        let most = shard::COSTS.iter().map(|c| u64::from(c.1)).max().unwrap();
+        assert!(
+            load.iter().max().unwrap() - load.iter().min().unwrap() <= most,
+            "{n}: {load:?}"
+        );
+    }
+}
+
 /// The oracle's output for `session TRACE INPUTS args` on the session `name`, or `None`
 /// without its files.
 fn session(name: &str, args: &[&str]) -> Option<String> {
@@ -23,14 +133,19 @@ fn session(name: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
+    let t0 = std::time::Instant::now();
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
         .args(["session", &trace, &inputs])
         .args(args)
         .output()
         .expect("melee-oracle runs");
+    eprintln!(
+        "melee-oracle session {name}: {:.0} s",
+        t0.elapsed().as_secs_f64()
+    );
     let text = String::from_utf8_lossy(&out.stdout).into_owned();
     eprintln!("{text}");
     Some(text)
@@ -68,6 +183,9 @@ fn the_ruleset_sessions_compare_clean() {
             ][..],
         ),
     ] {
+        if !shard::runs(&format!("the_ruleset_sessions_compare_clean/{name}")) {
+            continue;
+        }
         let Some(out) = session(name, &["--all", "--heap"]) else {
             return;
         };
@@ -96,6 +214,9 @@ fn the_ruleset_sessions_compare_clean() {
 #[test]
 fn without_dynamics_fix_nothing_is_named() {
     for (name, ticks) in [("menu-tour", 3055), ("classic-cstick", 3291)] {
+        if !shard::runs(&format!("without_dynamics_fix_nothing_is_named/{name}")) {
+            continue;
+        }
         let Some(out) = session(name, &["--all", "--heap", "--mutate", "no-dynamics-fix"]) else {
             return;
         };
@@ -114,6 +235,9 @@ fn without_dynamics_fix_nothing_is_named() {
 /// as Vanilla's differed there, 2026-11-14.)
 #[test]
 fn the_c_stick_rule_off_zooms() {
+    if !shard::runs("the_c_stick_rule_off_zooms") {
+        return;
+    }
     let Some(out) = session(
         "classic-cstick",
         &["--all", "--mutate", "c-stick-1p", "--ignore", "c_stick_1p"],
@@ -135,6 +259,9 @@ fn the_c_stick_rule_off_zooms() {
 /// "What still differs from the console's run").
 #[test]
 fn vs_menus_hands_off_its_match() {
+    if !shard::runs("vs_menus_hands_off_its_match") {
+        return;
+    }
     let Some(out) = session("vs-menus", &["--all", "--heap"]) else {
         return;
     };
@@ -167,10 +294,16 @@ fn traced(name: &str) -> &'static str {
 
 /// The output of `melee-oracle ARGS`.
 fn oracle(args: &[&str]) -> String {
+    let t0 = std::time::Instant::now();
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
         .args(args)
         .output()
         .expect("melee-oracle runs");
+    eprintln!(
+        "melee-oracle {}: {:.0} s",
+        args.first().unwrap_or(&""),
+        t0.elapsed().as_secs_f64()
+    );
     let text = String::from_utf8_lossy(&out.stdout).into_owned();
     eprintln!("{text}");
     text
@@ -201,10 +334,13 @@ fn the_live_match_sessions_run_on() {
             16104,
         ),
     ] {
+        if !shard::runs(&format!("the_live_match_sessions_run_on/{name}")) {
+            continue;
+        }
         let trace = ssbm_rs_local(&format!("traces/m6s-stall/{name}.trc"));
         let inputs = ssbm_rs_local(&format!("lockstep/m6s-match/{name}.inputs"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-            eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+            melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
             return;
         }
         let dir = std::env::temp_dir().join(format!("melee-hd-live-{name}-{}", std::process::id()));
@@ -308,12 +444,17 @@ fn the_live_matches_play_back_as_ssbm_rs_does() {
         ("matches-b-4", 1531, 4),
         ("matches-b-5", 1539, 0),
     ] {
+        if !shard::runs(&format!(
+            "the_live_matches_play_back_as_ssbm_rs_does/{name}"
+        )) {
+            continue;
+        }
         let (dir, at) = (traced(name), traced_trace(name));
         let trace = ssbm_rs_local(&format!("traces/{at}/{name}.trc"));
         let slp = ssbm_rs_local(&format!("lockstep/{dir}/traced/{name}.slp"));
         let log = ssbm_rs_local(&format!("traces/{at}/{name}.check.log"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-            eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+            melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
             return;
         }
         let out = oracle(&["diff", &trace, &slp, "--fp", "slippi", "--heap"]);
@@ -400,13 +541,18 @@ fn the_paused_live_matches_record_as_the_console_does() {
         ),
     ];
     for (name, compared, check, diverging, ticks) in cases {
+        if !shard::runs(&format!(
+            "the_paused_live_matches_record_as_the_console_does/{name}"
+        )) {
+            continue;
+        }
         let trace = ssbm_rs_local(&format!("traces/m6s-pause/{name}.trc"));
         let inputs = ssbm_rs_local(&format!("lockstep/m6s-pause/{name}.inputs"));
         let played = ssbm_rs_local(&format!("lockstep/m6s-stall/traced/{name}-1.slp"));
         let played_trace = ssbm_rs_local(&format!("traces/m6s-stall/{name}-1.trc"));
         let log = ssbm_rs_local(&format!("traces/m6s-stall/{name}-1.check.log"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-            eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+            melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
             return;
         }
         let dir =
@@ -472,13 +618,16 @@ fn the_paused_live_matches_record_as_the_console_does() {
 /// compares clean with melee-hd's.
 #[test]
 fn the_slow_mo_live_match_plays_back_as_ssbm_rs_does() {
+    if !shard::runs("the_slow_mo_live_match_plays_back_as_ssbm_rs_does") {
+        return;
+    }
     let trace = ssbm_rs_local("traces/m6s-followups/slomo.trc");
     let inputs = ssbm_rs_local("lockstep/m6s-followups/slomo.inputs");
     let played = ssbm_rs_local("lockstep/m6s-followups/traced/slomo-1.slp");
     let played_trace = ssbm_rs_local("traces/m6s-followups/slomo-1.trc");
     let log = ssbm_rs_local("traces/m6s-followups/slomo-1.check.log");
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
         return;
     }
     let dir = std::env::temp_dir().join(format!("melee-hd-slomo-{}", std::process::id()));
@@ -544,11 +693,14 @@ fn the_slow_mo_live_match_plays_back_as_ssbm_rs_does() {
 /// with melee-hd's.
 #[test]
 fn the_players_own_session_compares_clean() {
+    if !shard::runs("the_players_own_session_compares_clean") {
+        return;
+    }
     let trace = ssbm_rs_local("traces/m6s-player/player-fd.trc");
     let inputs = ssbm_rs_local("lockstep/m6s-player/player-fd.inputs");
     let saved = ssbm_rs_local("lockstep/m6s-player/traced/player-fd-1.slp");
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
         return;
     }
     let dir = std::env::temp_dir().join(format!("melee-hd-player-fd-{}", std::process::id()));
@@ -653,10 +805,13 @@ fn past_the_handback_only_the_named_differ() {
         ("matches-a", "m6s-stall", "m6s-match", 2105, 22083, 24187, 5),
         ("matches-b", "m6s-stall", "m6s-match", 2821, 16105, 18925, 5),
     ] {
+        if !shard::runs(&format!("past_the_handback_only_the_named_differ/{name}")) {
+            continue;
+        }
         let trace = ssbm_rs_local(&format!("traces/{traces}/{name}.trc"));
         let rec = ssbm_rs_local(&format!("lockstep/{inputs}/{name}.inputs"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-            eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+            melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
             return;
         }
         let out = oracle(&[
@@ -681,10 +836,13 @@ fn past_the_handback_only_the_named_differ() {
 /// them in its first tick: `pause-fd`'s VS controller, live standings and crowd among them.
 #[test]
 fn past_the_handback_the_statics_compare() {
+    if !shard::runs("past_the_handback_the_statics_compare") {
+        return;
+    }
     let trace = ssbm_rs_local("traces/m6s-pause/pause-fd.trc");
     let rec = ssbm_rs_local("lockstep/m6s-pause/pause-fd.inputs");
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
         return;
     }
     let out = oracle(&[
@@ -715,10 +873,13 @@ fn past_the_handback_the_statics_compare() {
 /// and the particles' family ids and display frames.
 #[test]
 fn a_later_live_match_takes_the_consoles_counters() {
+    if !shard::runs("a_later_live_match_takes_the_consoles_counters") {
+        return;
+    }
     let trace = ssbm_rs_local("traces/m6s-stall/matches-a.trc");
     let rec = ssbm_rs_local("lockstep/m6s-match/matches-a.inputs");
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
         return;
     }
     let out = oracle(&[
