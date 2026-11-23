@@ -242,7 +242,7 @@ impl Running<'_> {
             return false;
         }
         // `ft_80087A80`: the cloak's vibrate frame, 2 while it holds and 1 as it flickers.
-        match fp.smash_attrs.x2134_vibrateFrame {
+        match fp.smash_attrs.vibrate_frame {
             2 => true,
             1 => fp.cpu.frame_counter % 240 > 120,
             _ => false,
@@ -257,7 +257,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C06B4")]
     fn cloaking_colors(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];
-        let id = i32::from_be_bytes(fp.spycloak_overlay.x28_colanim)
+        let id = i32::from_be_bytes(fp.spycloak_overlay.colanim)
             .wrapping_add(super::colanim::SPYCLOAK_START);
         fp.cloak && (id == 0x7B || id == 0x80) && fp.refracted
     }
@@ -606,7 +606,7 @@ impl Running<'_> {
             c.stand_timer -= 1;
         }
         // `gm_8016C75C`: the player's standing.
-        if self.game.vs.state.x24C.x0 != self.game.scene_ticks() {
+        if self.game.vs.state.match_end.standings_tick != self.game.scene_ticks() {
             r5 = Leftover::Word(MATCH_END_X30);
         }
         let standing = self.cpu_standing(slot);
@@ -623,7 +623,7 @@ impl Running<'_> {
             self.game.fighters[f.0].cpu.coin_flip = r > 0.5;
         }
         let fpp = &mut self.game.fighters[f.0];
-        if !fpp.state_flags.x221B_b5 {
+        if !fpp.state_flags.holds_grab {
             fpp.cpu.hold_choice = 0;
         }
         // DI in hitstun.
@@ -1129,11 +1129,11 @@ impl Running<'_> {
     #[doc(alias = "gm_8016C75C")]
     pub(super) fn cpu_standing(&mut self, slot: i32) -> u32 {
         let tick = self.game.scene_ticks();
-        if self.game.vs.state.x24C.x0 != tick {
-            self.game.vs.state.x24C.x0 = tick;
+        if self.game.vs.state.match_end.standings_tick != tick {
+            self.game.vs.state.match_end.standings_tick = tick;
             self.compile_results();
         }
-        self.game.vs.state.x24C.player_standings[slot as usize].kos
+        self.game.vs.state.match_end.player_standings[slot as usize].kos
     }
 
     /// Whether the fighter holds someone, `ftCo_IsGrabbing`: its catch wait, Donkey Kong's

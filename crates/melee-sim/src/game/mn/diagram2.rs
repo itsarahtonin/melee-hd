@@ -266,10 +266,10 @@ impl Running<'_> {
     /// The page's selection saved in the rules (`saveDiagramSelection`).
     fn d2_save(&mut self) {
         let d = self.d2(self.d2_gobj());
-        let r = &mut self.game.game_data.x1850;
-        r.x12 = d.fighter;
-        r.x13 = d.name;
-        r.xD = d.name_mode;
+        let r = &mut self.game.game_data.rules;
+        r.diagram2_fighter = d.fighter;
+        r.diagram2_name = d.name;
+        r.diagram_name_mode = d.name_mode;
     }
 
     /// The characters' or names' header shown, and its name (`updateDiagramMode`).
@@ -645,7 +645,7 @@ impl Running<'_> {
             saved_selection: f.hovered_selection,
             anim_state: 1,
             jobjs,
-            name_mode: self.game.game_data.x1850.xD,
+            name_mode: self.game.game_data.rules.diagram_name_mode,
             ..Diagram2Data::default()
         };
         self.game.data_menus.diagram2.data.insert(addr, d);

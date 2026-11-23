@@ -38,7 +38,7 @@ impl Running<'_> {
         while let Some(g) = next {
             next = self.game.world.gobj(g).next;
             let f = self.game.fighter_id(g);
-            if self.game.fighters[f.0].parts_vis.xC[1].is_some() {
+            if self.game.fighters[f.0].parts_vis.lookups[1].is_some() {
                 for h in hide {
                     self.set_parts_vis(f, h, false);
                 }
@@ -125,7 +125,7 @@ impl Running<'_> {
         let o = self.active_overlay(f);
         FighterMaterial {
             refract: fp.refracted.then(|| {
-                let i = usize::from(fp.smash_attrs.x2134_vibrateFrame);
+                let i = usize::from(fp.smash_attrs.vibrate_frame);
                 *self.game.refract.tobjs.get(i).expect("refraction's chain")
             }),
             swapped: if !fp.outline && (!fp.low_models || !fp.low_models_own_material) {
@@ -155,7 +155,7 @@ impl Running<'_> {
                 silhouette: fp.silhouette,
                 low_models: fp.low_models,
             },
-            overlay_light: o.x7C_flag2 && o.x7C_light_enable,
+            overlay_light: o.flag2 && o.light_enable,
             light: fp.light,
             lights: self.game.ft.lobj0,
             ambient: self.game.ft.lobj1,
@@ -301,7 +301,7 @@ impl Running<'_> {
                     z,
                 );
             }
-            if fp.state_flags.x221B_b0 {
+            if fp.state_flags.shield_bubble {
                 drew |= coll_draw::hit_result(
                     objs,
                     data,
@@ -352,7 +352,10 @@ impl Running<'_> {
             && fp.stepped_on_item
             && coll_draw::damage(
                 objs,
-                [fp.dmg.item_pickup_bounds.x0, fp.dmg.item_pickup_bounds.xC],
+                [
+                    fp.dmg.item_pickup_bounds.prev_feet,
+                    fp.dmg.item_pickup_bounds.feet,
+                ],
                 pass,
             )
         {
@@ -531,7 +534,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         if !fp.invisible && !fp.visible && !fp.refracted {
             self.fighter_light(f);
-            if self.game.fighters[f.0].parts_vis.xC[1].is_some() {
+            if self.game.fighters[f.0].parts_vis.lookups[1].is_some() {
                 self.set_parts_vis(f, 0, false);
                 self.set_parts_vis(f, 2, false);
                 self.set_parts_vis(f, 4, false);
@@ -609,7 +612,7 @@ impl Running<'_> {
                 if self.game.fighters[f.0].camera_placed {
                     self.place_by_camera(g);
                 }
-                if self.game.fighters[f.0].parts_vis.xC[4].is_some() {
+                if self.game.fighters[f.0].parts_vis.lookups[4].is_some() {
                     self.draw_outline(g, pass, false);
                     self.draw_fighter(g, pass, true);
                     self.draw_outline(g, pass, true);
@@ -617,7 +620,7 @@ impl Running<'_> {
             }
             0 => {
                 self.game.fighters[f.0].silhouette = false;
-                let main = self.game.fighters[f.0].parts_vis.xC[4].is_none();
+                let main = self.game.fighters[f.0].parts_vis.lookups[4].is_none();
                 self.draw_fighter(g, pass, main);
             }
             _ => {}

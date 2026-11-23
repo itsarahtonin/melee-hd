@@ -42,8 +42,8 @@ fn count_stats(s: &mut plAttackStats, ev: [u8; 4]) {
         (0x08, &mut s.thrown_item_count),
         (0x04, &mut s.aerials_count),
         (0x01, &mut s.specials_count),
-        (0x02, &mut s.x1A0_count),
-        (0x10, &mut s.x1A4_count),
+        (0x02, &mut s.strikes_count),
+        (0x10, &mut s.reflectors_count),
     ] {
         if ev[2] & mask != 0 {
             *n = n.wrapping_add(1);
@@ -86,11 +86,11 @@ impl Running<'_> {
             AttackRecord::Fighter(g) => {
                 let a = &self.game.fighter(g).attack_record;
                 (
-                    a.x2074_vec.x,
-                    a.x2074_vec.y,
-                    a.x207C.x,
-                    a.x207C.y,
-                    [a.x10[0], a.x10[1]],
+                    a.percents.x,
+                    a.percents.y,
+                    a.kb_and_thrower.x,
+                    a.kb_and_thrower.y,
+                    [a.flags[0], a.flags[1]],
                 )
             }
             AttackRecord::Item(g) => {
@@ -107,23 +107,23 @@ impl Running<'_> {
         };
         let (a, b) = (flag_bits(flags[0]), flag_bits(flags[1]));
         ft_800898B4_t {
-            x0,
-            x4,
+            attacker_percent: x0,
+            victim_percent: x4,
             kb_applied1: kb,
-            xC: xc,
-            x10_b0: a[0],
-            x10_b1: a[1],
-            x10_b2: a[2],
-            x10_b3: a[3],
-            x10_b4: a[4],
-            x10_b5: a[5],
-            x10_b6: a[6],
-            x10_b7: a[7],
-            x11_b0: b[0],
-            x11_b1: b[1],
-            x11_b2: b[2],
-            x11_b3: b[3],
-            x11_b4: b[4],
+            item_thrower: xc,
+            spike: a[0],
+            metal: a[1],
+            bunny_hood: a[2],
+            starman: a[3],
+            cloak: a[4],
+            giant: a[5],
+            tiny: a[6],
+            landed: a[7],
+            from_behind: b[0],
+            at_edge: b[1],
+            on_ledge: b[2],
+            spike_after_strong: b[3],
+            forward_attack: b[4],
         }
     }
 
@@ -132,7 +132,7 @@ impl Running<'_> {
     fn attack_record_pad(&self, r: AttackRecord) -> [u8; 3] {
         match r {
             AttackRecord::Fighter(g) => {
-                let x = self.game.fighter(g).attack_record.x10;
+                let x = self.game.fighter(g).attack_record.flags;
                 [x[1], x[2], x[3]]
             }
             AttackRecord::Item(g) => {
@@ -147,7 +147,7 @@ impl Running<'_> {
     /// Marks the attack's record as one that landed (`x10_b7`).
     fn mark_record_landed(&mut self, r: AttackRecord) {
         match r {
-            AttackRecord::Fighter(g) => self.game.fighter_mut(g).attack_record.x10[0] |= 0x01,
+            AttackRecord::Fighter(g) => self.game.fighter_mut(g).attack_record.flags[0] |= 0x01,
             AttackRecord::Item(g) => {
                 super::super::it::item_mut(self.game, g).attack_record_word |= 0x0100_0000;
             }
@@ -211,7 +211,7 @@ impl Running<'_> {
                 if self.game.vs_is_teams() && self.game.vs_friendly_fire() && ateam == vteam {
                     // `pl_80040D8C`.
                     let t = self.game.player_stale_moves(aslot);
-                    t.xCB0 = t.xCB0.wrapping_add(1);
+                    t.teammate_hits = t.teammate_hits.wrapping_add(1);
                 }
                 if id < 100 {
                     let percent = self.game.fighter(victim).dmg.percent;
@@ -238,30 +238,30 @@ impl Running<'_> {
         };
         let _ = prev_kb;
         let d = &mut fp.dmg.hit_records;
-        d.x0 = 0;
-        d.x4 = 0;
+        d.attacker_percent = 0;
+        d.victim_percent = 0;
         d.kb_applied1 = 0.0;
-        d.xC = 6;
-        d.x10_b0 = false;
-        d.x11_b3 = false;
-        d.x10_b1 = false;
-        d.x10_b2 = false;
-        d.x10_b3 = false;
-        d.x10_b4 = false;
-        d.x10_b5 = false;
-        d.x10_b6 = false;
-        d.x10_b7 = false;
-        d.x11_b0 = false;
-        d.x11_b1 = false;
-        d.x11_b2 = false;
-        d.x11_b4 = false;
-        d.x4 = fp::fctiwz(reg(fp.dmg.percent));
-        fp.dmg.hit_records.x11_b0 = false;
+        d.item_thrower = 6;
+        d.spike = false;
+        d.spike_after_strong = false;
+        d.metal = false;
+        d.bunny_hood = false;
+        d.starman = false;
+        d.cloak = false;
+        d.giant = false;
+        d.tiny = false;
+        d.landed = false;
+        d.from_behind = false;
+        d.at_edge = false;
+        d.on_ledge = false;
+        d.forward_attack = false;
+        d.victim_percent = fp::fctiwz(reg(fp.dmg.percent));
+        fp.dmg.hit_records.from_behind = false;
         if edge != 0 {
-            fp.dmg.hit_records.x11_b1 = true;
+            fp.dmg.hit_records.at_edge = true;
         }
         if fp.motion_id == MS_X11_B2 {
-            fp.dmg.hit_records.x11_b2 = true;
+            fp.dmg.hit_records.on_ledge = true;
         }
         // No strong-hit mark: the record's x10_b0 was just cleared.
         let _ = prev_source;
@@ -280,8 +280,8 @@ impl Running<'_> {
             let rec = self.attack_record(record);
             let s = &mut self.game.player_stale_moves(slot).total_attack_count_struct;
             count_stats(&mut s.hits, ev);
-            if rec.x10_b0 {
-                s.hits.x1A8 = s.hits.x1A8.wrapping_add(1);
+            if rec.spike {
+                s.hits.spikes_count = s.hits.spikes_count.wrapping_add(1);
             }
             if id == 99 {
                 // `pl_8003FE40`.
@@ -289,8 +289,8 @@ impl Running<'_> {
             }
             let s = &mut self.game.player_stale_moves(slot).total_attack_count_struct;
             let best = s.attacks.by_attack_counts[usize::from(id)];
-            if !rec.x10_b7 && best > word_at(&s.x358, 4 + 4 * usize::from(id)) {
-                count_stats_bytes(&mut s.x358, ev, rec.x10_b0);
+            if !rec.landed && best > word_at(&s.landed, 4 + 4 * usize::from(id)) {
+                count_stats_bytes(&mut s.landed, ev, rec.spike);
                 self.count_best_hit(slot, sub, i32::from(id));
             }
         }
@@ -318,8 +318,8 @@ impl Running<'_> {
             .player_stale_moves(aslot)
             .total_attack_count_struct;
         count_stats(&mut s.hits, ev);
-        if rec.x10_b0 {
-            s.hits.x1A8 = s.hits.x1A8.wrapping_add(1);
+        if rec.spike {
+            s.hits.spikes_count = s.hits.spikes_count.wrapping_add(1);
         }
         if id == 99 {
             // `pl_8003FE40`.
@@ -330,8 +330,8 @@ impl Running<'_> {
             .player_stale_moves(aslot)
             .total_attack_count_struct;
         let best = s.attacks.by_attack_counts[usize::from(id)];
-        if !rec.x10_b7 && best > word_at(&s.x358, 4 + 4 * usize::from(id)) {
-            count_stats_bytes(&mut s.x358, ev, rec.x10_b0);
+        if !rec.landed && best > word_at(&s.landed, 4 + 4 * usize::from(id)) {
+            count_stats_bytes(&mut s.landed, ev, rec.spike);
             self.count_best_hit(aslot, asub, i32::from(id));
         }
         let s = &mut self
@@ -339,27 +339,27 @@ impl Running<'_> {
             .player_stale_moves(aslot)
             .total_attack_count_struct;
         if behind {
-            s.x56C = s.x56C.wrapping_add(1);
+            s.back_hits = s.back_hits.wrapping_add(1);
         } else {
-            s.x568 = s.x568.wrapping_add(1);
+            s.front_hits = s.front_hits.wrapping_add(1);
         }
         if id == 8 || id == 0xB {
-            s.x574 = s.x574.wrapping_add(1);
+            s.down_hits = s.down_hits.wrapping_add(1);
         } else {
-            s.x570 = s.x570.wrapping_add(1);
+            s.other_hits = s.other_hits.wrapping_add(1);
         }
         assert!((0..8).contains(&vslot), "0 <= h_player && h_player < 8");
         let s = &mut self
             .game
             .player_stale_moves(aslot)
             .total_attack_count_struct;
-        s.x504[usize::from(id)] |= 1 << (vslot as u8);
+        s.victims[usize::from(id)] |= 1 << (vslot as u8);
         self.first_hit_bonus(aslot);
         self.average_victim_percent(aslot, vslot, percent);
-        self.self_hit_bonus(aslot, vslot, vsub, rec.xC);
+        self.self_hit_bonus(aslot, vslot, vsub, rec.item_thrower);
         if vsub == 0 && (84..=87).contains(&id) {
             // `pl_800403FC`.
-            self.game.player_stale_moves(vslot).xCAC = aslot as u32;
+            self.game.player_stale_moves(vslot).flowered_by = aslot as u32;
         }
         self.count_hits_on(aslot, vslot, vsub, i32::from(id));
     }
@@ -372,15 +372,15 @@ impl Running<'_> {
             return;
         }
         let limit = self.bonus_param(0x17C) as i32;
-        let e = &mut self.game.player_combos(vslot).x10[aslot as usize];
-        if e.xC != 0 && e.xC == id {
-            e.x8 = e.x8.wrapping_add(1);
-            if e.xC == 90 && i32::from(e.x8) >= limit {
+        let e = &mut self.game.player_combos(vslot).by_attacker[aslot as usize];
+        if e.attack != 0 && e.attack == id {
+            e.repeats = e.repeats.wrapping_add(1);
+            if e.attack == 90 && i32::from(e.repeats) >= limit {
                 self.set_flag(aslot, Flag::Bonus(195), 1);
             }
         } else {
-            e.x8 = 1;
-            e.xC = id;
+            e.repeats = 1;
+            e.attack = id;
         }
     }
 
@@ -393,14 +393,14 @@ impl Running<'_> {
         }
         let shielding = self.game.player_mut(vslot).ext_u32(0xD50) != 0;
         let limit = self.bonus_param(4) as i32;
-        let e = &mut self.game.player_combos(vslot).x10[aslot as usize];
+        let e = &mut self.game.player_combos(vslot).by_attacker[aslot as usize];
         if id == 1 && shielding {
-            e.x12_b0 = true;
+            e.shield_jabbed = true;
         }
         if !matches!(id, 76 | 90 | 91 | 92 | 96) {
-            e.x10 = e.x10.wrapping_add(1);
+            e.air_hits = e.air_hits.wrapping_add(1);
         }
-        if i32::from(e.x10) >= limit {
+        if i32::from(e.air_hits) >= limit {
             let same = self.game.vs_is_teams()
                 && self.game.player_team(aslot) == self.game.player_team(vslot);
             if !same {
@@ -412,7 +412,7 @@ impl Running<'_> {
     /// `pl_8003FE64`: the first hit of the match, bonus 26, if no player has it yet.
     #[doc(alias = "pl_8003FE64")]
     fn first_hit_bonus(&mut self, aslot: i32) {
-        if (0..6).any(|i| self.game.player_stale_moves(i).x904[26] != 0) {
+        if (0..6).any(|i| self.game.player_stale_moves(i).bonuses[26] != 0) {
             return;
         }
         self.set_flag(aslot, Flag::Bonus(26), 1);
@@ -429,10 +429,10 @@ impl Running<'_> {
             return;
         }
         let t = self.game.player_stale_moves(aslot);
-        t.xCA4 = t.xCA4.wrapping_add(1);
-        let n = t.xCA4;
+        t.victim_percent_count = t.victim_percent_count.wrapping_add(1);
+        let n = t.victim_percent_count;
         let sum = fp::fmadds(
-            reg(t.xCA0),
+            reg(t.victim_percent_sum),
             fp::frsp(f64::from(n.wrapping_sub(1))),
             reg(percent),
         );
@@ -441,7 +441,7 @@ impl Running<'_> {
             total != 0.0,
             "the original's assertion failed: total != 0.0F"
         );
-        t.xCA0 = mem(fp::fdivs(sum, total));
+        t.victim_percent_sum = mem(fp::fdivs(sum, total));
     }
 
     /// `pl_8003EA40`: bonus 155 when the record names the victim's own slot.
@@ -467,7 +467,7 @@ impl Running<'_> {
                 .game
                 .player_entity_at(slot, sub)
                 .expect("the player's fighter");
-            let held = reg(self.game.fighter(g).smash_attrs.x2138_smashSinceHitbox);
+            let held = reg(self.game.fighter(g).smash_attrs.smash_since_hitbox);
             if held > reg(self.bonus_param_f32(0x38)) {
                 let p = self.game.player_mut(slot);
                 p.set_ext_u8(0xDD1, p.ext_u8(0xDD1) | 0x08);
@@ -476,9 +476,9 @@ impl Running<'_> {
         // `pl_8003EAAC`.
         if sub == 0 && id == 0x59 {
             let t = self.game.player_stale_moves(slot);
-            t.xCA8 = t.xCA8.wrapping_add(1);
+            t.ray_gun_hits = t.ray_gun_hits.wrapping_add(1);
             let target = crate::game::it::kinds::lgun::shots_bonus(self.game, self.data);
-            if self.game.player_stale_moves(slot).xCA8 == target {
+            if self.game.player_stale_moves(slot).ray_gun_hits == target {
                 self.set_point(slot, 194, 1);
             }
         }
@@ -491,7 +491,7 @@ impl Running<'_> {
             return;
         }
         let t = self.game.player_stale_moves(slot);
-        let step = t.xC90;
+        let step = t.combo_step;
         let next = match step {
             0 => (1..=3).contains(&id),
             1 => (6..=8).contains(&id),
@@ -501,13 +501,13 @@ impl Running<'_> {
         };
         if next {
             if step == 3 {
-                t.xC90 = 0;
+                t.combo_step = 0;
                 self.count_bonus(slot, 0x56);
             } else {
-                t.xC90 = step.wrapping_add(1);
+                t.combo_step = step.wrapping_add(1);
             }
         } else {
-            t.xC90 = 0;
+            t.combo_step = 0;
         }
     }
 
@@ -536,27 +536,27 @@ impl Running<'_> {
         };
         let d = &mut fp.dmg.hit_records;
         *d = rec;
-        d.x4 = fp::fctiwz(reg(fp.dmg.percent));
+        d.victim_percent = fp::fctiwz(reg(fp.dmg.percent));
         // The copy is the record's whole 0x14 bytes, its padding too.
         let pad = self.attack_record_pad(record);
         let f = self.game.fighter_id(victim);
         self.game.ft.hit_record_pad.insert(f.0, pad);
         let fp = self.game.fighter_mut(victim);
-        fp.dmg.hit_records.x11_b0 = behind;
+        fp.dmg.hit_records.from_behind = behind;
         if edge != 0 {
-            fp.dmg.hit_records.x11_b1 = true;
+            fp.dmg.hit_records.at_edge = true;
         }
         if fp.motion_id == MS_X11_B2 {
-            fp.dmg.hit_records.x11_b2 = true;
+            fp.dmg.hit_records.on_ledge = true;
         }
-        if fp.dmg.source_player != prev_source && fp.dmg.hit_records.x10_b0 && prev_kb >= strong {
-            fp.dmg.hit_records.x11_b3 = true;
+        if fp.dmg.source_player != prev_source && fp.dmg.hit_records.spike && prev_kb >= strong {
+            fp.dmg.hit_records.spike_after_strong = true;
         }
         if let Some(a) = attacker {
             let msid = i32::from(fp.dmg.attack_record[3]);
             let grabbed_by = fp.victim_gobj;
             if self.forward_attack(a, msid) && grabbed_by != Some(a) {
-                self.game.fighter_mut(victim).dmg.hit_records.x11_b4 = true;
+                self.game.fighter_mut(victim).dmg.hit_records.forward_attack = true;
             }
             self.mark_record_landed(record);
         }

@@ -753,13 +753,13 @@ impl Session {
     /// to the next scene.
     pub fn step_tick(&mut self, console: &mut dyn Console) -> (Frame, bool) {
         if self.aside.is_some() {
-            if self.game.scene.unk_C == 0 {
+            if self.game.scene.ending == 0 {
                 return self.live_tick(console);
             }
             self.hand_back();
         }
         let card = CardLent::take(&mut self.card);
-        if self.game.scene.unk_C != 0 {
+        if self.game.scene.ending != 0 {
             self.enter_next_scene(console);
         }
         if self.aside.is_some() {

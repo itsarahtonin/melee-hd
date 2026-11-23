@@ -448,7 +448,7 @@ impl Running<'_> {
         let mut stack = JointStack::new();
         let mut part = 0usize;
         while let Some(j) = joint {
-            while self.game.fighter_parts[parts][part].x8[0] & 0x40 == 0 {
+            while self.game.fighter_parts[parts][part].flags[0] & 0x40 == 0 {
                 part += 1;
             }
             let p = self.game.fighter_parts[parts][part]
@@ -484,7 +484,7 @@ impl Running<'_> {
         let mut stack = JointStack::new();
         let (mut part, mut total) = (0usize, 0u32);
         while let Some(j) = joint {
-            while self.game.fighter_parts[parts][part].x8[0] & 0x40 == 0 {
+            while self.game.fighter_parts[parts][part].flags[0] & 0x40 == 0 {
                 part += 1;
             }
             let part_jobj = self.game.fighter_parts[parts][part].joint;
@@ -651,12 +651,16 @@ impl Running<'_> {
             for i in 0..self.parts_table(FighterKind::Kirby.id()).len() as usize {
                 let bone = &self.game.fighter_parts[parts][i];
                 let Some(j) = bone.joint else { continue };
-                if bone.x8[0] & 0x02 == 0 && bone.x8[1] & 0x01 == 0 {
+                if bone.flags[0] & 0x02 == 0 && bone.flags[1] & 0x01 == 0 {
                     continue;
                 }
-                if bone.x8[1] & 0x02 != 0 {
-                    let xd = usize::from(bone.xC_u[1] >> 1);
-                    let list = if bone.x8[1] & 0x04 != 0 { second } else { main };
+                if bone.flags[1] & 0x02 != 0 {
+                    let xd = usize::from(bone.tree[1] >> 1);
+                    let list = if bone.flags[1] & 0x04 != 0 {
+                        second
+                    } else {
+                        main
+                    };
                     let d = self.game.fighter_dobj_lists[list.expect("a model's DObj list").0][xd];
                     let next = d.and_then(|d| self.game.objs.dobjs[d].next);
                     dobj::remove_all(&mut self.game.objs, next);
@@ -708,13 +712,13 @@ impl Running<'_> {
                 .0;
             let (j, j2) = {
                 let b = &self.game.fighter_parts[parts][part];
-                (b.joint, b.x4_jobj2)
+                (b.joint, b.interp_joint)
             };
             jobj::remove(&mut self.game.objs, j);
             jobj::remove(&mut self.game.objs, j2);
             let b = &mut self.game.fighter_parts[parts][part];
             b.joint = None;
-            b.x4_jobj2 = None;
+            b.interp_joint = None;
             set_bone_bit(b, 0, 1, false);
             set_bone_bit(b, 0, 2, false);
         }
@@ -879,7 +883,7 @@ impl Running<'_> {
         self.game.fighters[f.0]
             .u
             .set_data_at(VIS_LOOKUPS + 16, lookup);
-        self.game.fighters[f.0].parts_vis.xC[4] = lookup;
+        self.game.fighters[f.0].parts_vis.lookups[4] = lookup;
         self.kb_hat_lookup(f, 4, false, u::HAT_DOBJS);
         let c = self.kb_gw_color(4);
         let list = self.game.fighters[f.0]
@@ -921,7 +925,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F15D8")]
     pub fn kb_gamewatch_hat_off(&mut self, gobj: GObjId) {
         self.kb_unload_hat_parts(gobj, 24);
-        self.game.fighter_mut(gobj).parts_vis.xC[4] = None;
+        self.game.fighter_mut(gobj).parts_vis.lookups[4] = None;
         self.update_model_scale(gobj);
     }
 

@@ -44,8 +44,8 @@ pub fn start_script(
     co.script.cursor = script;
     co.script.timer = 0;
     co.script.loop_count = 0;
-    co.x7C_flag2 = false;
-    co.x7C_color_enable = false;
+    co.flag2 = false;
+    co.color_enable = false;
     gp.flags.overlay_done = false;
     run_ground_overlay(game, data, gobj);
 }

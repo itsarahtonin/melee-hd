@@ -197,12 +197,12 @@ impl Running<'_> {
         fp.grab_immune = 0x1FF;
         self.stop_dead(gobj);
         if self.game.fighter(victim).ground_or_air == super::super::common::GA_AIR {
-            self.game.fighter_mut(gobj).state_flags.x221B_b7 = false;
+            self.game.fighter_mut(gobj).state_flags.grounded_catch = false;
         } else {
             // The catcher holds on to the grounded victim's throw bone.
             self.attach_to_thrower(victim, gobj);
             let fp = self.game.fighter_mut(gobj);
-            fp.state_flags.x221B_b7 = true;
+            fp.state_flags.grounded_catch = true;
             fp.accessory4_cb = Some(CodeRef(addr::HI_FOLLOW_VICTIM));
         }
     }
@@ -246,7 +246,7 @@ impl Running<'_> {
     /// collision.
     #[doc(alias = "ftCa_SpecialHiCatch_Coll")]
     pub fn ca_special_hi_catch_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).state_flags.x221B_b7 {
+        if !self.game.fighter(gobj).state_flags.grounded_catch {
             self.air_coll_stay(gobj);
         }
     }
@@ -320,13 +320,13 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.partner = Some(catcher);
         fp.victim_gobj = Some(catcher);
-        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.holds_grab = false;
         fp.facing_dir = -cfacing;
         if fp.ground_or_air == super::super::common::GA_AIR {
             self.attach_to_thrower(catcher, gobj);
-            self.game.fighter_mut(gobj).state_flags.x221B_b7 = false;
+            self.game.fighter_mut(gobj).state_flags.grounded_catch = false;
         } else {
-            self.game.fighter_mut(gobj).state_flags.x221B_b7 = true;
+            self.game.fighter_mut(gobj).state_flags.grounded_catch = true;
         }
         self.change_motion_state(
             gobj,
@@ -337,7 +337,7 @@ impl Running<'_> {
             0.0,
             Some(catcher),
         );
-        if !self.game.fighter(gobj).state_flags.x221B_b7 {
+        if !self.game.fighter(gobj).state_flags.grounded_catch {
             self.game.fighter_mut(gobj).accessory1_cb = Some(CodeRef(addr::HELD_FOLLOW));
         }
         self.game.fighter_mut(gobj).grab_immune = 0x1FF;

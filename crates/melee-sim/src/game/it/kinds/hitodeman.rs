@@ -422,12 +422,12 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
     spawn.prev_pos = prev;
     spawn.pos = lib26b1::ecb_center(r.game, gobj);
     spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(mem(fp::fmuls(reg(facing), reg(speed))), 0.0, 0.0);
-    spawn.x0_parent_gobj = own;
-    spawn.x4_parent_gobj2 = Some(gobj);
-    spawn.x44_flag[0] &= !0x80;
-    spawn.x40 = 0;
+    spawn.owner = own;
+    spawn.maker = Some(gobj);
+    spawn.flags[0] &= !0x80;
+    spawn.ignore_id = 0;
     if spawn_air(r, &mut spawn).is_some() {
         let sfx = if facing == 1.0 { STAR_RIGHT } else { STAR_LEFT };
         r.lb_create_sound_object(&SoundParams {

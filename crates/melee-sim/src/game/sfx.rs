@@ -404,7 +404,7 @@ impl Running<'_> {
         let (slot, _) = self.fighter_slot(g);
         // `pl_8003FDA0`: bonus 0x5B.
         assert!((0..6).contains(&slot), "player slot {slot}");
-        self.game.players[slot as usize].stale_moves.x904[0x5B] = 1;
+        self.game.players[slot as usize].stale_moves.bonuses[0x5B] = 1;
         true
     }
 

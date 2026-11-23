@@ -217,7 +217,7 @@ impl DebugVars {
             p.cpu_kind = w(0xA8 + i) as u8;
             p.cpu_level = w(0xB8 + i) as u8;
             p.stocks = w(0xD4) as i8;
-            p.xC_b1 = false;
+            p.enters = false;
             p.model_scale = f(0x98 + i);
         }
         d
@@ -1211,14 +1211,14 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015FB68")]
     pub fn debug_relock_all(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;
-        s.x186C = 0;
+        s.unlocked_features = 0;
         s.unlocked_characters = 0;
-        s.x186A = 0;
+        s.unlocked_stages = 0;
         self.game.sync_unlocks();
         self.relock_messages();
         let s = &mut self.game.game_data.thing.save_data;
         for i in 0..300 {
-            s.x1B58[i / 32] &= !(1 << (i % 32));
+            s.trophies[i / 32] &= !(1 << (i % 32));
         }
         s.trophy_flags = [0; 293];
         s.trophy_category_flags = 0;

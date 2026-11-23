@@ -428,13 +428,11 @@ impl Running<'_> {
     #[doc(alias = "ftGw_SpecialLw_AbsorbThink_DecideAction")]
     pub fn gw_absorb_decide_action(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        let charge = fp
-            .u_i32(u::PANIC_CHARGE)
-            .wrapping_add(fp.absorb.x1A48_hitsTaken);
+        let charge = fp.u_i32(u::PANIC_CHARGE).wrapping_add(fp.absorb.hits_taken);
         fp.set_u_i32(u::PANIC_CHARGE, charge);
         let damage = fp
             .u_i32(u::PANIC_DAMAGE)
-            .wrapping_add(fp.absorb.x1A44_damageTaken);
+            .wrapping_add(fp.absorb.damage_taken);
         fp.set_u_i32(u::PANIC_DAMAGE, damage);
         if charge >= panic::FULL {
             self.start_color_anim(gobj, 5, 0);

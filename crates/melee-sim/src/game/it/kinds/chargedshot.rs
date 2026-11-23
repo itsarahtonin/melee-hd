@@ -313,12 +313,12 @@ pub fn make(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing: f32) 
     spawn.prev_pos.z = 0.0;
     spawn.pos = lib26b1::parent_ecb_center(r.game, parent);
     spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(parent);
+    spawn.maker = spawn.owner;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     spawn_air(r, &mut spawn)
 }
 

@@ -150,12 +150,12 @@ fn spawn_fields(r: &Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: f
     spawn.prev_pos.z = 0.0;
     spawn.pos = super::super::owner::ecb_center(r.game, parent);
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = Some(parent);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(parent);
+    spawn.maker = Some(parent);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     spawn
 }
 

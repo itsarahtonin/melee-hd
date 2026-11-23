@@ -384,7 +384,7 @@ impl Running<'_> {
                 .game
                 .player_entity_at(slot, sub)
                 .expect("a thrower without a fighter");
-            self.game.fighter_mut(g).attack_record.x207C.y = who;
+            self.game.fighter_mut(g).attack_record.kb_and_thrower.y = who;
         }
     }
 

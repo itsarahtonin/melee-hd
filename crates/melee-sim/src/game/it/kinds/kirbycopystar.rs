@@ -45,12 +45,12 @@ pub fn spawn(r: &mut Running, pos: Vec3, vel: Vec3, facing_dir: f32) {
     spawn.pos = spawn.prev_pos;
     // `Item_InitSpawnCommonFields`.
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = vel;
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return;
     };

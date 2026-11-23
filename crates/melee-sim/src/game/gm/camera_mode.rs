@@ -374,7 +374,7 @@ impl Running<'_> {
         r.disable_pausing = false;
         for (p, v) in start.players.iter_mut().zip(&vs.players) {
             p.clone_from(v);
-            p.xD_b3 = true;
+            p.no_magnifier = true;
         }
         vs_mode::setup_sub_colors(&mut start);
         let tags = self.nametag_rumbles();
@@ -443,7 +443,7 @@ impl Running<'_> {
             self.camera_check_texts();
         } else if self.game.buttons_triggered(4) & PAD_LR_START != 0 {
             self.lb_audio_call(SFX_BACK);
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.cam().check_exit = 2;
             self.game.end_scene();
         } else if self.game.buttons_triggered(4) & (PAD_START | PAD_A) != 0 {
@@ -710,7 +710,7 @@ impl Running<'_> {
             }
             let s = &mut self.game.vs.state;
             s.hud_enabled = 1;
-            s.unk_3 = 0;
+            s.photo_mode = 0;
         }
         self.camera_free_texts();
     }
@@ -752,7 +752,7 @@ impl Running<'_> {
         }
         let s = &mut self.game.vs.state;
         s.hud_enabled = 0;
-        s.unk_3 = 1;
+        s.photo_mode = 1;
         self.cm_snap_request();
     }
 

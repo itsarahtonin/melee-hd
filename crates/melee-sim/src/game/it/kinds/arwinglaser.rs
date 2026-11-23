@@ -330,13 +330,13 @@ pub fn spawn_straight(
         pos: at,
         prev_pos: at,
         facing_dir: facing,
-        x3C_damage: 0,
+        damage: 0,
         vel: Vec3::new(0.0, 0.0, 0.0),
-        x0_parent_gobj: None,
-        x40: 0,
+        owner: None,
+        ignore_id: 0,
         ..Default::default()
     };
-    spawn.x44_flag[0] &= !0x80;
+    spawn.flags[0] &= !0x80;
     let gobj = spawn_air(r, &mut spawn)?;
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     lib2725::set_lifetime(r.game, r.data, gobj, 300.0);
@@ -433,13 +433,13 @@ pub fn spawn_aimed(
         pos,
         prev_pos: at,
         facing_dir: 0.0,
-        x3C_damage: 0,
+        damage: 0,
         vel: Vec3::new(0.0, 0.0, 0.0),
-        x0_parent_gobj: None,
-        x40: 0,
+        owner: None,
+        ignore_id: 0,
         ..Default::default()
     };
-    spawn.x44_flag[0] &= !0x80;
+    spawn.flags[0] &= !0x80;
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return;
     };

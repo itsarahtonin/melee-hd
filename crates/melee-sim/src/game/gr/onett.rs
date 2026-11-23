@@ -748,7 +748,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
 /// the centre and right edge the CObj gives, `horn` the horn's distance past the edge.
 fn note_other_phase(r: &mut Running, car_j: Option<jobj::JObjId>, span: [f32; 2], horn: f32) {
     let Some(spans) = r.game.playback_spans(r.data) else {
-        let tick = r.game.scene.unk_8;
+        let tick = r.game.scene.game_ticks;
         r.game.display_phase.note(tick);
         return;
     };
@@ -767,7 +767,7 @@ fn note_other_phase(r: &mut Running, car_j: Option<jobj::JObjId>, span: [f32; 2]
     if (spans.into_iter().flatten())
         .any(|[_, center, right]| car_outcome(x, [center, right], horn, street) != ours)
     {
-        let tick = r.game.scene.unk_8;
+        let tick = r.game.scene.game_ticks;
         r.game.display_phase.note(tick);
     }
 }

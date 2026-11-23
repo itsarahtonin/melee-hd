@@ -427,16 +427,16 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
         p.cpu_level = if cpu { 1 + rng.below(9) as u8 } else { 0 };
         p.color = 0;
         if fighter >= PLAYABLE {
-            p.xD_b2 = true;
+            p.no_offscreen_damage = true;
         }
         if hand {
-            p.xC_b7 = true;
+            p.stamina = true;
             p.hp = 300;
-            p.xD_b0 = true;
+            p.hp_explodes = true;
             p.spawn_dir = -1;
         }
         if fighter == GIGA_BOWSER {
-            p.xC_b1 = false;
+            p.enters = false;
         }
         if cpu && let Some(kinds) = &chosen.cpu_kinds {
             p.cpu_kind = kinds[rng.below(kinds.len() as u64) as usize];
@@ -444,7 +444,7 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
         if let Some(hp) = chosen.stamina
             && lineup.is_none()
         {
-            p.xC_b7 = true;
+            p.stamina = true;
             p.hp = hp;
             p.stocks = 1;
         }

@@ -230,7 +230,7 @@ impl Running<'_> {
             d.hold_handicap_slider = 0;
             d.hold_cpu_slider = 0;
             d.sel_icon_prev = d.sel_icon;
-            let j = if self.game.game_data.x1850.handicap != 0 {
+            let j = if self.game.game_data.rules.handicap != 0 {
                 let j = self.menu_node(DOORS[i].cpu_slider);
                 let h = self.handicap_value(i);
                 let x = mem(fp::fmuls(reg(1.25), f64::from((h - 1) as f32)));
@@ -383,7 +383,7 @@ impl Running<'_> {
         let ds = self.game.charsel.doors[d];
         if ds.p_kind != ds.p_kind_prev {
             let sp90 = self.menu_node(DOORS[d].slider_name);
-            let handicap = self.game.game_data.x1850.handicap;
+            let handicap = self.game.game_data.rules.handicap;
             let level = f32::from(self.css().vs.start.players[d].cpu_level);
             match ds.p_kind {
                 PKIND_HUMAN => {
@@ -615,7 +615,7 @@ impl Running<'_> {
             VS_STAMINA => return s(self, 0x50),
             _ => {}
         }
-        let r = self.game.game_data.x1850.clone();
+        let r = self.game.game_data.rules.clone();
         if self.game.game_data.saved_language() == super::super::super::gm::main_lib::LANG_JP {
             // The count first, then the mode's word: stocks bare, a time with its unit, or no
             // limit.

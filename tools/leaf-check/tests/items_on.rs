@@ -228,13 +228,13 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     if name == "lb_80014638" {
         let (p, q) = (r(3), r(4));
         let feet = lb_80014638_arg0_t {
-            x0: vec_at(p),
-            xC: vec_at(p + 12),
+            prev_feet: vec_at(p),
+            feet: vec_at(p + 12),
         };
         let top = lb_80014638_arg1_t {
-            unk_x: f32_at(call, q),
-            unk_y: f32_at(call, q + 4),
-            x8: vec_at(q + 8),
+            motion_x: f32_at(call, q),
+            motion_y: f32_at(call, q + 4),
+            span: vec_at(q + 8),
         };
         return b(melee_sim::lb::stomp::stepped_on(&feet, &top));
     }
@@ -575,25 +575,36 @@ fn stepped_on_matches() {
             };
             let (l, r) = (next(), next());
             let feet = lb_80014638_arg0_t {
-                x0: Vec3::new(next(), next(), fz),
-                xC: Vec3::new(next(), next(), tz),
+                prev_feet: Vec3::new(next(), next(), fz),
+                feet: Vec3::new(next(), next(), tz),
             };
             let span = lb_80014638_arg1_t {
-                unk_x: next() * 0.1,
-                unk_y: next() * 0.1,
-                x8: Vec3::new(l.min(r), l.max(r), top),
+                motion_x: next() * 0.1,
+                motion_y: next() * 0.1,
+                span: Vec3::new(l.min(r), l.max(r), top),
             };
             write_f32s(
                 &ctx,
                 a,
                 &[
-                    feet.x0.x, feet.x0.y, feet.x0.z, feet.xC.x, feet.xC.y, feet.xC.z,
+                    feet.prev_feet.x,
+                    feet.prev_feet.y,
+                    feet.prev_feet.z,
+                    feet.feet.x,
+                    feet.feet.y,
+                    feet.feet.z,
                 ],
             );
             write_f32s(
                 &ctx,
                 b,
-                &[span.unk_x, span.unk_y, span.x8.x, span.x8.y, span.x8.z],
+                &[
+                    span.motion_x,
+                    span.motion_y,
+                    span.span.x,
+                    span.span.y,
+                    span.span.z,
+                ],
             );
             let theirs = ssbm_types::fns::lb_80014638(&ctx, handle(&ctx, a), handle(&ctx, b)) != 0;
             let ours = melee_sim::lb::stomp::stepped_on(&feet, &span);

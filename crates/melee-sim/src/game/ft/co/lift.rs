@@ -197,7 +197,7 @@ impl Running<'_> {
         let part = self.bone_index(&self.game.fighters[f.0], TRANS_N);
         let parts = self.game.fighters[f.0].parts.expect("parts");
         let jobj = self.game.fighter_parts[parts.0][part as usize]
-            .x4_jobj2
+            .interp_joint
             .expect("TransN's second joint");
         let frames = reg(self.common().f32(CD_TURN_FRAMES));
         let fp = &mut self.game.fighters[f.0];

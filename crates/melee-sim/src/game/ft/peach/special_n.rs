@@ -320,11 +320,11 @@ impl Running<'_> {
                 self.peach_toad_bubble(gobj, p);
                 let push = self.peach_n_attr_f32(gobj, p, attr::N_XA8);
                 let fp = &mut self.game.fighters[f.0];
-                fp.state_flags.x221B_b3 = true;
+                fp.state_flags.bubble_faces = true;
                 fp.counter_min_hitlag = push;
                 fp.counter_item_min_hitlag = push;
             }
-            0 => self.game.fighters[f.0].state_flags.x221B_b0 = false,
+            0 => self.game.fighters[f.0].state_flags.shield_bubble = false,
             _ => {}
         }
         if !self.anim_frames_remaining(gobj) {
@@ -434,7 +434,7 @@ impl Running<'_> {
         fp.post_hitlag_cb = Some(CodeRef(p.on_exit_hitlag));
         if fp.cmd_vars[CMD_ANIM] == 2 {
             self.peach_toad_bubble(gobj, p);
-            self.game.fighter_mut(gobj).state_flags.x221B_b3 = true;
+            self.game.fighter_mut(gobj).state_flags.bubble_faces = true;
         }
     }
 

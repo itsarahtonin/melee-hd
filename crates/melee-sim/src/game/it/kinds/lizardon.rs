@@ -358,7 +358,7 @@ pub fn flame(r: &mut Running, gobj: GObjId, kind: i32) {
         ..Default::default()
     };
     spawn.pos = lib26b1::ecb_center(r.game, gobj);
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     let (top, low, speed) = (
         attr_f32(r, gobj, 8),
         attr_f32(r, gobj, 0xC),
@@ -385,10 +385,10 @@ pub fn flame(r: &mut Running, gobj: GObjId, kind: i32) {
     spawn.vel.y = mem(fp::fmuls(reg(speed), sin));
     spawn.vel.z = 0.0;
     spawn.kind = kind;
-    spawn.x0_parent_gobj = item(r.game, gobj).owner;
-    spawn.x4_parent_gobj2 = Some(gobj);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = item(r.game, gobj).owner;
+    spawn.maker = Some(gobj);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     if spawn_air(r, &mut spawn).is_some() {
         let v = pokemon::vars(r.game, gobj);
         let s = v.i32(SOUND) ^ 1;

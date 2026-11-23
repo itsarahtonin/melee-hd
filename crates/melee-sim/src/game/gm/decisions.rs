@@ -445,7 +445,7 @@ impl Game {
     #[doc(alias = "pl_80039418")]
     #[doc(alias = "fn_8016F160")]
     pub fn bonus_count(&self, player: i32, kind: i32) -> u32 {
-        self.player(player).stale_moves.x904[kind as usize]
+        self.player(player).stale_moves.bonuses[kind as usize]
     }
 
     /// The points decision `kind` gives `player` in the results `r`, `fn_8016FAD4`: by rank
@@ -489,11 +489,11 @@ impl Game {
     #[doc(alias = "pl_800407C8")]
     pub fn hit_rate_record(&self, slot: i32) -> f32 {
         let t = &self.player(slot).stale_moves;
-        if t.xCEC == 0 {
+        if t.mash_frames == 0 {
             return 0.0;
         }
-        let total = gekko_fp::frsp(f64::from(t.xCEC));
-        let val = gekko_fp::frsp(f64::from(t.xCF0));
+        let total = gekko_fp::frsp(f64::from(t.mash_frames));
+        let val = gekko_fp::frsp(f64::from(t.mashes));
         crate::fpu::mem(gekko_fp::fdivs(val, total))
     }
 
@@ -601,7 +601,7 @@ impl Running<'_> {
         };
         let p = &r.player_standings;
         let au = a as usize;
-        let flags = &r._x448;
+        let flags = &r.mode_bonuses;
         let bit = |b: u8, n: u32| (b >> n) & 1 != 0;
         let others = |f: &dyn Fn(usize) -> bool| (0..4).any(|i| p[i].pkind != 3 && i != au && f(i));
         let one = |c: bool| i32::from(c);
@@ -740,8 +740,8 @@ impl Running<'_> {
                 }
             }
             0xFD => {
-                let v = self.game.player(a).stale_moves.xCB4 as u32;
-                one(v != 0 && u32::from(r.x7) == v)
+                let v = self.game.player(a).stale_moves.up_kos as u32;
+                one(v != 0 && u32::from(r.joiners) == v)
             }
             0xFE => {
                 let mine = self.game.player(a).ext_u32(0xD48);
@@ -792,13 +792,13 @@ impl Game {
     pub fn message_waits(&self, n: u32) -> bool {
         let s = &self.game_data.thing.save_data;
         let bit = |w: &[u32; 3]| w[(n / 32) as usize] & (1 << (n % 32)) != 0;
-        self.message_noted(n) && bit(&s.x1B40)
+        self.message_noted(n) && bit(&s.messages_pending)
     }
 
     /// `gm_80172174`: the trophies' notices and their times cleared (`gmMainLib_8015CCE4`).
     #[doc(alias = "gm_80172174")]
     #[doc(alias = "gmMainLib_8015CCE4")]
     pub fn clear_trophy_notices(&mut self) {
-        self.game_data.unk_44 = Default::default();
+        self.game_data.trophy_notices = Default::default();
     }
 }

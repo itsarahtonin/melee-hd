@@ -101,11 +101,11 @@ pub fn spawn(
     spawn.pos = spawn.prev_pos;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
     spawn.facing_dir = -1.0;
-    spawn.x3C_damage = 0;
-    spawn.x0_parent_gobj = Some(owner);
-    spawn.x4_parent_gobj2 = Some(owner);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = attack as i32;
+    spawn.damage = 0;
+    spawn.owner = Some(owner);
+    spawn.maker = Some(owner);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = attack as i32;
     let mut first = None;
     let mut prev: Option<GObjId> = None;
     let mut wait = 0;

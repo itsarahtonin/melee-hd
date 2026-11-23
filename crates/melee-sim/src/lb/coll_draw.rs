@@ -202,14 +202,14 @@ pub fn coin_capsule(
         return false;
     }
     let size = crate::fpu::mem(gekko_fp::fmuls(
-        crate::fpu::reg(c.x0),
+        crate::fpu::reg(c.radius),
         crate::fpu::reg(scale_y),
     ));
     push(
         objs,
         DebugDraw::Capsule {
-            a: c.x14,
-            b: c.x8,
+            a: c.prev_pos,
+            b: c.pos,
             color,
             amb,
             size,
@@ -443,9 +443,9 @@ pub fn stomp(objs: &mut Objects, r: &crate::game::structs::lb_80014638_arg1_t, p
     push(
         objs,
         DebugDraw::Stomp {
-            x0: r.x8.x,
-            x1: r.x8.y,
-            y: r.x8.z,
+            x0: r.span.x,
+            x1: r.span.y,
+            y: r.span.z,
         },
     );
     true

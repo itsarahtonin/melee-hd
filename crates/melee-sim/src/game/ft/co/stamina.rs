@@ -84,7 +84,7 @@ impl Running<'_> {
         self.damage_hooks(gobj);
         self.drop_heavy_item(gobj);
         if let Some(victim) = self.game.fighter(gobj).victim_gobj {
-            if self.game.fighter(gobj).state_flags.x221B_b5 {
+            if self.game.fighter(gobj).state_flags.holds_grab {
                 self.enter_capture_cut(victim);
             } else {
                 self.enter_capture_cut(gobj);

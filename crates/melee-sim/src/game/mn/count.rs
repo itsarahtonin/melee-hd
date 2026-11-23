@@ -492,24 +492,24 @@ impl Running<'_> {
     fn count_row_number(&self, r: u8) -> u32 {
         let s = &self.game.game_data.thing.save_data;
         let v = match r {
-            row::POWER_COUNT => s.x1A50 as u32,
-            row::POWER_TIME => s.x1A54 as u32,
+            row::POWER_COUNT => s.power_count as u32,
+            row::POWER_TIME => s.power_time as u32,
             // `gm_GetPlayTime`'s cap tests a sum past `u32::MAX`, which can't be: it wraps
             // (Melee's bugs, latent).
-            row::PLAY_TIME => (s.x1A34 as u32).wrapping_add(s.x1A3C as u32),
-            row::SINGLEPLAYER_TIME => s.x1A3C as u32,
-            row::VS_PLAY_TIME => s.x1A34 as u32,
-            row::COMBINED_VS_PLAY_TIME => s.x1A38 as u32,
+            row::PLAY_TIME => (s.vs_play_time as u32).wrapping_add(s.one_player_time as u32),
+            row::SINGLEPLAYER_TIME => s.one_player_time as u32,
+            row::VS_PLAY_TIME => s.vs_play_time as u32,
+            row::COMBINED_VS_PLAY_TIME => s.combined_vs_play_time as u32,
             row::VS_PLAY_MATCH_TOTAL => self.vs_matches_played(),
             row::TIME_MATCH_TOTAL => s.time_matches,
             row::STOCK_MATCH_TOTAL => s.stock_matches,
             row::COIN_MATCH_TOTAL => s.coin_matches,
             row::BONUS_MATCH_TOTAL => s.bonus_matches,
-            row::VS_PLAY_CONTESTANTS => s.x1A30 as u32,
+            row::VS_PLAY_CONTESTANTS => s.vs_contestants as u32,
             row::MATCH_RESET_COUNTER => s.match_resets,
-            row::TOTAL_DAMAGE => s.x1A58 as u32,
-            row::KO_TOTAL => s.x1A5C as u32,
-            row::SELFDESTRUCT_TOTAL => s.x1A60 as u32,
+            row::TOTAL_DAMAGE => s.total_damage as u32,
+            row::KO_TOTAL => s.total_kos as u32,
+            row::SELFDESTRUCT_TOTAL => s.total_self_destructs as u32,
             row::AVAILABLE_CHARACTERS => self.count_unlocked_characters(),
             row::AVAILABLE_MAPS => (0..STAGES)
                 .filter(|&i| self.stage_unlocked(super::super::gm::opening::stage_select_kind(i)))

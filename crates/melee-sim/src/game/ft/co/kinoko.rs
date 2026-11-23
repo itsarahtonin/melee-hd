@@ -517,7 +517,7 @@ impl Running<'_> {
         let Some(victim) = fp.victim_gobj else {
             return;
         };
-        if fp.state_flags.x221B_b5 {
+        if fp.state_flags.holds_grab {
             self.enter_capture_cut(victim);
         } else {
             self.enter_capture_cut(gobj);

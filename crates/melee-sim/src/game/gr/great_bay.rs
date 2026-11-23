@@ -953,13 +953,13 @@ pub fn turtle_item(r: &mut Running, gobj: GObjId) -> bool {
     let mut spawn = crate::game::structs::SpawnItem {
         kind: selected,
         hold_kind: -1,
-        x10: 1,
+        origin: 1,
         pos,
         prev_pos: pos,
         facing_dir: -1.0,
         ..Default::default()
     };
-    spawn.x45_flag[0] = 0x80;
+    spawn.unread_45[0] = 0x80;
     super::super::it::item::spawn_air(r, &mut spawn);
     true
 }

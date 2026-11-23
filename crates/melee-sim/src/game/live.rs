@@ -122,7 +122,7 @@ impl Running<'_> {
             played: self.game.characters_played(),
             seed: self.game.objs.rng.seed,
             ucf: self.game.ucf,
-            end: self.game.scene.unk_C,
+            end: self.game.scene.ending,
         }
     }
 }
@@ -158,7 +158,7 @@ impl Game {
         self.mark_played(&back.played);
         self.objs.rng.seed = back.seed;
         self.ucf = back.ucf;
-        self.scene.unk_C = back.end;
+        self.scene.ending = back.end;
     }
 }
 
@@ -256,7 +256,7 @@ pub struct Carried {
 impl Carried {
     fn of(g: &Game) -> Self {
         Carried {
-            arrows: (g.hud.arrows.x14.clone(), g.hud.arrows.x2C),
+            arrows: (g.hud.arrows.colors.clone(), g.hud.arrows.players),
             ef_ids: g.ef.params.map(|p| p.gfx_id),
             start_points: g.gr.start_points,
             ft_track: g.it.ft_track.clone(),
@@ -265,7 +265,7 @@ impl Carried {
     }
 
     fn put(&self, g: &mut Game) {
-        (g.hud.arrows.x14, g.hud.arrows.x2C) = (self.arrows.0.clone(), self.arrows.1);
+        (g.hud.arrows.colors, g.hud.arrows.players) = (self.arrows.0.clone(), self.arrows.1);
         for (p, &id) in g.ef.params.iter_mut().zip(&self.ef_ids) {
             p.gfx_id = id;
         }
@@ -329,8 +329,8 @@ impl Game {
         self.vs.clone_from(&live.vs);
         // The players as the console's entry made them (Zelda held A), the match's since.
         for (f, c) in self.vs.state.fighters.iter_mut().zip(&entry.vs_fighters) {
-            f.x0 = c.x0;
-            f.x4[0] = (f.x4[0] & !ZELDA_HELD_A) | (c.x4[0] & ZELDA_HELD_A);
+            f.ckind = c.ckind;
+            f.flags[0] = (f.flags[0] & !ZELDA_HELD_A) | (c.flags[0] & ZELDA_HELD_A);
         }
         self.gm.ranks.clone_from(&live.gm.ranks);
         self.crowd = live.crowd;
@@ -338,7 +338,17 @@ impl Game {
         self.it.clank_boxes = live.it.clank_boxes;
         self.camera.take_match(&live.camera);
         let (m, l) = (&mut self.magnify, &live.magnify);
-        (m.x4, m.x8, m.xC, m.x10) = (l.x4.clone(), l.x8.clone(), l.xC.clone(), l.x10.clone());
+        (
+            m.bubble_color_0,
+            m.bubble_color_2,
+            m.bubble_color_6,
+            m.bubble_color_8,
+        ) = (
+            l.bubble_color_0.clone(),
+            l.bubble_color_2.clone(),
+            l.bubble_color_6.clone(),
+            l.bubble_color_8.clone(),
+        );
         m.image_descs.clone_from(&l.image_descs);
         for (p, q) in m.player.iter_mut().zip(&l.player) {
             p.state.clone_from(&q.state);
@@ -350,16 +360,17 @@ impl Game {
         // slots (`un_802FE260` resets which are shown), the announcements' callbacks, lines
         // and marks; their models and GObjs stay the menus'.
         let (a, b) = (&mut self.hud.arrows, &live.hud.arrows);
-        (a.x24, a.x28, a.x30, a.x31, a.x32) = (b.x24, b.x28, b.x30, b.x31, b.x32);
+        (a.shown, a.sides, a.silent, a.sounding, a.sound_timer) =
+            (b.shown, b.sides, b.silent, b.sounding, b.sound_timer);
         for (e, l) in self
             .hud
             .announcements
             .iter_mut()
             .zip(&live.hud.announcements)
         {
-            let (gobj, model) = (e.x0, e.x14);
+            let (gobj, model) = (e.gobj, e.model);
             e.clone_from(l);
-            (e.x0, e.x14) = (gobj, model);
+            (e.gobj, e.model) = (gobj, model);
         }
         self.bgflash.scale = live.bgflash.scale;
         self.gm.pause.slot = live.gm.pause.slot;
@@ -832,7 +843,7 @@ impl Game {
         let paused = self.camera.mode() == super::camera::PAUSE;
         if self.keeps_display_views() {
             let due = super::camera::pass_view(self);
-            let tick = self.scene.unk_0;
+            let tick = self.scene.ticks;
             self.display_phase.tick_end(tick, due);
             if !self.camera.is_following() {
                 self.display_phase.followed_views = [None; 2];
@@ -927,7 +938,7 @@ impl Game {
                 .followed_transform()
                 .is_some_and(|t| theirs(g, t) != *ours);
         if differs {
-            let tick = self.scene.unk_8;
+            let tick = self.scene.game_ticks;
             self.display_phase.note(tick);
         }
     }
@@ -952,7 +963,7 @@ impl Game {
             return None;
         }
         let held = super::camera::View::of_camera(self, data);
-        let now = self.scene.unk_0;
+        let now = self.scene.ticks;
         let d = &self.display_phase;
         if d.view_tick != now {
             return Some([None; 2]);
@@ -1180,7 +1191,7 @@ impl Game {
 
     /// One tick counted at most once.
     fn haze_note(&mut self) {
-        let tick = self.scene.unk_8;
+        let tick = self.scene.game_ticks;
         if self.haze.counted != Some(tick) {
             self.haze.counted = Some(tick);
             self.display_phase.note(tick);
@@ -1346,7 +1357,7 @@ mod tests {
         g.rules = crate::game::state::Rules::VANILLA
             .with_fixes(Some(crate::game::slippi::CodeSet::V3_19));
         let tick = |g: &mut Game, t: u32, before: u32, step: bool, during: u32, after: u32| {
-            g.scene.unk_8 = t;
+            g.scene.game_ticks = t;
             g.haze_frame_start();
             for _ in 0..before {
                 g.objs.rng.draw();
@@ -1382,7 +1393,7 @@ mod tests {
         tick(&mut g, 6, 0, false, 0, 0);
         assert_eq!(g.display_phase.differing, 3);
         // Kraid restarts it: the tick still counts, then it's back on course.
-        g.scene.unk_8 = 7;
+        g.scene.game_ticks = 7;
         g.haze_frame_start();
         g.haze_restarted();
         g.objs.rng.draw();

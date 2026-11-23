@@ -207,7 +207,8 @@ class Gen:
             if splice:
                 if off == splice[1] and f["offset_bits"] % 8 == 0 and splice[0] not in done:
                     done.add(splice[0])
-                    out.append({"name": splice[0], "offset_bits": off * 8, "splice": splice[3]})
+                    # A splice may name a generated struct by its C name: use its Rust name.
+                    out.append({"name": splice[0], "offset_bits": off * 8, "splice": config.RENAME_TYPES.get(splice[3], splice[3])})
                 continue
             out.append(f)
         return out
@@ -216,6 +217,9 @@ class Gen:
         r = self.recs[rid]
         name = rust_type_name(rid)
         out = [f"/// `{rec_name(rid)}`, {r['size']:#x} bytes."]
+        if name != rec_name(rid):
+            # A renamed type keeps its C name as an alias, as a renamed field does.
+            out.append(f'#[doc(alias("{rec_name(rid)}"))]')
         # CloneFrom: a restore copies field by field, reusing the target's storage.
         out.append("#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]")
         out.append(f"pub struct {name} {{")

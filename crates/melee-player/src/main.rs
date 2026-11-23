@@ -734,7 +734,7 @@ impl Platform {
         // A live match whose scene ended hands back in this tick, its game let go: its replay
         // is saved first, however it ended.
         if s.in_live_match()
-            && s.game.scene.unk_C != 0
+            && s.game.scene.ending != 0
             && let Some(r) = s.game.recorder.take()
         {
             self.save_replay(&r);

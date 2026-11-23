@@ -253,14 +253,11 @@ impl Ctx<'_> {
         flags: &FighterFlags,
     ) -> Option<u8> {
         let overlay = active_overlay_ft(fp);
-        if !overlay.x7C_flag2
-            || !overlay.x7C_light_enable
-            || rendermode & RENDER_XLU != 0
-            || flags.outline
+        if !overlay.flag2 || !overlay.light_enable || rendermode & RENDER_XLU != 0 || flags.outline
         {
             return None;
         }
-        let mut light = overlay.x50_light_color.clone();
+        let mut light = overlay.light_color.clone();
         if crate::mutation::on("ftMaterial_800BF534") {
             light.r ^= 0x10;
         }
@@ -289,13 +286,13 @@ impl Ctx<'_> {
         let tint = if flags.outline {
             Some(color(&fp.overlay_colors[1]))
         } else if sub != 0 {
-            if overlay.x7C_color_enable {
-                Some(blend_tint(&fp.overlay_colors[0], &overlay.x2C_hex))
+            if overlay.color_enable {
+                Some(blend_tint(&fp.overlay_colors[0], &overlay.hex))
             } else {
                 Some(self.sub_color(sub))
             }
-        } else if overlay.x7C_color_enable {
-            Some(color(&overlay.x2C_hex))
+        } else if overlay.color_enable {
+            Some(color(&overlay.hex))
         } else {
             None
         };
@@ -319,7 +316,7 @@ impl Ctx<'_> {
         let fp = &game.fighters[f.0];
         if fp.refracted {
             let rendermode = game.objs.mobjs[m].rendermode;
-            return self.refract_setup(rendermode, usize::from(fp.smash_attrs.x2134_vibrateFrame));
+            return self.refract_setup(rendermode, usize::from(fp.smash_attrs.vibrate_frame));
         }
         // The flags the fighter's render callback set for this tree, as melee-sim named them.
         let flags = match self.hsd.fighter_flags {
@@ -361,7 +358,7 @@ impl Ctx<'_> {
         // outline: melee-sim named those lights before the material (`Draw::Lights`), and the
         // render mode's channels take them.
         let overlay = active_overlay_ft(fp);
-        let without_alpha = overlay.x7C_flag2 && overlay.x7C_light_enable && light_reg.is_none();
+        let without_alpha = overlay.flag2 && overlay.light_enable && light_reg.is_none();
         if !flags.silhouette {
             self.fighter_color_overlay(&desc, fp, light_reg, &flags);
         }
@@ -429,13 +426,13 @@ impl Ctx<'_> {
         };
         let (desc, rendermode) = self.mobj_setup_tev_part(m);
         let overlay = &gp.color_overlay;
-        if overlay.x7C_color_enable || gp.flags.tinted {
+        if overlay.color_enable || gp.flags.tinted {
             let mut d = tevdesc_tmpl(GX_DISABLE);
             d.stage = self.hsd.tev.assign_tev();
-            if overlay.x7C_color_enable {
+            if overlay.color_enable {
                 let reg1 = free_color_register(0, &desc, &[]);
                 assert!(reg1 != -1, "can't find free color register!");
-                let hex = color(&overlay.x2C_hex);
+                let hex = color(&overlay.hex);
                 set_reg_values(
                     self.gx,
                     &mut self.hsd.tev,
@@ -444,7 +441,7 @@ impl Ctx<'_> {
                 let start = if reg1 < 4 { 4 } else { 0 };
                 let reg2 = free_color_register(start, &desc, &[reg1 as u8]);
                 assert!(reg2 != -1, "can't find free color register!");
-                let a = overlay.x2C_hex.a;
+                let a = overlay.hex.a;
                 set_reg_values(
                     self.gx,
                     &mut self.hsd.tev,
@@ -490,10 +487,10 @@ impl Ctx<'_> {
     fn item_light_overlay(&mut self, desc: &TevDesc, ip: &Item) -> Option<u8> {
         let own = &ip.color_overlay;
         // The mutation adds the stage for an overlay that doesn't light.
-        if (!own.x7C_flag2 || !own.x7C_light_enable) && !crate::mutation::on("it_80277F90") {
+        if (!own.flag2 || !own.light_enable) && !crate::mutation::on("it_80277F90") {
             return None;
         }
-        let light = own.x50_light_color.clone();
+        let light = own.light_color.clone();
         Some(self.light_overlay_stage(desc, &light, GX_ENABLE))
     }
 
@@ -523,13 +520,13 @@ impl Ctx<'_> {
         let tint = if b4 {
             Some(color(&ip.outline.color))
         } else if ip.tinted != 0 {
-            if overlay.x7C_color_enable {
-                Some(blend_tint(&ip.tint, &overlay.x2C_hex))
+            if overlay.color_enable {
+                Some(blend_tint(&ip.tint, &overlay.hex))
             } else {
                 Some(color(&ip.tint))
             }
-        } else if overlay.x7C_color_enable {
-            Some(color(&overlay.x2C_hex))
+        } else if overlay.color_enable {
+            Some(color(&overlay.hex))
         } else {
             None
         };
@@ -700,7 +697,7 @@ impl Ctx<'_> {
 /// second's.
 #[doc(alias = "ftCo_800C0658")]
 fn active_overlay_ft(fp: &melee_sim::game::structs::Fighter) -> &ColorOverlay {
-    if fp.main_overlay.x28_colanim != [0; 4] {
+    if fp.main_overlay.colanim != [0; 4] {
         &fp.main_overlay
     } else {
         &fp.secondary_overlay

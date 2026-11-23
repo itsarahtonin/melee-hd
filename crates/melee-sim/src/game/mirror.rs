@@ -665,7 +665,10 @@ mod label_tests {
     #[test]
     fn step_3s_renamed_fields_label_gives_the_originals_name() {
         use crate::game::structs::{
-            _StaticPlayer, Camera, Ground, GroundParam, MatchPlayerData, StageInfo, StartMeleeRules,
+            _StaticPlayer, Announcement, Camera, ControllerMap, EventData, GameData, GmSaveData,
+            Ground, GroundParam, ItemCounts, JoinerTally, LbShadow, MatchPlayerData,
+            OffscreenArrows, PlayerInitData, SceneLoop, StageInfo, StaleMoveTable, StartMeleeRules,
+            SwingLink, VsSceneState,
         };
         assert_eq!(
             labels_after::<Fighter>("fighter", |fp| {
@@ -677,6 +680,28 @@ mod label_tests {
                 "fighter.coll_data.map_generation (x38)",
                 "fighter.hitboxes (x914)[0].kb_growth (x24)",
                 "fighter.dmg.percent (x1830_percent)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<Fighter>("fighter", |fp| {
+                fp.state_flags.holds_grab = true;
+                fp.reflect.damage_mul = 1.0;
+            }),
+            [
+                "fighter.reflect (ReflectAttr).damage_mul (x1A34_damageMul)",
+                "fighter.state_flags (x221B).holds_grab (x221B_b5)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<Fighter>("fighter", |fp| {
+                fp.dmg.hit_records.spike = true;
+                fp.attack_record.record_id = 1;
+                fp.smash_attrs.hold_frame = 1.0;
+            }),
+            [
+                "fighter.dmg.hit_records (x18d8).spike (x10_b0)",
+                "fighter.attack_record (x2074).record_id (x2088)",
+                "fighter.smash_attrs.hold_frame (x211C_holdFrame)",
             ]
         );
         assert_eq!(
@@ -729,6 +754,108 @@ mod label_tests {
                 p.flags.rumbles = true;
             }),
             ["player.coins_lost (unk9C)", "player.flags.rumbles (b0)"]
+        );
+        assert_eq!(
+            labels_after::<StaleMoveTable>("stale_moves", |t| {
+                t.total_attack_count_struct.walks = 1;
+                t.combos.by_attacker[1].air_hits = 1;
+                t.ledge_catches = 1;
+            }),
+            [
+                "stale_moves.total_attack_count_struct.walks (x580)",
+                "stale_moves.combos (x5EC).by_attacker (x10)[1].air_hits (x10)",
+                "stale_moves.ledge_catches (xCE8)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<GmSaveData>("save", |s| {
+                s.trophy_records.kos = 1;
+                s.total_kos = 1;
+            }),
+            [
+                "save.trophy_records (unk_30).kos (xC)",
+                "save.total_kos (x1A5C)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<EventData>("event", |e| {
+                e.round = 1;
+                e.target_test.color = 1;
+            }),
+            [
+                "event.round (x20)",
+                "event.target_test (unk_584).color (unk_585)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<VsSceneState>("vs", |s| {
+                s.timer_frames = 1;
+                s.fighters[0].respawn_damage = 1;
+                s.match_end.standings_tick = 1;
+            }),
+            [
+                "vs.timer_frames (unk_2C)",
+                "vs.fighters[0].respawn_damage (x6)",
+                "vs.match_end (x24C).standings_tick (x0)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<PlayerInitData>("player", |p| p.shows_hearts = true),
+            ["player.shows_hearts (xD_b1)"]
+        );
+        assert_eq!(
+            labels_after::<GameData>("game_data", |d| {
+                d.vs.all_star.round = 1;
+                d.rules.gallery_song = 1;
+            }),
+            [
+                "game_data.vs.all_star (unk_528).round (x5)",
+                "game_data.rules (x1850).gallery_song (unk_14)",
+            ]
+        );
+        assert_eq!(
+            labels_after::<SceneLoop>("scene", |s| {
+                s.ticks = 1;
+                s.pause.runs = true;
+            }),
+            [
+                "scene.ticks (unk_0)",
+                "scene.pause (unk_10).runs (unk_38_0)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<Announcement>("announcement", |a| {
+                a.sfx_frame = 1;
+                a.flags.started = true;
+            }),
+            [
+                "announcement.sfx_frame (x10)",
+                "announcement.flags (x12).started (x2)"
+            ]
+        );
+        assert_eq!(
+            labels_after::<JoinerTally>("tally", |t| t.crowd_count = 1),
+            ["tally.crowd_count (x108)"]
+        );
+        assert_eq!(
+            labels_after::<OffscreenArrows>("arrows", |a| a.sides[1] = 1),
+            ["arrows.sides (x28)[1]"]
+        );
+        assert_eq!(
+            labels_after::<ItemCounts>("counts", |c| c.pokemon_limit = 1),
+            ["counts.pokemon_limit (x20)"]
+        );
+        assert_eq!(
+            labels_after::<SwingLink>("link", |l| l.ease_axis = 1),
+            ["link.ease_axis (unk_54)"]
+        );
+        assert_eq!(
+            labels_after::<LbShadow>("shadow", |s| s.off_by_stage = true),
+            ["shadow.off_by_stage (x0_b4)"]
+        );
+        assert_eq!(
+            labels_after::<ControllerMap>("pads", |m| m.ports[1].held_frames = 1),
+            ["pads.ports (x0)[1].held_frames (x2C)"]
         );
     }
 }

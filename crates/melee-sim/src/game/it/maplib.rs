@@ -149,8 +149,8 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.coll.set_facing_dir(dir);
     let x1c = attr_of(ip).f32(data, super::data::attr::DAMAGE_MUL);
     ip.coll.weight = x1c;
-    if spawn.x44_flag[0] & 0x80 != 0 {
-        if spawn.x48_ground_or_air == 1 {
+    if spawn.flags[0] & 0x80 != 0 {
+        if spawn.ground_or_air == 1 {
             place_air(r, gobj, spawn.pos);
         } else {
             place_ground(r.game, r.data, gobj, spawn.pos);

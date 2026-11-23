@@ -118,7 +118,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, next, UPDATE_CMD, frame, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(PULL_FOLLOW));
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.grounded_catch = false;
     }
 
     /// `ftCo_CatchPull_Anim`: holding once the pull's frames run out or the script marks it.
@@ -269,7 +269,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(WAIT_FOLLOW));
         fp.take_dmg_cb = Some(CodeRef(WAIT_ON_DAMAGE));
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.grounded_catch = false;
         fp.mv.set_jobj_at(HOLD_JOINT, j);
         self.fighter_effect(gobj, ef::SpawnKind::Pos, 0x41D, j, &[]);
         let f = self.game.fighter_id(gobj);
@@ -453,7 +453,7 @@ impl Running<'_> {
                 fp.thaw_size = true;
             }
         }
-        let (holder, held) = if self.game.fighter(a).state_flags.x221B_b7 {
+        let (holder, held) = if self.game.fighter(a).state_flags.grounded_catch {
             (b, a)
         } else {
             (a, b)
@@ -461,16 +461,16 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(holder);
         fp.partner = None;
         fp.victim_gobj = None;
-        fp.state_flags.x221B_b5 = false;
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.holds_grab = false;
+        fp.state_flags.grounded_catch = false;
         if self.game.fighter(held).held_in_model {
             self.release_from_model(holder, held);
         }
         let fp = self.game.fighter_mut(held);
         fp.partner = None;
         fp.victim_gobj = None;
-        fp.state_flags.x221B_b5 = false;
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.holds_grab = false;
+        fp.state_flags.grounded_catch = false;
     }
 
     /// [`Self::grab_release`]'s part for a victim inside its grabber's model (`x2226_b2`).
@@ -664,8 +664,8 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(victim);
         fp.partner = Some(grabber);
         fp.victim_gobj = Some(grabber);
-        fp.state_flags.x221B_b5 = false;
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.holds_grab = false;
+        fp.state_flags.grounded_catch = false;
         fp.facing_dir = mem(fp::fneg(reg(gf)));
         let timer = self.grab_escape_time(victim);
         let fp = self.game.fighter_mut(victim);
@@ -703,7 +703,7 @@ impl Running<'_> {
         let Some(victim) = fp.victim_gobj else {
             return;
         };
-        if fp.state_flags.x221B_b5 {
+        if fp.state_flags.holds_grab {
             self.knocked_away(victim);
             self.grab_release(gobj, victim);
         } else {
@@ -1096,9 +1096,9 @@ impl Running<'_> {
         if !fp.is_sub_fighter {
             let slot = i32::from(fp.player_idx);
             let t = self.game.player_stale_moves(slot);
-            t.xCEC = t.xCEC.wrapping_add(1);
+            t.mash_frames = t.mash_frames.wrapping_add(1);
             if mashed {
-                t.xCF0 = t.xCF0.wrapping_add(1);
+                t.mashes = t.mashes.wrapping_add(1);
             }
         }
         mashed

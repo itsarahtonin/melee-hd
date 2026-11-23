@@ -421,11 +421,11 @@ impl Running<'_> {
                 let fp = self.game.fighter_mut(gobj);
                 let s = &mut fp.smash_attrs;
                 s.state = 2;
-                s.x2124_frameSpeedMul = rate;
-                s.x212C = 0;
-                s.x212D = rows;
-                s.x2130_sfxBool = 0;
-                let color = s.x2128;
+                s.frame_speed_mul = rate;
+                s.shake_row = 0;
+                s.shake_rows = rows;
+                s.sfx_played = 0;
+                let color = s.color_anim;
                 self.set_anim_rate(gobj, 0.0);
                 if color != 0x7B {
                     self.start_color_anim(gobj, color, 0);
@@ -436,7 +436,7 @@ impl Running<'_> {
             1 => fp.smash_attrs.state = 0,
             2 if !a => {
                 fp.smash_attrs.state = 3;
-                let (rate, color) = (fp.smash_attrs.x2124_frameSpeedMul, fp.smash_attrs.x2128);
+                let (rate, color) = (fp.smash_attrs.frame_speed_mul, fp.smash_attrs.color_anim);
                 self.set_anim_rate(gobj, rate);
                 self.end_color_anim(gobj, color);
                 let f = self.game.fighter_id(gobj);

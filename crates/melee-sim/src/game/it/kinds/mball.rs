@@ -107,7 +107,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if !item_mut(r.game, gobj).vars.mball().out.get() {
         let c = &mut r.game.it.counts;
-        c.x1C = c.x1C.wrapping_sub(1);
+        c.pokemon = c.pokemon.wrapping_sub(1);
     }
 }
 

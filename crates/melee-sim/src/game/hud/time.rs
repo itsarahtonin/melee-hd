@@ -48,7 +48,7 @@ impl Game {
     /// The timer's hundredths, counting down unless the timer counts up, `gm_8016AF0C`.
     #[doc(alias = "gm_8016AF0C")]
     pub fn vs_timer_centiseconds(&self) -> u16 {
-        let f = fp::frsp(f64::from(self.vs.state.unk_2C));
+        let f = fp::frsp(f64::from(self.vs.state.timer_frames));
         let t = fp::fctiwz(fp::fdivs(fp::fmuls(99.0, f), 59.0)) as u16;
         if self.vs_timer_counts_up() {
             t

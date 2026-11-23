@@ -131,7 +131,7 @@ impl Game {
             return None;
         }
         let mut out: Vec<u8> = t.namedata.iter().map(|&b| b as u8).collect();
-        out.push(t.x1A0 as u8);
+        out.push(t.name_end as u8);
         let end = out
             .iter()
             .position(|&b| b == 0)

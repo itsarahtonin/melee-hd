@@ -208,7 +208,7 @@ impl Running<'_> {
             let bone = self.data.u32(init) as i32;
             let joint = self.game.fighter_parts[parts][bone as usize].joint;
             let p = &mut self.game.fighters[f.0].ledge_points[i as usize];
-            p.x24 = bone;
+            p.bone = bone;
             p.jobj = joint;
             p.v1 = raw3(init.at(4));
             p.v2 = mem(reg(self.data.f32(init.at(0x10))));

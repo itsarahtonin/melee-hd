@@ -151,7 +151,7 @@ impl Running<'_> {
             .0;
         let (root, root2, root_depth) = {
             let b = &self.game.fighter_parts[parts][parent];
-            (b.joint, b.x4_jobj2, b.xC_u[0])
+            (b.joint, b.interp_joint, b.tree[0])
         };
         hang(&mut self.game.objs.jobjs, how, root, model);
         hang(&mut self.game.objs.jobjs, how, root2, blend);
@@ -170,7 +170,7 @@ impl Running<'_> {
         bone_from_joint(bone, flags, tree_depth);
         set_bone_last_dobj(bone, 0);
         set_bone_bit(bone, 1, 6, false);
-        bone.x4_jobj2 = Some(blend);
+        bone.interp_joint = Some(blend);
         set_bone_bit(bone, 0, 2, true);
     }
 

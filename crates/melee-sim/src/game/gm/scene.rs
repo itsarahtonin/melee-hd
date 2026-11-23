@@ -32,29 +32,30 @@ impl Game {
     /// Whether a debug pause bit is set, `gm_GetDbPauseFlag`.
     #[doc(alias = "gm_GetDbPauseFlag")]
     pub fn db_pause_flag(&self, bit: u32) -> bool {
-        u64::from(self.scene.unk_10.x0) & (1u64 << bit) != 0
+        u64::from(self.scene.pause.pause_bits) & (1u64 << bit) != 0
     }
 
     /// The debug pause bits, `gm_801A4624`.
     #[doc(alias = "gm_801A4624")]
     pub fn db_pause_flags(&self) -> u8 {
-        self.scene.unk_10.x0
+        self.scene.pause.pause_bits
     }
 
     #[doc(alias = "gm_SetDbPauseFlag")]
     pub fn set_db_pause_flag(&mut self, bit: u32) {
-        self.scene.unk_10.x0 = (u64::from(self.scene.unk_10.x0) | 1u64 << bit) as u8;
+        self.scene.pause.pause_bits = (u64::from(self.scene.pause.pause_bits) | 1u64 << bit) as u8;
     }
 
     #[doc(alias = "gm_ClearDbPauseFlag")]
     pub fn clear_db_pause_flag(&mut self, bit: u32) {
-        self.scene.unk_10.x0 = (u64::from(self.scene.unk_10.x0) & !(1u64 << bit)) as u8;
+        self.scene.pause.pause_bits =
+            (u64::from(self.scene.pause.pause_bits) & !(1u64 << bit)) as u8;
     }
 
     /// Whether a debug frame step is pending, `gm_801A46B8`.
     #[doc(alias = "gm_801A46B8")]
     pub fn db_frame_step(&self, bit: u32) -> bool {
-        u64::from(self.scene.unk_10.x2) & (1u64 << bit) != 0
+        u64::from(self.scene.pause.step_bits) & (1u64 << bit) != 0
     }
 
     /// The process links the debug pause bits stop, `gm_801A48A4`.
@@ -74,7 +75,7 @@ impl Game {
     /// `gm_SetDbPauseInputHandlers`.
     #[doc(alias = "gm_SetDbPauseInputHandlers")]
     pub fn set_db_pause_handlers(&mut self, pause: u32, step: u32) {
-        let h = &mut self.scene.unk_10.db_input;
+        let h = &mut self.scene.pause.db_input;
         h.check_pause = super::super::mirror::code(pause);
         h.check_framestep = super::super::mirror::code(step);
     }
@@ -85,19 +86,19 @@ impl Game {
     #[doc(alias = "gm_801A4970")]
     pub fn db_scene_input(&mut self) {
         let (pause, step) = (
-            self.scene.unk_10.db_input.check_pause,
-            self.scene.unk_10.db_input.check_framestep,
+            self.scene.pause.db_input.check_pause,
+            self.scene.pause.db_input.check_framestep,
         );
         if let Some(f) = pause
             && self.db_pause_predicate(f.0)
         {
-            self.scene.unk_10.x0 ^= 1;
+            self.scene.pause.pause_bits ^= 1;
         }
         if self.db_pause_flag(0)
             && let Some(f) = step
             && self.db_pause_predicate(f.0)
         {
-            self.scene.unk_10.x2 |= 1;
+            self.scene.pause.step_bits |= 1;
         }
     }
 
@@ -175,59 +176,59 @@ impl Game {
 
     #[doc(alias = "gm_SetPreGObjProcCallback")]
     pub fn set_pre_gobj_proc(&mut self, f: u32) {
-        self.scene.unk_10.pre_gobj_proc = super::super::mirror::code(f);
+        self.scene.pause.pre_gobj_proc = super::super::mirror::code(f);
     }
 
     /// Which half of the pause mask the clocks gate, `gm_801A4B50`.
     #[doc(alias = "gm_801A4B50")]
     pub fn set_clock_mask(&mut self, which: i32) {
-        self.scene.unk_10.unk_34 = which;
+        self.scene.pause.clock_mask = which;
     }
 
     /// Ends the scene after this frame, `gm_801A4B60`.
     #[doc(alias = "gm_801A4B60")]
     pub fn end_scene(&mut self) {
-        self.scene.unk_C = 1;
+        self.scene.ending = 1;
     }
 
     /// Ends the scene at once, without rendering this frame, `gm_801A4B74`.
     #[doc(alias = "gm_801A4B74")]
     pub fn end_scene_now(&mut self) {
-        self.scene.unk_C = 2;
+        self.scene.ending = 2;
     }
 
     /// Engine ticks since the scene started, `gm_801A4BA8`.
     #[doc(alias = "gm_801A4BA8")]
     pub fn scene_ticks(&self) -> u32 {
-        self.scene.unk_0
+        self.scene.ticks
     }
 
     /// Ticks the game clock was due since the scene started, `gm_801A4BB8`.
     #[doc(alias = "gm_801A4BB8")]
     pub fn scene_game_ticks(&self) -> u32 {
-        self.scene.unk_8
+        self.scene.game_ticks
     }
 
     /// Clears the debug pause state, `gm_801677C0`.
     #[doc(alias = "gm_801677C0")]
     pub fn clear_db_pause(&mut self) {
-        let s = &mut self.scene.unk_10;
-        s.x0 = 0;
-        s.x1 = 0;
-        s.x2 = 0;
-        s.x3 = 0;
-        s.unk_20 = 0;
-        s.unk_28 = 0;
+        let s = &mut self.scene.pause;
+        s.pause_bits = 0;
+        s.applied_pause_bits = 0;
+        s.step_bits = 0;
+        s.applied_step_bits = 0;
+        s.paused_links = 0;
+        s.skip_links = 0;
     }
 
     /// The scene loop's setup before its first tick, `gm_801A4D34`'s prologue: the debug
     /// pause state and counters cleared and all but the newest queued poll dropped.
     pub fn start_scene_loop(&mut self) {
         self.clear_db_pause();
-        self.scene.unk_0 = 0;
-        self.scene.unk_4 = 0;
-        self.scene.unk_8 = 0;
-        self.scene.unk_C = 0;
+        self.scene.ticks = 0;
+        self.scene.frames_drawn = 0;
+        self.scene.game_ticks = 0;
+        self.scene.ending = 0;
         self.pads.flush_queue(Flush::Leave1);
     }
 }
@@ -324,7 +325,7 @@ pub fn begin_tick(r: &mut Running) {
     }
     let g = &mut *r.game;
     let run = g.db_frame_step(0) || !g.db_pause_flag(0);
-    g.scene.unk_10.unk_38_0 = run;
+    g.scene.pause.runs = run;
     if run {
         g.pacing.advance();
         if g.pacing.due(0) {
@@ -349,7 +350,7 @@ pub enum Resume {
 /// counts. Returns whether the scene asked to end.
 pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
     let g = &mut *r.game;
-    if g.scene.unk_10.unk_38_0 {
+    if g.scene.pause.runs {
         if from == Resume::ButtonMaps && g.pacing.due(0) {
             g.evaluate_controller_inputs();
         }
@@ -360,44 +361,44 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
         }
     }
     let g = &mut *r.game;
-    let s = &mut g.scene.unk_10;
-    if s.x0 != s.x1 || s.x2 != s.x3 {
-        s.unk_20 = if s.unk_38_0 {
-            Game::pause_links(s.x0)
+    let s = &mut g.scene.pause;
+    if s.pause_bits != s.applied_pause_bits || s.step_bits != s.applied_step_bits {
+        s.paused_links = if s.runs {
+            Game::pause_links(s.pause_bits)
         } else {
             u64::MAX
         };
-        s.x1 = s.x0;
-        s.x3 = s.x2;
-        s.x2 = 0;
+        s.applied_pause_bits = s.pause_bits;
+        s.applied_step_bits = s.step_bits;
+        s.step_bits = 0;
     }
-    s.unk_28 = s.unk_20;
-    let mask = CLOCK_MASKS[s.unk_34 as usize];
+    s.skip_links = s.paused_links;
+    let mask = CLOCK_MASKS[s.clock_mask as usize];
     if !g.pacing.due(0) {
-        s.unk_28 |= mask;
+        s.skip_links |= mask;
     }
     if !g.pacing.due(1) {
-        s.unk_28 |= !mask;
+        s.skip_links |= !mask;
     }
     if r.game.gm.db_level >= super::DB_DEBUG_ROM {
         r.game.db_check_screenshot();
     }
     r.lb_audio_tick();
-    if let Some(f) = r.game.scene.unk_10.pre_gobj_proc {
+    if let Some(f) = r.game.scene.pause.pre_gobj_proc {
         super::super::code::run_event(r, f.0);
     }
     let g = &mut *r.game;
     // The scheduler reads the mask through `HSD_GObjLibInitData.unk_2`.
-    g.world.skip_links = g.scene.unk_10.unk_28;
+    g.world.skip_links = g.scene.pause.skip_links;
     crate::hsd::gobj::run_procs(r);
     crate::game::record::end_of_procs(r.game);
     let g = &mut *r.game;
     let sc = &mut g.scene;
-    if sc.unk_0 != u32::MAX - 1 {
-        sc.unk_0 = sc.unk_0.wrapping_add(1);
+    if sc.ticks != u32::MAX - 1 {
+        sc.ticks = sc.ticks.wrapping_add(1);
     }
-    if sc.unk_10.unk_38_0 && g.pacing.due(0) && sc.unk_8 != u32::MAX - 1 {
-        sc.unk_8 = sc.unk_8.wrapping_add(1);
+    if sc.pause.runs && g.pacing.due(0) && sc.game_ticks != u32::MAX - 1 {
+        sc.game_ticks = sc.game_ticks.wrapping_add(1);
     }
     // What a display pass would give the camera now (`live::DisplayPhase`, design call 9).
     g.display_phase_tick_end();
@@ -405,13 +406,13 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
         check_active_threads();
     }
     let sc = &mut g.scene;
-    if sc.unk_C != 0 {
+    if sc.ending != 0 {
         return true;
     }
     // In a replay, playback's codes close the tick's sound log next (`HandleFrameSoundLog`),
     // after the point ssbm-rs's traces sample: the next tick's start takes it up. A live match
     // runs no sound code (`Playback::sound_codes`).
-    let frame = (sc.unk_8 as i32).wrapping_sub(1);
+    let frame = (sc.game_ticks as i32).wrapping_sub(1);
     if let Some(p) = g.playback.as_mut().filter(|p| !p.live) {
         p.sounds.closing = Some(frame);
     }
@@ -492,13 +493,13 @@ fn step_tick_polls(
     let ended = tick_polls(r, alarm);
     // A round ticks once per poll it found queued (on the timeline, which counts the
     // round's ticks), or until the scene asks to end, then renders once.
-    let round_over = r.game.scene.unk_C != 0
+    let round_over = r.game.scene.ending != 0
         || r.game
             .audio
             .clock
             .as_ref()
             .is_none_or(|c| c.ticks_left == 0);
-    (Tick { pads, ended }, r.game.scene.unk_C != 2 && round_over)
+    (Tick { pads, ended }, r.game.scene.ending != 2 && round_over)
 }
 
 /// The scene loop's thread check at the debug ROM's level, `OSCheckActiveThreads`, after
@@ -534,8 +535,8 @@ pub fn render_screen(r: &mut Running) {
     crate::hsd::display::set_offscreen(&mut r.game.objs, false);
     r.render_frame();
     let sc = &mut r.game.scene;
-    if sc.unk_4 != u32::MAX - 1 {
-        sc.unk_4 = sc.unk_4.wrapping_add(1);
+    if sc.frames_drawn != u32::MAX - 1 {
+        sc.frames_drawn = sc.frames_drawn.wrapping_add(1);
     }
     r.game.db_take_screenshot_if_pending();
 }

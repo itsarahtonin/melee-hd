@@ -40,7 +40,7 @@ impl Running<'_> {
     #[doc(alias = "gm_GetMatchEndPlayerScore")]
     pub fn match_end_score(&mut self, slot: i32) -> i32 {
         self.results_up_to_date();
-        self.game.vs.state.x24C.player_standings[slot as usize].score
+        self.game.vs.state.match_end.player_standings[slot as usize].score
     }
 
     /// A fighter's player's rank in the results as they stand, `gm_8016C6C0`.
@@ -57,7 +57,7 @@ impl Running<'_> {
     pub fn player_rank(&mut self, slot: i32) -> i32 {
         self.results_up_to_date();
         let g = &*self.game;
-        let r = &g.vs.state.x24C;
+        let r = &g.vs.state.match_end;
         let p = &r.player_standings[slot as usize];
         if g.vs.start.is_teams == 0 {
             i32::from(p.is_big_loser)
@@ -69,8 +69,8 @@ impl Running<'_> {
     /// The results brought up to date once a tick (`x24C.x0` the tick they were).
     pub(crate) fn results_up_to_date(&mut self) {
         let tick = self.game.scene_ticks();
-        if self.game.vs.state.x24C.x0 != tick {
-            self.game.vs.state.x24C.x0 = tick;
+        if self.game.vs.state.match_end.standings_tick != tick {
+            self.game.vs.state.match_end.standings_tick = tick;
             self.compile_results();
         }
     }
@@ -103,9 +103,9 @@ impl Running<'_> {
     #[doc(alias = "fn_80166A8C")]
     #[doc(alias = "gm_80166378")]
     pub(crate) fn compile_results(&mut self) {
-        let mut r = std::mem::take(&mut self.game.vs.state.x24C);
+        let mut r = std::mem::take(&mut self.game.vs.state.match_end);
         self.compile_results_into(&mut r);
-        self.game.vs.state.x24C = r;
+        self.game.vs.state.match_end = r;
     }
 
     /// `gm_80166378` on results `r`: a bonus match's scores tally each player's bonuses
@@ -132,7 +132,7 @@ impl Game {
     /// `gm_80166378` on a copy of the game's results, where no bonus match's tally can
     /// run (the Slippi recorder's).
     pub(crate) fn compile_results(&mut self) {
-        let mut r = std::mem::take(&mut self.vs.state.x24C);
+        let mut r = std::mem::take(&mut self.vs.state.match_end);
         self.fill_standings(&mut r);
         for i in 0..6 {
             if r.player_standings[i].pkind != PKIND_NA {
@@ -141,7 +141,7 @@ impl Game {
             }
         }
         self.rank_results(&mut r);
-        self.vs.state.x24C = r;
+        self.vs.state.match_end = r;
     }
 
     /// `gm_80166378`'s standings before the scores: every player's fields from the player
@@ -153,9 +153,9 @@ impl Game {
         for t in &mut r.team_standings {
             *t = Default::default();
         }
-        r._x448 = [0; 4];
+        r.mode_bonuses = [0; 4];
         r.frame_count = self.vs_frame_count();
-        r.x7 = self.vs_joiners();
+        r.joiners = self.vs_joiners();
         // `kills` holds four; the fifth and sixth land in `x18` and the padding after it.
         let mut kills = [[0u16; 6]; 6];
         for (i, row) in kills.iter_mut().enumerate() {
@@ -193,13 +193,13 @@ impl Game {
             let ratio = self.hit_ratio(s);
             p.hit_percent = fp::fctiwz(fp::fmuls(100.0, ratio)) as i8 as u8;
             let st = self.player(s).stale_moves.total_attack_count_struct.clone();
-            p.attacks_hit = u32::from_be_bytes(st.x358[0..4].try_into().unwrap());
+            p.attacks_hit = u32::from_be_bytes(st.landed[0..4].try_into().unwrap());
             p.attacks_total = st.attacks.total;
             let t = &self.player(s).stale_moves;
-            p.damage_dealt = to_u32(t.xC6C);
-            p.damage_taken = to_u32(t.xC60);
-            p.damage_recovered = t.xC68 as u32;
-            p.peak_damage = to_u32(t.xC64);
+            p.damage_dealt = to_u32(t.damage_dealt);
+            p.damage_taken = to_u32(t.damage_taken);
+            p.damage_recovered = t.damage_recovered as u32;
+            p.peak_damage = to_u32(t.peak_damage);
             let pl = self.player(s);
             p.walk_distance = to_u32(pl.ext_f32(0xD74)).wrapping_mul(10);
             p.run_distance = to_u32(pl.ext_f32(0xD78)).wrapping_mul(10);
@@ -218,10 +218,10 @@ impl Game {
             p.grabs = st.attacks.by_attack_counts[STATS_CATCH];
             p.down_attacks = down_attacks(&st.attacks.by_attack_counts);
             // `pl_800386D8(stats, 112)`: past `x358`'s high attacks, the word at 0x5A8.
-            p.action_stat_112 = st.x598[4];
+            p.ledge_catches = st.more_actions[4];
             p.items_picked_up = pl
                 .stale_moves
-                .x674
+                .items_picked_up
                 .iter()
                 .fold(0u32, |a, &v| a.wrapping_add(v));
             let (d44, d68) = (pl.ext_f32(0xD84), pl.ext_f32(0xD88));
@@ -231,7 +231,7 @@ impl Game {
                 crate::ppc::cvt_fp2unsigned(fp::fmuls(60.0, fp::fmuls(10.0, reg(d68))));
             p.timed_stat_3 = (pl.ext_u32(0xD04) / 60) as i32;
             p.timed_stat_4 = (pl.ext_u32(0xD68) / 60) as i32;
-            p.last_attack_stat = pl.stale_moves.xCB0 as u32;
+            p.teammate_hits = pl.stale_moves.teammate_hits as u32;
             for (j, k) in row.iter_mut().enumerate() {
                 if r.player_standings[j].pkind != PKIND_NA {
                     *k = self.player_kos(s, j as i32) as u16;
@@ -290,7 +290,7 @@ impl Game {
         if super::is_1p_mode(self) {
             let mut v = 3.0;
             let st = &self.vs.state;
-            if st.unk_0 != 0
+            if st.phase != 0
                 && (st.match_result == OUTCOME_TIMEOUT || st.match_result == OUTCOME_1P_GAME_OVER)
             {
                 v = fp::fmuls(v, f64::from(1.1_f32));
@@ -313,7 +313,7 @@ impl Game {
     fn hit_ratio(&self, slot: i32) -> f64 {
         let st = &self.player(slot).stale_moves.total_attack_count_struct;
         let total = st.attacks.total;
-        let hits = u32::from_be_bytes(st.x358[0..4].try_into().unwrap());
+        let hits = u32::from_be_bytes(st.landed[0..4].try_into().unwrap());
         if total == 0 {
             return 0.0;
         }
@@ -419,7 +419,7 @@ impl<'a> TeamStanding<'a> {
             within >= 0x104 && (within - 0x104) % 4 == 0 && (within - 0x104) / 4 + 2 < 257,
             "fn_80165E7C: team {team:#x}'s standing past the teams isn't modeled"
         );
-        TeamStanding::Past(&mut r.x44C[p].x104, (within - 0x104) / 4)
+        TeamStanding::Past(&mut r.decisions[p].points, (within - 0x104) / 4)
     }
 
     fn score(&self) -> i32 {

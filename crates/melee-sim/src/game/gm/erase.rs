@@ -4,7 +4,7 @@
 //! conditions no longer hold taken back (`gm_801729EC`) and the save written.
 
 use super::super::state::Running;
-use super::super::structs::{FighterData_x7C, GmSaveData};
+use super::super::structs::{FighterRecords, GmSaveData};
 
 /// `lbl_803B78C8`'s notification ids, by unlock index.
 const CHARACTER_MESSAGES: [u8; 11] = [4, 2, 3, 1, 0, 8, 7, 5, 0xA, 9, 6];
@@ -62,9 +62,9 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D924")]
     fn unnote_message(&mut self, n: u32) {
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1B80[n as usize] = 0;
-        clear_bit(&mut s.x1B40, n);
-        clear_bit(&mut s.x1B4C, n);
+        s.message_times[n as usize] = 0;
+        clear_bit(&mut s.messages_pending, n);
+        clear_bit(&mut s.messages_noted, n);
     }
 
     /// `gm_GetVsPlayMatchTotal`: the VS matches played, every kind.
@@ -79,14 +79,14 @@ impl Running<'_> {
     }
 
     /// Each character's 1P records' flags and counts (`GetPersistentFighterData(i)->x7C`).
-    fn records_1p(&self) -> impl Iterator<Item = &FighterData_x7C> {
+    fn records_1p(&self) -> impl Iterator<Item = &FighterRecords> {
         self.game
             .game_data
             .thing
             .save_data
-            .x1F2C
+            .fighters
             .iter()
-            .map(|f| &f.x7C)
+            .map(|f| &f.records)
     }
 
     /// The condition of special message `n`'s row of `lbl_803D6300` (the first whose mask
@@ -131,36 +131,36 @@ impl Running<'_> {
     #[doc(alias = "fn_80172664")]
     #[doc(alias = "fn_80173644")]
     pub(super) fn message_condition(&mut self, n: u32) -> Option<bool> {
-        let any = |r: &Self, f: &dyn Fn(&FighterData_x7C) -> bool| r.records_1p().any(f);
-        let all = |r: &Self, f: &dyn Fn(&FighterData_x7C) -> bool| r.records_1p().all(f);
+        let any = |r: &Self, f: &dyn Fn(&FighterRecords) -> bool| r.records_1p().any(f);
+        let all = |r: &Self, f: &dyn Fn(&FighterRecords) -> bool| r.records_1p().all(f);
         let played = self.vs_matches_played();
         // `lbLang_GetLanguageSetting`: the disc's, English on this one.
         let us = !super::language_setting_is_jp();
         // `fn_80163FA4(n)`: how many of the first `n` events are cleared (`x1A68`'s bits).
         let events = |r: &Self, n: u32| {
             (0..n)
-                .filter(|&i| r.game.game_data.thing.save_data.x1A68 & (1i64 << i) != 0)
+                .filter(|&i| r.game.game_data.thing.save_data.events_cleared & (1i64 << i) != 0)
                 .count() as u32
         };
         Some(match n {
             0x16 | 0x18 | 0x1B | 0x1C | 0x1D | 0x37..=0x3D => self.message_due(n, 0x100),
-            0x17 => self.game.game_data.thing.save_data.unk_1A8.x0 >= 0x1388,
-            0x1E => any(self, &|d| d.b4),
-            0x1F => any(self, &|d| d.b5),
-            0x20 => any(self, &|d| d.b6),
-            0x21 => all(self, &|d| d.b4),
-            0x22 => all(self, &|d| d.b5),
-            0x23 => all(self, &|d| d.b6),
+            0x17 => self.game.game_data.thing.save_data.message_records.kos >= 0x1388,
+            0x1E => any(self, &|d| d.classic_cleared),
+            0x1F => any(self, &|d| d.adventure_cleared),
+            0x20 => any(self, &|d| d.all_star_cleared),
+            0x21 => all(self, &|d| d.classic_cleared),
+            0x22 => all(self, &|d| d.adventure_cleared),
+            0x23 => all(self, &|d| d.all_star_cleared),
             0x24 => events(self, 30) == 30,
             0x25 => events(self, 51) == 51,
-            0x26 => all(self, &|d| d.b0),
-            0x27 => any(self, &|d| d.b2),
-            0x28 => any(self, &|d| d.b3),
-            0x29 => any(self, &|d| d.x80 == 4),
+            0x26 => all(self, &|d| d.target_cleared),
+            0x27 => any(self, &|d| d.hundred_man_cleared),
+            0x28 => any(self, &|d| d.fifteen_min_cleared),
+            0x29 => any(self, &|d| d.classic_level == 4),
             0x2A => any(self, &|d| d.b789 == 1),
-            0x2B => any(self, &|d| d.x81 == 4),
+            0x2B => any(self, &|d| d.adventure_level == 4),
             0x2C => any(self, &|d| d.b10_to_12 == 1),
-            0x2D => any(self, &|d| d.x82 == 4),
+            0x2D => any(self, &|d| d.all_star_level == 4),
             0x2E => false,
             0x2F => played >= 100,
             0x30 => played >= 1000,
@@ -170,7 +170,7 @@ impl Running<'_> {
             0x34 => !us && played >= 0x1A90,
             0x35 => us && played >= 0x1383,
             0x36 => played >= 50_000,
-            0x41 => self.game.game_data.thing.save_data.x1B3C != 0,
+            0x41 => self.game.game_data.thing.save_data.final_event_all_stocks != 0,
             _ => return None,
         })
     }
@@ -192,14 +192,14 @@ impl Running<'_> {
                 && self.game.game_data.thing.save_data.unlocked_characters & (1 << i) == 0
             {
                 let m = u32::from(character_message(i));
-                clear_bit(&mut self.game.game_data.thing.save_data.x1B4C, m);
+                clear_bit(&mut self.game.game_data.thing.save_data.messages_noted, m);
             }
         }
         for i in 0..11 {
             let m = stage_message(i);
-            if self.game.game_data.thing.save_data.x186A & (1 << i) == 0 {
+            if self.game.game_data.thing.save_data.unlocked_stages & (1 << i) == 0 {
                 let n = u32::from(stage_notice(i32::from(m)));
-                clear_bit(&mut self.game.game_data.thing.save_data.x1B4C, n);
+                clear_bit(&mut self.game.game_data.thing.save_data.messages_noted, n);
             }
         }
         for (trophy, m) in [(230, 63), (201, 64), (150, 26)] {
@@ -219,11 +219,11 @@ impl Running<'_> {
     pub fn erase_characters(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;
         s.unlocked_characters = 0;
-        s.unk_8 = Default::default();
+        s.challenger_records = Default::default();
         self.game.sync_unlocks();
         self.relock_messages();
         self.card_game_mark_changes();
-        self.game.game_data.x39 = [0; 11];
+        self.game.game_data.challenger_losses = [0; 11];
     }
 
     /// `mnDataDel_8024E940`'s erase: the stages locked (`gm_801647D0`), their records cleared
@@ -233,8 +233,8 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015F490")]
     pub fn erase_stages(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;
-        s.x186A = 0;
-        s.unk_28 = Default::default();
+        s.unlocked_stages = 0;
+        s.stage_unlock_records = Default::default();
         self.game.sync_unlocks();
         let open = (0..29u8).any(|i| {
             self.stage_unlocked_inline(super::opening::stage_select_kind(i))
@@ -252,15 +252,15 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015EEC8")]
     pub fn erase_records(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;
-        for f in s.x1F2C.iter_mut() {
-            f.x7C = FighterData_x7C::default();
+        for f in s.fighters.iter_mut() {
+            f.records = FighterRecords::default();
         }
         // `memzero` from `x1A68` to `x1B40`.
         let z = GmSaveData::default();
-        s.x1A68 = z.x1A68;
-        s.x1A70 = z.x1A70;
-        s.padding_x1A70 = z.padding_x1A70;
-        s.x1B3C = z.x1B3C;
+        s.events_cleared = z.events_cleared;
+        s.event_scores = z.event_scores;
+        s.event_scores_rest = z.event_scores_rest;
+        s.final_event_all_stocks = z.final_event_all_stocks;
         s.pad_2D5 = z.pad_2D5;
         self.relock_messages();
         self.card_game_mark_changes();
@@ -271,7 +271,9 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015F260")]
     pub fn erase_names(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1F2C.iter_mut().for_each(super::main_lib::clear_fighter);
+        s.fighters
+            .iter_mut()
+            .for_each(super::main_lib::clear_fighter);
         for i in 0..super::main_lib::NAMETAG_COUNT {
             super::main_lib::clear_name_tag(self.game.game_data.name_tag(i));
         }
@@ -291,9 +293,9 @@ impl Running<'_> {
         s.trophy_count = 0;
         self.toy_reset_table();
         let s = &mut self.game.game_data.thing.save_data;
-        s.unk_30 = Default::default();
+        s.trophy_records = Default::default();
         for i in 0..300 {
-            clear_bit(&mut s.x1B58, i);
+            clear_bit(&mut s.trophies, i);
         }
         self.game.sync_unlocks();
         self.relock_messages();
@@ -317,9 +319,9 @@ impl Running<'_> {
             self.game.sync_unlocks();
             self.lb_audio_language(0xBF);
         }
-        let b = self.game.game_data.thing.save_data.x1CB0.sound_balance;
+        let b = self.game.game_data.thing.save_data.prefs.sound_balance;
         self.game.audio.lb_apply_balance(b);
-        let d = self.game.game_data.thing.save_data.x1CB0.deflicker;
+        let d = self.game.game_data.thing.save_data.prefs.deflicker;
         self.set_video_mode(d != 0);
         self.relock_messages();
         self.card_game_mark_changes();

@@ -126,8 +126,8 @@ impl Running<'_> {
         r.end_kind = 9;
         for (p, v) in start.players.iter_mut().zip(&vs.players) {
             p.clone_from(v);
-            p.xC_b1 = false;
-            p.xD_b3 = true;
+            p.enters = false;
+            p.no_magnifier = true;
         }
         let p0 = &vs.players[0];
         super::setup_players::setup_human(
@@ -137,7 +137,7 @@ impl Running<'_> {
             1,
             self.game.one_player.homerun_slot,
         );
-        start.players[0].xD_b2 = true;
+        start.players[0].no_offscreen_damage = true;
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
         super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
@@ -160,7 +160,7 @@ impl Running<'_> {
     pub fn homerun_exit_vs(&mut self) {
         let me = self.game.vs_melee.exit.match_end.clone();
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(me.frame_count / 60) as i32;
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(me.frame_count / 60) as i32;
         self.results_add_coins(i32::from(me.player_standings[0].coins));
         self.homerun_store_records();
         if me.outcome == super::vs::OUTCOME_RETRY {
@@ -177,7 +177,13 @@ impl Running<'_> {
         if stage != NO_STAGE {
             self.unlock_stage(stage);
         }
-        let best = &mut self.game.game_data.thing.save_data.unk_30.xB0[usize::from(sel)];
+        let best = &mut self
+            .game
+            .game_data
+            .thing
+            .save_data
+            .trophy_records
+            .home_run_best[usize::from(sel)];
         if dist > *best as u32 {
             *best = dist as i32;
         }
@@ -201,7 +207,15 @@ impl Running<'_> {
         }
         let mut total = 0u32;
         for i in 0..0x19 {
-            total = add_clamped(total, self.game.game_data.thing.save_data.unk_30.xB0[i]);
+            total = add_clamped(
+                total,
+                self.game
+                    .game_data
+                    .thing
+                    .save_data
+                    .trophy_records
+                    .home_run_best[i],
+            );
         }
         if total >= 0x7A120 {
             let _ = self.give_record_trophy(0x8D);
@@ -224,9 +238,9 @@ impl Running<'_> {
         for i in 0..0x1B_u8 {
             let sel = selkind(i);
             let v = self.game.home_run.records[usize::from(sel)].wrapping_mul(10);
-            self.game.game_data.thing.save_data.x1F2C[usize::from(sel)]
-                .x7C
-                .x84 = v;
+            self.game.game_data.thing.save_data.fighters[usize::from(sel)]
+                .records
+                .home_run_distance = v;
         }
     }
 

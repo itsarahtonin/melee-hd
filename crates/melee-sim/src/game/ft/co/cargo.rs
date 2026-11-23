@@ -662,7 +662,7 @@ impl Running<'_> {
         let (akind, x2070, instance) = (
             af.kind,
             u32::from_be_bytes(af.attack_flags),
-            af.attack_record.x2088,
+            af.attack_record.record_id,
         );
         self.attack_landed(
             Some(holder),

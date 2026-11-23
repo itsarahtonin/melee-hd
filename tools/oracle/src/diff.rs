@@ -932,7 +932,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     };
     // A state taken up at a tick's end has that frame's display pass still to run; a started
     // match has run none of its ticks.
-    let mut render_due = from.is_some() && m.game.scene.unk_C != 2;
+    let mut render_due = from.is_some() && m.game.scene.ending != 2;
     let mut end = End::Limit;
     let stop = loop {
         if compared >= limit {

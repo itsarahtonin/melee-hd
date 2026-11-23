@@ -1122,7 +1122,7 @@ impl Running<'_> {
         } else {
             ckind
         };
-        let color = self.game.game_data.vs.unk_522.color;
+        let color = self.game.game_data.vs.adventure.color;
         let d = &mut self.game.one_player.adventure_cutscene;
         d[0] = kind;
         d[1] = color;
@@ -1365,7 +1365,7 @@ impl Running<'_> {
     /// into the ending (mode 0x16).
     fn adventure_clear(&mut self) {
         let run = self.game.one_player.adventure.base;
-        let stocks = self.game.game_data.vs.unk_522.stocks;
+        let stocks = self.game.game_data.vs.adventure.stocks;
         self.one_player_clear(&run, stocks, super::endings::GM_ADVENTURE_GOVER);
     }
 

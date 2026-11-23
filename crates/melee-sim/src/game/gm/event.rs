@@ -83,13 +83,13 @@ impl Running<'_> {
     /// `gm_801BEB74`: the event chosen.
     #[doc(alias = "gm_801BEB74")]
     pub fn set_event(&mut self, n: u8) {
-        self.game.game_data.vs.unk_530.unk_535 = n;
+        self.game.game_data.vs.event.event = n;
     }
 
     /// `gm_801BEB80`: the event chosen last.
     #[doc(alias = "gm_801BEB80")]
     pub fn event(&self) -> u8 {
-        self.game.game_data.vs.unk_530.unk_535
+        self.game.game_data.vs.event.event
     }
 
     /// `gm_801BEB8C`: whether event `n` is scored by its time (`evinit`'s `x1_0`), not KOs.
@@ -134,7 +134,7 @@ pub fn event_place(name: u8) -> u8 {
 /// `gmMainLib_8015CF84` (`stb 1` at the save's 0x1B3C).
 #[doc(alias = "gmMainLib_8015CF84")]
 pub fn note_final_event_all_stocks(save: &mut crate::game::structs::GmSaveData) {
-    save.x1B3C = 1;
+    save.final_event_all_stocks = 1;
 }
 
 /// `onEnterVs`'s players' setups from the table (`gm_801BAB40_src`, 0x1C bytes): the
@@ -251,29 +251,29 @@ impl Running<'_> {
     /// without their copy's hat), the stage too when `stage`, and their sound banks.
     #[doc(alias = "gm_801BA938")]
     fn event_cache(&mut self, lo: usize, hi: usize, stage: bool) {
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         let gc = &mut self.dvd_mut().cache.scene.game_cache;
         for i in lo..hi {
-            let c = ev.x4C[i];
+            let c = ev.chars[i];
             if c != 0x21 {
                 gc.entries[i].char_id = i32::from(c);
-                gc.entries[i].color = ev.x50[i];
-                if ev.x45 != 0 && i > 0 && c == 4 {
+                gc.entries[i].color = ev.colors[i];
+                if ev.crowd_kirby_copies != 0 && i > 0 && c == 4 {
                     gc.entries[i].copies_from_cache = 0;
                 }
             }
         }
         if stage {
-            gc.stkind = ev.x48;
+            gc.stkind = ev.stage;
         }
         self.preload_refresh();
         let mut mask = 0;
         for i in lo..hi {
-            if ev.x4C[i] != 0x21 {
-                mask |= crate::lb::audio::character_banks(i32::from(ev.x4C[i]));
+            if ev.chars[i] != 0x21 {
+                mask |= crate::lb::audio::character_banks(i32::from(ev.chars[i]));
             }
         }
-        mask |= crate::lb::audio::stage_banks(ev.x48);
+        mask |= crate::lb::audio::stage_banks(ev.stage);
         let lb = &mut self.game.audio.lb;
         lb.unwant_banks(0x1C);
         lb.want_banks(0xC, mask);
@@ -284,18 +284,18 @@ impl Running<'_> {
     /// lists' entry's; with its first player to choose, the other players in the cache.
     #[doc(alias = "onEnterCss@801BAA60")]
     pub fn event_enter_css(&mut self) {
-        let e = self.game.game_data.vs.unk_530.clone();
+        let e = self.game.game_data.vs.event.clone();
         super::setup_players::css_one_player(
             &mut self.game.event.css,
             0xE,
-            e.x2,
+            e.chosen_char,
             0,
-            e.x3 as i8,
+            e.chosen_color as i8,
             e.nametag,
             0,
-            e.x6,
+            e.port,
         );
-        if e.x44 == 1 {
+        if e.load_kind == 1 {
             self.event_cache(1, 4, true);
         }
     }
@@ -310,13 +310,13 @@ impl Running<'_> {
         }
         let (ckind, _, color, nametag, _) =
             super::setup_players::css_one_player_choice(&self.game.event.css);
-        let e = &mut self.game.game_data.vs.unk_530;
-        e.x2 = ckind;
-        e.x3 = color;
+        let e = &mut self.game.game_data.vs.event;
+        e.chosen_char = ckind;
+        e.chosen_color = color;
         e.nametag = nametag;
-        e.x8 = -1;
-        e.x9 = -1;
-        e.xA = -1;
+        e.random_char_1 = -1;
+        e.random_char_2 = -1;
+        e.random_char_3 = -1;
     }
 
     /// `gm_801BAB40`: a player's block from the event's setup.
@@ -336,17 +336,17 @@ impl Running<'_> {
         p.handicap = 9;
         p.team = u8_(6);
         p.nametag = 0x78;
-        p.xB = u8_(7);
+        p.sfx_size = u8_(7);
         p.rumble_enabled = false;
-        p.xC_b1 = flags & 0x80 != 0;
+        p.enters = flags & 0x80 != 0;
         p.vs_metal = flags & 0x40 != 0;
-        p.xC_b3 = flags & 0x20 != 0;
+        p.unread_c_b3 = flags & 0x20 != 0;
         p.vs_invisible = flags & 0x10 != 0;
-        p.xC_b6 = flags & 0x08 != 0;
-        p.xC_b7 = flags & 0x04 != 0;
-        p.xD_b1 = false;
-        p.xD_b2 = false;
-        p.xD_b4 = false;
+        p.voice_muted = flags & 0x08 != 0;
+        p.stamina = flags & 0x04 != 0;
+        p.shows_hearts = false;
+        p.no_offscreen_damage = false;
+        p.dies_up = false;
         p.cpu_kind = u8_(9);
         p.cpu_level = u8_(0xA);
         p.damage = 0;
@@ -393,32 +393,32 @@ impl Running<'_> {
     pub fn event_on_load(&mut self) {
         self.event_load_table();
         let port = self.one_player_port();
-        let e = &mut self.game.game_data.vs.unk_530;
-        e.x0 = 0;
-        e.x1 = 0;
-        e.x6 = port;
-        e.x7 = 0;
-        e.xB_0 = false;
-        e.xB_1 = false;
-        e.xB_2 = false;
-        e.xB_3 = false;
-        e.xB_4 = false;
-        e.xB_5 = false;
-        e.xB_6 = false;
-        e.xC = 0;
-        e.x10 = 0;
-        e.x14 = 0;
-        e.x18 = 0;
-        e.x1C = 1.0;
-        e.x20 = 0;
-        e.x24 = 0;
-        e.x28 = 0;
-        e.x2C = 0;
-        e.x30 = 0;
-        e.x34 = 0;
-        e.x38 = 0x21;
-        e.x3C = 0;
-        e.x40 = 0;
+        let e = &mut self.game.game_data.vs.event;
+        e.char_kind = 0;
+        e.char_color = 0;
+        e.port = port;
+        e.team = 0;
+        e.timer_counts_up = false;
+        e.cleared = false;
+        e.round_won = false;
+        e.crowd = false;
+        e.series = false;
+        e.voices_loaded = false;
+        e.timed = false;
+        e.score = 0;
+        e.proc_counter = 0;
+        e.unread_14 = 0;
+        e.proc_state = 0;
+        e.quake_scale = 1.0;
+        e.round = 0;
+        e.round_stocks = 0;
+        e.round_damage = 0;
+        e.round_seconds = 0;
+        e.round_frames = 0;
+        e.series_frames = 0;
+        e.kept_char = 0x21;
+        e.coins = 0;
+        e.play_frames = 0;
         self.event_players();
         let n = self.event();
         let e = self.event_entry(n).expect("the event's entry");
@@ -457,20 +457,20 @@ impl Running<'_> {
             };
             x45 = u8::from(self.data.u8(b.at(0x17)) == 1);
         }
-        let ev = &mut self.game.game_data.vs.unk_530;
-        ev.x44 = x44;
-        ev.x48 = stkind;
-        ev.x4C = chars;
-        ev.x50 = colors;
-        ev.x45 = x45;
-        let round = ev.x20;
+        let ev = &mut self.game.game_data.vs.event;
+        ev.load_kind = x44;
+        ev.stage = stkind;
+        ev.chars = chars;
+        ev.colors = colors;
+        ev.crowd_kirby_copies = x45;
+        let round = ev.round;
         match idx {
             9 | 19 | 29 | 39 | 48 => {
                 let r = self.event_round(e, round as usize);
-                let ev = &mut self.game.game_data.vs.unk_530;
-                ev.x44 = if round == 0 { 3 } else { 4 };
-                ev.x4C[1] = self.data.u8(r) as i8;
-                ev.x50[1] = self.data.u8(r.at(3));
+                let ev = &mut self.game.game_data.vs.event;
+                ev.load_kind = if round == 0 { 3 } else { 4 };
+                ev.chars[1] = self.data.u8(r) as i8;
+                ev.colors[1] = self.data.u8(r.at(3));
             }
             35 if round <= 1 => {
                 let picks: &[(usize, usize)] = if round == 0 {
@@ -485,20 +485,20 @@ impl Running<'_> {
                         (slot, self.data.u8(r) as i8, self.data.u8(r.at(3)))
                     })
                     .collect();
-                let ev = &mut self.game.game_data.vs.unk_530;
-                ev.x44 = if round == 0 { 2 } else { 4 };
+                let ev = &mut self.game.game_data.vs.event;
+                ev.load_kind = if round == 0 { 2 } else { 4 };
                 for (slot, c, col) in v {
-                    ev.x4C[slot] = c;
-                    ev.x50[slot] = col;
+                    ev.chars[slot] = c;
+                    ev.colors[slot] = col;
                 }
             }
             43 => {
                 let x4 = e.params(self).expect("the event's parameters");
                 let p = self.data.ptr(x4.at(4)).expect("the event's third player");
                 let (c, col) = (self.data.u8(p) as i8, self.data.u8(p.at(3)));
-                let ev = &mut self.game.game_data.vs.unk_530;
-                ev.x4C[2] = c;
-                ev.x50[2] = col;
+                let ev = &mut self.game.game_data.vs.event;
+                ev.chars[2] = c;
+                ev.colors[2] = col;
             }
             _ => {}
         }
@@ -521,29 +521,29 @@ impl Running<'_> {
         e: Entry,
         level: u8,
     ) {
-        self.game.game_data.vs.unk_530.xB_3 = true;
+        self.game.game_data.vs.event.crowd = true;
         let b = e.evbonus(self).expect("the event's crowd");
         let d = self.data;
         let ck = d.u8(b) as i8;
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         let own = d.u8(b.at(5)) == 1;
-        if own && ev.x0 as i8 == ck && ev.x1 == d.u8(b.at(6)) {
-            self.game.game_data.vs.unk_530.x50[1] = next_color(d.u8(b.at(6)));
+        if own && ev.char_kind as i8 == ck && ev.char_color == d.u8(b.at(6)) {
+            self.game.game_data.vs.event.colors[1] = next_color(d.u8(b.at(6)));
         }
         let copies = if ck == CharacterKind::Kirby {
             d.u8(b.at(0x17))
         } else {
             0
         };
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         self.setup_opponents(
             &[ck, NONE, NONE],
-            [ev.x50[1] as i8, 0, 0],
+            [ev.colors[1] as i8, 0, 0],
             i32::from(own),
             0,
             copies,
-            ev.x0,
-            ev.x1,
+            ev.char_kind,
+            ev.char_color,
             i32::from(d.u8(b.at(1))),
             i32::from(d.u8(b.at(2))),
             i32::from(d.u8(b.at(3))),
@@ -592,21 +592,21 @@ impl Running<'_> {
         start: &mut super::super::structs::StartMeleeData,
         e: Entry,
     ) {
-        let ev = self.game.game_data.vs.unk_530.clone();
-        if ev.x20 > 0 {
+        let ev = self.game.game_data.vs.event.clone();
+        if ev.round > 0 {
             let p = &mut start.players[0];
-            p.stocks = ev.x24 as i8;
-            p.damage = ev.x28 as u16;
-            p.xC_b1 = false;
-            let c = ev.x38 as i8;
+            p.stocks = ev.round_stocks as i8;
+            p.damage = ev.round_damage as u16;
+            p.enters = false;
+            let c = ev.kept_char as i8;
             if c != 0x21 {
                 p.ckind = c;
-                let ev = &mut self.game.game_data.vs.unk_530;
-                ev.x0 = c as u8;
-                ev.x4C[0] = c;
+                let ev = &mut self.game.game_data.vs.event;
+                ev.char_kind = c as u8;
+                ev.chars[0] = c;
             }
         }
-        let src = self.event_round(e, ev.x20 as usize);
+        let src = self.event_round(e, ev.round as usize);
         start.players[1] = self.event_player(src);
         let (p0, p1) = (start.players[0].clone(), &mut start.players[1]);
         if p1.ckind == p0.ckind && p1.color == p0.color {
@@ -619,9 +619,9 @@ impl Running<'_> {
             p1.color = next_color(p1.color);
         }
         let (c, col) = (p1.ckind, p1.color);
-        let ev = &mut self.game.game_data.vs.unk_530;
-        ev.x4C[1] = c;
-        ev.x50[1] = col;
+        let ev = &mut self.game.game_data.vs.event;
+        ev.chars[1] = c;
+        ev.colors[1] = col;
     }
 
     /// A series' round `k`'s opponent's setup (`evstage_table->entries[k]`).
@@ -699,27 +699,27 @@ impl Running<'_> {
         r.on_match_start = Some(super::super::handles::CodeRef(ON_MATCH_START));
         let counts_up = r.timer_counts_up;
         let quake = d.f32(ei.at(0x24));
-        let ev = &mut self.game.game_data.vs.unk_530;
+        let ev = &mut self.game.game_data.vs.event;
         if counts_up {
-            ev.xB_0 = true;
+            ev.timer_counts_up = true;
         }
         if b1 & 0x80 != 0 {
-            ev.xB_6 = true;
+            ev.timed = true;
         }
         if quake != 1.0 {
-            ev.x1C = quake;
+            ev.quake_scale = quake;
         }
         if e.kind(self) == 2 {
-            let ev = &mut self.game.game_data.vs.unk_530;
-            ev.xB_4 = true;
-            let round = ev.x20;
+            let ev = &mut self.game.game_data.vs.event;
+            ev.series = true;
+            let round = ev.round;
             let stage = self.event_round_stage(e, round as usize);
             start.rules.stkind = stage;
-            self.game.game_data.vs.unk_530.x48 = i32::from(stage);
+            self.game.game_data.vs.event.stage = i32::from(stage);
             if round > 0 {
                 start.rules.long_countdown = true;
                 start.rules.alt_go = true;
-                start.rules.time_limit = self.game.game_data.vs.unk_530.x2C as u32;
+                start.rules.time_limit = self.game.game_data.vs.event.round_seconds as u32;
             }
             self.game.left_list_start(&mut start.rules);
         }
@@ -745,29 +745,29 @@ impl Running<'_> {
             self.event_round_opponent(&mut start, e);
         }
         if level == 0x2B {
-            let ev = &mut self.game.game_data.vs.unk_530;
-            if ev.x4C[0] == ev.x4C[2] && ev.x50[0] == ev.x50[2] {
-                ev.x50[2] = next_color(ev.x50[2]);
+            let ev = &mut self.game.game_data.vs.event;
+            if ev.chars[0] == ev.chars[2] && ev.colors[0] == ev.colors[2] {
+                ev.colors[2] = next_color(ev.colors[2]);
             }
         }
         if level == 0x31 {
             for (i, dir) in [(1, 1), (2, -1)] {
                 let p = &mut start.players[i];
                 p.spawn_dir = dir;
-                p.xD_b0 = true;
-                p.xD_b2 = true;
+                p.hp_explodes = true;
+                p.no_offscreen_damage = true;
             }
         }
         if e.kind(self) == 1 {
             self.event_crowd(&mut start, e, level);
         }
-        let ev = self.game.game_data.vs.unk_530.clone();
-        match ev.x44 {
+        let ev = self.game.game_data.vs.event.clone();
+        match ev.load_kind {
             0 | 1 => self.event_cache(0, 4, true),
             2 => {
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;
-                gc.entries[0].char_id = i32::from(ev.x4C[0]);
-                gc.entries[0].color = ev.x50[0];
+                gc.entries[0].char_id = i32::from(ev.chars[0]);
+                gc.entries[0].color = ev.colors[0];
                 self.preload_refresh();
                 self.wait_preload_class(0xC7);
                 self.event_cache(1, 4, true);
@@ -779,8 +779,8 @@ impl Running<'_> {
             4 => {
                 self.dvd_mut().keep_class();
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;
-                gc.entries[0].char_id = i32::from(ev.x4C[0]);
-                gc.entries[0].color = ev.x50[0];
+                gc.entries[0].char_id = i32::from(ev.chars[0]);
+                gc.entries[0].color = ev.colors[0];
                 self.preload_refresh();
                 self.wait_preload_stale_released(4);
                 self.event_cache(1, 4, true);
@@ -797,23 +797,23 @@ impl Running<'_> {
     /// `onEnterVs`'s first player: its port, the chosen character where the event leaves it
     /// open, its rumble, and the event's note of its team, character and costume.
     fn event_first_player(&mut self, start: &mut super::super::structs::StartMeleeData) {
-        let ev = self.game.game_data.vs.unk_530.clone();
-        super::setup_players::set_slot(&mut start.players[0], i32::from(ev.x6));
+        let ev = self.game.game_data.vs.event.clone();
+        super::setup_players::set_slot(&mut start.players[0], i32::from(ev.port));
         let p = &mut start.players[0];
         let team = p.team;
         if p.ckind == CharacterKind::NONE as i8 {
-            p.ckind = ev.x2;
-            p.color = ev.x3;
+            p.ckind = ev.chosen_char;
+            p.color = ev.chosen_color;
             p.nametag = ev.nametag;
         }
         let (c, col, tag) = (p.ckind, p.color, p.nametag);
-        let ev = &mut self.game.game_data.vs.unk_530;
-        ev.x7 = team;
-        ev.x0 = c as u8;
-        ev.x4C[0] = c;
-        ev.x1 = col;
-        ev.x50[0] = col;
-        let port = usize::from(ev.x6);
+        let ev = &mut self.game.game_data.vs.event;
+        ev.team = team;
+        ev.char_kind = c as u8;
+        ev.chars[0] = c;
+        ev.char_color = col;
+        ev.colors[0] = col;
+        let port = usize::from(ev.port);
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
         start.players[0].rumble_enabled = super::vs_mode::rumble_enabled(&prefs, port, tag, &tags);
@@ -831,24 +831,24 @@ impl Running<'_> {
         let p0 = start.players[0].clone();
         if src.team(self) == 0 {
             start.players[i].team = p0.team;
-            start.players[i].xD_b1 = true;
+            start.players[i].shows_hearts = true;
         }
         if src.ckind(self) == CharacterKind::NONE as i8 {
-            let ev = &self.game.game_data.vs.unk_530;
+            let ev = &self.game.game_data.vs.event;
             let kept = match i {
-                1 => ev.x8,
-                2 => ev.x9,
-                3 => ev.xA,
+                1 => ev.random_char_1,
+                2 => ev.random_char_2,
+                3 => ev.random_char_3,
                 _ => super::super::code::unported_call("an event's random fifth player"),
             };
             if kept == -1 {
                 let c = self.event_random_opponent(start, i) as i8;
                 start.players[i].ckind = c;
-                let ev = &mut self.game.game_data.vs.unk_530;
+                let ev = &mut self.game.game_data.vs.event;
                 match i {
-                    1 => ev.x8 = c,
-                    2 => ev.x9 = c,
-                    _ => ev.xA = c,
+                    1 => ev.random_char_1 = c,
+                    2 => ev.random_char_2 = c,
+                    _ => ev.random_char_3 = c,
                 }
             } else {
                 start.players[i].ckind = kept;
@@ -865,9 +865,9 @@ impl Running<'_> {
         }
         if i < 4 {
             let (c, col) = (p.ckind, p.color);
-            let ev = &mut self.game.game_data.vs.unk_530;
-            ev.x4C[i] = c;
-            ev.x50[i] = col;
+            let ev = &mut self.game.game_data.vs.event;
+            ev.chars[i] = c;
+            ev.colors[i] = col;
         }
     }
 }
@@ -889,23 +889,23 @@ impl Running<'_> {
         self.reset_opponents();
         let me = self.game.event.exit.match_end.clone();
         if me.outcome == super::vs::OUTCOME_RETRY {
-            let ev = &mut self.game.game_data.vs.unk_530;
-            let save = ev.x20 != 0 && level != 0x31;
-            ev.xB_5 = false;
-            ev.x20 = 0;
-            ev.x24 = 0;
-            ev.x28 = 0;
-            ev.x2C = 0;
-            ev.x30 = 0;
-            ev.x34 = 0;
-            ev.x38 = 0x21;
-            ev.x3C = 0;
-            ev.x40 = 0;
+            let ev = &mut self.game.game_data.vs.event;
+            let save = ev.round != 0 && level != 0x31;
+            ev.voices_loaded = false;
+            ev.round = 0;
+            ev.round_stocks = 0;
+            ev.round_damage = 0;
+            ev.round_seconds = 0;
+            ev.round_frames = 0;
+            ev.series_frames = 0;
+            ev.kept_char = 0x21;
+            ev.coins = 0;
+            ev.play_frames = 0;
             self.event_players();
             if save {
                 let (c, col) = (
-                    self.game.game_data.vs.unk_530.x0,
-                    self.game.game_data.vs.unk_530.x1,
+                    self.game.game_data.vs.event.char_kind,
+                    self.game.game_data.vs.event.char_color,
                 );
                 self.dvd_mut().keep_class();
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;
@@ -927,23 +927,23 @@ impl Running<'_> {
         } else {
             0
         };
-        let ev = &mut self.game.game_data.vs.unk_530;
-        ev.x3C = ev.x3C.wrapping_add(coins);
-        ev.x40 = ev.x40.wrapping_add(me.frame_count as i32);
-        if ev.xB_4 && ev.xB_2 {
-            ev.x24 = i32::from(p0.stocks);
-            ev.x28 = p0.percent as i32;
-            ev.xB_2 = false;
-            ev.xB_5 = false;
-            ev.x20 += 1;
+        let ev = &mut self.game.game_data.vs.event;
+        ev.coins = ev.coins.wrapping_add(coins);
+        ev.play_frames = ev.play_frames.wrapping_add(me.frame_count as i32);
+        if ev.series && ev.round_won {
+            ev.round_stocks = i32::from(p0.stocks);
+            ev.round_damage = p0.percent as i32;
+            ev.round_won = false;
+            ev.voices_loaded = false;
+            ev.round += 1;
             self.event_players();
             self.set_next_game_mode_state_id(1);
             return;
         }
-        let cleared = ev.xB_1;
+        let cleared = ev.cleared;
         if cleared {
-            let cur = ev.xC;
-            let timed = ev.xB_6;
+            let cur = ev.score;
+            let timed = ev.timed;
             let mut best = self.event_score(i32::from(level));
             let better = if timed {
                 best == 0 || (cur as u32) < best as u32
@@ -954,15 +954,15 @@ impl Running<'_> {
                 best = cur;
                 self.set_event_score(i32::from(level), best);
             }
-            self.game.game_data.thing.save_data.x1A68 |= 1i64 << level;
+            self.game.game_data.thing.save_data.events_cleared |= 1i64 << level;
         }
         let (coins, frames) = {
-            let ev = &self.game.game_data.vs.unk_530;
-            (ev.x3C, ev.x40)
+            let ev = &self.game.game_data.vs.event;
+            (ev.coins, ev.play_frames)
         };
         self.results_add_coins(coins);
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(frames as u32 / 60) as i32;
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(frames as u32 / 60) as i32;
         let place = event_place(level);
         let kind = if cleared {
             if !self.game.gm.unlocks.ckind_unlocked(0x19) && place == 0x1C {
@@ -1004,12 +1004,12 @@ impl Running<'_> {
         }
         self.trophy_unlocks();
         let _ = self.special_unlocks(0x10);
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         if kind != CharacterKind::NONE {
             self.init_challenger(
-                ev.x0,
-                ev.x1,
-                ev.x6,
+                ev.char_kind,
+                ev.char_color,
+                ev.port,
                 ev.nametag,
                 kind,
                 super::machine::GM_MENU,
@@ -1017,7 +1017,7 @@ impl Running<'_> {
             self.change_game_mode_after_scene(super::machine::GM_CHALLENGER_APPROACH);
             return;
         }
-        if !self.challenger_check(1, ev.x6) {
+        if !self.challenger_check(1, ev.port) {
             self.change_game_mode_after_scene(super::machine::GM_MENU);
         }
     }
@@ -1036,11 +1036,11 @@ impl Running<'_> {
     #[doc(alias = "gm_801BC00C")]
     fn event_match_setup(&mut self) {
         let idx = self.event();
-        let ev = &mut self.game.game_data.vs.unk_530;
-        ev.xB_1 = false;
-        ev.x10 = 0;
-        ev.x14 = 0;
-        ev.x18 = 0;
+        let ev = &mut self.game.game_data.vs.event;
+        ev.cleared = false;
+        ev.proc_counter = 0;
+        ev.unread_14 = 0;
+        ev.proc_state = 0;
         if matches!(
             idx,
             4 | 9 | 12 | 15 | 19 | 21 | 23 | 27 | 29 | 35 | 39 | 43 | 44 | 48
@@ -1048,10 +1048,10 @@ impl Running<'_> {
             self.event_load_table();
         }
         let e = self.event_entry(idx).expect("the event's entry");
-        let ev = self.game.game_data.vs.unk_530.clone();
+        let ev = self.game.game_data.vs.event.clone();
         match idx {
             35 => {
-                let rounds: &[usize] = if ev.x20 == 0 { &[2, 3] } else { &[4] };
+                let rounds: &[usize] = if ev.round == 0 { &[2, 3] } else { &[4] };
                 for &k in rounds {
                     let p = self.event_round(e, k);
                     let (c, col) = (self.data.u8(p) as i8, self.data.u8(p.at(3)));
@@ -1066,23 +1066,23 @@ impl Running<'_> {
                 let p = self.data.ptr(x4.at(4)).expect("the event's third player");
                 let kind =
                     super::super::pl::player::ckind_ftkind(i32::from(self.data.u8(p) as i8), 0);
-                self.load_fighter_costume(kind, ev.x50[2]);
-                if ev.x0 as i8 == 4 {
-                    self.player_kirby_copy(kind, i32::from(ev.x1));
+                self.load_fighter_costume(kind, ev.colors[2]);
+                if ev.char_kind as i8 == 4 {
+                    self.player_kirby_copy(kind, i32::from(ev.char_color));
                 }
             }
             _ => {}
         }
-        if matches!(idx, 9 | 19 | 29 | 35 | 39 | 48) && ev.x20 > 0 {
+        if matches!(idx, 9 | 19 | 29 | 35 | 39 | 48) && ev.round > 0 {
             let st = &mut self.game.vs.state;
-            st.timer_seconds = ev.x2C as u32;
-            st.unk_2C = ev.x30 as u16;
+            st.timer_seconds = ev.round_seconds as u32;
+            st.timer_frames = ev.round_frames as u16;
         }
         let put = |r: &mut Self, k: usize| {
             let p = r.event_round(e, k);
             let (c, col) = (r.data.u8(p), r.data.u8(p.at(3)));
-            let ev = &r.game.game_data.vs.unk_530;
-            let col = if ev.x0 as i8 == c as i8 && ev.x1 == col {
+            let ev = &r.game.game_data.vs.event;
+            let col = if ev.char_kind as i8 == c as i8 && ev.char_color == col {
                 next_color(col)
             } else {
                 col
@@ -1091,19 +1091,19 @@ impl Running<'_> {
         };
         match idx {
             9 | 19 | 29 | 39 | 48 => {
-                let mut k = ev.x20;
+                let mut k = ev.round;
                 while k < self.event_rounds(e) {
                     put(self, k as usize);
                     k += 1;
                 }
             }
             35 => {
-                if ev.x20 == 0 {
+                if ev.round == 0 {
                     for k in [0, 2, 3] {
                         put(self, k);
                     }
                 }
-                if ev.x20 <= 1 {
+                if ev.round <= 1 {
                     for k in [1, 4] {
                         put(self, k);
                     }
@@ -1114,7 +1114,7 @@ impl Running<'_> {
         if idx == 0x24 {
             self.game.bgflash.set_scale(0.2);
         }
-        let q = self.game.game_data.vs.unk_530.x1C;
+        let q = self.game.game_data.vs.event.quake_scale;
         self.game.camera.set_quake_scale(q);
         let w = &mut self.game.world;
         let g = w.create(0xF, 0x11, 0);
@@ -1140,7 +1140,7 @@ impl Running<'_> {
         let with = |p: DataRef| (d.u8(p) as i8, Some(d.u8(p.at(3))));
         match idx {
             35 => {
-                let ks: &[usize] = if self.game.game_data.vs.unk_530.x20 == 0 {
+                let ks: &[usize] = if self.game.game_data.vs.event.round == 0 {
                     &[2, 3]
                 } else {
                     &[4]
@@ -1246,7 +1246,7 @@ impl Running<'_> {
     /// Whether the match's time ran out (`gm_801BC754`'s and the others' inline): never for
     /// a timer that counts up, else with the timer on at its last frame of second 0.
     fn event_time_up(&self) -> bool {
-        if self.game.game_data.vs.unk_530.xB_0 {
+        if self.game.game_data.vs.event.timer_counts_up {
             return false;
         }
         self.game.vs.start.timer_enabled
@@ -1263,18 +1263,21 @@ impl Running<'_> {
     #[doc(alias = "gm_801BC4F4")]
     fn event_success(&mut self, gobj: GObjId) {
         let level = self.event();
-        self.game.game_data.vs.unk_530.xB_1 = true;
+        self.game.game_data.vs.event.cleared = true;
         let best = self.event_score(i32::from(level)) as u32;
-        let ev = self.game.game_data.vs.unk_530.clone();
-        let record = if ev.xB_6 {
-            let mut t = self.game.vs_frame_count().wrapping_add(ev.x34 as u32);
+        let ev = self.game.game_data.vs.event.clone();
+        let record = if ev.timed {
+            let mut t = self
+                .game
+                .vs_frame_count()
+                .wrapping_add(ev.series_frames as u32);
             if level == 0x31 {
-                t = ev.x34 as u32;
+                t = ev.series_frames as u32;
             }
             if t > 0x34BBF {
                 t = 0x34BBF;
             }
-            self.game.game_data.vs.unk_530.xC = t as i32;
+            self.game.game_data.vs.event.score = t as i32;
             best == 0 || t < best
         } else {
             let mut kos: u32 = 0;
@@ -1288,7 +1291,7 @@ impl Running<'_> {
                 kos = self.game.player_kos(0, 1).wrapping_sub(falls);
             }
             // `if (var_r27 > -1)`: an unsigned compare with 0xFFFFFFFF, never true.
-            self.game.game_data.vs.unk_530.xC = kos as i32;
+            self.game.game_data.vs.event.score = kos as i32;
             kos > best
         };
         self.set_player_unkillable(0, 1);
@@ -1296,10 +1299,10 @@ impl Running<'_> {
         self.game.set_game_speed(1.0);
         self.game.vs_set_end_kind(2);
         if record {
-            self.game.vs.state.unk_10 = 0x9C40 + 1;
-            self.game.vs.state.unk_14 = 0x144 + 1;
+            self.game.vs.state.end_sfx_1 = 0x9C40 + 1;
+            self.game.vs.state.end_sfx_2 = 0x144 + 1;
         } else {
-            self.game.vs.state.unk_14 = 0x145 + 1;
+            self.game.vs.state.end_sfx_2 = 0x145 + 1;
         }
         self.game.vs_terminate();
         gobj::free(self, gobj);
@@ -1308,12 +1311,12 @@ impl Running<'_> {
     /// `failEvent`: the event failed: the match ended with the failure's announcement and
     /// sound, its end frozen 40 frames, the process gone.
     fn event_fail(&mut self, gobj: GObjId) {
-        self.game.game_data.vs.unk_530.xB_1 = false;
+        self.game.game_data.vs.event.cleared = false;
         self.game.audio.lb.master = 0x7F;
         self.game.set_game_speed(1.0);
         self.game.vs_set_end_kind(6);
-        self.game.vs.state.unk_14 = 0x148 + 1;
-        self.game.vs.state.unk_18 = 0x28;
+        self.game.vs.state.end_sfx_2 = 0x148 + 1;
+        self.game.vs.state.end_sfx_2_frame = 0x28;
         self.game.vs_terminate();
         gobj::free(self, gobj);
     }
@@ -1332,7 +1335,7 @@ impl Running<'_> {
                         count += 1;
                     }
                 }
-                if self.game.game_data.vs.unk_530.xB_3 {
+                if self.game.game_data.vs.event.crowd {
                     count += self.game.gm.opponents.left();
                 }
 
@@ -1349,7 +1352,7 @@ impl Running<'_> {
                 }
             }
             0 | 2 if self.event_time_up() => {
-                if u32::from(self.game.game_data.vs.unk_530.x7) == self.event_winning_team() {
+                if u32::from(self.game.game_data.vs.event.team) == self.event_winning_team() {
                     self.event_success(gobj);
                     return;
                 }
@@ -1522,15 +1525,15 @@ impl Running<'_> {
     /// `itEvYoshiEgg_Spawn`); failed once the egg breaks (`x18`), cleared at the time's end.
     #[doc(alias = "gm_801BD028")]
     fn event_egg_proc(&mut self, gobj: GObjId) {
-        if self.game.game_data.vs.unk_530.x10 == 0 {
+        if self.game.game_data.vs.event.proc_counter == 0 {
             let e = self.event_entry(self.event()).expect("the event's entry");
             let x4 = e.params(self).expect("the egg's place");
             let d = self.data;
             let pos = crate::vec::Vec3::new(d.f32(x4), d.f32(x4.at(4)), d.f32(x4.at(8)));
             super::super::it::kinds::evyoshiegg::spawn(self, pos);
-            self.game.game_data.vs.unk_530.x10 += 1;
+            self.game.game_data.vs.event.proc_counter += 1;
         }
-        if self.game.game_data.vs.unk_530.x18 != 0 {
+        if self.game.game_data.vs.event.proc_state != 0 {
             self.event_fail(gobj);
             return;
         }
@@ -1606,17 +1609,17 @@ impl Running<'_> {
         let frames = i32::from(self.game.vs_timer_frames());
         let sheik = self.game.player_fighter_kind(0) == FighterKind::Seak;
         let fc = self.game.vs_frame_count() as i32;
-        let ev = &mut self.game.game_data.vs.unk_530;
-        ev.xB_2 = true;
-        ev.x10 = 0x78 - wait;
-        ev.x2C = secs;
-        ev.x30 = frames;
-        if ev.x2C < min {
-            ev.x2C = min;
-            ev.x30 = 0;
+        let ev = &mut self.game.game_data.vs.event;
+        ev.round_won = true;
+        ev.proc_counter = 0x78 - wait;
+        ev.round_seconds = secs;
+        ev.round_frames = frames;
+        if ev.round_seconds < min {
+            ev.round_seconds = min;
+            ev.round_frames = 0;
         }
-        ev.x38 = if sheik { 0x13 } else { 0x21 };
-        ev.x34 = ev.x34.wrapping_add(fc);
+        ev.kept_char = if sheik { 0x13 } else { 0x21 };
+        ev.series_frames = ev.series_frames.wrapping_add(fc);
         self.set_player_unkillable(0, 1);
         self.game.audio.lb.master = 0x7F;
         self.game.set_game_speed(1.0);
@@ -1628,8 +1631,8 @@ impl Running<'_> {
     /// from the first player's), `gm_8016AC44`.
     fn event_strike(&mut self, src: DataRef) {
         let (c, col) = (self.data.u8(src) as i8, self.data.u8(src.at(3)));
-        let ev = &self.game.game_data.vs.unk_530;
-        let col = if ev.x0 as i8 == c && ev.x1 == col {
+        let ev = &self.game.game_data.vs.event;
+        let col = if ev.char_kind as i8 == c && ev.char_color == col {
             next_color(col)
         } else {
             col
@@ -1640,9 +1643,9 @@ impl Running<'_> {
     /// A round won: once the round's wait (`x10`) runs out, the fade to black (over the
     /// first event's `x4`'s frames) and the process gone.
     fn event_round_wait(&mut self, gobj: GObjId) {
-        let ev = &mut self.game.game_data.vs.unk_530;
-        ev.x10 -= 1;
-        if ev.x10 < 0 {
+        let ev = &mut self.game.game_data.vs.event;
+        ev.proc_counter -= 1;
+        if ev.proc_counter < 0 {
             let e0 = self.event_entry(0).expect("the first event's entry");
             let x4 = e0.params(self).expect("the first event's parameters");
             let frames = self.data.u32(x4.at(4)) as i32;
@@ -1662,13 +1665,13 @@ impl Running<'_> {
     #[doc(alias = "gm_801BE37C")]
     #[doc(alias = "gm_801BE618")]
     fn event_rounds_proc(&mut self, gobj: GObjId) {
-        if self.game.game_data.vs.unk_530.xB_2 {
+        if self.game.game_data.vs.event.round_won {
             self.event_round_wait(gobj);
             return;
         }
         if self.game.player_stocks(1) <= 0 {
             let e = self.event_entry(self.event()).expect("the event's entry");
-            let round = self.game.game_data.vs.unk_530.x20;
+            let round = self.game.game_data.vs.event.round;
             let src = self.event_round(e, round as usize);
             self.event_strike(src);
             if round >= self.event_rounds(e) - 1 {
@@ -1691,10 +1694,10 @@ impl Running<'_> {
     /// (`xB_5`): their masks (`lbAudioAx_80026E84`) wanted for the match's groups
     /// (`lbAudioAx_80026F2C(0x14)`, `lbAudioAx_8002702C(4, ...)`), loaded, and waited for.
     fn event_voices(&mut self, kinds: &[i32]) {
-        if self.game.game_data.vs.unk_530.xB_5 {
+        if self.game.game_data.vs.event.voices_loaded {
             return;
         }
-        self.game.game_data.vs.unk_530.xB_5 = true;
+        self.game.game_data.vs.event.voices_loaded = true;
         let mut mask = 0u64;
         for &k in kinds {
             mask |= crate::lb::audio::character_banks(k);
@@ -1713,7 +1716,7 @@ impl Running<'_> {
     fn event_rounds_36_proc(&mut self, gobj: GObjId) {
         let idx = self.event();
         let e = self.event_entry(idx).expect("the event's entry");
-        let round = self.game.game_data.vs.unk_530.x20;
+        let round = self.game.game_data.vs.event.round;
         let p0 = e.player(self, 0).expect("the event's first player");
         let ck = |r: &Self, k: usize| i32::from(r.data.u8(r.event_round(e, k)) as i8);
         let first = i32::from(self.data.u8(p0) as i8);
@@ -1723,20 +1726,20 @@ impl Running<'_> {
             [first, ck(self, 1), ck(self, 4), first]
         };
         self.event_voices(&kinds);
-        if self.game.game_data.vs.unk_530.xB_2 {
+        if self.game.game_data.vs.event.round_won {
             self.event_round_wait(gobj);
             return;
         }
-        let x18 = self.game.game_data.vs.unk_530.x18;
+        let x18 = self.game.game_data.vs.event.proc_state;
         if round == 0 {
             match x18 {
                 0 if self.game.player_stocks(1) <= 0 => {
-                    self.game.game_data.vs.unk_530.x18 = 1;
+                    self.game.game_data.vs.event.proc_state = 1;
                     let p = self.event_player(self.event_round(e, 2));
                     self.vs_add_player(2, &p);
                 }
                 1 if self.game.player_stocks(2) <= 0 => {
-                    self.game.game_data.vs.unk_530.x18 = 2;
+                    self.game.game_data.vs.event.proc_state = 2;
                     let p = self.event_player(self.event_round(e, 3));
                     self.vs_add_player(3, &p);
                 }
@@ -1754,7 +1757,7 @@ impl Running<'_> {
         } else {
             match x18 {
                 0 if self.game.player_stocks(1) <= 0 => {
-                    self.game.game_data.vs.unk_530.x18 = 1;
+                    self.game.game_data.vs.event.proc_state = 1;
                     let p = self.event_player(self.event_round(e, 4));
                     self.vs_add_player(2, &p);
                 }
@@ -1787,7 +1790,7 @@ impl Running<'_> {
             i32::from(self.data.u8(joiner) as i8),
         ];
         self.event_voices(&kinds);
-        let joined = self.game.game_data.vs.unk_530.x10 != 0;
+        let joined = self.game.game_data.vs.event.proc_counter != 0;
         if joined && self.game.player_stocks(2) <= 0 {
             self.event_success(gobj);
             return;
@@ -1797,9 +1800,9 @@ impl Running<'_> {
             return;
         }
         if !joined && self.game.vs_timer_seconds() >= self.data.u32(x4) {
-            self.game.game_data.vs.unk_530.x10 = 1;
+            self.game.game_data.vs.event.proc_counter = 1;
             let mut p = self.event_player(joiner);
-            p.color = self.game.game_data.vs.unk_530.x50[2];
+            p.color = self.game.game_data.vs.event.colors[2];
             self.vs_add_player(2, &p);
         }
         if self.event_time_up() {
@@ -1819,7 +1822,7 @@ impl Running<'_> {
                 count += 1;
             }
         }
-        if self.game.game_data.vs.unk_530.xB_3 {
+        if self.game.game_data.vs.event.crowd {
             count += self.game.gm.opponents.left();
         }
         if count == 0 {
@@ -1850,37 +1853,37 @@ impl Running<'_> {
         let both = self.boss_mh_word(0x170);
         let hp = |r: &Self, s: i32| r.game.player_remaining_hp(s);
         let (out1, out2) = (hp(self, 1) <= 0, hp(self, 2) <= 0);
-        let ev = &mut self.game.game_data.vs.unk_530;
-        match ev.x20 {
+        let ev = &mut self.game.game_data.vs.event;
+        match ev.round {
             0 if out1 || out2 => {
-                ev.x20 = 1;
-                ev.x10 = 0;
+                ev.round = 1;
+                ev.proc_counter = 0;
             }
             1 if out1 && out2 => {
-                ev.x20 = 2;
-                ev.x10 = 0;
+                ev.round = 2;
+                ev.proc_counter = 0;
             }
             _ => {}
         }
         if out1 && out2 {
             let end = slowed.wrapping_add(both);
-            if self.game.game_data.vs.unk_530.x10 == 0 {
+            if self.game.game_data.vs.event.proc_counter == 0 {
                 self.game.vs.state.hud_enabled = 0;
-                let ev = &mut self.game.game_data.vs.unk_530;
-                ev.x18 = if ev.x18 == 1 { 2 } else { 1 };
-                let slot = ev.x18;
+                let ev = &mut self.game.game_data.vs.event;
+                ev.proc_state = if ev.proc_state == 1 { 2 } else { 1 };
+                let slot = ev.proc_state;
                 self.boss_camera_on_player(slot);
                 self.game.set_db_pause_flag(6);
                 self.player_disable_input(0);
                 self.set_player_unkillable(0, 1);
-                self.game.game_data.vs.unk_530.x34 = self.game.vs_frame_count() as i32;
+                self.game.game_data.vs.event.series_frames = self.game.vs_frame_count() as i32;
                 self.game.vs.start.timer_enabled = false;
             }
-            if self.game.game_data.vs.unk_530.x10 == slowed {
+            if self.game.game_data.vs.event.proc_counter == slowed {
                 self.hands_out_cheer();
                 self.game.bgflash.fade_to_white(both);
             }
-            let t = self.game.game_data.vs.unk_530.x10;
+            let t = self.game.game_data.vs.event.proc_counter;
             if t >= end {
                 self.event_success(gobj);
                 return;
@@ -1893,34 +1896,34 @@ impl Running<'_> {
                     lb.master = 0;
                 }
             }
-            if self.game.game_data.vs.unk_530.x10 % 30 == 0 {
-                let port = usize::from(self.game.game_data.vs.unk_530.x6);
+            if self.game.game_data.vs.event.proc_counter % 30 == 0 {
+                let port = usize::from(self.game.game_data.vs.event.port);
                 let tag = self.game.player_nametag(0);
                 self.tou_rumble(port, tag, 2, 0x1E);
                 super::super::camera::request_quake(self, super::super::camera::QUAKE_MEDIUM, None);
             }
-            let ev = &mut self.game.game_data.vs.unk_530;
-            if ev.x10 <= end {
-                ev.x10 += 1;
+            let ev = &mut self.game.game_data.vs.event;
+            if ev.proc_counter <= end {
+                ev.proc_counter += 1;
             }
         } else if out1 || out2 {
-            self.game.game_data.vs.unk_530.x18 = if out1 { 1 } else { 2 };
+            self.game.game_data.vs.event.proc_state = if out1 { 1 } else { 2 };
             let end = slowed.wrapping_add(one);
-            let t = self.game.game_data.vs.unk_530.x10;
+            let t = self.game.game_data.vs.event.proc_counter;
             if t == 0 {
-                let slot = self.game.game_data.vs.unk_530.x18;
+                let slot = self.game.game_data.vs.event.proc_state;
                 self.boss_camera_on_player(slot);
                 self.game.set_db_pause_flag(6);
             }
-            if self.game.game_data.vs.unk_530.x10 == slowed {
+            if self.game.game_data.vs.event.proc_counter == slowed {
                 self.hands_out_cheer();
             }
-            if self.game.game_data.vs.unk_530.x10 == end {
+            if self.game.game_data.vs.event.proc_counter == end {
                 self.game.set_game_speed(1.0);
             }
-            let ev = &mut self.game.game_data.vs.unk_530;
-            if ev.x10 <= end {
-                ev.x10 += 1;
+            let ev = &mut self.game.game_data.vs.event;
+            if ev.proc_counter <= end {
+                ev.proc_counter += 1;
             }
         }
         if self.game.player_p1_stocks() <= 0 || self.event_time_up() {
@@ -2029,7 +2032,7 @@ mod tests {
     fn the_final_events_note_writes_its_one_byte() {
         for before in [0u8, 1, 0xFF] {
             let mut s = GmSaveData {
-                x1B3C: before,
+                final_event_all_stocks: before,
                 ..GmSaveData::default()
             };
             let mut want = bytes(&s);

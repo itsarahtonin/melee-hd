@@ -463,14 +463,16 @@ impl Running<'_> {
         let chara = usize::from(self.game.hud.debug.word(0x804D_6DC8) as u8);
         match self.game.debug_mode.records_kind {
             2 => {
-                let v = self.game.game_data.thing.save_data.x1F2C[chara].x7C.x84 as u32;
+                let v = self.game.game_data.thing.save_data.fighters[chara]
+                    .records
+                    .home_run_distance as u32;
                 let m = crate::fpu::mem(crate::gekko_fp::frsp(f64::from(v / 100)));
                 self.game.hud.debug.set_word(0x804D_6DD0, m.to_bits());
             }
             3 => {
-                let f = &mut self.game.game_data.thing.save_data.x1F2C[chara].x7C;
-                let r = i32::from(f.b0);
-                f.b0 = r & 1 != 0;
+                let f = &mut self.game.game_data.thing.save_data.fighters[chara].records;
+                let r = i32::from(f.target_cleared);
+                f.target_cleared = r & 1 != 0;
                 self.game.hud.debug.set_word(0x804D_6DCC, r as u32);
             }
             _ => {}
@@ -500,14 +502,14 @@ impl Running<'_> {
             }
             0x8030_0C80 => {
                 let n = self.game.hud.debug.word(0x804D_6DDC);
-                self.game.game_data.thing.save_data.x1A48 = n.wrapping_mul(10);
+                self.game.game_data.thing.save_data.coins = n.wrapping_mul(10);
                 self.mark_class_two_trophies();
                 GM_MENU
             }
             _ => {
                 let n = self.game.hud.debug.word(0x804D_6DF4);
                 self.sfx_forward();
-                self.game.game_data.thing.save_data.x1A5C = n as i32;
+                self.game.game_data.thing.save_data.total_kos = n as i32;
                 GM_MENU
             }
         };
@@ -545,9 +547,9 @@ impl Running<'_> {
             0x8030_0DE0 => {
                 use crate::gekko_fp as fp;
                 let v = fp::fmuls(100.0, crate::fpu::reg(count));
-                s.x1F2C[chara].x7C.x84 = crate::ppc::cvt_fp2unsigned(v) as i32;
+                s.fighters[chara].records.home_run_distance = crate::ppc::cvt_fp2unsigned(v) as i32;
             }
-            _ => s.x1F2C[chara].x7C.b0 = clear & 1 != 0,
+            _ => s.fighters[chara].records.target_cleared = clear & 1 != 0,
         }
         self.game.sync_unlocks();
     }
@@ -582,7 +584,7 @@ impl Running<'_> {
             p.color = color as u8;
             self.change_game_mode_after_scene(GM_CLASSIC_GOVER);
         } else {
-            let s = &mut self.game.game_data.vs.unk_51C;
+            let s = &mut self.game.game_data.vs.classic;
             s.c_kind = ckind as _;
             s.color = color as u8;
             if mode <= 2 {
@@ -631,7 +633,7 @@ impl Running<'_> {
     fn debug_allstar_from_round(&mut self, arg: i32) -> i32 {
         if arg == CB_SELECT {
             let round = self.game.hud.debug.word(0x804D_5910).wrapping_sub(1);
-            self.game.game_data.vs.unk_528.x5 = round as u8;
+            self.game.game_data.vs.all_star.round = round as u8;
             self.sfx_forward();
             self.debug_to_mode(crate::game::gm::GM_ALLSTAR);
         }
@@ -645,7 +647,7 @@ impl Running<'_> {
     fn debug_adventure_from_stage(&mut self, arg: i32) -> i32 {
         if arg == CB_SELECT {
             let stage = self.game.hud.debug.word(0x804D_5908).wrapping_sub(1);
-            self.game.game_data.vs.unk_522.x5 = stage as u8;
+            self.game.game_data.vs.adventure.round = stage as u8;
             self.sfx_forward();
             self.debug_to_mode(crate::game::gm::GM_ADVENTURE);
         }
@@ -659,7 +661,7 @@ impl Running<'_> {
     fn debug_classic_from_stage(&mut self, arg: i32) -> i32 {
         if arg == CB_SELECT {
             let stage = self.game.hud.debug.word(0x804D_590C).wrapping_sub(1);
-            self.game.game_data.vs.unk_51C.x5 = stage as u8;
+            self.game.game_data.vs.classic.round = stage as u8;
             self.sfx_forward();
             self.debug_to_mode(crate::game::gm::GM_CLASSIC);
         }

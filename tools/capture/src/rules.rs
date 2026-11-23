@@ -159,7 +159,7 @@ impl Comparer<'_> {
             );
         }
         let tournament = self.game.machine.routing.curr_mode == GM_TOURNAMENT;
-        let x186c = self.game.game_data.thing.save_data.x186C;
+        let x186c = self.game.game_data.thing.save_data.unlocked_features;
         const KEPT: [usize; 5] = [7, 2, 2, 2, 2];
         for (i, &n) in KEPT.iter().enumerate() {
             let shown = !(tournament && i == 1) && (i != 3 || x186c & 1 != 0);

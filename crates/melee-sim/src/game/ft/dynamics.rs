@@ -93,15 +93,15 @@ impl Running<'_> {
             while let Some(d) = link {
                 if self.game.fighter_dynamics[d.0].desc.jobj == part_j {
                     let b = &mut self.game.fighter_parts[parts.0][part as usize];
-                    if b.x8[0] & 0x80 != 0 {
-                        b.x8[0] &= !0x80;
+                    if b.flags[0] & 0x80 != 0 {
+                        b.flags[0] &= !0x80;
                         self.game.fighters[f.0].dynamic_bone_sets[i].bone_id = BoneSlot::Id(j + 1);
                         if self.game.fighters[f.0].action_tree.is_some() {
                             let speed = self.game.fighters[f.0].frame_speed_mul;
                             self.restart_part_anim(f, part, frame, speed);
                         }
                     } else {
-                        b.x8[0] |= 0x80;
+                        b.flags[0] |= 0x80;
                         self.game.fighters[f.0].dynamic_bone_sets[i].bone_id = BoneSlot::Id(j);
                         let root = super::super::gr::ground::jobj_of(self.game, gobj);
                         let skel = self.game.fighters[f.0].anim_skeleton;
@@ -184,22 +184,22 @@ impl Running<'_> {
                 let desc = &mut self.game.fighter_dynamics[d.0].desc;
                 let dj = desc.jobj.expect("a dynamic bone without a joint");
                 let m = &self.game.objs.jobjs[dj].mtx.m;
-                desc.unk_2C = Vec3 {
+                desc.joint_pos = Vec3 {
                     x: m[0][3],
                     y: m[1][3],
                     z: m[2][3],
                 };
-                desc.unk_44 = 0.0;
+                desc.spin = 0.0;
                 let (t, s) = (desc.translate, desc.scale);
                 jobj::set_translate(&mut self.game.objs.jobjs, dj, t);
                 jobj::set_scale(&mut self.game.objs.jobjs, dj, s);
             }
             let b = &mut self.game.fighter_parts[parts.0][bone as usize];
             if on {
-                b.x8[0] |= 0x80;
+                b.flags[0] |= 0x80;
                 jobj::clear_flags(&mut self.game.objs.jobjs, j, USE_QUATERNION);
             } else {
-                b.x8[0] &= !0x80;
+                b.flags[0] &= !0x80;
             }
             j = j.and_then(|j| self.game.objs.jobjs[j].child);
             link = self.game.fighter_dynamics[d.0].next;
@@ -360,7 +360,7 @@ impl Running<'_> {
         for (dst, c) in held.iter_mut().zip(&fp.ledge_points[..count]) {
             *dst = Collider {
                 radius: c.v2,
-                center: c.x18,
+                center: c.center,
             };
         }
         let colliders = &held[..count];
@@ -431,7 +431,7 @@ impl Running<'_> {
             let c = &self.game.fighters[f.0].ledge_points[i];
             let (j, off) = (c.jobj, c.v1);
             let at = world_position(&mut self.game.objs, self.data, j, Some(off));
-            self.game.fighters[f.0].ledge_points[i].x18 = at;
+            self.game.fighters[f.0].ledge_points[i].center = at;
         }
     }
 
@@ -568,16 +568,16 @@ impl Game {
             d.rotate = o.rotate;
             d.scale = o.scale;
             d.translate = o.translate;
-            d.unk_2C = Vec3::new(copy(m[0][3]), copy(m[1][3]), copy(m[2][3]));
-            d.unk_58 = d.rotate;
-            d.unk_38.x = 1.0;
-            d.unk_38.y = 0.0;
-            d.unk_38.z = 0.0;
-            d.unk_44 = 0.0;
-            d.unk_8C = 0.0;
-            d.unk_48 = 0.0;
+            d.joint_pos = Vec3::new(copy(m[0][3]), copy(m[1][3]), copy(m[2][3]));
+            d.rest_rotation = d.rotate;
+            d.spin_axis.x = 1.0;
+            d.spin_axis.y = 0.0;
+            d.spin_axis.z = 0.0;
+            d.spin = 0.0;
+            d.gravity = 0.0;
+            d.length = 0.0;
             self.fighter_dynamics[l.0].next = None;
-            self.fighter_dynamics[l.0].unk_94 = 0;
+            self.fighter_dynamics[l.0].unread_94 = 0;
             desc.count += 1;
             match self.objs.jobjs[j].child {
                 Some(c) => j = c,
@@ -590,8 +590,8 @@ impl Game {
         let mut cur = desc.data.expect("lb_8000FD48: a chain of no links");
         while let Some(next) = self.fighter_dynamics[cur.0].next {
             let (a, b) = (
-                self.fighter_dynamics[cur.0].desc.unk_2C,
-                self.fighter_dynamics[next.0].desc.unk_2C,
+                self.fighter_dynamics[cur.0].desc.joint_pos,
+                self.fighter_dynamics[next.0].desc.joint_pos,
             );
             let dy = fp::fsubs(reg(a.y), reg(b.y));
             let dx = fp::fsubs(reg(a.x), reg(b.x));
@@ -599,7 +599,7 @@ impl Game {
             let sq = fp::fmadds(dz, dz, fp::fmadds(dx, dx, fp::fmuls(dy, dy)));
             // The inline `sqrtf`, taken for anything not at most zero (a NaN too).
             let len = if !(sq <= 0.0) { newton_sqrt(sq) } else { sq };
-            self.fighter_dynamics[cur.0].desc.unk_48 = mem(len);
+            self.fighter_dynamics[cur.0].desc.length = mem(len);
             let t = self.fighter_dynamics[next.0].desc.translate;
             // `fabsf` as the branches compile it: anything not at least zero is negated.
             let abs = |v: f32| {
@@ -607,7 +607,7 @@ impl Game {
                 if r >= 0.0 { r } else { fp::fneg(r) }
             };
             let (x, y, z) = (abs(t.x), abs(t.y), abs(t.z));
-            self.fighter_dynamics[cur.0].desc.unk_54 = if !(z <= y) {
+            self.fighter_dynamics[cur.0].desc.ease_axis = if !(z <= y) {
                 if !(z <= x) { -1 } else { 0 }
             } else if !(y <= x) {
                 1
@@ -632,21 +632,21 @@ impl Game {
             let l = link.expect("lb_80011710: more parameters than links faults");
             let e = inner.at(0x3C * i as u32);
             let d = &mut self.fighter_dynamics[l.0].desc;
-            d.unk_4C = copy(data.f32(e));
-            d.unk_50 = copy(data.f32(e.at(4)));
-            d.unk_58 = Quat {
+            d.stiffness = copy(data.f32(e));
+            d.return_rate = copy(data.f32(e.at(4)));
+            d.rest_rotation = Quat {
                 x: raw(e.at(8)),
                 y: raw(e.at(0xC)),
                 z: raw(e.at(0x10)),
                 w: raw(e.at(0x14)),
             };
-            d.unk_68 = copy(data.f32(e.at(0x18)));
-            d.unk_6C = raw3(e.at(0x1C));
-            d.unk_78 = raw3(e.at(0x28));
-            d.unk_84 = copy(data.f32(e.at(0x34)));
-            d.unk_88 = copy(data.f32(e.at(0x38)));
-            d.unk_8C = if reg(d.unk_48) != 0.0 {
-                mem(fp::fdivs(reg(pos.z), reg(d.unk_48)))
+            d.max_angle = copy(data.f32(e.at(0x18)));
+            d.unread_6c = raw3(e.at(0x1C));
+            d.unread_78 = raw3(e.at(0x28));
+            d.spin_damping = copy(data.f32(e.at(0x34)));
+            d.max_swing = copy(data.f32(e.at(0x38)));
+            d.gravity = if reg(d.length) != 0.0 {
+                mem(fp::fdivs(reg(pos.z), reg(d.length)))
             } else {
                 0.0
             };

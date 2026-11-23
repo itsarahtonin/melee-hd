@@ -40,7 +40,7 @@ impl Running<'_> {
         self.init_coll(gobj);
         self.init_x1930(f);
         let fp = &self.game.fighters[f.0];
-        if fp.smash_attrs.x2135 == -1
+        if fp.smash_attrs.rebirth_point == -1
             && self.land_on_spawn(f)
             && !self.game.fighters[f.0].spawn_in_air
         {
@@ -194,13 +194,13 @@ impl Running<'_> {
         fp.intangible_frames = 0;
         fp.invincible_frames = 0;
         fp.starman = false;
-        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.holds_grab = false;
         fp.victim_gobj = None;
         fp.partner = None;
-        fp.state_flags.x221B_b6 = false;
+        fp.state_flags.item_grab_set = false;
         fp.target_item_gobj = None;
         fp.caught_item = Default::default();
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.grounded_catch = false;
         fp.held_hit_light = false;
         fp.leg_reach = 0;
         fp.hit_by = None;
@@ -213,10 +213,10 @@ impl Running<'_> {
         fp.combo_push_frames = 0;
         fp.combo_victim = None;
         fp.shield_was_hit = false;
-        fp.state_flags.x221B_b0 = false;
-        fp.state_flags.x221B_b1 = false;
-        fp.state_flags.x221B_b3 = false;
-        fp.state_flags.x221B_b4 = false;
+        fp.state_flags.shield_bubble = false;
+        fp.state_flags.shield_deflects = false;
+        fp.state_flags.bubble_faces = false;
+        fp.state_flags.bubble_reflectors_only = false;
         fp.powershield_early = false;
         fp.powershield_late = false;
         fp.powershield = false;
@@ -230,13 +230,13 @@ impl Running<'_> {
         fp.shield_hit_by_sub = false;
         fp.reflecting = false;
         fp.reflect_kept = false;
-        fp.reflect.x1A3C_damageOver = 0;
-        fp.reflect.x1A2C_reflectHitDirection = 0.0;
+        fp.reflect.damage_over = 0;
+        fp.reflect.hit_direction = 0.0;
         fp.absorbing = false;
         fp.absorb_any = false;
-        fp.absorb.x1A40_absorbHitDirection = 0.0;
-        fp.absorb.x1A44_damageTaken = 0;
-        fp.absorb.x1A48_hitsTaken = 0;
+        fp.absorb.hit_direction = 0.0;
+        fp.absorb.damage_taken = 0;
+        fp.absorb.hits_taken = 0;
         fp.lstick_angle = 0.0;
         fp.air_grab_timer = 0;
         fp.air_item_caught = false;
@@ -300,7 +300,7 @@ impl Running<'_> {
         // `ftCo_800C88A0`.
         fp.cloak = false;
         fp.refracted = false;
-        fp.smash_attrs.x2134_vibrateFrame = 0;
+        fp.smash_attrs.vibrate_frame = 0;
         fp.cloak_frames = 0;
         fp.cloak_look = false;
         fp.stamina_dead = false;
@@ -308,7 +308,7 @@ impl Running<'_> {
         // `ftCo_800DEEA8`: no smash attack charging.
         fp.smash_attrs.state = 0;
         fp.voice_muted = fp.rules_voice_muted;
-        fp.smash_attrs.x2138_smashSinceHitbox = -1.0;
+        fp.smash_attrs.smash_since_hitbox = -1.0;
     }
 
     /// The multi-jumps' rises (`Fighter_x2D0_t::x14`, `x28` of them) scaled by the fighter's
@@ -575,10 +575,10 @@ impl Running<'_> {
         let p = fp.coll_data.cur_pos;
         let (lx, rx) = (fp.coll_data.ecb.left.x, fp.coll_data.ecb.right.x);
         let v = &mut fp.dmg.item_pickup_bounds;
-        v.xC.x = mem(fp::fadds(reg(lx), reg(p.x)));
-        v.xC.y = mem(fp::fadds(reg(rx), reg(p.x)));
-        v.xC.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
-        v.x0 = v.xC;
+        v.feet.x = mem(fp::fadds(reg(lx), reg(p.x)));
+        v.feet.y = mem(fp::fadds(reg(rx), reg(p.x)));
+        v.feet.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.feet_height)));
+        v.prev_feet = v.feet;
     }
 
     /// Whether the fighter has a floor within 10 below where it spawns, put on it if so,
@@ -785,10 +785,10 @@ impl Running<'_> {
                 Some(offset),
             );
             let p = &mut self.game.fighters[f.0].stamina_markers[i as usize];
-            p.x4 = joint;
-            p.x0 = x0;
-            p.x8 = Vec3::new(v.x, v.y, 0.0);
-            p.x14 = p.x8;
+            p.joint = joint;
+            p.radius = x0;
+            p.pos = Vec3::new(v.x, v.y, 0.0);
+            p.prev_pos = p.pos;
         }
     }
 
@@ -860,32 +860,32 @@ fn clear_hit_records(fp: &mut Fighter) {
     fp.dmg.attack_record = [0; 4];
     fp.attack_flags = fp.dmg.attack_record;
     let r = &mut fp.attack_record;
-    r.x2074_vec.x = 0;
-    r.x2074_vec.y = 0;
-    r.x207C.x = 0.0;
-    r.x207C.y = 6;
+    r.percents.x = 0;
+    r.percents.y = 0;
+    r.kb_and_thrower.x = 0.0;
+    r.kb_and_thrower.y = 6;
     // `x2084`'s bits only: the first byte's eight and the second's top five.
-    r.x10[0] = 0;
-    r.x10[1] &= 0x07;
-    r.x2088 = 0;
+    r.flags[0] = 0;
+    r.flags[1] &= 0x07;
+    r.record_id = 0;
     let d = &mut fp.dmg.hit_records;
-    d.x0 = 0;
-    d.x4 = 0;
+    d.attacker_percent = 0;
+    d.victim_percent = 0;
     d.kb_applied1 = 0.0;
-    d.xC = 6;
-    d.x10_b0 = false;
-    d.x11_b3 = false;
-    d.x10_b1 = false;
-    d.x10_b2 = false;
-    d.x10_b3 = false;
-    d.x10_b4 = false;
-    d.x10_b5 = false;
-    d.x10_b6 = false;
-    d.x10_b7 = false;
-    d.x11_b0 = false;
-    d.x11_b1 = false;
-    d.x11_b2 = false;
-    d.x11_b4 = false;
+    d.item_thrower = 6;
+    d.spike = false;
+    d.spike_after_strong = false;
+    d.metal = false;
+    d.bunny_hood = false;
+    d.starman = false;
+    d.cloak = false;
+    d.giant = false;
+    d.tiny = false;
+    d.landed = false;
+    d.from_behind = false;
+    d.at_edge = false;
+    d.on_ledge = false;
+    d.forward_attack = false;
     fp.dmg.instance_hit_by = 0;
 }
 

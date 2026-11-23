@@ -177,11 +177,11 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let c = &mut fp.cpu;
         for i in &mut c.partner_inputs {
-            i.x0 = 0;
+            i.buttons = 0;
             i.lstick.x = 0;
             i.lstick.y = 0;
-            i.x4 = 0;
-            i.x5 = 0;
+            i.ltrigger = 0;
+            i.rtrigger = 0;
             i.cur_pos = pos;
             i.facing_dir = facing;
         }

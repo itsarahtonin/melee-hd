@@ -93,8 +93,8 @@ fn channels(c: &_GXColor) -> [u8; 4] {
 /// target's.
 #[doc(alias = "fn_8001FC08")]
 pub fn fade_step(d: &mut BgFlashData) {
-    let target = channels(&d.x8);
-    for ((cur, step), target) in d.x10.iter_mut().zip(d.x20).zip(target) {
+    let target = channels(&d.to);
+    for ((cur, step), target) in d.channels.iter_mut().zip(d.steps).zip(target) {
         let val = fp::fadds(reg(*cur), reg(step));
         let t = fp::frsp(f64::from(target));
         let past = if step > 0.0 { val >= t } else { val <= t };
@@ -111,22 +111,22 @@ impl BgFlash {
         match d.state.mode {
             0..=2 => {
                 fade_step(d);
-                d.xC = color(
-                    to_u8(d.x10[0]),
-                    to_u8(d.x10[1]),
-                    to_u8(d.x10[2]),
-                    to_u8(d.x10[3]),
+                d.color = color(
+                    to_u8(d.channels[0]),
+                    to_u8(d.channels[1]),
+                    to_u8(d.channels[2]),
+                    to_u8(d.channels[3]),
                 );
             }
-            3 | 4 if d.x30 == 0 => {
-                for _ in 0..d.x3C {
-                    if d.x34 < WIDTH {
-                        d.x34 = d.x34.wrapping_add(i32::from(d.x31));
-                    } else if d.x38 < HEIGHT {
-                        d.x38 = d.x38.wrapping_add(i32::from(d.x32));
-                        d.x34 = 0;
+            3 | 4 if d.wipe_held == 0 => {
+                for _ in 0..d.wipe_speed {
+                    if d.wipe_x < WIDTH {
+                        d.wipe_x = d.wipe_x.wrapping_add(i32::from(d.wipe_step));
+                    } else if d.wipe_y < HEIGHT {
+                        d.wipe_y = d.wipe_y.wrapping_add(i32::from(d.wipe_strip_height));
+                        d.wipe_x = 0;
                     } else {
-                        d.x33 = 1;
+                        d.wipe_done = 1;
                         return;
                     }
                 }
@@ -142,14 +142,14 @@ impl BgFlash {
         let d = &mut self.data;
         d.state.active = false;
         d.state.mode = 2;
-        d.x4 = from.clone();
-        d.xC = d.x4.clone();
-        d.x8 = to.clone();
+        d.from = from.clone();
+        d.color = d.from.clone();
+        d.to = to.clone();
         let (a, b) = (channels(&from), channels(&to));
         for i in 0..4 {
-            d.x10[i] = f32::from(a[i]);
+            d.channels[i] = f32::from(a[i]);
             let diff = i32::from(b[i]) - i32::from(a[i]);
-            d.x20[i] = mem(fp::fdivs(fp::frsp(f64::from(diff)), count));
+            d.steps[i] = mem(fp::fdivs(fp::frsp(f64::from(diff)), count));
         }
     }
 
@@ -179,7 +179,7 @@ impl BgFlash {
     pub fn set_color(&mut self, c: _GXColor) {
         self.data.state.active = false;
         self.data.state.mode = 5;
-        self.data.xC = c;
+        self.data.color = c;
     }
 
     /// Holds black at `alpha`, `fn_800208B0`.
@@ -212,31 +212,31 @@ impl BgFlash {
         };
         let black = channels(&BLACK);
         if !(3..5).contains(&mode) {
-            out(quad(0, 0, WIDTH, HEIGHT, channels(&d.xC)));
+            out(quad(0, 0, WIDTH, HEIGHT, channels(&d.color)));
             return;
         }
-        if d.x33 != 0 {
+        if d.wipe_done != 0 {
             if mode == 3 {
                 out(quad(0, 0, WIDTH, HEIGHT, black));
             }
             return;
         }
-        if d.x30 != 0 {
+        if d.wipe_held != 0 {
             return;
         }
-        let h = i32::from(d.x32);
+        let h = i32::from(d.wipe_strip_height);
         assert!(h != 0, "fn_8001FEC4: a wipe of strips 0 high never ends");
         if mode == 3 {
             let mut y = 0;
-            while y <= d.x38 {
-                let right = if y == d.x38 { d.x34 } else { WIDTH };
+            while y <= d.wipe_y {
+                let right = if y == d.wipe_y { d.wipe_x } else { WIDTH };
                 out(quad(0, y, right, y + h, black));
                 y += h;
             }
         } else {
-            let mut y = d.x38;
+            let mut y = d.wipe_y;
             while y <= HEIGHT {
-                let left = if y == d.x38 { d.x34 } else { 0 };
+                let left = if y == d.wipe_y { d.wipe_x } else { 0 };
                 out(quad(left, y, WIDTH, y + h, black));
                 y += h;
             }
@@ -256,7 +256,7 @@ impl Game {
             .user
             .as_mut()
             .expect("the flash's user data")
-            .x4;
+            .overlay;
         colanim::start(co, data, table, id as i32, frames as i32)
     }
 
@@ -264,7 +264,7 @@ impl Game {
     #[doc(alias = "fn_80021C1C")]
     pub fn bg_flash_reset(&mut self) {
         let u = self.bgflash.user.as_mut().expect("the flash's user data");
-        colanim::clear(&mut u.x4);
+        colanim::clear(&mut u.overlay);
     }
 
     /// The flash's user data released, `lbBgFlash_Free`.
@@ -284,14 +284,14 @@ impl Running<'_> {
     pub fn bg_flash_create(&mut self, priority: u8) {
         let g = &mut *self.game;
         let camera = g.world.create(0x14, 0x16, 0);
-        g.bgflash.data.x44 = Some(camera);
+        g.bgflash.data.camera = Some(camera);
         let c = cobj::load_static_desc(&mut g.objs, self.data, &CAMERA_DESC);
         g.world.set_obj(camera, OBJ_CAMERA, Obj::CObj(c));
         g.world
             .setup_gx_link_max(camera, CodeRef(CAMERA_RENDER), priority, false);
         g.world.gobj_mut(camera).gxlink_prios = 0x10000;
         let flash = g.world.create(0x15, 0x16, 2);
-        g.bgflash.data.x40 = Some(flash);
+        g.bgflash.data.gobj = Some(flash);
         g.world
             .setup_gx_link(flash, CodeRef(RENDER), 0x10, priority);
         g.world.setup_proc(flash, CodeRef(PROC), 0);
@@ -311,7 +311,7 @@ impl Running<'_> {
         g.bgflash.gobj = Some(gobj);
         g.bgflash.scale = 1.0;
         g.bgflash.user = Some(BgFlashUserData {
-            x0: alpha,
+            alpha: alpha,
             ..BgFlashUserData::default()
         });
         let addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::BgFlash);
@@ -333,7 +333,10 @@ impl Running<'_> {
         if let Some(left) =
             crate::game::leftovers::import::<BgFlashUserData>(self.data, addr, fresh)
         {
-            g.bgflash.user = Some(BgFlashUserData { x0: alpha, ..left });
+            g.bgflash.user = Some(BgFlashUserData {
+                alpha: alpha,
+                ..left
+            });
         }
         // `lbArchive_LoadSymbols("LbBf.dat", ...)`.
         self.disc_load("LbBf.dat", crate::game::ft::data::MAIN_MEMORY);
@@ -357,14 +360,14 @@ impl Running<'_> {
     /// once it stops, the flash clears.
     #[doc(alias = "lbBgFlash_Proc")]
     pub fn bg_flash_proc(&mut self) {
-        let was = self.bg_flash_user().x4.x7C_color_enable;
+        let was = self.bg_flash_user().overlay.color_enable;
         self.bg_flash_run();
         let u = self.bg_flash_user();
-        if u.x4.x7C_color_enable {
+        if u.overlay.color_enable {
             let scale = reg(self.game.bgflash.scale);
-            let c = &u.x4.x2C_hex;
+            let c = &u.overlay.hex;
             let s = |v: u8| fp::fctiwz(fp::fmuls(fp::frsp(f64::from(v)), scale)) as u8;
-            let a = (i32::from(c.a) * i32::from(u.x0) / 255) as u8;
+            let a = (i32::from(c.a) * i32::from(u.alpha) / 255) as u8;
             let c = color(s(c.r), s(c.g), s(c.b), a);
             self.game.bgflash.set_color(c);
         } else if was {
@@ -384,7 +387,7 @@ impl Running<'_> {
     #[doc(alias = "fn_80021C80")]
     fn bg_flash_run(&mut self) {
         let data = self.data;
-        let co = &mut self.game.bgflash.user.as_mut().expect("user data").x4;
+        let co = &mut self.game.bgflash.user.as_mut().expect("user data").overlay;
         // `fn_80021C18` takes the owner's commands and does nothing, so the script would
         // stay on one; dead, no LbBf.dat script holds one (ledger/dead.txt).
         while colanim::step(data, co, &mut |_, op| {

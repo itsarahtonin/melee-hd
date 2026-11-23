@@ -496,7 +496,7 @@ impl Recorder {
         w.u8(command::FRAME_START);
         w.i32(self.frame);
         w.u32(g.objs.rng.seed);
-        w.u32(g.scene.unk_8);
+        w.u32(g.scene.game_ticks);
         self.frame_buf = w.0;
         self.last_frame = Some(self.frame);
     }
@@ -591,7 +591,7 @@ impl Recorder {
         w.f32(fp.dmg.hitlag_frames);
         w.u32(fp.anim_id as u32);
         w.u16(fp.dmg.instance_hit_by);
-        w.u16(fp.attack_record.x2088);
+        w.u16(fp.attack_record.record_id);
         self.frame_buf = w.0;
         self.last_frame = Some(self.frame);
         if !follower {
@@ -669,7 +669,7 @@ impl Recorder {
         // The results as they stand, on a copy (the codes fill the results' global, which the
         // match doesn't read, from the controller's): each player's placement.
         let mut copy = g.clone();
-        let r = &mut copy.vs.state.x24C;
+        let r = &mut copy.vs.state.match_end;
         r.outcome = method;
         r.is_teams = g.vs.start.is_teams;
         copy.compile_results();
@@ -682,7 +682,7 @@ impl Recorder {
         } else {
             0xFF
         });
-        for p in &copy.vs.state.x24C.player_standings[..4] {
+        for p in &copy.vs.state.match_end.player_standings[..4] {
             w.u8(if p.pkind == 3 { 0xFF } else { p.is_small_loser });
         }
         self.frame_buf.clear();
@@ -725,7 +725,7 @@ pub(crate) fn game_start(r: &mut Running, d: &StartMeleeData) {
 /// The frame index, `Common/IncrementFrameIndex.asm`: the first frame at the scene's first
 /// tick, else the next.
 pub(crate) fn count_frame(g: &mut Game) {
-    let first = g.scene.unk_0 == 0;
+    let first = g.scene.ticks == 0;
     g.record(|r, _| {
         r.frame = if first {
             FIRST_FRAME
@@ -840,7 +840,12 @@ fn name_tag_text(g: &Game, slot: u8) -> [u16; 8] {
     for (o, &c) in b.iter_mut().zip(&t.namedata) {
         *o = c as u8;
     }
-    b[8..12].copy_from_slice(&[t.x1A0 as u8, t.rumble_enabled, t.x1A2 as u8, t.padding_x1A2]);
+    b[8..12].copy_from_slice(&[
+        t.name_end as u8,
+        t.rumble_enabled,
+        t.handicap as u8,
+        t.pad_1a3,
+    ]);
     if let Some(next) = tag(s + 1) {
         b[12..14].copy_from_slice(&next.vs_kos[0].to_be_bytes());
         b[14..16].copy_from_slice(&next.vs_kos[1].to_be_bytes());
@@ -887,8 +892,14 @@ fn flag_bytes(fp: &super::structs::Fighter) -> [u8; 5] {
             fp.shield_was_hit,
         ]),
         byte([
-            b.x221B_b0, b.x221B_b1, b.x221B_b2, b.x221B_b3, b.x221B_b4, b.x221B_b5, b.x221B_b6,
-            b.x221B_b7,
+            b.shield_bubble,
+            b.shield_deflects,
+            b.shield_no_entry,
+            b.bubble_faces,
+            b.bubble_reflectors_only,
+            b.holds_grab,
+            b.item_grab_set,
+            b.grounded_catch,
         ]),
         byte([
             fp.held_hit_light,
@@ -1074,24 +1085,24 @@ fn export_player(o: &mut Bits<0x138>, at: usize, p: &PlayerInitData) {
     o.u8(at + 0x8, p.handicap as u8);
     o.u8(at + 0x9, p.team);
     o.u8(at + 0xA, p.nametag);
-    o.u8(at + 0xB, p.xB);
+    o.u8(at + 0xB, p.sfx_size);
     let flags = [
         p.rumble_enabled,
-        p.xC_b1,
+        p.enters,
         p.vs_metal,
-        p.xC_b3,
+        p.unread_c_b3,
         p.vs_invisible,
-        p.xC_b5,
-        p.xC_b6,
-        p.xC_b7,
-        p.xD_b0,
-        p.xD_b1,
-        p.xD_b2,
-        p.xD_b3,
-        p.xD_b4,
-        p.xD_b5,
-        p.xD_b6,
-        p.xD_b7,
+        p.attrs_scaled,
+        p.voice_muted,
+        p.stamina,
+        p.hp_explodes,
+        p.shows_hearts,
+        p.no_offscreen_damage,
+        p.no_magnifier,
+        p.dies_up,
+        p.unused_d_b5,
+        p.unused_d_b6,
+        p.unused_d_b7,
     ];
     for (i, &f) in flags.iter().enumerate() {
         o.bits(at, 96 + i as u32, 1, u32::from(f));

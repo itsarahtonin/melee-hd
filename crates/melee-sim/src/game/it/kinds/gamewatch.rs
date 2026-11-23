@@ -137,16 +137,16 @@ pub(super) fn spawn_common(
     initial_collision: bool,
 ) {
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = parent;
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
+    spawn.owner = parent;
+    spawn.maker = spawn.owner;
     if initial_collision {
-        spawn.x44_flag[0] |= 0x80;
+        spawn.flags[0] |= 0x80;
     } else {
-        spawn.x44_flag[0] &= !0x80;
+        spawn.flags[0] &= !0x80;
     }
-    spawn.x40 = 0;
+    spawn.ignore_id = 0;
 }
 
 /// An item he holds at his part `part` (the spawns of the sprayer, the manhole, the torch,

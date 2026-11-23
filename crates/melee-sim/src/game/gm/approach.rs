@@ -115,7 +115,7 @@ impl Running<'_> {
             .copied()
             .find(|c| c.0 == idx)
             .expect("the challenger's row");
-        let lost = self.game.game_data.x39[usize::from(idx)];
+        let lost = self.game.game_data.challenger_losses[usize::from(idx)];
         let level = i32::from(base) - i32::from(step) * i32::from(lost);
         level.clamp(0, 9) as u8
     }
@@ -172,14 +172,14 @@ impl Running<'_> {
         let end = self.game.vs_melee.exit.match_end.clone();
         let c = self.game.gm.challenger;
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
         let p = &end.player_standings[0];
         self.results_add_coins(i32::from(p.coins));
         if !canceled(end.outcome) && p.stocks != 0 {
             self.unlock_character(c.cpu_ckind);
         } else {
             let idx = super::super::gm::unlock_index(c.cpu_ckind).expect("a challenger");
-            let lost = &mut self.game.game_data.x39[idx as usize];
+            let lost = &mut self.game.game_data.challenger_losses[idx as usize];
             *lost = super::results_exit::add_u8_saturating(u32::from(*lost), 1) as u8;
         }
         self.trophy_unlocks();

@@ -411,7 +411,7 @@ impl Playback {
     /// after the last counted.
     pub fn next_index(game: &Game) -> i32 {
         let p = game.playback.as_ref().expect("a replay's match");
-        if game.scene.unk_0 == 0 {
+        if game.scene.ticks == 0 {
             FIRST_FRAME
         } else {
             p.frame_index.wrapping_add(1)
@@ -447,7 +447,7 @@ impl Game {
     ///
     /// The Gecko code at `0x8016D294`.
     pub fn playback_count_frame(&mut self) {
-        let first = self.scene.unk_0 == 0;
+        let first = self.scene.ticks == 0;
         let p = self.playback_mut();
         p.frame_index = if first {
             FIRST_FRAME

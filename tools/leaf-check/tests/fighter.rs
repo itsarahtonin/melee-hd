@@ -1184,7 +1184,7 @@ fn dynamics_library() {
                     _ => {
                         let fid = maps.fighters[&r[5]];
                         let (dir, len) = wind::force_at(&g.game.gr.winds, v(r[3]));
-                        g.game.fighters[fid.0].ledge_points[0].x18 = dir;
+                        g.game.fighters[fid.0].ledge_points[0].center = dir;
                         return Ret::Float(f64::from(len));
                     }
                 }

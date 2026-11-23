@@ -237,16 +237,16 @@ pub fn spawn(
     s.prev_pos = at;
     s.pos = at;
     s.facing_dir = 0.0;
-    s.x3C_damage = 0;
+    s.damage = 0;
     s.vel = Vec3::new(0.0, 0.0, 0.0);
-    s.x0_parent_gobj = None;
-    s.x4_parent_gobj2 = None;
+    s.owner = None;
+    s.maker = None;
     if fall {
-        s.x44_flag[0] |= 0x80;
+        s.flags[0] |= 0x80;
     } else {
-        s.x44_flag[0] &= !0x80;
+        s.flags[0] &= !0x80;
     }
-    s.x40 = 0;
+    s.ignore_id = 0;
     r.game.it.yaku_attr = true;
     // `it_804D6D38[It_PKind_Random - It_Kind_Kuriboh]->x0_common_attr = &it_803F8C08`: the
     // table's last entry, an article in `ItCo.dat`'s data, which the heap's image takes where

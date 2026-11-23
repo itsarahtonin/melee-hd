@@ -126,7 +126,7 @@ impl Running<'_> {
     /// (the slider timer's end in `fn_8025F0E0`).
     fn charsel_sliders_settle(&mut self, i: usize) {
         let menu = self.game.charsel.menu;
-        let handicap = self.game.game_data.x1850.handicap;
+        let handicap = self.game.game_data.rules.handicap;
         let kind = self.game.charsel.doors[i].p_kind;
         let level = f32::from(self.css().vs.start.players[i].cpu_level);
         if handicap != 0 {
@@ -676,7 +676,7 @@ impl Running<'_> {
             4 => {
                 self.css_req(list, ALL_MASK, 20.0);
                 self.game.sis.text_mut(tag.name_list).hidden = 1;
-                if self.game.game_data.x1850.handicap != 0 && self.game.charsel.doors_used == 4 {
+                if self.game.game_data.rules.handicap != 0 && self.game.charsel.doors_used == 4 {
                     let h = self.handicap_value(port);
                     let menu = self.game.charsel.menu;
                     let j = self.css_animate(menu, DOORS[port].cpu_slider, TOBJ_MASK, h as f32);
@@ -937,7 +937,7 @@ impl Running<'_> {
             self.rumble_stop_all();
             self.free_gobj_links(1, 8);
             self.sis_reset();
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.change_game_mode_after_scene(super::super::super::gm::machine::GM_MENU);
             self.game.end_scene();
             return;

@@ -815,48 +815,48 @@ fn color_overlay(img: &Image, l: &mut Lay, off: u32, c: &super::structs::ColorOv
         };
         l.word(off + 0x10 + 4 * i as u32, w);
     }
-    l.u32(off + 0x24, c.x24 as u32);
-    l.bytes(off + 0x28, &c.x28_colanim);
+    l.u32(off + 0x24, c.unused_24 as u32);
+    l.bytes(off + 0x28, &c.colanim);
     let rgba = |g: &super::structs::_GXColor| [g.r, g.g, g.b, g.a];
-    l.bytes(off + 0x2C, &rgba(&c.x2C_hex));
+    l.bytes(off + 0x2C, &rgba(&c.hex));
     l.f32s(
         off + 0x30,
         &[
-            c.x30_color_red,
-            c.x34_color_green,
-            c.x38_color_blue,
-            c.x3C_color_alpha,
-            c.x40_colorblend_red,
-            c.x44_colorblend_green,
-            c.x48_colorblend_blue,
-            c.x4C_colorblend_alpha,
+            c.color_red,
+            c.color_green,
+            c.color_blue,
+            c.color_alpha,
+            c.colorblend_red,
+            c.colorblend_green,
+            c.colorblend_blue,
+            c.colorblend_alpha,
         ],
     );
-    l.bytes(off + 0x50, &rgba(&c.x50_light_color));
+    l.bytes(off + 0x50, &rgba(&c.light_color));
     l.f32s(
         off + 0x54,
         &[
-            c.x54_light_red,
-            c.x58_light_green,
-            c.x5C_light_blue,
-            c.x60_light_alpha,
-            c.x64_lightblend_red,
-            c.x68_lightblend_green,
-            c.x6C_lightblend_blue,
-            c.x70_lightblend_alpha,
-            c.x74_light_rot_x,
-            c.x78_light_rot_yz,
+            c.light_red,
+            c.light_green,
+            c.light_blue,
+            c.light_alpha,
+            c.lightblend_red,
+            c.lightblend_green,
+            c.lightblend_blue,
+            c.lightblend_alpha,
+            c.light_rot_x,
+            c.light_rot_yz,
         ],
     );
     let bits = [
-        c.x7C_color_enable,
-        c.x7C_flag2,
-        c.x7C_light_enable,
-        c.x7C_flag4,
-        c.x7C_flag5,
-        c.x7C_flag6,
-        c.x7C_flag7,
-        c.x7C_flag8,
+        c.color_enable,
+        c.flag2,
+        c.light_enable,
+        c.flag4,
+        c.flag5,
+        c.flag6,
+        c.flag7,
+        c.flag8,
     ];
     l.u8(off + 0x7C, msb_bits(&bits));
 }
@@ -883,8 +883,8 @@ pub fn bg_flash(game: &Game, img: &mut Image) {
 /// The background flash's user data's fields laid out into `l` (its block at `l`'s start):
 /// its alpha and color overlay.
 pub fn bg_flash_fields(img: &Image, l: &mut Lay, u: &super::structs::BgFlashUserData) {
-    l.u8(0, u.x0);
-    color_overlay(img, l, 4, &u.x4);
+    l.u8(0, u.alpha);
+    color_overlay(img, l, 4, &u.overlay);
 }
 
 /// A Pokémon Stadium screen's user data (`grStadium_801D2BEC`'s `TextWrapper`, 0x20;

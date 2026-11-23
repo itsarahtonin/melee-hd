@@ -331,8 +331,8 @@ pub fn ecb_motion(game: &mut Game, gobj: GObjId) {
     let a = super::lib26b1::ecb_center(game, gobj);
     let b = super::lib26b1::last_ecb_center(game, gobj);
     let ip = item_mut(game, gobj);
-    ip.stomp_box.unk_x = mem(fp::fsubs(reg(a.x), reg(b.x)));
-    ip.stomp_box.unk_y = mem(fp::fsubs(reg(a.y), reg(b.y)));
+    ip.stomp_box.motion_x = mem(fp::fsubs(reg(a.x), reg(b.x)));
+    ip.stomp_box.motion_y = mem(fp::fsubs(reg(a.y), reg(b.y)));
 }
 
 /// The ECB's extent in the world, into `xB54.x8`, `it_80274D6C`.
@@ -341,9 +341,9 @@ pub fn ecb_extent(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     let e = &ip.coll.ecb;
     let (right_x, right_y, left_x, top_y) = (e.right.x, e.right.y, e.left.x, e.top.y);
-    ip.stomp_box.x8.y = mem(fp::fadds(reg(right_x), reg(ip.pos.x)));
-    ip.stomp_box.x8.x = mem(fp::fadds(reg(left_x), reg(ip.pos.x)));
-    ip.stomp_box.x8.z = mem(fp::fadds(
+    ip.stomp_box.span.y = mem(fp::fadds(reg(right_x), reg(ip.pos.x)));
+    ip.stomp_box.span.x = mem(fp::fadds(reg(left_x), reg(ip.pos.x)));
+    ip.stomp_box.span.z = mem(fp::fadds(
         reg(top_y),
         fp::fadds(reg(right_y), reg(ip.pos.y)),
     ));
@@ -353,8 +353,8 @@ pub fn ecb_extent(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80274DAC")]
 pub fn init_spin(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.stomp_box.unk_x = 0.0;
-    ip.stomp_box.unk_y = 0.0;
+    ip.stomp_box.motion_x = 0.0;
+    ip.stomp_box.motion_y = 0.0;
     ecb_extent(game, gobj);
 }
 

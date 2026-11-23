@@ -274,12 +274,12 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     spawn.pos = spawn.prev_pos;
     // `Item_InitSpawnCommonFields(&spawn, owner, facing_dir, false)`.
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(owner);
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] &= 0x7F;
-    spawn.x40 = 0;
+    spawn.owner = Some(owner);
+    spawn.maker = spawn.owner;
+    spawn.flags[0] &= 0x7F;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     item_mut(r.game, gobj)
         .vars

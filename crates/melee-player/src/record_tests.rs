@@ -1205,7 +1205,7 @@ fn the_players_live_match_counts_camera_reads_after_a_pause_only() {
             assert!(!m.game.follows_playback_camera(), "a second camera");
             let d = &m.game.display_phase;
             if d.lost && off.is_none() {
-                off = Some(m.game.scene.unk_8);
+                off = Some(m.game.scene.game_ticks);
                 before = d.differing;
             }
             (after, first) = (d.differing, d.first);

@@ -1422,9 +1422,9 @@ impl Running<'_> {
     #[doc(alias = "fn_801641B4")]
     pub fn tou_setup_match(&mut self) {
         self.load_announcer();
-        let rules = self.game.game_data.x1850.clone();
-        let prefs_freq = self.game.game_data.thing.save_data.x1CB0.item_freq;
-        let prefs_mask = self.game.game_data.thing.save_data.x1CB0.item_mask;
+        let rules = self.game.game_data.rules.clone();
+        let prefs_freq = self.game.game_data.thing.save_data.prefs.item_freq;
+        let prefs_mask = self.game.game_data.thing.save_data.prefs.item_mask;
         let mut d = StartMeleeData {
             rules: super::super::vs_mode::rules_defaults(),
             ..StartMeleeData::default()
@@ -1466,7 +1466,7 @@ impl Running<'_> {
         r.pause_shows_lras = false;
         r.pause_z_retries = false;
         r.pause_shows_z = false;
-        match rules.unk_xc {
+        match rules.sd_penalty {
             1 => r.sd_penalty = 0,
             0 => r.sd_penalty = -1,
             2 => r.sd_penalty = -2,
@@ -1504,7 +1504,7 @@ impl Running<'_> {
                 p.cpu_kind = 4;
                 p.cpu_level = m.level;
                 p.damage1 = 0;
-                if self.game.game_data.x1850.handicap != 0 {
+                if self.game.game_data.rules.handicap != 0 {
                     let (a, df) = super::super::vs_mode::HANDICAP_RATIOS
                         [usize::from(m.handicap.wrapping_sub(1))];
                     let p = &mut d.players[i];

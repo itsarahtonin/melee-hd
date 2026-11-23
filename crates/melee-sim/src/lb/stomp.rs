@@ -10,10 +10,10 @@ use crate::game::structs::{lb_80014638_arg0_t, lb_80014638_arg1_t};
 /// and y, its top in z), widened by `top.unk_x` and raised by `top.unk_y`, `lb_80014638`.
 #[doc(alias = "lb_80014638")]
 pub fn stepped_on(feet: &lb_80014638_arg0_t, top: &lb_80014638_arg1_t) -> bool {
-    let (mut from, to, span) = (feet.x0, feet.xC, top.x8);
-    from.x = mem(fp::fadds(reg(from.x), reg(top.unk_x)));
-    from.y = mem(fp::fadds(reg(from.y), reg(top.unk_x)));
-    from.z = mem(fp::fadds(reg(from.z), reg(top.unk_y)));
+    let (mut from, to, span) = (feet.prev_feet, feet.feet, top.span);
+    from.x = mem(fp::fadds(reg(from.x), reg(top.motion_x)));
+    from.y = mem(fp::fadds(reg(from.y), reg(top.motion_x)));
+    from.z = mem(fp::fadds(reg(from.z), reg(top.motion_y)));
     if from.z < to.z {
         return false;
     }

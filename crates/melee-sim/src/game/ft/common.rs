@@ -127,12 +127,14 @@ impl Running<'_> {
         {
             let t = self.game.player_stale_moves(slot);
             if !by(slot) {
-                t.x674[kind2 as usize] = t.x674[kind2 as usize].wrapping_add(1);
+                t.items_picked_up[kind2 as usize] =
+                    t.items_picked_up[kind2 as usize].wrapping_add(1);
             }
             if (0..6).any(by) {
                 return;
             }
-            t.x710[kind2 as usize] = t.x710[kind2 as usize].wrapping_add(1);
+            t.fresh_items_picked_up[kind2 as usize] =
+                t.fresh_items_picked_up[kind2 as usize].wrapping_add(1);
         }
     }
 
@@ -147,7 +149,7 @@ impl Running<'_> {
         let part = self.bone_index(&self.game.fighters[f.0], TRANS_N);
         let parts = self.game.fighters[f.0].parts.expect("parts");
         let jobj = self.game.fighter_parts[parts.0][part as usize]
-            .x4_jobj2
+            .interp_joint
             .expect("TransN's second joint");
         let total = self.common().i32(0x648);
         let fp = &mut self.game.fighters[f.0];
@@ -184,9 +186,10 @@ impl Running<'_> {
         let pos = fp.coll_data.cur_pos;
         let lx = reg(fp.coll_data.ecb.left.x);
         let rx = reg(fp.coll_data.ecb.right.x);
-        fp.dmg.item_pickup_bounds.x0.x = mem(fp::fadds(lx, reg(pos.x)));
-        fp.dmg.item_pickup_bounds.x0.y = mem(fp::fadds(rx, reg(pos.x)));
-        fp.dmg.item_pickup_bounds.x0.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
+        fp.dmg.item_pickup_bounds.prev_feet.x = mem(fp::fadds(lx, reg(pos.x)));
+        fp.dmg.item_pickup_bounds.prev_feet.y = mem(fp::fadds(rx, reg(pos.x)));
+        fp.dmg.item_pickup_bounds.prev_feet.z =
+            mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.feet_height)));
     }
 
     /// Whether the magnifier shows the player off screen, `ifMagnify_802FC998`.
@@ -227,9 +230,9 @@ impl Running<'_> {
         // `pl_8003EC9C`: the damage taken and the highest percent.
         if sub == 0 {
             let t = self.game.player_stale_moves(slot);
-            t.xC60 = mem(fp::fadds(reg(t.xC60), amount));
-            if reg(t.xC64) < reg(percent) {
-                t.xC64 = percent;
+            t.damage_taken = mem(fp::fadds(reg(t.damage_taken), amount));
+            if reg(t.peak_damage) < reg(percent) {
+                t.peak_damage = percent;
             }
             self.game.player_mut(slot).set_ext_u32(0xD10, 0);
         }
@@ -343,27 +346,27 @@ impl Running<'_> {
         if !charging && attr.state != 4 {
             return;
         }
-        attr.x2118_frames = mem(fp::fadds(reg(attr.x2118_frames), 1.0));
-        attr.x212C = attr.x212C.wrapping_add(1);
-        if attr.x212C >= attr.x212D {
-            attr.x212C = 0;
+        attr.frames = mem(fp::fadds(reg(attr.frames), 1.0));
+        attr.shake_row = attr.shake_row.wrapping_add(1);
+        if attr.shake_row >= attr.shake_rows {
+            attr.shake_row = 0;
         }
-        if charging && attr.x2118_frames >= attr.x211C_holdFrame {
-            if attr.x2118_frames > attr.x211C_holdFrame {
-                attr.x2118_frames = attr.x211C_holdFrame;
+        if charging && attr.frames >= attr.hold_frame {
+            if attr.frames > attr.hold_frame {
+                attr.frames = attr.hold_frame;
             }
             attr.state = 3;
-            let (rate, color) = (attr.x2124_frameSpeedMul, attr.x2128);
+            let (rate, color) = (attr.frame_speed_mul, attr.color_anim);
             self.set_anim_rate(gobj, rate);
             self.end_color_anim(gobj, color);
             let f = self.game.fighter_id(gobj);
             self.stop_rumble(f, 0x24);
         }
         let attr = &self.game.fighter(gobj).smash_attrs;
-        if attr.x2130_sfxBool == 0 && attr.x2118_frames >= sfx_frame {
+        if attr.sfx_played == 0 && attr.frames >= sfx_frame {
             let f = self.game.fighter_id(gobj);
             self.fighter_play_sfx(f, 0x7B, 0x7F, 0x40);
-            self.game.fighter_mut(gobj).smash_attrs.x2130_sfxBool = 1;
+            self.game.fighter_mut(gobj).smash_attrs.sfx_played = 1;
         }
     }
 
@@ -844,12 +847,12 @@ impl Running<'_> {
             let off = crate::game::mirror::read_vec3(self.data, table.at(0x14 * i as u32 + 4));
             let fp = self.game.fighter_mut(gobj);
             let e = &mut fp.stamina_markers[i];
-            e.x14 = e.x8;
-            let j = e.x4;
+            e.prev_pos = e.pos;
+            let j = e.joint;
             let p = world_position(&mut self.game.objs, self.data, j, Some(off));
             let e = &mut self.game.fighter_mut(gobj).stamina_markers[i];
-            e.x8 = p;
-            e.x8.z = 0.0;
+            e.pos = p;
+            e.pos.z = 0.0;
         }
     }
 }

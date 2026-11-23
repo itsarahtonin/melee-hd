@@ -536,7 +536,7 @@ impl Running<'_> {
         }
         let source = fp.dmg.source;
         let instance = if source == Some(holder) {
-            self.game.fighter(holder).attack_record.x2088
+            self.game.fighter(holder).attack_record.record_id
         } else {
             let Some(src) = source.filter(|&s| crate::game::it::is_item(self.game, Some(s))) else {
                 return false;
@@ -686,7 +686,7 @@ impl Running<'_> {
         }
         let fp = &self.game.fighters[f.0];
         if let Some(other) = fp.victim_gobj {
-            if fp.state_flags.x221B_b5 {
+            if fp.state_flags.holds_grab {
                 self.holder_hit(gobj, other, facing);
             } else {
                 self.held_hit(gobj, other, cape.is_some(), facing);
@@ -1010,7 +1010,7 @@ impl Running<'_> {
         let (akind, x2070, instance) = (
             hp.kind,
             u32::from_be_bytes(hp.attack_flags),
-            hp.attack_record.x2088,
+            hp.attack_record.record_id,
         );
         self.attack_landed(
             Some(holder),
@@ -1058,7 +1058,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DCE34")]
     fn grab_break(&mut self, a: GObjId, b: GObjId) {
         self.grab_release(a, b);
-        let g = if self.game.fighter(b).state_flags.x221B_b7 {
+        let g = if self.game.fighter(b).state_flags.grounded_catch {
             a
         } else {
             b

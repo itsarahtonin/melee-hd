@@ -150,7 +150,7 @@ impl Running<'_> {
 
     /// `gmMainLib_8015D804`: when the save noted message `n`.
     fn message_time(&self, n: u8) -> u32 {
-        self.game.game_data.thing.save_data.x1B80[usize::from(n)]
+        self.game.game_data.thing.save_data.message_times[usize::from(n)]
     }
 
     /// `mnInfo_80251AFC`: the messages in the order shown, the noted ones first, oldest

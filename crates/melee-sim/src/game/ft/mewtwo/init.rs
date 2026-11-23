@@ -39,7 +39,7 @@ impl Running<'_> {
         let parts = self.game.fighters[f.0]
             .parts
             .expect("a fighter without parts");
-        self.game.fighter_parts[parts.0][PART_TRANS_N as usize].x8[0] |= 0x08;
+        self.game.fighter_parts[parts.0][PART_TRANS_N as usize].flags[0] |= 0x08;
         self.game.fighters[f.0].hip_offset = true;
         for (i, kind) in ITEMS.into_iter().enumerate() {
             let article = self.data.ptr(items.at(4 * i as u32));

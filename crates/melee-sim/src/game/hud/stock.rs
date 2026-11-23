@@ -146,7 +146,7 @@ impl Game {
     #[doc(alias = "ifStock_802FB4EC")]
     pub fn color_stock_icons(&mut self, player: i32, c: [u8; 3]) {
         for i in 0..7 {
-            let j = self.hud.stock.player[player as usize].x4[i + 1].expect("an icon");
+            let j = self.hud.stock.player[player as usize].joints[i + 1].expect("an icon");
             let d = self.objs.jobjs[j].dobj().expect("jobj->u.dobj");
             let m = self.objs.dobjs[d].mobj.expect("dobj->mobj");
             let mat = self.objs.mobjs[m].mat.as_mut().expect("mobj->mat");
@@ -197,12 +197,12 @@ impl Running<'_> {
         u.anim[slot] = 1;
         g.hud.stock_users[t].flag = 0;
         let u = &mut g.hud.stock_users[d];
-        u.x3[slot - 5] = taker as u8;
+        u.steal_takers[slot - 5] = taker as u8;
         if stocks <= 5 && stocks > 0 {
             u.anim[(stocks - 1) as usize] = 10;
         }
         let j = if stocks <= 5 && stocks > 0 { stocks } else { 1 };
-        let row = g.hud.stock.player[d].x4;
+        let row = g.hud.stock.player[d].joints;
         let pos = g.objs.jobjs[row[0].expect("the icon row")].translate;
         let icon = row[j as usize];
         jobj::req_anim_all(&mut g.objs, icon, 0.0);
@@ -220,7 +220,7 @@ impl Running<'_> {
         );
         let ts = g.player_stocks(taker);
         let k = if ts < 5 && ts > 0 { ts } else { 0 };
-        let trow = g.hud.stock.player[t].x4;
+        let trow = g.hud.stock.player[t].joints;
         let pos = g.objs.jobjs[trow[0].expect("the icon row")].translate;
         let icon = trow[k as usize];
         jobj::req_anim_all(&mut g.objs, icon, 0.0);
@@ -272,9 +272,9 @@ impl Running<'_> {
         let frame = mem(self.game.player_stock_icon(p as i32));
         let row = self.game.hud.stock.player[p].clone();
         if stocks <= 5 {
-            jobj::set_flags_all(&mut self.game.objs.jobjs, row.x3C, HIDDEN);
+            jobj::set_flags_all(&mut self.game.objs.jobjs, row.joint_14, HIDDEN);
             for i in 0..5 {
-                let icon = row.x4[i + 1].expect("an icon");
+                let icon = row.joints[i + 1].expect("an icon");
                 if (i as i32) < stocks {
                     jobj::clear_flags_all(&mut self.game.objs.jobjs, Some(icon), HIDDEN);
                     let u = &mut self.game.hud.stock_users[p];
@@ -308,16 +308,16 @@ impl Running<'_> {
         } else {
             let g = &mut *self.game;
             let objs = &mut g.objs;
-            jobj::clear_flags_all(&mut objs.jobjs, row.x3C, HIDDEN);
+            jobj::clear_flags_all(&mut objs.jobjs, row.joint_14, HIDDEN);
             if stocks >= 10 {
-                jobj::req_anim_all(objs, row.x44, mem(fp::frsp(f64::from(stocks / 10))));
-                jobj::req_anim_all(objs, row.x40, mem(fp::frsp(f64::from(stocks % 10))));
+                jobj::req_anim_all(objs, row.joint_16, mem(fp::frsp(f64::from(stocks / 10))));
+                jobj::req_anim_all(objs, row.joint_15, mem(fp::frsp(f64::from(stocks % 10))));
             } else {
-                jobj::req_anim_all(objs, row.x44, mem(fp::frsp(f64::from(stocks))));
-                jobj::set_flags_all(&mut objs.jobjs, row.x40, HIDDEN);
+                jobj::req_anim_all(objs, row.joint_16, mem(fp::frsp(f64::from(stocks))));
+                jobj::set_flags_all(&mut objs.jobjs, row.joint_15, HIDDEN);
             }
             for i in 0..5 {
-                let icon = row.x4[i + 1].expect("an icon");
+                let icon = row.joints[i + 1].expect("an icon");
                 let a = if i == 0 { 0 } else { 10 };
                 g.hud.stock_users[p].anim[i] = a;
                 jobj::req_anim_all(&mut g.objs, Some(icon), mem(fp::frsp(f64::from(a))));
@@ -325,7 +325,7 @@ impl Running<'_> {
             }
         }
         for i in 5..=6 {
-            let icon = row.x4[i + 1].expect("a flying icon");
+            let icon = row.joints[i + 1].expect("a flying icon");
             let a = self.game.hud.stock_users[p].anim[i];
             if a == 0 {
                 jobj::set_flags_all(&mut self.game.objs.jobjs, Some(icon), HIDDEN);
@@ -335,7 +335,7 @@ impl Running<'_> {
                     let f = self.game.hud.stock_users[p].steal[i - 5].clone();
                     let t = fp::fmuls(0.100_000_001_490_116_12, fp::frsp(f64::from(a)));
                     let mut c = Vec3::quadratic([f.start, f.mid, f.end], mem(t));
-                    let r0 = self.game.objs.jobjs[row.x4[0].expect("the icon row")].translate;
+                    let r0 = self.game.objs.jobjs[row.joints[0].expect("the icon row")].translate;
                     c.x = mem(fp::fsubs(reg(c.x), reg(r0.x)));
                     c.y = mem(fp::fsubs(reg(c.y), reg(r0.y)));
                     c.z = mem(fp::fsubs(reg(c.z), reg(r0.z)));
@@ -353,7 +353,7 @@ impl Running<'_> {
                 } else {
                     let u = &mut self.game.hud.stock_users[p];
                     u.anim[i] = 0;
-                    let other = usize::from(u.x3[i - 5]);
+                    let other = usize::from(u.steal_takers[i - 5]);
                     self.game.hud.stock_users[other].flag = 1;
                 }
             }
@@ -377,7 +377,7 @@ impl Running<'_> {
         let ui = self.game.stock_user(gobj);
         let p = usize::from(self.game.hud.stock_users[ui].player);
         let g = &mut *self.game;
-        let first = g.hud.stock.player[p].x4[1].expect("an icon");
+        let first = g.hud.stock.player[p].joints[1].expect("an icon");
         let coins = g.player_coins(p as i32);
         g.hud.stock.player[p].coins = coins;
         let coins = if coins as u32 > 99_999 { 99_999 } else { coins };
@@ -397,10 +397,18 @@ impl Running<'_> {
         let row = g.hud.stock.player[p].clone();
         let at = |k: usize| -> Option<JObjId> {
             if k < 8 {
-                row.x4[k]
+                row.joints[k]
             } else {
                 [
-                    row.x24, row.x28, row.x2C, row.x30, row.x34, row.x38, row.x3C, row.x40, row.x44,
+                    row.joint_8,
+                    row.joint_9,
+                    row.joint_10,
+                    row.joint_11,
+                    row.joint_12,
+                    row.joint_13,
+                    row.joint_14,
+                    row.joint_15,
+                    row.joint_16,
                 ][k - 8]
             }
         };
@@ -422,8 +430,8 @@ impl Running<'_> {
             } else {
                 jobj::set_flags_all(&mut g.objs.jobjs, j, HIDDEN);
                 if count == 0 && i == 0 {
-                    jobj::req_anim_all(&mut g.objs, row.x38, 0.0);
-                    jobj::clear_flags_all(&mut g.objs.jobjs, row.x38, HIDDEN);
+                    jobj::req_anim_all(&mut g.objs, row.joint_13, 0.0);
+                    jobj::clear_flags_all(&mut g.objs.jobjs, row.joint_13, HIDDEN);
                 }
             }
         }
@@ -448,7 +456,7 @@ impl Running<'_> {
                 };
                 let p = usize::from(self.game.hud.stock_users[ui].player);
                 let g = &mut *self.game;
-                let first = g.hud.stock.player[p].x4[1].expect("an icon");
+                let first = g.hud.stock.player[p].joints[1].expect("an icon");
                 jobj::req_anim_all(&mut g.objs, Some(first), 0.0);
                 let frame = mem(g.player_stock_icon(p as i32));
                 set_icon_frame(&mut g.objs, first, frame);
@@ -469,7 +477,7 @@ impl Running<'_> {
     #[doc(alias = "ifStock_802F98E8")]
     pub fn create_stock_icons(&mut self, player: u8, mode: u8) {
         let data = self.data;
-        let Some(models) = self.game.hud.stock.x0 else {
+        let Some(models) = self.game.hud.stock.models else {
             return;
         };
         let p = usize::from(player);
@@ -477,7 +485,7 @@ impl Running<'_> {
         u.player = player;
         u.mode = mode;
         u.flag = 1;
-        if let Some(old) = self.game.hud.stock.player[p].x0 {
+        if let Some(old) = self.game.hud.stock.player[p].gobj {
             gobj::free(self, old);
         }
         let g = &mut *self.game;
@@ -497,19 +505,19 @@ impl Running<'_> {
         let r = &mut g.hud.stock.player[p];
         for (k, j) in found.into_iter().enumerate() {
             match k {
-                0..=7 => r.x4[k] = j,
-                8 => r.x24 = j,
-                9 => r.x28 = j,
-                10 => r.x2C = j,
-                11 => r.x30 = j,
-                12 => r.x34 = j,
-                13 => r.x38 = j,
-                14 => r.x3C = j,
-                15 => r.x40 = j,
-                _ => r.x44 = j,
+                0..=7 => r.joints[k] = j,
+                8 => r.joint_8 = j,
+                9 => r.joint_9 = j,
+                10 => r.joint_10 = j,
+                11 => r.joint_11 = j,
+                12 => r.joint_12 = j,
+                13 => r.joint_13 = j,
+                14 => r.joint_14 = j,
+                15 => r.joint_15 = j,
+                _ => r.joint_16 = j,
             }
         }
-        r.x0 = Some(o);
+        r.gobj = Some(o);
         let coins = g.player_coins(i32::from(player));
         g.hud.stock.player[p].coins = coins;
         let mut stocks = g.player_stocks(i32::from(player));
@@ -523,11 +531,11 @@ impl Running<'_> {
             |g: &mut Game, j: Option<JObjId>| jobj::set_flags_all(&mut g.objs.jobjs, j, HIDDEN);
         match mode {
             0 => {
-                hide(g, row.x24);
+                hide(g, row.joint_8);
                 if stocks <= 5 {
-                    hide(g, row.x3C);
+                    hide(g, row.joint_14);
                     for i in 0..7 {
-                        let icon = row.x4[i + 1];
+                        let icon = row.joints[i + 1];
                         let a = if (i as i32) < stocks || i >= 5 {
                             if i >= 5 {
                                 hide(g, icon);
@@ -546,15 +554,21 @@ impl Running<'_> {
             }
             1 | 2 => {
                 if mode == 1 {
-                    hide(g, row.x24);
-                    hide(g, row.x3C);
+                    hide(g, row.joint_8);
+                    hide(g, row.joint_14);
                 } else {
-                    for j in [row.x28, row.x2C, row.x30, row.x34, row.x3C] {
+                    for j in [
+                        row.joint_9,
+                        row.joint_10,
+                        row.joint_11,
+                        row.joint_12,
+                        row.joint_14,
+                    ] {
                         hide(g, j);
                     }
                 }
                 for i in 0..7 {
-                    let icon = row.x4[i + 1];
+                    let icon = row.joints[i + 1];
                     let a = if i == 0 { 0 } else { 10 };
                     g.hud.stock_users[p].anim[i] = a;
                     if i < 5 {
@@ -577,7 +591,7 @@ impl Running<'_> {
             &mut crate::game::code::ParticleHooks,
             Some(root),
         );
-        let flags = g.vs.state.fighters[p].x4[0];
+        let flags = g.vs.state.fighters[p].flags[0];
         if flags & 0x40 != 0 {
             g.color_stock_icons(i32::from(player), [0x08, 0x08, 0x08]);
         } else if flags & 0x80 != 0 {
@@ -596,37 +610,37 @@ impl Running<'_> {
     pub fn stock_tally_proc(&mut self, _gobj: GObjId) {
         let g = &mut *self.game;
         if g.vs_is_singleplayer() && g.gm.opponents.joining() {
-            if g.hud.stock_1774.x0 != 0 {
+            if g.hud.stock_1774.state != 0 {
                 return;
             }
-            g.hud.stock_1774.x0 = 1;
+            g.hud.stock_1774.state = 1;
             let (costumes, characters) = (g.gm.opponents.costumes, g.gm.opponents.characters);
             let t = &mut g.hud.stock_1774;
             for k in 0..130 {
-                t.x10C[k + 1] = None;
-                t.x1[k] = costumes[k];
-                t.x83[k] = characters[k];
+                t.icons[k + 1] = None;
+                t.costumes[k] = costumes[k];
+                t.chars[k] = characters[k];
             }
             for i in 0..130 {
-                if let Some(o) = self.game.hud.stock_1774.x10C[1 + i].take() {
+                if let Some(o) = self.game.hud.stock_1774.icons[1 + i].take() {
                     gobj::free(self, o);
                 }
-                if self.game.hud.stock_1774.x1[i] == -2 {
+                if self.game.hud.stock_1774.costumes[i] == -2 {
                     return;
                 }
                 let o = self.create_joiner_icon(i);
-                self.game.hud.stock_1774.x10C[1 + i] = Some(o);
+                self.game.hud.stock_1774.icons[1 + i] = Some(o);
             }
             return;
         }
-        if g.hud.stock_1774.x0 == 1 {
+        if g.hud.stock_1774.state == 1 {
             for j in (0..130).rev() {
-                if let Some(o) = self.game.hud.stock_1774.x10C[1 + j].take() {
+                if let Some(o) = self.game.hud.stock_1774.icons[1 + j].take() {
                     gobj::free(self, o);
                 }
             }
         }
-        self.game.hud.stock_1774.x0 = 0;
+        self.game.hud.stock_1774.state = 0;
     }
 
     /// A joiner's icon in the joiners' tally, `ifStock_802F9F48`: the scene's first model off
@@ -637,7 +651,7 @@ impl Running<'_> {
         let data = self.data;
         let g = &mut *self.game;
         let o = g.world.create(14, 15, 0);
-        let models = g.hud.stock.x0.expect("the icons' models");
+        let models = g.hud.stock.models.expect("the icons' models");
         let model = data.ptr(models).expect("the tally's model");
         let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
         g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
@@ -653,7 +667,7 @@ impl Running<'_> {
         jobj::clear_flags(&mut g.objs.jobjs, Some(icon), HIDDEN);
         jobj::req_anim_all(&mut g.objs, Some(root), 0.0);
         let t = &g.hud.stock_1774;
-        let frame = stock_icon_frame(i32::from(t.x83[i]), 0, i32::from(t.x1[i]));
+        let frame = stock_icon_frame(i32::from(t.chars[i]), 0, i32::from(t.costumes[i]));
         set_icon_frame(&mut g.objs, icon, mem(frame));
         jobj::anim_all(&mut g.objs, data, &mut code::ParticleHooks, Some(root));
         o
@@ -670,18 +684,18 @@ impl Running<'_> {
         let mut counter = 0;
         let (mut x, mut y) = (reg(-21.0), reg(11.0));
         for (i, &costume) in costumes.iter().enumerate().take(130) {
-            let Some(o) = g.hud.stock_1774.x10C[i + 1] else {
+            let Some(o) = g.hud.stock_1774.icons[i + 1] else {
                 break;
             };
             let Some(Obj::JObj(j)) = g.world.gobj(o).obj else {
                 panic!("a tally icon without its model");
             };
-            g.hud.stock_1774.x1[i] = costume;
-            match g.hud.stock_1774.x1[i] {
+            g.hud.stock_1774.costumes[i] = costume;
+            match g.hud.stock_1774.costumes[i] {
                 -1 => jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0),
                 -2 => {
                     for _ in i..130 {
-                        if let Some(o) = g.hud.stock_1774.x10C[i + 1]
+                        if let Some(o) = g.hud.stock_1774.icons[i + 1]
                             && let Some(Obj::JObj(j)) = g.world.gobj(o).obj
                         {
                             jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0);
@@ -712,44 +726,44 @@ impl Running<'_> {
     #[doc(alias = "fn_802FAC34")]
     pub fn stock_tally_proc_2(&mut self, _gobj: GObjId) {
         if self.game.vs_has_challenger_record() {
-            if self.game.hud.stock_1acc.x0 != 0 {
+            if self.game.hud.stock_1acc.state != 0 {
                 return;
             }
-            self.game.hud.stock_1acc.x0 = 1;
+            self.game.hud.stock_1acc.state = 1;
             let mem = self.game.left_list_memory();
             let t = &mut self.game.hud.stock_1acc;
             for i in 0..130 {
-                t.x10C[i] = None;
-                t.x83[i] = mem[0x1C + i];
-                t.x1[i] = mem[i];
+                t.icons[i] = None;
+                t.costumes[i] = mem[0x1C + i];
+                t.chars[i] = mem[i];
             }
             for n in 0..130 {
-                if let Some(o) = self.game.hud.stock_1acc.x10C[n].take() {
+                if let Some(o) = self.game.hud.stock_1acc.icons[n].take() {
                     gobj::free(self, o);
                 }
                 let t = &self.game.hud.stock_1acc;
-                let (ch, b) = (t.x1[n], t.x83[n]);
+                let (ch, b) = (t.chars[n], t.costumes[n]);
                 if b == -2 || ch == -2 {
                     return;
                 }
                 let x = fp::fmadds(reg(2.45), fp::frsp(f64::from(n as i32 % 5)), fp::fneg(21.0));
                 let y = fp::fnmsubs(reg(2.45), fp::frsp(f64::from(n as i32 / 5)), 11.0);
                 let o = self.create_tally_icon(i32::from(ch), i32::from(b), x, y);
-                self.game.hud.stock_1acc.x10C[n] = Some(o);
+                self.game.hud.stock_1acc.icons[n] = Some(o);
                 if n == 0 {
                     self.game.world.setup_proc(o, CodeRef(PROC_TALLY_PLACE), 17);
                 }
             }
             return;
         }
-        if self.game.hud.stock_1acc.x0 == 1 {
+        if self.game.hud.stock_1acc.state == 1 {
             for i in (0..130).rev() {
-                if let Some(o) = self.game.hud.stock_1acc.x10C[i].take() {
+                if let Some(o) = self.game.hud.stock_1acc.icons[i].take() {
                     gobj::free(self, o);
                 }
             }
         }
-        self.game.hud.stock_1acc.x0 = 0;
+        self.game.hud.stock_1acc.state = 0;
     }
 
     /// A character's icon in the characters-left tally, `ifStock_802F96D0`: the scene's first
@@ -759,7 +773,7 @@ impl Running<'_> {
         let data = self.data;
         let g = &mut *self.game;
         let o = g.world.create(14, 15, 0);
-        let models = g.hud.stock.x0.expect("the icons' models");
+        let models = g.hud.stock.models.expect("the icons' models");
         let model = data.ptr(models).expect("the tally's model");
         let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
         g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
@@ -790,20 +804,20 @@ impl Running<'_> {
         let mut k = 0;
         let (mut x, mut y) = (fp::fneg(21.0), reg(11.0));
         for i in 0..130 {
-            let Some(o) = g.hud.stock_1acc.x10C[i] else {
+            let Some(o) = g.hud.stock_1acc.icons[i] else {
                 return;
             };
             let Some(Obj::JObj(j)) = g.world.gobj(o).obj else {
                 panic!("a tally icon without its model");
             };
             let t = &mut g.hud.stock_1acc;
-            t.x83[i] = mem_[0x1C + i];
-            t.x1[i] = mem_[i];
-            match t.x83[i] {
+            t.costumes[i] = mem_[0x1C + i];
+            t.chars[i] = mem_[i];
+            match t.costumes[i] {
                 -1 => jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0),
                 -2 => {
                     for _ in i..130 {
-                        if let Some(o) = g.hud.stock_1acc.x10C[i]
+                        if let Some(o) = g.hud.stock_1acc.icons[i]
                             && let Some(Obj::JObj(j)) = g.world.gobj(o).obj
                         {
                             jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0);
@@ -834,7 +848,7 @@ impl Running<'_> {
         let data = self.data;
         let g = &mut *self.game;
         let o = g.world.create(14, 15, 0);
-        let models = g.hud.stock.x0.expect("the icons' models");
+        let models = g.hud.stock.models.expect("the icons' models");
         let model = data.ptr(models).expect("the targets' model");
         let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
         g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
@@ -909,21 +923,21 @@ impl Running<'_> {
             archive: a,
             offset: at,
         };
-        g.hud.stock.x0 = Some(models);
-        g.hud.stock.x4 = data.ptr(models.at(4));
-        g.hud.stock_1acc.x108 = None;
-        g.hud.stock_1acc.x0 = 0;
+        g.hud.stock.models = Some(models);
+        g.hud.stock.counter_model = data.ptr(models.at(4));
+        g.hud.stock_1acc.unread_108 = None;
+        g.hud.stock_1acc.state = 0;
         let o = g.world.create(14, 15, 0);
         g.world.setup_proc(o, CodeRef(PROC_TALLY_2), 17);
-        g.hud.stock_1acc.x108 = Some(o);
+        g.hud.stock_1acc.unread_108 = Some(o);
         if !g.gm.opponents.counted() {
-            g.hud.stock_1774.x10C[0] = None;
-            g.hud.stock_1774.x0 = 0;
+            g.hud.stock_1774.icons[0] = None;
+            g.hud.stock_1774.state = 0;
             let o = g.world.create(14, 15, 0);
             g.world.setup_proc(o, CodeRef(PROC_TALLY), 17);
-            g.hud.stock_1774.x10C[0] = Some(o);
+            g.hud.stock_1774.icons[0] = Some(o);
         } else if g.gm.opponents.joining() {
-            g.hud.stock_1774.x108 = -1;
+            g.hud.stock_1774.crowd_count = -1;
             self.create_counter(true);
         }
         for i in 0..16 {
@@ -946,7 +960,7 @@ impl Running<'_> {
         let data = self.data;
         let g = &mut *self.game;
         let o = g.world.create(14, 15, 0);
-        let model = g.hud.stock.x4.expect("the counter's model");
+        let model = g.hud.stock.counter_model.expect("the counter's model");
         let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
         g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
         g.world.setup_gx_link(o, CodeRef(RENDER_COUNTER), 11, 0);
@@ -1002,20 +1016,20 @@ impl Running<'_> {
     #[doc(alias = "fn_802F8DB0")]
     pub fn crowd_counter_proc(&mut self, _gobj: GObjId) {
         let x = self.game.opponents_count();
-        if x != self.game.hud.stock_1774.x108 {
+        if x != self.game.hud.stock_1774.crowd_count {
             self.set_multi_man_counter(x);
         }
-        self.game.hud.stock_1774.x108 = x;
+        self.game.hud.stock_1774.crowd_count = x;
     }
 
     /// Frees the single-player tally's icons, `ifStock_802FB390`.
     #[doc(alias = "ifStock_802FB390")]
     pub fn free_stock_tally(&mut self) {
-        if let Some(o) = self.game.hud.stock_1774.x10C[0].take() {
+        if let Some(o) = self.game.hud.stock_1774.icons[0].take() {
             gobj::free(self, o);
         }
         for i in (0..130).rev() {
-            if let Some(o) = self.game.hud.stock_1774.x10C[i + 1].take() {
+            if let Some(o) = self.game.hud.stock_1774.icons[i + 1].take() {
                 gobj::free(self, o);
             }
         }
@@ -1035,7 +1049,7 @@ impl Running<'_> {
     #[doc(alias = "ifStock_802FB484")]
     pub fn free_stock_tally_2(&mut self) {
         for i in 0..16 {
-            if let Some(o) = self.game.hud.stock_1acc.x10C[i].take() {
+            if let Some(o) = self.game.hud.stock_1acc.icons[i].take() {
                 gobj::free(self, o);
             }
         }
@@ -1044,7 +1058,7 @@ impl Running<'_> {
     /// Frees a player's icons, `ifStock_802FB650`.
     #[doc(alias = "ifStock_802FB650")]
     pub fn free_stock_icons(&mut self, player: i32) {
-        if let Some(o) = self.game.hud.stock.player[player as usize].x0 {
+        if let Some(o) = self.game.hud.stock.player[player as usize].gobj {
             gobj::free(self, o);
         }
         self.game.hud.stock.player[player as usize] = Default::default();
@@ -1053,7 +1067,7 @@ impl Running<'_> {
     /// Clears the second flag of a player's icons' processes, `ifStock_802FB6AC`.
     #[doc(alias = "ifStock_802FB6AC")]
     pub fn stock_icons_flags(&mut self, player: i32) {
-        if let Some(o) = self.game.hud.stock.player[player as usize].x0 {
+        if let Some(o) = self.game.hud.stock.player[player as usize].gobj {
             self.game.world.clear_flags_2(o);
         }
     }

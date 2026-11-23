@@ -277,7 +277,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             println!("the recording's last read was taken before tick {tick}");
             break None;
         }
-        if s.game.scene.unk_C != 0 {
+        if s.game.scene.ending != 0 {
             // This tick changes scenes: no rollback reaches back across it.
             in_scene = 0;
             work_taken = false;
@@ -635,7 +635,7 @@ fn probe_line(tick: u64, next: usize, game: &Game) {
                 p.team
             );
         }
-        let r = &game.game_data.x1850;
+        let r = &game.game_data.rules;
         line += &format!(
             " | teams{} stage{} | rules mode{} time{} hcap{} ff{} sd{}",
             start.rules.is_teams,
@@ -644,7 +644,7 @@ fn probe_line(tick: u64, next: usize, game: &Game) {
             r.time_limit,
             r.handicap,
             r.friendly_fire,
-            r.unk_xc
+            r.sd_penalty
         );
         for (i, t) in cs.tokens.iter().enumerate() {
             if let Some(t) = t {

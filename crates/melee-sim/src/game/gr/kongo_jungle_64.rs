@@ -378,7 +378,7 @@ pub fn proc_birds(r: &mut Running, gobj: GObjId) {
                 })
             })
         {
-            let tick = r.game.scene.unk_8;
+            let tick = r.game.scene.game_ticks;
             r.game.display_phase.note(tick);
         }
         jobj::set_srt(&mut r.game.objs.jobjs, root, |o| o.translate.x = x);

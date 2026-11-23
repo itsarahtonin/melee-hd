@@ -193,14 +193,14 @@ pub fn spawn(r: &mut Running, owner: GObjId, offset: Vec3, ty: i32) -> Option<GO
         prev_pos: at,
         pos: at,
         facing_dir: -1.0,
-        x3C_damage: 0,
+        damage: 0,
         vel: Vec3::new(0.0, 0.0, 0.0),
-        x0_parent_gobj: None,
-        x4_parent_gobj2: None,
-        x40: 0,
+        owner: None,
+        maker: None,
+        ignore_id: 0,
         ..Default::default()
     };
-    spawn.x44_flag[0] &= !0x80;
+    spawn.flags[0] &= !0x80;
     let gobj = spawn_air(r, &mut spawn)?;
     let s = super::super::super::gr::ground::scale(r.game);
     item_mut(r.game, gobj).scl = s;

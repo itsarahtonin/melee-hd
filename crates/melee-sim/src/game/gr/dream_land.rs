@@ -331,7 +331,7 @@ pub fn proc_flights(r: &mut Running, gobj: GObjId) {
             })
         })
     {
-        let tick = r.game.scene.unk_8;
+        let tick = r.game.scene.game_ticks;
         r.game.display_phase.note(tick);
     }
     let rand = reg(r.game.objs.rng.draw_f32());

@@ -385,8 +385,8 @@ impl Running<'_> {
         fp::fmuls(
             damage,
             fp::fmadds(
-                fp::fsubs(reg(a.x2120_damageMul), 1.0),
-                fp::fdivs(reg(a.x2118_frames), reg(a.x211C_holdFrame)),
+                fp::fsubs(reg(a.damage_mul), 1.0),
+                fp::fdivs(reg(a.frames), reg(a.hold_frame)),
                 1.0,
             ),
         )
@@ -409,11 +409,11 @@ impl Running<'_> {
         let (lo, hi) = (c.u32(0x7E8), c.u32(0x7EC));
         if a != 361 && lo <= a && a <= hi {
             let fp = &mut self.game.fighters[f.0];
-            if fp.attack_record.x10[0] & 0x80 == 0 {
-                fp.attack_record.x10[0] |= 0x80;
+            if fp.attack_record.flags[0] & 0x80 == 0 {
+                fp.attack_record.flags[0] |= 0x80;
                 let slot = i32::from(fp.player_idx);
                 let stats = self.game.player_action_stats(slot);
-                stats.attacks.x1A8 = stats.attacks.x1A8.wrapping_add(1);
+                stats.attacks.spikes_count = stats.attacks.spikes_count.wrapping_add(1);
             }
         }
     }
@@ -422,8 +422,8 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_80080484")]
     fn smash_since_hitbox(&mut self, f: FighterId) {
         let a = &mut self.game.fighters[f.0].smash_attrs;
-        if a.x2138_smashSinceHitbox == -1.0 {
-            a.x2138_smashSinceHitbox = 0.0;
+        if a.smash_since_hitbox == -1.0 {
+            a.smash_since_hitbox = 0.0;
         }
     }
 
@@ -830,10 +830,10 @@ impl Running<'_> {
         let color = mem(ufloat(bits(self.cmd_word(f, 0), 0, 8)));
         let a = &mut self.game.fighters[f.0].smash_attrs;
         a.state = 1;
-        a.x2118_frames = 0.0;
-        a.x211C_holdFrame = frames;
-        a.x2120_damageMul = mul;
-        a.x2128 = fp::fctiwz(reg(color));
+        a.frames = 0.0;
+        a.hold_frame = frames;
+        a.damage_mul = mul;
+        a.color_anim = fp::fctiwz(reg(color));
     }
 
     /// The fighter's vibration (`ftCo_800C8B60`).
@@ -842,7 +842,7 @@ impl Running<'_> {
     fn cmd_vibrate(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
         fp.refracted = bits(w, 6, 1) != 0;
-        fp.smash_attrs.x2134_vibrateFrame = bits(w, 7, 8) as u8;
+        fp.smash_attrs.vibrate_frame = bits(w, 7, 8) as u8;
     }
 
     /// Runs fighter command `index` as a state started partway in does (`ftAction_803C07AC`):
@@ -1197,7 +1197,7 @@ impl Running<'_> {
                 let w = self.cmd_word_in(f, Some(which), 0);
                 let fp = &mut self.game.fighters[f.0];
                 fp.refracted = bits(w, 6, 1) != 0;
-                fp.smash_attrs.x2134_vibrateFrame = bits(w, 7, 8) as u8;
+                fp.smash_attrs.vibrate_frame = bits(w, 7, 8) as u8;
                 self.cmd_script(f, Some(which)).skip(1);
             }
             (true, 0) => self.cmd_script(f, Some(which)).skip(5),

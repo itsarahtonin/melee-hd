@@ -109,7 +109,7 @@ impl Running<'_> {
 
     /// `gmMainLib_8015CEFC`: whether the save has the event at place `n` cleared.
     pub fn event_cleared(&self, n: i32) -> bool {
-        self.game.game_data.thing.save_data.x1A68 & (1i64 << (n & 63)) != 0
+        self.game.game_data.thing.save_data.events_cleared & (1i64 << (n & 63)) != 0
     }
 
     /// `mnEvent_8024CE74`: the last event the list can start a page on: 0x2A in a develop
@@ -132,9 +132,9 @@ impl Running<'_> {
             22..=26 => 0x14,
             50.. => {
                 // `gm_80162EC8`: any of the first 25 characters' records with `x7C.b5`.
-                let any = self.game.game_data.thing.save_data.x1F2C[..0x19]
+                let any = self.game.game_data.thing.save_data.fighters[..0x19]
                     .iter()
-                    .any(|f| f.x7C.b5);
+                    .any(|f| f.records.adventure_cleared);
                 if any { 0x2A } else { 0x29 }
             }
             _ => {
@@ -571,9 +571,9 @@ impl Running<'_> {
 pub fn score_of(s: &super::super::structs::GmSaveData, n: i32) -> i32 {
     let n = n as usize;
     if n < 4 {
-        return s.x1A70[n];
+        return s.event_scores[n];
     }
-    let b = &s.padding_x1A70[4 * (n - 4)..4 * (n - 3)];
+    let b = &s.event_scores_rest[4 * (n - 4)..4 * (n - 3)];
     i32::from_be_bytes([b[0], b[1], b[2], b[3]])
 }
 
@@ -589,9 +589,9 @@ impl Running<'_> {
         let s = &mut self.game.game_data.thing.save_data;
         let n = n as usize;
         if n < 4 {
-            s.x1A70[n] = v;
+            s.event_scores[n] = v;
         } else {
-            s.padding_x1A70[4 * (n - 4)..4 * (n - 3)].copy_from_slice(&v.to_be_bytes());
+            s.event_scores_rest[4 * (n - 4)..4 * (n - 3)].copy_from_slice(&v.to_be_bytes());
         }
     }
 }

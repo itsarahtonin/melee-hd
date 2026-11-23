@@ -36,9 +36,9 @@ pub struct Attract {
 /// The save's VS rules and preferences as `gm_80167BC8` reads them
 /// (`gmMainLib_GetGameRules`, `gmMainLib_GetGamePrefs`, `gmMainLib_8015ED30`).
 #[doc(alias = "gmMainLib_GetGamePrefs")]
-pub fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
-    let r = &g.x1850;
-    let p = &g.thing.save_data.x1CB0;
+pub fn saved_rules(g: &crate::game::structs::GameData) -> (GameRules, GamePrefs) {
+    let r = &g.rules;
+    let p = &g.thing.save_data.prefs;
     let rules = GameRules {
         mode: r.mode,
         time_limit: r.time_limit,
@@ -49,7 +49,7 @@ pub fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
         friendly_fire: r.friendly_fire,
         pause: r.pause,
         score_display: r.score_display,
-        sd_penalty: r.unk_xc,
+        sd_penalty: r.sd_penalty,
     };
     let prefs = GamePrefs {
         item_freq: p.item_freq,
@@ -97,7 +97,7 @@ impl Running<'_> {
             p.slot_type = PKIND_CPU as u8;
             p.cpu_level = 9;
             p.cpu_kind = 4;
-            p.xC_b1 = false;
+            p.enters = false;
             if start.rules.match_kind == 1 {
                 p.stocks = 99;
             }
@@ -179,9 +179,9 @@ impl Running<'_> {
             self.lb_audio_reset();
             self.sfx_stop_all();
             if self.game.machine.routing.curr_state_id == 3
-                && self.game.game_data.unk_1.is_multiple_of(2)
+                && self.game.game_data.demo_count.is_multiple_of(2)
             {
-                self.game.game_data.unk_1 = self.game.game_data.unk_1.wrapping_add(1);
+                self.game.game_data.demo_count = self.game.game_data.demo_count.wrapping_add(1);
                 self.game.machine.routing.next_state_id = 1;
             }
             self.game.end_scene();

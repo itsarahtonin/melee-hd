@@ -1549,7 +1549,7 @@ pub fn platform_lights(r: &mut Running, gobj: GObjId) {
     if lg.is_some() {
         let mut cur = first;
         let mut i = 0;
-        let hex = &r.game.grounds[g.0].color_overlay.x2C_hex;
+        let hex = &r.game.grounds[g.0].color_overlay.hex;
         let color = [hex.r, hex.g, hex.b, hex.a];
         while let Some(l) = cur {
             if diffuse(r.game, l) {

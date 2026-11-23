@@ -120,12 +120,12 @@ pub fn spawn_pushed(
     spawn.pos = item(r.game, topi).pos;
     // `Item_InitSpawnCommonFields(&spawn, NULL, facing_dir, true)`.
     spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = spawn.owner;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     spawned(r, gobj);
     start_pushed(r, gobj, decel, Some(topi));

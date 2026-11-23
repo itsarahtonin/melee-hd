@@ -225,7 +225,7 @@ impl Running<'_> {
     #[doc(alias = "ftColl_80078710")]
     #[doc(alias = "ftCommon_8007EE0C")]
     pub(crate) fn throw_hit(&mut self, gobj: GObjId, victim: GObjId, place: bool) {
-        let (holder, held) = if self.game.fighter(gobj).state_flags.x221B_b7 {
+        let (holder, held) = if self.game.fighter(gobj).state_flags.grounded_catch {
             (victim, gobj)
         } else {
             (gobj, victim)
@@ -233,8 +233,8 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.partner = None;
         fp.victim_gobj = None;
-        fp.state_flags.x221B_b5 = false;
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.holds_grab = false;
+        fp.state_flags.grounded_catch = false;
         let hit = self.game.fighter(gobj).throw_hitboxes[0].clone();
         self.record_fighter_hit(gobj, victim, reg(hit.damage));
         let v = self.game.fighter_id(victim);
@@ -303,7 +303,7 @@ impl Running<'_> {
         let (akind, x2070, instance) = (
             af.kind,
             u32::from_be_bytes(af.attack_flags),
-            af.attack_record.x2088,
+            af.attack_record.record_id,
         );
         self.attack_landed(
             Some(gobj),
@@ -371,7 +371,7 @@ impl Running<'_> {
         let vf = &mut self.game.fighters[v.0];
         vf.partner = None;
         vf.victim_gobj = None;
-        vf.state_flags.x221B_b7 = false;
+        vf.state_flags.grounded_catch = false;
     }
 
     /// A slow throw's quick release counts toward a bonus, `pl_80040614`: a victim the
