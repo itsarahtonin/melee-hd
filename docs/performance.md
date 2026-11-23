@@ -449,6 +449,82 @@ LLVM_PROFILE_FILE=/tmp/pgo/%p-%m.profraw target-pgo-gen/bench-dist/melee-bench n
 CARGO_TARGET_DIR=target-pgo RUSTFLAGS=-Cprofile-use=$PWD/pgo.profdata cargo build --locked --profile bench-dist -p melee-bench
 ```
 
+## Vanilla's match from the menus (2026-11-22)
+
+`perf/vanilla-speed` from `7e7ac110`. `perf/release-pgo`'s training found Vanilla's match from power-on several times slower than the Slippi ruleset's on this PC. Vanilla is the settings' default ruleset, and at 60 ticks a second its tick and prediction were over a frame's budget there.
+
+**How it was measured.** The player's paced bench (`melee-hd --bench`, `--high-refresh extrapolate --frames-per-tick 2`, the fast renderer at 1280x960) ran the PGO training's scripted controllers (`--holds`, `tools/dist/src/train.rs` at `8be92781`). The script goes from power-on through the menus into a two-minute VS match, Fox against a level 9 computer Yoshi, and back to the character select. There were four cases:
+- **Vanilla:** the script as is, on Fountain of Dreams.
+- **Slippi, Battlefield:** the Slippi ruleset with the script's own stage presses, which land on Battlefield.
+- **Slippi, Fountain of Dreams:** the Slippi ruleset with Vanilla's stage presses, like for like.
+- **Command line:** a Vanilla match from the command line, no menus (`--p1 fox --p2 yoshi --stage fod --stocks 0 --minutes 2 --seed 1`, port 1's presses the same, Yoshi idle).
+
+A scratch patch to the bench (never committed) wrote each tick's simulation time and its prediction's parts. The numbers are means over the match's ticks 1,000 to 7,900; the menus are ticks 0 to 699. Everything ran on [the worker](#machine) in the runner's exclusive reservations, `release`, the builds alternating over two rounds. A power-on match seeds its random numbers from the host's clock, so each run's match plays out differently: runs of one build differ by up to 4%.
+
+| ms a tick (the worker) | base `7e7ac110` | branch `2342eaa8` |
+| --- | --- | --- |
+| Vanilla, the match: simulation | 5.19 to 5.21 | 1.54 to 1.59 |
+| Vanilla, the match: prediction (restoring the copy + the predicted tick) | 6.36 to 6.50 (2.53 to 2.62 + 3.77 to 3.82) | 1.74 to 1.80 (0.72 + 0.97 to 1.03) |
+| Vanilla, the menus: simulation, prediction | 3.38 to 3.41, 2.21 to 2.23 | 0.98 to 1.00, 0.66 |
+| Slippi on Fountain of Dreams, the match: simulation, prediction | 1.20, 1.12 | 1.15 to 1.18, 1.07 to 1.14 |
+| Slippi on Battlefield, the match: simulation, prediction | 1.02, 0.80 to 0.84 | 0.98 to 1.03, 0.81 to 0.86 |
+| Slippi, the menus: simulation, prediction | 3.71 to 3.87, 1.95 to 2.03 | 1.53 to 1.59, 0.47 to 0.49 |
+| Command line's Vanilla match (the whole run): simulation, prediction | 1.07 to 1.08, 0.90 to 0.91 | 1.08 to 1.10, 0.89 to 0.90 |
+
+The bench's own figures for the whole Vanilla run (menus and match, 8,754 ticks): simulation 4.89 and 4.90 ms a tick against 1.47 and 1.51; prediction 5.75 and 5.86 against 1.59 and 1.63; a tick with its prediction at p50 11.29 and 11.43 ms against 3.01 and 3.11, at p99 14.48 and 14.96 against 5.18 and 5.33.
+
+**Where it went.** Call-graph profiles of the Vanilla run (`perf record -g`, frame pointers, the build with line tables) found two causes, and neither was the simulation's work:
+- **The song's file, read every tick.** After every tick of a scene, a session looks up the song playing on the disc (`Session::read_song`), to add it to the music stream if it hasn't it. It asked the console for the file's bytes, and the player's disc reopens its partition and reads the partition's metadata and the executable on every lookup (`melee_data::disc::Disc`). That was about 30% of the main thread. In a live match of the Slippi ruleset the session isn't ticking, so it never paid this; Vanilla's match runs in the session and paid it every tick. The Slippi ruleset's menus paid it as well.
+- **The heap's image, copied twice a tick.** A session keeps the heap's image (docs/engine.md, a session's heap leftovers): runs of known bytes kept by 64 KiB page, each page shared between snapshots until written. The prediction restores its copy from the real state every tick, sharing every page. So the real tick and the predicted tick each copied every page they wrote, about 1,500 runs a page in `BTreeMap` nodes, and each restore freed the copy's pages. That was about a fifth of the thread, and all of restore's growth.
+
+**The changes**, each a commit:
+1. A session keeps the song it last looked up with its entry number (`Session::song_read`, not state). While the song is the same and the stream has its entry, the disc isn't asked (`song_had`, its unit test).
+2. A page keeps its runs by the 1 KiB chunk each starts in. Each chunk is shared apart, so a write copies its chunk alone. The runs and their keys are what one map a page held (a run still ends at most at its page's end), so the state, its hash and its comparison are unchanged. `chunked_pages_hold_what_one_map_holds` plays 4,000 random writes and takes against the old one-map-a-page code and compares every run, lookup and read.
+3. A cut shortens the run it starts inside in place, and lists the runs it hits on the stack.
+4. A chunk's runs are a sorted vector: a copy is one allocation, a drop one free.
+5. Chunks and pages carry a version number, renewed at every write (not state). A restore leaves what the two share or hold alike. It takes the state's runs into a chunk the copy holds alone, and shares the rest. So once the state and its copy have both written a chunk, neither shares it, and neither tick copies it again.
+6. An allocator's free-list word goes into the image held in place (`Src::Word`), read and hashed as the four bytes `Src::Bytes` held, instead of in a buffer of its own. The search for the run before an address takes the nearest earlier chunk's last run without searching it.
+
+Measured one after another (the Vanilla match, ms a tick): after 1, simulation 1.77 and prediction 4.57 to 4.71; after 2 (4 KiB chunks), 1.67 to 1.72 and 2.30 to 2.42; 1 KiB chunks and 3, 1.60 and 2.06 to 2.11 (256-byte chunks were no faster); 4, 1.59 and 1.92 to 1.96; 5, 1.54 to 1.60 and 1.80 to 1.83; 6, 1.49 to 1.55 and 1.71 to 1.76. Comparing the setup and the card with the copy's before copying them, rather than copying them every restore, gained nothing and was left out.
+
+**Against the target.** The brief's target was within 1.5 times the Slippi ruleset's per-tick time, simulation and prediction each. Like for like, against Slippi on the same stage, the Vanilla match's simulation is 1.34 times Slippi's and its prediction about 1.6 times. Against Slippi on the training script's Battlefield, a cheaper stage, the ratios are 1.55 and 2.1. A tick with its prediction now takes about 3.1 ms against 11.4 before (p50 over the whole run; p99 about 5.3 against 15.0), well inside a 60 Hz tick's 16.7 ms on the worker. What the Vanilla match still costs over Slippi's is the image's own bookkeeping:
+- the runs each allocation and free writes, in both the real and the predicted tick, about a quarter of the predicted tick;
+- the chunks a tick changed, copied back by the restore;
+- a session's larger state, copied by every restore. Its setup and its card each hold the memory card's half-megabyte image.
+
+That is the cost of modelling memory exactly, not of doing work twice. Going further would mean keeping the card's image shared between snapshots (`melee_save::Card` and `Setup::card` behind an `Arc`, a change across the crates that build a setup), or making each run's bookkeeping cheaper still. The command line's Vanilla match, which keeps no image, costs what Slippi's does on the same stage.
+
+**The benchmark matches** (`melee-bench native --runs 5`, three rounds alternating, median frames per second over the rounds; every run in sync). They don't run the image, and they gained 1 to 4%, from the code's layout:
+
+| Match | Base | Branch |
+| --- | --- | --- |
+| `fox-fox-fd` | 2,670 | 2,699 |
+| `fox-marth-bf` | 2,627 | 2,655 |
+| `fox-marth-fd` | 2,491 | 2,510 |
+| `fox-marth-ps` | 2,290 | 2,334 |
+| `ics-peach-ps` | 1,790 | 1,829 |
+| `ganon-captain-fd` | 2,502 | 2,574 |
+| Sarah's 3.19 replay | 2,854 | 2,972 |
+
+```sh
+# the bench (the training's holds: tools/dist/src/train.rs at 8be92781, vs_script and monkey)
+melee-hd --power-on --ruleset vanilla --saves DIR --holds "$(cat vanilla.txt)" --bench 8760 --high-refresh extrapolate --frames-per-tick 2
+melee-hd --power-on --ruleset slippi --replays DIR --holds "$(cat slippi-fod.txt)" --bench 8700 --high-refresh extrapolate --frames-per-tick 2
+melee-hd --p1 fox --p2 yoshi --stage fod --stocks 0 --minutes 2 --seed 1 --holds "$(cat cmdline.txt)" --bench 7400 --high-refresh extrapolate --frames-per-tick 2
+melee-bench native --runs 5 fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ics-peach-ps ganon-captain-fd
+```
+
+**Checks.** The state stays the same, tick for tick:
+- **Sessions:** the verify list's 263 `diffsession-*` session jobs, base and branch, on the worker, with a scratch patch (never committed) to the oracle's `session` that writes every tick's whole-state hash, the menus' game set aside during a live match included. All 979,007 ticks' hashes are equal, and every job ends as it did on the base. The one that fails, `mutate-no-image`, fails on both, as a mutation run must.
+- **Replays:** the verify list's 213 Vanilla replay diffs. The base's full diffs are clean against the traces and wrote their golden hashes; the branch's golden check matches all 2,342,528 ticks.
+- **Rollbacks:** `session-sync --rollback 7 --shortcut` on `menu-tour`, `rules-match`, the options' `set`, `menus-ics-fox-fod` with and without items, `menus-cpu-fox-fox-fod`, `stage-ps` and `camera-full` finds no difference. The restore's chunk-by-chunk path runs on every rollback.
+- **Tests:** these pass:
+  - `melee-oracle --test ruleset` at one thread (12 tests);
+  - eight of `--test session`'s matches from the menus (`power_on_runs_through_the_main_menu`, `a_session_plays_its_match_from_the_selects`, `a_second_match_sets_its_spawner_up_again`, `the_rules_reach_the_match`, `matches_from_the_menus_on_three_stages`, `a_session_match_rolls_back`, `the_approach_match_rolls_back`, `the_attract_match_on_brinstar_reads_a_leftover`);
+  - `ticks_and_restores_dont_allocate` at one thread;
+  - melee-player's `predict_tests`, which find each prediction equal to the tick it predicted, in a session too.
+- **The new unit tests** (`a_song_had_skips_the_disc_only_while_its_entry_is_there`, `chunked_pages_hold_what_one_map_holds`, `a_word_written_reads_and_hashes_as_its_four_bytes`) each fail when their piece is broken: the song's entry check dropped; a chunk range's last chunk or the run before misfound; a lookup in the wrong chunk; a run cut but not shortened; an unsorted insert; a restore that skips a page it shares no longer or keeps pages past the state's; a chunk or page whose version isn't renewed on a write; the word hashed apart from its bytes.
+
 ## Benchmark matches
 
 | Match | Stage | Fighters (costume) | Seed | Frames | Length | Ends |

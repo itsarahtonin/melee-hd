@@ -22,7 +22,6 @@
 //! copies lists of pages; what the scenes before left is one layer, the scene's own changes
 //! two beside it, which the scene's end folds in.
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use melee_data::archive::{ArchiveId, Archives};
@@ -1794,6 +1793,7 @@ impl Image {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
 
     fn bytes(b: &[u8]) -> Src {
         Src::Bytes {
@@ -2165,7 +2165,10 @@ mod tests {
         for img in [&mut a, &mut b] {
             img.release(0x8040_000E, 0x8040_0012);
         }
-        assert_eq!(a.bytes(&data, 0x8040_000C, 8), b.bytes(&data, 0x8040_000C, 8));
+        assert_eq!(
+            a.bytes(&data, 0x8040_000C, 8),
+            b.bytes(&data, 0x8040_000C, 8)
+        );
         assert_eq!(a.bytes(&data, 0x8040_0012, 2).0, [0x45, 0x67]);
         let hash = |i: &Image| {
             let mut h = StateHasher::new();
