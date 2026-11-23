@@ -12,7 +12,7 @@ use crate::game::state::Running;
 use crate::hsd::display::Draw;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::lobj::{self, LObjId};
-use crate::hsd::shadow::{self, ViewingRect};
+use crate::hsd::shadow::{self, ShadowId, ViewingRect};
 use crate::vec::Vec3;
 
 /// `HSD_GOBJ_PLINK_FIGHTER`.
@@ -195,4 +195,38 @@ impl Running<'_> {
         }
         self.show_low_models();
     }
+}
+
+/// The decomp's `LbShadow`.
+#[derive(
+    melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq, melee_derive::Mirror,
+)]
+#[mirror(c = "LbShadow", size = 0x8, lay, pad(0x1, 3))]
+pub struct LbShadow {
+    #[at(0x0, bits(0, 1))]
+    #[doc(alias("x0_b0"))]
+    pub off_no_light: bool,
+    #[at(0x0, bits(1, 1))]
+    #[doc(alias("x0_b1"))]
+    pub off_unset: bool,
+    #[at(0x0, bits(2, 1))]
+    #[doc(alias("x0_b2"))]
+    pub off_over_limit: bool,
+    #[at(0x0, bits(3, 1))]
+    #[doc(alias("x0_b3"))]
+    pub off_nothing_drawn: bool,
+    #[at(0x0, bits(4, 1))]
+    #[doc(alias("x0_b4"))]
+    pub off_by_stage: bool,
+    #[at(0x0, bits(5, 1))]
+    #[doc(alias("x0_b5"))]
+    pub off_by_debug: bool,
+    #[at(0x0, bits(6, 1))]
+    #[doc(alias("x0_b6"))]
+    pub unused_b6: bool,
+    #[at(0x0, bits(7, 1))]
+    #[doc(alias("x0_b7"))]
+    pub unused_b7: bool,
+    #[at(0x4)]
+    pub shadow: Option<ShadowId>,
 }

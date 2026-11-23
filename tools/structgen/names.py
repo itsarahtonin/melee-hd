@@ -350,96 +350,6 @@ FIGHTER = {
     "x2338": "hammer_timers",
 }
 
-CPU_FIGHTER = {
-    # The spawn's third argument (`ftCo_800A101C`), kept for the restarts a kind or level
-    # change makes.
-    "x14": "spawn_arg",
-    # The behavior, and the two the kind starts from.
-    "x18": "behavior",
-    "x1C": "default_behavior",
-    "x20": "alt_behavior",
-    # Written by the spawn alone.
-    "x24": "unread_24",
-    "x28": "unread_28",
-    "x2C": "item_worth_min",
-    "x30": "retarget_timer",
-    "x34": "ranged_delay",
-    "x38": "destination_reach",
-    "x3C": "walk_far",
-    "x40": "keep_away_distance",
-    "x44": "target",
-    "x48": "last_target",
-    "x4C": "item_target",
-    "x50": "enemy_item",
-    "x54": "destination",
-    "x5C": "destination_distance",
-    "x60": "destination_timer",
-    "x64": "home",
-    # The picked attack's reach.
-    "x6C": "attack_reach_0",
-    "x74": "attack_reach_1",
-    "x7C": "frame_counter",
-    "x80": "hold_back_counter",
-    "x84": "stage_read_count",
-    "x88": "stand_timer",
-    "x8C": "stand_kind",
-    "x90": "ranged_count",
-    "x94": "hold_choice",
-    "x98": "spawn_pos",
-    "xA4": "command",
-    "xA8_array": "allowed_commands",
-    "xC8": "allowed_count",
-    "pad_xC9": "pad_c9",
-    "xCC_array": "ruled_out_commands",
-    "xEC": "ruled_out_count",
-    "pad_xED": "pad_ed",
-    "xF0": "threat_fighter",
-    "xF4": "threat_item",
-    "xF8_b0": "fear_target",
-    "xF8_b12": "threat_kind",
-    "xF8_b34": "jump_kind",
-    "xF8_b5": "coin_flip",
-    "xF8_b6": "near_target",
-    "xF8_b7": "attacking",
-    "xF9_b0": "keeps_target",
-    "xF9_b1": "fleeing",
-    "xF9_b2": "acts_alone",
-    # What a decision lets the fighter do (the fear flags clear them).
-    "xF9_b3": "may_jump_attack",
-    "xF9_b4": "may_air_attack",
-    "xF9_b5": "may_ranged_attack",
-    "xF9_b6": "may_shield",
-    "xF9_b7": "may_pick_up",
-    "xFA_b0": "unused_fa_b0",
-    "xFA_b1": "tech_shield",
-    "xFA_b2": "ledge_picked",
-    "xFA_b34": "human_target_rule",
-    "xFA_b5": "drifting_back",
-    "xFA_b6": "off_stage",
-    "xFA_b7": "follows_popo",
-    "xFB_b0": "nana_recovering",
-    "xFB_b1": "unused_fb_b1",
-    "xFB_b2": "unused_fb_b2",
-    "xFB_b3": "unused_fb_b3",
-    "xFB_b4": "unused_fb_b4",
-    "xFB_b5": "unused_fb_b5",
-    "xFB_b6": "unused_fb_b6",
-    "xFB_b7": "unused_fb_b7",
-    # Nana's record of Popo's inputs, and where it's written and read.
-    "xFC": "partner_inputs",
-    "x444": "partner_input_write",
-    "x448": "partner_input_read",
-    "csP": "script_cursor",
-    "x558": "jump_height",
-    # The hurtboxes' extent: behind, ahead, their middle, the top.
-    "x55C": "hurt_behind",
-    "x560": "hurt_ahead",
-    "x564": "hurt_middle",
-    "x568": "hurt_top",
-    "x56C": "reach",
-    "x570": "reach_scale",
-}
-
 # `Item`, the item's block.
 ITEM = {
     # A freed item's link to the next free item (`HSD_ObjFree` writes it over the first word).
@@ -1096,7 +1006,7 @@ STEP_2 = {
     **ITEM_VARS,
 }
 
-FIELD_NAMES = {"Fighter": FIGHTER, "CpuFighter": CPU_FIGHTER}
+FIELD_NAMES = {"Fighter": FIGHTER}
 for _struct in sorted(set(STEP_2) | set(UNUSED_ITEM_FIELDS)):
     FIELD_NAMES[_struct] = {**STEP_2.get(_struct, {}), **UNUSED_ITEM_FIELDS.get(_struct, {})}
 

@@ -97,7 +97,7 @@ pub struct Layout {
     /// own (its fields are checked against the struct around it).
     pub c_name: Option<&'static str>,
     pub size: u32,
-    /// The runs of bytes no field holds (offset, bytes): the compiler's padding.
+    /// The runs of bits no field holds (first bit, bits): the compiler's padding.
     pub pads: Vec<(u32, u32)>,
     pub fields: Vec<FieldLayout>,
 }
@@ -268,11 +268,85 @@ macro_rules! handles {
     )*};
 }
 
-use super::handles::StartHookId;
+use super::ef::QueuedId;
+use super::handles::{
+    AnimBufId, AttrsId, BoneTableId, CameraBoxId, DObjListId, DynamicsId, EffectId, FighterId,
+    ItemId, ItemLinkId, ItemLogicRef, ItemStatesRef, PartsId, RawPtr, StartHookId,
+};
+use super::held::Kept;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::lobj::LObjId;
+use crate::hsd::shadow::ShadowId;
+use crate::hsd::sis::TextId;
 
-handles!(GObjId, JObjId, StartHookId);
+handles!(
+    GObjId,
+    JObjId,
+    StartHookId,
+    AnimBufId,
+    AttrsId,
+    BoneTableId,
+    CameraBoxId,
+    DObjListId,
+    DynamicsId,
+    EffectId,
+    FighterId,
+    ItemId,
+    ItemLinkId,
+    ItemLogicRef,
+    ItemStatesRef,
+    LObjId,
+    PartsId,
+    QueuedId,
+    ShadowId,
+    TextId,
+);
+
+/// A pointer no port has mapped yet: its address, compared and laid out as the word it is.
+impl Mirror for RawPtr {
+    const SIZE: u32 = 4;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        RawPtr(m.u32(at))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        if self.0 != m.u32(at) {
+            cx.mismatch(path, format!("{:#x}", self.0), format!("{:#x}", m.u32(at)));
+        }
+    }
+}
+
+impl LayOut for RawPtr {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn LayCx) {
+        l.put_u32(at, self.0);
+    }
+}
+
+/// A field no code writes (`config.KEPT`): imported as memory holds it, compared and laid out
+/// only where known.
+impl<T: Mirror + std::fmt::Debug> Mirror for Kept<T> {
+    const SIZE: u32 = T::SIZE;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        Kept(Some(T::import(m, at, cx)))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        if let Some(v) = &self.0 {
+            v.compare(m, at, path, cx);
+        }
+    }
+}
+
+impl<T: LayOut> LayOut for Kept<T> {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn LayCx) {
+        if let Some(v) = &self.0 {
+            v.lay(l, at, cx);
+        }
+    }
+}
 
 impl<H: Handle> Mirror for Option<H> {
     const SIZE: u32 = 4;

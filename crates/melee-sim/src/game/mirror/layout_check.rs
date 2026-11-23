@@ -30,9 +30,17 @@ struct CRecord {
 /// The hand-written structs, by their layouts. Each is on structgen's `OWNED` list.
 fn owned() -> Vec<Layout> {
     use crate::game::camera::types::{Camera, CameraQuake, CameraTransformState, OrbitLimits};
+    use crate::game::ft::types::{
+        AbsorbAttrs, AfterimagePoints, AttackRecord, CommonAttrs, CpuFighter, DObjList, EggAttrs,
+        FighterDamage, FighterHurtCapsule, FighterInput, FighterStateFlags, FtInputTimers,
+        FtPartsVis, HitResult, IntVec2, ItemPickup, LedgePoint, ModelVariant, PartAnim,
+        PartnerInput, ReflectAttrs, SmashAttrs, StaminaMarker, StepFeet, U8Vec2,
+    };
     use crate::game::gr::types::{
         Ground, GroundFlags, GroundParam, StageBits, StageBlastZone, StageCameraInfo, StageInfo,
     };
+    use crate::lb::colanim::ColorOverlay;
+    use crate::lb::shadow::LbShadow;
     use crate::mp::coll::{CollData, Ecb, Surface};
     [
         CollData::layout(),
@@ -49,6 +57,33 @@ fn owned() -> Vec<Layout> {
         GroundParam::layout(),
         Ground::layout(),
         GroundFlags::layout(),
+        FighterStateFlags::layout(),
+        PartAnim::layout(),
+        StaminaMarker::layout(),
+        LedgePoint::layout(),
+        AfterimagePoints::layout(),
+        ModelVariant::layout(),
+        FighterInput::layout(),
+        FtInputTimers::layout(),
+        U8Vec2::layout(),
+        IntVec2::layout(),
+        ItemPickup::layout(),
+        FtPartsVis::layout(),
+        DObjList::layout(),
+        FighterHurtCapsule::layout(),
+        ReflectAttrs::layout(),
+        AbsorbAttrs::layout(),
+        FighterDamage::layout(),
+        StepFeet::layout(),
+        HitResult::layout(),
+        AttackRecord::layout(),
+        CommonAttrs::layout(),
+        EggAttrs::layout(),
+        SmashAttrs::layout(),
+        CpuFighter::layout(),
+        PartnerInput::layout(),
+        ColorOverlay::layout(),
+        LbShadow::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))
@@ -156,11 +191,7 @@ fn flatten(
     runs: &mut Vec<(u32, u32, String, Option<&'static str>)>,
     pads: &mut Vec<(u32, u32)>,
 ) {
-    pads.extend(
-        l.pads
-            .iter()
-            .map(|&(a, n)| (base + a * 8, base + (a + n) * 8)),
-    );
+    pads.extend(l.pads.iter().map(|&(a, n)| (base + a, base + a + n)));
     for f in &l.fields {
         let FieldLayout {
             name,

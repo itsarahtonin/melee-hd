@@ -34,13 +34,14 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::types::StepFeet;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::kinds::{
     egg, fflower, freeze, lgun, lipstick, parasol, sscope, sscopebeam, wstar,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, item};
 use melee_sim::game::state::Running;
-use melee_sim::game::structs::{lb_80014638_arg0_t, lb_80014638_arg1_t};
+use melee_sim::game::structs::lb_80014638_arg1_t;
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
@@ -227,7 +228,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     let vec_at = |p: u32| Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
     if name == "lb_80014638" {
         let (p, q) = (r(3), r(4));
-        let feet = lb_80014638_arg0_t {
+        let feet = StepFeet {
             prev_feet: vec_at(p),
             feet: vec_at(p + 12),
         };
@@ -574,7 +575,7 @@ fn stepped_on_matches() {
                 _ => (next(), next()),
             };
             let (l, r) = (next(), next());
-            let feet = lb_80014638_arg0_t {
+            let feet = StepFeet {
                 prev_feet: Vec3::new(next(), next(), fz),
                 feet: Vec3::new(next(), next(), tz),
             };

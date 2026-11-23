@@ -193,7 +193,7 @@ fn hit_capsule(
 #[doc(alias("x1614"))]
 pub fn coin_capsule(
     objs: &mut Objects,
-    c: &crate::game::structs::Fighter_x1614_t,
+    c: &crate::game::ft::types::StaminaMarker,
     pass: i32,
     scale_y: f32,
 ) -> bool {
@@ -350,7 +350,7 @@ pub fn damage(objs: &mut Objects, pts: [Vec3; 2], pass: i32) -> bool {
 pub fn ledge(
     objs: &mut Objects,
     data: &Archives,
-    p: &crate::game::structs::Fighter_x1670_t,
+    p: &crate::game::ft::types::LedgePoint,
     pass: i32,
 ) -> bool {
     let (color, amb) = LEDGE;

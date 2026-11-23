@@ -105,97 +105,6 @@ ITEM_XDCC_FLAG = {
     "b3": "checks_blast_zones",
 }
 
-# A fighter's damage state (`dmg`, `Fighter::dmg`, the fighter's `x182C` to `x1960`).
-DMG = {
-    # The damage it takes is scaled by this (Yoshi's egg sets it).
-    "x182c_behavior": "damage_scale",
-    "x1830_percent": "percent",
-    # What its armor (Kirby's stone, a grab's) has left before it breaks.
-    "x1834": "armor_hp",
-    # The damage taken this frame, applied at the collision resolve.
-    "x1838_percentTemp": "pending_damage",
-    "x183C_applied": "damage_applied",
-    # The largest whole damage of the frame's tip hits.
-    "x1840": "max_tip_damage",
-    "x1848_kb_angle": "kb_angle",
-    "x184c_damaged_hurtbox": "damaged_hurtbox",
-    "x1854_collpos": "coll_pos",
-    "x1860_element": "element",
-    # The weighed hit's severity, damage, direction, angle and height: only written.
-    "x1864": "unread_1864",
-    "x1868_source": "source",
-    "x186c": "unread_186c",
-    "x1870": "unread_1870",
-    "x1874": "unread_1874",
-    "x1878": "unread_1878",
-    # A tip's hit (`ftColl_8007AB80`), held back while its hitlag lasts (`ftColl_8007BE3C`):
-    # its knockback, where it hit, its element and severity, whose it was and its damage.
-    "x187c": "tip_kb",
-    "x1880": "tip_pos",
-    "x188c": "tip_element",
-    "x1890": "tip_severity",
-    "x1894": "tip_source",
-    "x1898": "tip_damage",
-    # Frames of a hit still to apply: any keeps the frame's hit handling running.
-    "x189C_unk_num_frames": "hit_frames",
-    # The tips' knockback the frame applied, 0 without tips.
-    "x18a0": "tip_kb_applied",
-    "x18A4_knockbackMagnitude": "kb_magnitude",
-    # The knockback of the hit that sent it, which SDI's threshold reads.
-    "x18A8": "hit_kb",
-    "x18ac_time_since_hit": "time_since_hit",
-    # The model's shake (`ftCommon_8008021C`).
-    "x18B8": "shake_x",
-    "x18BC": "shake_y",
-    # Whoever hit it last: their spawn number, their player (6: none), the attack, its source's
-    # class (3: an item) and kind.
-    "x18C0": "source_spawn",
-    "x18c4_source_ply": "source_player",
-    "x18C8": "source_attack",
-    "x18CC": "source_class",
-    "x18D0": "source_kind",
-    # The last attack's record and the hit records (`ft_800892D4` clears them).
-    "x18d4": "attack_record",
-    "x18d8": "hit_records",
-    "x18ec_instancehitby": "instance_hit_by",
-    # Health a food or a heart still has to give (stamina mode).
-    "x18F0": "healing",
-    # A cape's turn's frames.
-    "x18F4": "cape_turn_frames",
-    # The hit shake's kind (0 in the air, 1 on the ground, 2 electric), its frames, step, length
-    # and the floor's normal it shakes along.
-    "x18F8": "shake_kind",
-    "x18f9": "unused_18f9",
-    "x18fa_model_shift_frames": "model_shift_frames",
-    "x18FC": "shake_step",
-    "x18FD": "shake_len",
-    "x1900": "shake_normal_x",
-    "x1904": "shake_normal_y",
-    # The sound a hard hit queues for when hitlag ends, and the character's table of them.
-    "x1908": "queued_sfx",
-    "x190C": "queued_sfx_table",
-    # Frames counted toward a stage's damage over time (`Fighter_procAnim`).
-    "x1910": "dot_frames",
-    # The largest whole damage it dealt an item this frame.
-    "x1914": "item_hit_damage",
-    # A clank's recoil.
-    "x191C": "clank_damage",
-    # The largest damage its shield took this frame, the push and its direction.
-    "x1924": "max_shield_damage",
-    "x1928": "shield_push",
-    "x192c": "shield_push_dir",
-    # The bounds it picks items up and steps on them in (`ft_800819A8`).
-    "x1930": "item_pickup_bounds",
-    # A bounce off an item: its frames and those left.
-    "x1948": "bounce_frames",
-    "x194C": "bounce_frames_left",
-    "x1950": "stepped_on_item",
-    # Frames hitlag is held past its end (the longest of a cape's turns).
-    "x1954": "hold_frames",
-    "x1958": "pending_hitlag_frames",
-    "x195c_hitlag_frames": "hitlag_frames",
-}
-
 # A match's rules (`StartMeleeRules`, `vs.start`), which the replays' game info block holds.
 START_MELEE_RULES = {
     # How the damage displays show (`ifStatus_802F665C`).
@@ -391,75 +300,6 @@ STATIC_PLAYER_FLAGS_AE = {
     "b7": "unused_b7",
 }
 
-# The fighter's nested structs (the continuation's first group): a color overlay (`ColorOverlay`,
-# a fighter's, an item's and a stage object's) under the decomp's half-names, `state_flags`'
-# bits (`Fighter_x221B`), the part animations, the stamina markers, the reflect and absorb
-# attributes, Nana's input record, the afterimage's points, the swing chains' colliders and the
-# parts' visibility lookups.
-COLOR_OVERLAY = {
-    # Laid out for the heap's image; nothing writes or reads it.
-    "x24": "unused_24",
-    "x28_colanim": "colanim",
-    "x2C_hex": "hex",
-    "x30_color_red": "color_red",
-    "x34_color_green": "color_green",
-    "x38_color_blue": "color_blue",
-    "x3C_color_alpha": "color_alpha",
-    "x40_colorblend_red": "colorblend_red",
-    "x44_colorblend_green": "colorblend_green",
-    "x48_colorblend_blue": "colorblend_blue",
-    "x4C_colorblend_alpha": "colorblend_alpha",
-    "x50_light_color": "light_color",
-    "x54_light_red": "light_red",
-    "x58_light_green": "light_green",
-    "x5C_light_blue": "light_blue",
-    "x60_light_alpha": "light_alpha",
-    "x64_lightblend_red": "lightblend_red",
-    "x68_lightblend_green": "lightblend_green",
-    "x6C_lightblend_blue": "lightblend_blue",
-    "x70_lightblend_alpha": "lightblend_alpha",
-    "x74_light_rot_x": "light_rot_x",
-    "x78_light_rot_yz": "light_rot_yz",
-    "x7C_color_enable": "color_enable",
-    "x7C_flag2": "flag2",
-    "x7C_light_enable": "light_enable",
-    "x7C_flag4": "flag4",
-    "x7C_flag5": "flag5",
-    "x7C_flag6": "flag6",
-    "x7C_flag7": "flag7",
-    "x7C_flag8": "flag8",
-}
-FIGHTER_X221B = {
-    # A shield bubble is up (`ftCo_800925A4`'s drain); a hit on it deflects or doesn't enter
-    # (`ftColl_8007B1B8`); the bubble faces one way, and passes all but the boxes reflectors meet.
-    "x221B_b0": "shield_bubble",
-    "x221B_b1": "shield_deflects",
-    "x221B_b2": "shield_no_entry",
-    "x221B_b3": "bubble_faces",
-    "x221B_b4": "bubble_reflectors_only",
-    # It holds a fighter it grabbed (`ftColl_8007B5AC`'s catch).
-    "x221B_b5": "holds_grab",
-    "x221B_b6": "item_grab_set",
-    # A special's catch of a grounded fighter (Falcon Dive's, `ftCa_SpecialHi`).
-    "x221B_b7": "grounded_catch",
-}
-FIGHTER_X8B0 = {"x0": "unused_0", "x4": "frames", "x8": "frame", "xC": "blend", "x10": "part", "x11": "anim"}
-FIGHTER_X1614 = {"x0": "radius", "x4": "joint", "x8": "pos", "x14": "prev_pos", "x20": "contact"}
-FIGHTER_REFLECT = {
-    "x1A2C_reflectHitDirection": "hit_direction",
-    "x1A30_maxDamage": "max_damage",
-    "x1A34_damageMul": "damage_mul",
-    "x1A38_speedMul": "speed_mul",
-    "x1A3C_damageOver": "damage_over",
-}
-FIGHTER_ABSORB = {"x1A40_absorbHitDirection": "hit_direction", "x1A44_damageTaken": "damage_taken", "x1A48_hitsTaken": "hits_taken"}
-# An entry of Nana's record of Popo's inputs.
-FIGHTER_X1A88_XFC = {"x0": "buttons", "x4": "ltrigger", "x5": "rtrigger", "xA": "unused_a", "xB": "unused_b"}
-# An afterimage's two points.
-FIGHTER_X20B0 = {"x0": "point_0", "xC": "point_1"}
-FIGHTER_X1670 = {"x14": "unused_14", "x18": "center", "x24": "bone"}
-FT_PARTS_VIS = {"xC": "lookups"}
-
 # The fighter's data structs (the continuation's second group): a character's save records
 # (`FighterData`, its 1P records `FighterData_x7C`), a smash attack's charge (`_SmashAttr`), the
 # common attributes (`ftCo_DatAttrs`, Yoshi's egg `ftCo_DatAttrs_xBC_t`), a part's bone
@@ -502,50 +342,6 @@ FIGHTER_DATA = {
     "x7B": "unused_7b",
     "x7C": "records",
 }
-SMASH_ATTR = {
-    "x2118_frames": "frames",
-    "x211C_holdFrame": "hold_frame",
-    "x2120_damageMul": "damage_mul",
-    "x2124_frameSpeedMul": "frame_speed_mul",
-    # The color animation the charge plays (0x7B none).
-    "x2128": "color_anim",
-    # The model's shake, a row of `Fighter_SmashChargeShakeTable` each frame.
-    "x212C": "shake_row",
-    "x212D": "shake_rows",
-    "x212E": "unused_212e",
-    "x212F": "unused_212f",
-    "x2130_sfxBool": "sfx_played",
-    # The cloak's look: 2 while it holds, 1 as it flickers.
-    "x2134_vibrateFrame": "vibrate_frame",
-    # The entry point a respawn goes to (-1 the platform).
-    "x2135": "rebirth_point",
-    "x2136": "unused_2136",
-    "x2137": "unused_2137",
-    "x2138_smashSinceHitbox": "smash_since_hitbox",
-}
-FTCO_DAT_ATTRS = {
-    # Yoshi's egg.
-    "xBC": "egg",
-    # The star Kirby spits a swallowed fighter out in.
-    "xDC": "kirby_star_scale",
-    # The Bunny Hood's bones 4 and 8 moved, its ears scaled by the height.
-    "x114": "hood_shift_4",
-    "x120": "hood_shift_8",
-    "x12C": "hood_ear_scale",
-    # The flower's offset on the head and its petals' scale.
-    "x130": "flower_offset",
-    "x13C": "flower_scale",
-    # The scale of a script's effects 0x438 and 0x439.
-    "x144": "effect_scale",
-    # The freeze's head offset (`ftCo_DamageIce_Init`).
-    "x150_damageice_unk": "ice_offset_z",
-    "x154_damageice_unk": "ice_offset_y",
-    "x168": "unused_168",
-    "x170": "camera_bone_offset",
-    # The feet's height in the step-on box.
-    "x17C": "feet_height",
-}
-FTCO_DAT_ATTRS_XBC = {"x4": "hurt_a_offset", "x10": "hurt_b_offset", "x1C": "hurt_scale"}
 FIGHTER_BONE = {
     # The joint an animation is read into before it's blended onto `joint`.
     "x4_jobj2": "interp_joint",
@@ -553,21 +349,8 @@ FIGHTER_BONE = {
     # Byte 0 the bone's depth in the tree, byte 1 flags.
     "xC_u": "tree",
 }
-# The fighter's feet for stepping on an item (`lb_80014638`): the left and right edges in x and
-# y, the height in z, last frame's and this one's.
-LB_STEP_FEET = {"x0": "prev_feet", "xC": "feet"}
 # An item's top that can be stepped on: its motion this frame, and its span.
 LB_STEP_TOP = {"unk_x": "motion_x", "unk_y": "motion_y", "x8": "span"}
-# The attack record (`x2074`) an attack's hits take.
-STRUCT_2074 = {
-    # `x` the percent the attacker had at the attack's start, `y` the hit's victim's (0 here).
-    "x2074_vec": "percents",
-    # `x` the knockback (0 here), `y` the player who last hit the attacker with an item (6 none).
-    "x207C": "kb_and_thrower",
-    "x10": "flags",
-    # The record's number (`plAttack_80037B08`).
-    "x2088": "record_id",
-}
 # A hit's record (`dmg.hit_records`), copied from the attack record and filled in at the hit.
 FT_800898B4 = {
     "x0": "attacker_percent",
@@ -1193,18 +976,6 @@ SPAWN_ITEM = {
     "x47_flag": "unused_47",
     "x48_ground_or_air": "ground_or_air",
 }
-# What holds a fighter's shadow off: no light, (nothing sets `b1`), past the fifth, nothing to
-# draw, the stage's surface, the debug menu.
-LB_SHADOW = {
-    "x0_b0": "off_no_light",
-    "x0_b1": "off_unset",
-    "x0_b2": "off_over_limit",
-    "x0_b3": "off_nothing_drawn",
-    "x0_b4": "off_by_stage",
-    "x0_b5": "off_by_debug",
-    "x0_b6": "unused_b6",
-    "x0_b7": "unused_b7",
-}
 CONTROLLER_MAP = {
     "x0": "ports",
     "xF0": "repeat_fn",
@@ -1228,7 +999,7 @@ GROUPS = [
         "CameraBoxFlags_x0": CAMERA_BOX_FLAGS_X0,
         "Item_xDCC_flag": ITEM_XDCC_FLAG,
     },
-    {"dmg": DMG},
+    {},
     {"StartMeleeRules": START_MELEE_RULES, "MatchPlayerData": MATCH_PLAYER_DATA},
     {
         "_StaticPlayer": STATIC_PLAYER,
@@ -1236,28 +1007,12 @@ GROUPS = [
         "_StaticPlayer_more_flags": STATIC_PLAYER_MORE_FLAGS,
         "_StaticPlayer_flagsAE": STATIC_PLAYER_FLAGS_AE,
     },
-    {
-        "ColorOverlay": COLOR_OVERLAY,
-        "Fighter_x221B": FIGHTER_X221B,
-        "Fighter_x8B0_t": FIGHTER_X8B0,
-        "Fighter_x1614_t": FIGHTER_X1614,
-        "Fighter_ReflectAttr": FIGHTER_REFLECT,
-        "Fighter_AbsorbAttr": FIGHTER_ABSORB,
-        "Fighter_x1A88_xFC_t": FIGHTER_X1A88_XFC,
-        "Fighter_x20B0_t": FIGHTER_X20B0,
-        "Fighter_x1670_t": FIGHTER_X1670,
-        "FtPartsVis": FT_PARTS_VIS,
-    },
+    {},
     {
         "FighterData_x7C": FIGHTER_DATA_X7C,
         "FighterData": FIGHTER_DATA,
-        "_SmashAttr": SMASH_ATTR,
-        "ftCo_DatAttrs": FTCO_DAT_ATTRS,
-        "ftCo_DatAttrs_xBC_t": FTCO_DAT_ATTRS_XBC,
         "FighterBone": FIGHTER_BONE,
-        "lb_80014638_arg0_t": LB_STEP_FEET,
         "lb_80014638_arg1_t": LB_STEP_TOP,
-        "Struct2074": STRUCT_2074,
         "ft_800898B4_t": FT_800898B4,
     },
     {
@@ -1319,7 +1074,6 @@ GROUPS = [
         "lb_00F9_UnkDesc0": SWING_LINK,
         "DynamicsData": DYNAMICS_DATA,
         "SpawnItem": SPAWN_ITEM,
-        "LbShadow": LB_SHADOW,
         "controller_map": CONTROLLER_MAP,
         "gm_controller_map": GM_CONTROLLER_MAP,
     },
