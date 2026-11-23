@@ -1052,7 +1052,7 @@ impl Comparer<'_> {
             game.gr.coll_stamp,
             self.u16(sym("Ground_804D6954")) as i16,
         );
-        self.start_hooks(game.stage_info.x6A4, self.u32(info + 0x6A4));
+        self.start_hooks(game.stage_info.start_hooks, self.u32(info + 0x6A4));
         self.dynamic_attrs();
         let generation = self.u32(sym("mpColl_804D64AC")) as i32;
         let ours = game

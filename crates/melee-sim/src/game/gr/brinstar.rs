@@ -333,8 +333,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grZebes_801D84A4")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.zebes_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, MAP_BACK, MAP_STAGE, MAP_CREATURE, MAP_LAVA] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -993,7 +993,7 @@ pub fn init_lava(r: &mut Running, gobj: GObjId) {
     v.top_speed = 0.0;
     v.speed = 0.0;
     v.light = None;
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
     let mut last = 0;
     while last < 0x1D && !entry_empty(p.level(r.data, last + 1)) {
         last += 1;
@@ -1147,7 +1147,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     r.game.grounds[g.0].u.zebes_back().state = 0;
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// The background's process, `grZebes_801D9F84`: still (0), it reacts once the lava's level
@@ -1985,5 +1985,5 @@ pub fn check_shadow_render() -> bool {
 /// The lowest the camera's eye goes on Brinstar, `grZebes_801DCCC8`: 5 above the lava.
 #[doc(alias = "grZebes_801DCCC8")]
 pub fn camera_floor(s: &super::super::structs::StageInfo) -> f32 {
-    mem(fp::fadds(5.0, reg(s.x724)))
+    mem(fp::fadds(5.0, reg(s.acid_level)))
 }

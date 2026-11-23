@@ -123,7 +123,7 @@ impl Running<'_> {
         let x140 = reg(self.common().f32(0x140));
         let fp = &self.game.fighters[f.0];
         let kb = reg(fp.dmg.kb_applied);
-        kb == 0.0 || (fp.allow_sdi && fp.in_hitstun_sdi && kb < fp::fadds(reg(fp.dmg.x18A8), x140))
+        kb == 0.0 || (fp.allow_sdi && fp.in_hitstun_sdi && kb < fp::fadds(reg(fp.dmg.hit_kb), x140))
     }
 
     /// A holder hit in the same frame as the victim it holds fast, the victim resolved first
@@ -143,7 +143,7 @@ impl Running<'_> {
     #[doc(alias = "Fighter_8006CDA4")]
     pub fn drop_items_on_hit(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        let dmg = fp::fctiwz(reg(fp.dmg.x1838_percentTemp));
+        let dmg = fp::fctiwz(reg(fp.dmg.pending_damage));
         let hold = fp
             .item_gobj
             .is_some_and(|i| !lib26b1::is_heavy(self.game, self.data, i));
@@ -151,7 +151,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         if fp.motion_id != ms::DAMAGE_ICE
             && (fp.motion_id as u32).wrapping_sub(0x122) > 1
-            && fp.dmg.x1860_element != ELEMENT_CAPE
+            && fp.dmg.element != ELEMENT_CAPE
             && !fp.held_in_model
         {
             if hold && keep {
@@ -195,7 +195,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Damage_CalcAngle")]
     pub(crate) fn damage_angle(&mut self, f: FighterId, kb: f64) -> f64 {
         let c = self.common();
-        let angle = self.game.fighters[f.0].dmg.x1848_kb_angle;
+        let angle = self.game.fighters[f.0].dmg.kb_angle;
         if angle != 361 {
             let a = angle as u32;
             let (lo, hi, frames) = (c.u32(0x7E8), c.u32(0x7EC), c.i32(0x7F0));
@@ -227,7 +227,7 @@ impl Running<'_> {
         let xfc = self.common().i32(0xFC);
         let abs = super::checks::abs;
         let fp = &mut self.game.fighters[f.0];
-        if fp.dmg.x18ac_time_since_hit < xfc {
+        if fp.dmg.time_since_hit < xfc {
             fp.kb_vel.x = mem(x);
             fp.kb_vel.y = mem(y);
             return;
@@ -265,7 +265,7 @@ impl Running<'_> {
     /// link register it saved (its caller's return address), never zero, so it reads as true.
     #[doc(alias = "ftCo_8008DA4C")]
     fn damage_color_anim(&mut self, gobj: GObjId, element: u32, level: i32) -> bool {
-        if self.game.fighter(gobj).dmg.x1838_percentTemp == 0.0 {
+        if self.game.fighter(gobj).dmg.pending_damage == 0.0 {
             return true;
         }
         let id = match element {
@@ -289,7 +289,7 @@ impl Running<'_> {
         let kb = reg(self.game.fighters[f.0].dmg.kb_applied);
         self.drop_items_on_hit(f);
         let fp = &mut self.game.fighters[f.0];
-        fp.dmg.x18d8.kb_applied1 = mem(kb);
+        fp.dmg.hit_records.kb_applied1 = mem(kb);
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
         self.record_knockback(slot, sub, mem(kb));
         let scaled154 = fp::fmuls(kb, reg(c.f32(0x154)));
@@ -312,7 +312,7 @@ impl Running<'_> {
         fp.mv[DAMAGE_X1A] = 0;
         fp.set_mv_f32(DAMAGE_X14, 0.0);
         let mut angle = self.damage_angle(f, kb);
-        let ice = self.game.fighters[f.0].dmg.x1860_element == ELEMENT_ICE;
+        let ice = self.game.fighters[f.0].dmg.element == ELEMENT_ICE;
         if level_base >= 2 && ice {
             angle = ice_angle(angle);
         }
@@ -320,7 +320,7 @@ impl Running<'_> {
         let mut y = fp::fmuls(scaled, reg(math::sin(mem(angle))));
         let fp = &mut self.game.fighters[f.0];
         fp.facing_dir = fp.dmg.facing_dir_1;
-        let hurtbox = fp.dmg.x184c_damaged_hurtbox as usize;
+        let hurtbox = fp.dmg.damaged_hurtbox as usize;
         let mut sounds = true;
         let mut msid;
         if fp.ground_or_air == GA_AIR {
@@ -379,7 +379,7 @@ impl Running<'_> {
         if level == 3 && fp.ground_or_air == GA_AIR {
             if angle > reg(c.f32(0x234)) && angle < reg(c.f32(0x238)) {
                 msid = ms::DAMAGE_FLY_TOP;
-            } else if reg(fp.dmg.x1830_percent) >= fp::frsp(f64::from(c.i32(0x23C)))
+            } else if reg(fp.dmg.percent) >= fp::frsp(f64::from(c.i32(0x23C)))
                 && !(reg(self.game.objs.rng.draw_f32()) >= reg(c.f32(0x240)))
             {
                 msid = ms::DAMAGE_FLY_ROLL;
@@ -393,13 +393,13 @@ impl Running<'_> {
         }
         let mag = self.crowd_angle_scale(kb, angle);
         let fp = &mut self.game.fighters[f.0];
-        fp.dmg.x18A4_knockbackMagnitude = mem(mag);
-        let (source, spawn) = (fp.dmg.x18C0 as u32, fp.spawn_num as u32);
+        fp.dmg.kb_magnitude = mem(mag);
+        let (source, spawn) = (fp.dmg.source_spawn as u32, fp.spawn_num as u32);
         self.crowd_knockback(source, spawn);
         if reg(facing) != 0.0 {
             self.game.fighters[f.0].facing_dir = facing;
         }
-        let element = self.game.fighters[f.0].dmg.x1860_element;
+        let element = self.game.fighters[f.0].dmg.element;
         let _ = self.damage_color_anim(gobj, element, level);
         self.heavy_hit_flash(gobj, element as i32, mem(kb));
         self.change_motion_state(gobj, msid, 0x40, 0.0, 1.0, 0.0, None);
@@ -416,9 +416,9 @@ impl Running<'_> {
         fp.active_timer.lstick.x = 0xFE;
         fp.active_timer.lstick.y = 0xFE;
         fp.post_hitlag_cb = Some(ON_EXIT_HITLAG);
-        fp.dmg.x18A8 = fp.dmg.kb_applied;
+        fp.dmg.hit_kb = fp.dmg.kb_applied;
         fp.in_hitstun = true;
-        fp.dmg.x18ac_time_since_hit = 0;
+        fp.dmg.time_since_hit = 0;
         if msid == ms::DAMAGE_FLY_ROLL {
             self.fly_roll(gobj);
         }
@@ -443,13 +443,13 @@ impl Running<'_> {
             if scaled154 >= reg(c.f32(0x20C)) {
                 let v = sfx(self, 0x20);
                 let fp = &mut self.game.fighters[f.0];
-                fp.dmg.x1908 = 0x4F;
-                fp.dmg.x190C = v;
+                fp.dmg.queued_sfx = 0x4F;
+                fp.dmg.queued_sfx_table = v;
             } else if scaled154 >= reg(c.f32(0x208)) {
                 let v = sfx(self, 0x1C);
                 let fp = &mut self.game.fighters[f.0];
-                fp.dmg.x1908 = 0x50;
-                fp.dmg.x190C = v;
+                fp.dmg.queued_sfx = 0x50;
+                fp.dmg.queued_sfx_table = v;
             }
         }
         if level == 3 && self.game.fighters[f.0].ground_or_air == GA_AIR {
@@ -534,9 +534,9 @@ impl Running<'_> {
         if !self.game.fighter(holder).is_popo {
             return false;
         }
-        let source = fp.dmg.x1868_source;
+        let source = fp.dmg.source;
         let instance = if source == Some(holder) {
-            self.game.fighter(holder).attack_record.x2088
+            self.game.fighter(holder).attack_record.record_id
         } else {
             let Some(src) = source.filter(|&s| crate::game::it::is_item(self.game, Some(s))) else {
                 return false;
@@ -592,7 +592,7 @@ impl Running<'_> {
         if fp.hanging {
             fp.ledge_cooldown = cooldown;
         }
-        let e = fp.dmg.x1860_element;
+        let e = fp.dmg.element;
         if (e == ELEMENT_NAP || e == ELEMENT_SLEEP) && !fp.is_sandbag {
             self.enter_damage_song(gobj, e != ELEMENT_NAP);
         } else {
@@ -640,7 +640,7 @@ impl Running<'_> {
         } else {
             3
         };
-        let element = fp.dmg.x1860_element;
+        let element = fp.dmg.element;
         if self.damage_color_anim(gobj, element, level) {
             self.color_anim_update(gobj);
         }
@@ -663,7 +663,7 @@ impl Running<'_> {
             return;
         }
         let mut cape = None;
-        if fp.dmg.x1860_element == ELEMENT_CAPE {
+        if fp.dmg.element == ELEMENT_CAPE {
             if self.cape_hit(gobj) {
                 return;
             }
@@ -686,7 +686,7 @@ impl Running<'_> {
         }
         let fp = &self.game.fighters[f.0];
         if let Some(other) = fp.victim_gobj {
-            if fp.state_flags.x221B_b5 {
+            if fp.state_flags.holds_grab {
                 self.holder_hit(gobj, other, facing);
             } else {
                 self.held_hit(gobj, other, cape.is_some(), facing);
@@ -767,10 +767,10 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let frames = self.common().i32(0x648);
         let fp = &mut self.game.fighters[f.0];
-        fp.dmg.x18F4 = frames;
-        let turn = fp::frsp(f64::from(fp.dmg.x18F4));
-        if turn > reg(fp.dmg.x1954) {
-            fp.dmg.x1954 = mem(turn);
+        fp.dmg.cape_turn_frames = frames;
+        let turn = fp::frsp(f64::from(fp.dmg.cape_turn_frames));
+        if turn > reg(fp.dmg.hold_frames) {
+            fp.dmg.hold_frames = mem(turn);
         }
         fp.turn_spin = true;
         self.start_hitlag(gobj);
@@ -797,7 +797,7 @@ impl Running<'_> {
     fn held_fast(&self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         fp.held_hit_light
-            || reg(fp.dmg.x1838_percentTemp) < fp::frsp(f64::from(self.common().i32(0x3C0)))
+            || reg(fp.dmg.pending_damage) < fp::frsp(f64::from(self.common().i32(0x3C0)))
     }
 
     /// A held fighter's hit, `ftCo_8008EC90` with `x221B_b5` clear. Held fast and not
@@ -815,10 +815,10 @@ impl Running<'_> {
                     self.damage_no_reaction(gobj);
                     let (applied, mul) = {
                         let o = &self.game.fighters[of.0];
-                        (o.dmg.x183C_applied, o.hitlag_vibrate_mul)
+                        (o.dmg.damage_applied, o.hitlag_vibrate_mul)
                     };
                     let fp = &mut self.game.fighters[ff.0];
-                    fp.dmg.x183C_applied = applied;
+                    fp.dmg.damage_applied = applied;
                     fp.hitlag_vibrate_mul = mul;
                     self.game.fighters[of.0].hit_reaction = 3;
                     return;
@@ -830,12 +830,12 @@ impl Running<'_> {
                 self.game.fighters[of.0].hit_reaction = 1;
                 return;
             }
-            let applied = self.game.fighters[ff.0].dmg.x183C_applied;
+            let applied = self.game.fighters[ff.0].dmg.damage_applied;
             if applied != 0 {
                 let o = &self.game.fighters[of.0];
                 let lag = self.hitlag(applied, o.motion_id, o.hitlag_vibrate_mul);
                 let o = &mut self.game.fighters[of.0];
-                o.dmg.x195c_hitlag_frames = mem(lag);
+                o.dmg.hitlag_frames = mem(lag);
                 o.allow_sdi = true;
                 if !o.in_hitlag {
                     if let Some(cb) = o.pre_hitlag_cb {
@@ -874,13 +874,13 @@ impl Running<'_> {
             state: d(0) as i32,
             damage: mem(fp::frsp(f64::from(d(4)))),
             kb_angle: d(8) as i32,
-            x24: d(0xC),
-            x28: d(0x10),
-            x2C: d(0x14),
+            kb_growth: d(0xC),
+            set_kb: d(0x10),
+            base_kb: d(0x14),
             element: d(0x18),
             sfx_severity: d(0x1C) as i32,
             sfx_kind: d(0x20) as i32,
-            unk_count: d(4),
+            whole_damage: d(4),
             ..Default::default()
         };
         self.clear_attacker(gobj);
@@ -892,7 +892,7 @@ impl Running<'_> {
         let kb = self.knockback_of(
             f,
             &hit,
-            hit.unk_count,
+            hit.whole_damage,
             ratio,
             1.0,
             defense,
@@ -900,11 +900,11 @@ impl Running<'_> {
         );
         let fp = &mut self.game.fighters[f.0];
         fp.dmg.kb_applied = mem(kb);
-        fp.dmg.x1848_kb_angle = hit.kb_angle;
+        fp.dmg.kb_angle = hit.kb_angle;
         fp.dmg.facing_dir_1 = fp.facing_dir;
-        fp.dmg.x184c_damaged_hurtbox = 1;
-        fp.dmg.x1854_collpos = pos;
-        fp.dmg.x1860_element = hit.element;
+        fp.dmg.damaged_hurtbox = 1;
+        fp.dmg.coll_pos = pos;
+        fp.dmg.element = hit.element;
         self.take_damage_coins(f, reg(hit.damage));
         self.calc_knockback(f);
         self.damage_reaction(gobj, 0.0);
@@ -924,10 +924,10 @@ impl Running<'_> {
                 if self.held_fast(other) {
                     let (applied, mul) = {
                         let fp = &self.game.fighters[ff.0];
-                        (fp.dmg.x183C_applied, fp.hitlag_vibrate_mul)
+                        (fp.dmg.damage_applied, fp.hitlag_vibrate_mul)
                     };
                     let o = &mut self.game.fighters[of.0];
-                    o.dmg.x183C_applied = applied;
+                    o.dmg.damage_applied = applied;
                     o.hitlag_vibrate_mul = mul;
                     if self.hit_too_light(ff) {
                         self.damage_no_reaction(gobj);
@@ -983,16 +983,16 @@ impl Running<'_> {
                 fighter: h,
                 index: 1,
             },
-            hit.unk_count,
+            hit.whole_damage,
         );
         let facing = self.game.fighters[h.0].facing_dir;
         let fp = &mut self.game.fighters[f.0];
         fp.dmg.kb_applied = mem(kb);
-        fp.dmg.x1848_kb_angle = hit.kb_angle;
+        fp.dmg.kb_angle = hit.kb_angle;
         fp.dmg.facing_dir_1 = mem(fp::fneg(reg(facing)));
-        fp.dmg.x184c_damaged_hurtbox = 1;
-        fp.dmg.x1854_collpos = pos;
-        fp.dmg.x1860_element = hit.element;
+        fp.dmg.damaged_hurtbox = 1;
+        fp.dmg.coll_pos = pos;
+        fp.dmg.element = hit.element;
         if record {
             // `ftColl_80078710`, the facing word's address as the keep flag.
             self.thrower_attack_landed(holder, gobj);
@@ -1010,7 +1010,7 @@ impl Running<'_> {
         let (akind, x2070, instance) = (
             hp.kind,
             u32::from_be_bytes(hp.attack_flags),
-            hp.attack_record.x2088,
+            hp.attack_record.record_id,
         );
         self.attack_landed(
             Some(holder),
@@ -1058,7 +1058,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DCE34")]
     fn grab_break(&mut self, a: GObjId, b: GObjId) {
         self.grab_release(a, b);
-        let g = if self.game.fighter(b).state_flags.x221B_b7 {
+        let g = if self.game.fighter(b).state_flags.grounded_catch {
             a
         } else {
             b
@@ -1073,7 +1073,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C44CC")]
     fn bind_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.dmg.x1860_element == ELEMENT_DISABLE && !fp.is_sandbag {
+        if fp.dmg.element == ELEMENT_DISABLE && !fp.is_sandbag {
             if matches!(fp.attack_flags[1] >> 4, 5 | 9 | 11 | 12) {
                 return false;
             }
@@ -1088,7 +1088,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D2FA4")]
     pub fn screw_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.dmg.x1860_element == ELEMENT_SCBALL {
+        if fp.dmg.element == ELEMENT_SCBALL {
             if matches!(fp.attack_flags[1] >> 4, 11 | 12) {
                 return false;
             }
@@ -1154,10 +1154,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C0CB8")]
     fn bury_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.dmg.x1860_element == ELEMENT_GROUND
-            && fp.ground_or_air == GA_GROUND
-            && !fp.held_in_ice
-        {
+        if fp.dmg.element == ELEMENT_GROUND && fp.ground_or_air == GA_GROUND && !fp.held_in_ice {
             self.enter_bury(gobj);
             return true;
         }
@@ -1168,14 +1165,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C74F4")]
     fn leadead_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.dmg.x1860_element == ELEMENT_LEADEAD
+        if fp.dmg.element == ELEMENT_LEADEAD
             && fp.capture_timer == 0
             && fp.motion_id != ms::CAPTURE_LEADEAD
         {
-            let source = fp
-                .dmg
-                .x1868_source
-                .expect("a ReDead's hit without its source");
+            let source = fp.dmg.source.expect("a ReDead's hit without its source");
             if crate::game::it::kinds::redead::held(self, source).is_none() {
                 self.enter_capture_leadead(gobj);
                 return true;
@@ -1210,21 +1204,21 @@ impl Running<'_> {
         let lag = self.hitlag(dmg, msid, mul);
         let frames = fp::fctiwz(fp::fmadds(reg(c.f32(0x168)), lag, reg(c.f32(0x16C))));
         let fp = &mut self.game.fighters[f.0];
-        fp.dmg.x18fa_model_shift_frames = frames as u16;
-        fp.dmg.x18FC = 0;
+        fp.dmg.model_shift_frames = frames as u16;
+        fp.dmg.shake_step = 0;
         if element == ELEMENT_ELECTRIC {
-            fp.dmg.x18F8 = 2;
+            fp.dmg.shake_kind = 2;
         } else if ga == GA_AIR {
-            fp.dmg.x18F8 = 0;
+            fp.dmg.shake_kind = 0;
         } else {
-            fp.dmg.x18F8 = 1;
-            fp.dmg.x1900 = fp.coll_data.floor.normal.x;
-            fp.dmg.x1904 = fp.coll_data.floor.normal.y;
+            fp.dmg.shake_kind = 1;
+            fp.dmg.shake_normal_x = fp.coll_data.floor.normal.x;
+            fp.dmg.shake_normal_y = fp.coll_data.floor.normal.y;
         }
-        let kind = u32::from(fp.dmg.x18F8);
+        let kind = u32::from(fp.dmg.shake_kind);
         let table = self.load_common(0x24);
         let len = self.data.u32(table.at(8 * kind + 4));
-        self.game.fighters[f.0].dmg.x18FD = len as u8;
+        self.game.fighters[f.0].dmg.shake_len = len as u8;
     }
 
     /// A hit's rumble by its damage, `ftCommon_8007ED50`: `ftCommonData` x138 frames a

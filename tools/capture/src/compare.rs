@@ -743,7 +743,7 @@ impl<'a> Comparer<'a> {
             "gm",
             "pause flags, debug level, develop.ini found, trophies' data loaded",
             (
-                game.scene.unk_10.x0,
+                game.scene.pause.pause_bits,
                 g.db_level,
                 g.develop_ini,
                 g.trophy_data,
@@ -980,7 +980,7 @@ impl<'a> Comparer<'a> {
                     && self.game.ft.dynamics_block != 0
                     && self.game.ft.dynamics_pixels.contains(&(d.0 as u16))
                 {
-                    link.desc.unk_54 = self.u32(theirs + 0x54) as i32;
+                    link.desc.ease_axis = self.u32(theirs + 0x54) as i32;
                 }
                 link.compare(
                     &mem,

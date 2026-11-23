@@ -1099,3 +1099,9 @@ STEP_2 = {
 FIELD_NAMES = {"Fighter": FIGHTER, "CpuFighter": CPU_FIGHTER}
 for _struct in sorted(set(STEP_2) | set(UNUSED_ITEM_FIELDS)):
     FIELD_NAMES[_struct] = {**STEP_2.get(_struct, {}), **UNUSED_ITEM_FIELDS.get(_struct, {})}
+
+# Step 3 (task 23): the other generated structs, in `names_step3.py`.
+from names_step3 import STEP_3  # noqa: E402
+
+for _struct, _names in STEP_3.items():
+    FIELD_NAMES.setdefault(_struct, {}).update(_names)

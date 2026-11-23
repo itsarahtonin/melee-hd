@@ -283,9 +283,12 @@ impl Running<'_> {
         if reg(pos.x) != 0.0 || reg(pos.y) != 0.0 {
             let hit = &mut fp.hitboxes[id];
             hit_at(hit, pos);
-            hit.x4C = pos;
-            if reg(hit.x58.x) == 0.0 && reg(hit.x58.y) == 0.0 && reg(hit.x58.z) == 0.0 {
-                hit.x58 = pos;
+            hit.pos = pos;
+            if reg(hit.prev_pos.x) == 0.0
+                && reg(hit.prev_pos.y) == 0.0
+                && reg(hit.prev_pos.z) == 0.0
+            {
+                hit.prev_pos = pos;
             }
         }
     }
@@ -295,8 +298,8 @@ impl Running<'_> {
     pub fn seak_special_s_zero_hitbox_positions(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         for hit in &mut fp.hitboxes {
-            hit.x58 = Vec3::new(0.0, 0.0, 0.0);
-            hit.x4C = Vec3::new(0.0, 0.0, 0.0);
+            hit.prev_pos = Vec3::new(0.0, 0.0, 0.0);
+            hit.pos = Vec3::new(0.0, 0.0, 0.0);
         }
     }
 

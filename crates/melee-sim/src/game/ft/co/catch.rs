@@ -150,8 +150,8 @@ impl Running<'_> {
                 let h = &mf.hitboxes[i];
                 if h.state == hitcapsule::DISABLED
                     || h.element != ELEMENT_CATCH
-                    || !((h.x40_b2 && vf.ground_or_air == super::super::common::GA_AIR)
-                        || (h.x40_b3 && vf.ground_or_air == super::super::common::GA_GROUND))
+                    || !((h.hits_air && vf.ground_or_air == super::super::common::GA_AIR)
+                        || (h.hits_ground && vf.ground_or_air == super::super::common::GA_GROUND))
                 {
                     continue;
                 }
@@ -234,7 +234,7 @@ impl Running<'_> {
         if d < reg(fp.grab_distance) {
             fp.partner = vg;
             fp.victim_gobj = vg;
-            fp.state_flags.x221B_b5 = true;
+            fp.state_flags.holds_grab = true;
             fp.grab_distance = mem(d);
         }
     }
@@ -255,7 +255,7 @@ impl Running<'_> {
         if d < reg(fp.grab_distance) {
             fp.caught_item = Some(it);
             fp.target_item_gobj = Some(it);
-            fp.state_flags.x221B_b6 = true;
+            fp.state_flags.item_grab_set = true;
             fp.grab_distance = mem(d);
         }
     }
@@ -285,8 +285,8 @@ impl Running<'_> {
                 if h.state == hitcapsule::DISABLED || h.element != ELEMENT_CATCH {
                     continue;
                 }
-                if !((h.x40_b2 && ip.ground_or_air == super::super::common::GA_AIR)
-                    || (h.x40_b3 && ip.ground_or_air == super::super::common::GA_GROUND))
+                if !((h.hits_air && ip.ground_or_air == super::super::common::GA_AIR)
+                    || (h.hits_ground && ip.ground_or_air == super::super::common::GA_GROUND))
                 {
                     continue;
                 }
@@ -346,7 +346,7 @@ impl Running<'_> {
         let (kind, x2070, instance) = (
             fp.kind,
             u32::from_be_bytes(fp.attack_flags),
-            fp.attack_record.x2088,
+            fp.attack_record.record_id,
         );
         self.attack_landed(
             Some(gobj),
@@ -360,8 +360,8 @@ impl Running<'_> {
             false,
         );
         let vf = self.game.fighter_mut(victim);
-        vf.dmg.x18c4_source_ply = 6;
-        vf.dmg.x18C8 = -1;
+        vf.dmg.source_player = 6;
+        vf.dmg.source_attack = -1;
     }
 
     /// Runs a grab's victim callback (`Fighter::grabbed_cb`, taking the victim and the

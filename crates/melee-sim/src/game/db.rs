@@ -452,7 +452,7 @@ impl Running<'_> {
                     Arg::Int(i32::from(p.cpu_level)),
                     Arg::Int(i32::from(p.cpu_type)),
                     Arg::Int(i32::from(p.handicap)),
-                    Arg::Float(reg(p.unk50)),
+                    Arg::Float(reg(p.unset_ratio)),
                     Arg::Float(reg(p.attack_ratio)),
                     Arg::Float(reg(p.defense_ratio)),
                 ]
@@ -717,7 +717,7 @@ impl Running<'_> {
         for g in self.game.fighter_gobjs() {
             let f = self.game.fighter_id(g);
             if self.game.fighters[f.0].shadow.shadow.is_some() {
-                self.game.fighters[f.0].shadow.x0_b5 = !on;
+                self.game.fighters[f.0].shadow.off_by_debug = !on;
                 self.shadow_update(g);
             }
         }
@@ -729,7 +729,7 @@ impl Running<'_> {
         for g in self.game.link_gobjs(P_LINK_GROUND) {
             // The link's other GObjs hold no stage part (`ground != NULL`).
             if let Some(super::state::UserData::Ground(gr)) = self.game.world.gobjs[g.0].user_data {
-                self.game.grounds[gr.0].x10_flags.b7 = on;
+                self.game.grounds[gr.0].flags.debug_lines = on;
             }
         }
     }
@@ -1467,16 +1467,16 @@ impl Running<'_> {
             pos,
             prev_pos: pos,
             facing_dir: facing,
-            x44_flag: [0x80],
+            flags: [0x80],
             ..Default::default()
         };
         let common = super::it::item::common_data(self.game);
         let counts = &self.game.it.counts;
-        if kind < ItKind::COMMON_END && counts.x0 as u32 >= common.u32(self.data, 0) {
+        if kind < ItKind::COMMON_END && counts.common as u32 >= common.u32(self.data, 0) {
             // "Item Max Over."
             return;
         }
-        if kind < ItKind::OctorokStone && counts.x2C as u32 >= common.u32(self.data, 0x14) {
+        if kind < ItKind::OctorokStone && counts.monsters as u32 >= common.u32(self.data, 0x14) {
             // "couldn't get Item struct.(CZako)"
             return;
         }
@@ -1531,18 +1531,18 @@ impl Running<'_> {
             return;
         }
         let c = &mut self.game.it.counts;
-        c.x4 = c.x0;
-        c.xC = c.x8;
-        c.x14 = c.x10;
-        c.x20 = c.x1C;
-        c.x28 = c.x24;
-        c.x30 = c.x2C;
-        c.x38 = c.x34;
-        c.x44 = c.x40;
-        c.x4C = c.x48;
-        c.x54 = c.x50;
-        c.x5C = c.x58;
-        c.x64 = c.x60;
+        c.common_limit = c.common;
+        c.common_shots_limit = c.common_shots;
+        c.food_limit = c.food;
+        c.pokemon_limit = c.pokemon;
+        c.pokemon_shots_limit = c.pokemon_shots;
+        c.monsters_limit = c.monsters;
+        c.monster_shots_limit = c.monster_shots;
+        c.stage_shots_limit = c.stage_shots;
+        c.trophies_limit = c.trophies;
+        c.coins_limit = c.coins;
+        c.stage_hurtboxes_limit = c.stage_hurtboxes;
+        c.training_items_limit = c.training_items;
     }
 
     /// `fn_UpdateObjAllocLimiter`: at the develop level, B held and D-pad up caps the effects'

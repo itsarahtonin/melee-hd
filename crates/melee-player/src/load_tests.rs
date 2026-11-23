@@ -225,8 +225,8 @@ fn present(
             at: clock,
             tick: t,
             scene: format!("{:?}", s.game().machine.phase),
-            drawn: s.game().scene.unk_4,
-            ending: s.game().scene.unk_C,
+            drawn: s.game().scene.frames_drawn,
+            ending: s.game().scene.ending,
         });
         shown.extend(hold.tick(drew, plan.due, later));
         if let Some(old) = paced.ran(Mode::Interpolate, s.game(), f, plan.due) {
@@ -376,7 +376,7 @@ fn explore() {
                 );
                 phase = p;
             }
-            before = (drew, s.game().scene.unk_C);
+            before = (drew, s.game().scene.ending);
             if s.ended {
                 break;
             }

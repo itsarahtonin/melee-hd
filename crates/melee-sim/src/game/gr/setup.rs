@@ -34,29 +34,29 @@ pub fn reset(game: &mut Game) {
     datfiles::clear(game);
     let i = &mut game.stage_info;
     i.flags = 0;
-    i.x6D0 = -1;
-    i.x6D2 = 0;
-    i.x6D4 = 0;
-    i.x6D8 = 0;
-    i.x6DC = 0;
-    i.x724 = -10000.0;
-    i.x12C = None;
-    i.unk8C.b3 = false;
-    i.unk8C.b2 = true;
+    i.goal_point = -1;
+    i.target_count = 0;
+    i.targets_left = 0;
+    i.route_event = 0;
+    i.route_zone = 0;
+    i.acid_level = -10000.0;
+    i.fog = None;
+    i.bits.has_guide_points = false;
+    i.bits.fog_enabled = true;
     i.on_touch_line = None;
     i.on_check_shadow_render = None;
-    i.unk8C.b4 = false;
-    i.unk8C.b5 = false;
-    i.unk8C.b6 = false;
-    i.x714 = -1;
-    i.x90 = None;
-    i.unk8C.b7 = false;
-    i.x720 = -1;
-    i.x94 = None;
+    i.bits.own_entry_points = false;
+    i.bits.keeps_spawn_point = false;
+    i.bits.watches_point = false;
+    i.watch.point = -1;
+    i.watch_callback = None;
+    i.bits.watches_point_2 = false;
+    i.watch_2.point = -1;
+    i.watch_callback_2 = None;
     i.map_gobjs = [None; 64];
-    i.x280 = [None; 261];
-    i.x694 = Default::default();
-    i.x6A4 = None;
+    i.points = [None; 261];
+    i.cameras = Default::default();
+    i.start_hooks = None;
     let c = &mut i.cam_info;
     c.cam_bounds.left = -170.0;
     c.cam_bounds.right = 170.0;
@@ -66,8 +66,8 @@ pub fn reset(game: &mut Game) {
     c.cam_y_offset = 0.0;
     c.cam_vertical_tilt = 30.0;
     c.cam_pan_degrees = -10.0;
-    c.x20 = mem(fp::frsp(0.2));
-    c.x24 = mem(fp::frsp(0.2));
+    c.cam_pan_rate = mem(fp::frsp(0.2));
+    c.cam_tilt_rate = mem(fp::frsp(0.2));
     c.cam_zoom_rate = 82.0;
     c.cam_max_depth = 1000.0;
     i.blast_zone.left = -99999.0;
@@ -75,14 +75,14 @@ pub fn reset(game: &mut Game) {
     i.blast_zone.top = 99999.0;
     i.blast_zone.bottom = -99999.0;
     i.grkind = -1;
-    i.x6D2 = 0;
-    i.x6D4 = 0;
-    i.x98 = -1;
-    i.x9C = 0;
-    i.x72C = None;
-    i.x6E0 = 0.0;
-    i.x708 = 0;
-    i.x740 = 0;
+    i.target_count = 0;
+    i.targets_left = 0;
+    i.bgm = -1;
+    i.watch_frame = 0;
+    i.barrel = None;
+    i.home_run_distance = 0.0;
+    i.trophy_coin_wait = 0;
+    i.cars_state = 0;
 }
 
 /// Resets the fighters' stage devices, `ftCo_800C06C0`.
@@ -106,8 +106,8 @@ pub fn set_cam_angles(game: &mut Game, tilt: f32, pan: f32, a: f32, b: f32) {
     let c = &mut game.stage_info.cam_info;
     c.cam_vertical_tilt = tilt;
     c.cam_pan_degrees = pan;
-    c.x20 = a;
-    c.x24 = b;
+    c.cam_pan_rate = a;
+    c.cam_tilt_rate = b;
 }
 
 /// `Ground_801C38EC`.
@@ -133,7 +133,7 @@ pub fn set_pause_cam(
     right: f32,
 ) {
     let c = &mut game.stage_info.cam_info;
-    c.x3C = x3c;
+    c.unread_3c = x3c;
     c.pausecam_zpos_min = min;
     c.pausecam_zpos_init = init;
     c.pausecam_zpos_max = max;
@@ -265,7 +265,7 @@ pub fn measure_blast_zones(game: &mut Game, data: &Archives) {
 /// Queues a process to call with a stage object when the match starts, `Ground_801C10B8`.
 #[doc(alias = "Ground_801C10B8")]
 pub fn add_start_hook(game: &mut Game, gobj: GObjId, func: CodeRef) {
-    let next = game.stage_info.x6A4;
+    let next = game.stage_info.start_hooks;
     let id = game.gr.start_hooks.alloc(StartHook {
         next,
         gobj: Some(gobj),
@@ -274,7 +274,7 @@ pub fn add_start_hook(game: &mut Game, gobj: GObjId, func: CodeRef) {
     game.gr
         .start_hooks
         .set_addr(id, crate::hsd::heap::mem_alloc(0xC));
-    game.stage_info.x6A4 = Some(StartHookId(id));
+    game.stage_info.start_hooks = Some(StartHookId(id));
 }
 
 /// The collision joints of a map: the archive's for it (where its list is and how many it
@@ -525,7 +525,7 @@ pub fn fill_points(
             i += 1;
         }
         prev = i;
-        game.stage_info.x280[slot as usize] = cur;
+        game.stage_info.points[slot as usize] = cur;
     }
 }
 
@@ -617,7 +617,7 @@ fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId, init_stage_data: b
     game.gr.render_leftovers.remove(&id.0);
     if init_stage_data && game.rules.inits_stage_data() {
         let g = &mut game.grounds[id.0];
-        g.x11_flags.rest = Some(0);
+        g.pass_flags.rest = Some(0);
         g.u.left = Some([0; super::vars::SIZE]);
     } else if let Some(left) = crate::game::leftovers::import(data, addr, true) {
         game.grounds[id.0] = left;
@@ -638,7 +638,7 @@ fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId, init_stage_data: b
         ));
         let g = &mut game.grounds[id.0];
         if runs.iter().any(|&(a, b)| a <= 0x11 && 0x11 < b) {
-            g.x11_flags.rest = None;
+            g.pass_flags.rest = None;
         }
         const UNION: u32 = 0xC4;
         g.u.unknown = runs
@@ -678,19 +678,19 @@ pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
         let gp = &mut game.grounds[g.0];
         gp.map_id = map_id;
         gp.gobj = Some(gobj);
-        gp.x10_flags.b0 = false;
-        gp.x10_flags.b1 = false;
-        gp.x10_flags.b2 = true;
-        gp.x8_callback = None;
-        gp.xC_callback = None;
-        gp.x1C_callback = None;
-        gp.x10_flags.b5 = false;
-        gp.x10_flags.b6 = false;
-        gp.x11_flags.b012 = 0;
-        gp.x10_flags.b7 = false;
-        gp.x18 = None;
-        gp.x10_flags.b3 = false;
-        gp.x20 = [-1; 8];
+        gp.flags.unread_b0 = false;
+        gp.flags.unread_b1 = false;
+        gp.flags.keeps_fog = true;
+        gp.unread_8 = None;
+        gp.unread_c = None;
+        gp.callback3 = None;
+        gp.flags.shadowed = false;
+        gp.flags.tinted = false;
+        gp.pass_flags.b012 = 0;
+        gp.flags.debug_lines = false;
+        gp.camera = None;
+        gp.flags.follows_camera = false;
+        gp.sounds = [-1; 8];
     }
     material::reset_overlay(game, gobj);
     let main = datfiles::main_head(game);
@@ -721,7 +721,7 @@ pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
                 false,
             );
             game.world.gobj_mut(cg).gxlink_prios = 8;
-            game.grounds[g.0].x18 = Some(cg);
+            game.grounds[g.0].camera = Some(cg);
             add_camera(game, c);
         }
         game.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(sj));
@@ -814,7 +814,7 @@ impl Mirror for GroundX11Flags {
 /// `Ground_801C2BD4`; the original asserts there's room.
 #[doc(alias = "Ground_801C2BD4")]
 pub fn add_camera(game: &mut Game, c: CObjId) {
-    let cams = &mut game.stage_info.x694.0;
+    let cams = &mut game.stage_info.cameras.0;
     if cams.contains(&Some(c)) {
         return;
     }
@@ -825,7 +825,7 @@ pub fn add_camera(game: &mut Game, c: CObjId) {
 /// Whether a CObj is one of the stage objects' cameras, `Ground_801C2C8C`.
 #[doc(alias = "Ground_801C2C8C")]
 pub fn is_stage_camera(game: &Game, c: CObjId) -> bool {
-    game.stage_info.x694.0.contains(&Some(c))
+    game.stage_info.cameras.0.contains(&Some(c))
 }
 
 /// Creates a stage object from a joint descriptor, `Ground_801C1A20`: as
@@ -846,16 +846,16 @@ pub fn stage_gobj_from_joint(
         let gp = &mut game.grounds[g.0];
         gp.map_id = map_id;
         gp.gobj = Some(gobj);
-        gp.x10_flags.b0 = false;
-        gp.x10_flags.b1 = false;
-        gp.x10_flags.b2 = true;
-        gp.x8_callback = None;
-        gp.xC_callback = None;
-        gp.x1C_callback = None;
-        gp.x10_flags.b5 = false;
-        gp.x18 = None;
-        gp.x10_flags.b3 = false;
-        gp.x20 = [-1; 8];
+        gp.flags.unread_b0 = false;
+        gp.flags.unread_b1 = false;
+        gp.flags.keeps_fog = true;
+        gp.unread_8 = None;
+        gp.unread_c = None;
+        gp.callback3 = None;
+        gp.flags.shadowed = false;
+        gp.camera = None;
+        gp.flags.follows_camera = false;
+        gp.sounds = [-1; 8];
     }
     material::reset_overlay(game, gobj);
     let model = jobj::load_joint(&mut game.objs, data, Some(joint));
@@ -879,12 +879,12 @@ pub fn create_from_callbacks(
     let gobj = stage_gobj(r, map_id, frame)?;
     let g = ground_of(r.game, gobj);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     // grDisplay_801C5DB0 renders it.
     r.game.world.setup_gx_link(gobj, CodeRef(0x801C_5DB0), 3, 0);
     if cb.callback3 != 0 {
-        r.game.grounds[g.0].x1C_callback = Some(CodeRef(cb.callback3));
+        r.game.grounds[g.0].callback3 = Some(CodeRef(cb.callback3));
     }
     if cb.on_init != 0 {
         super::super::code::run_proc(r, gobj, CodeRef(cb.on_init));
@@ -928,7 +928,7 @@ pub fn create_fog(game: &mut Game, data: &Archives) {
     o.end = mem(fp::fmuls(reg(o.end), s));
     let [r, g, b, _] = o.color;
     game.camera.set_background_color(r, g, b);
-    game.stage_info.x12C = Some(gobj);
+    game.stage_info.fog = Some(gobj);
 }
 
 /// Whether a light's animation loops, by the archive's shadow entries, `Ground_801C43C4`.
@@ -1293,23 +1293,35 @@ fn setup_inner(r: &mut Running, grkind: i32) {
     let (game, data) = (&mut *r.game, r.data);
     let p = game.gr.param.clone().expect("stage_info.param is null");
     let f = |x: i32| mem(fp::frsp(f64::from(x)));
-    set_cam_angles(game, f(p.x8.into()), f(p.x14), p.x1C, p.x18);
-    set_cam_depth(game, f(p.x10), f(p.xC));
-    set_cam_track_smooth(game, p.x28);
+    set_cam_angles(
+        game,
+        f(p.cam_vertical_tilt.into()),
+        f(p.cam_pan_degrees),
+        p.cam_pan_rate,
+        p.cam_tilt_rate,
+    );
+    set_cam_depth(game, f(p.cam_max_depth), f(p.cam_zoom_rate));
+    set_cam_track_smooth(game, p.cam_track_smooth);
     set_pause_cam(
         game,
-        f(p.x2E.into()),
-        f(p.x30),
-        f(p.x34),
-        f(p.x38),
-        p.x3C,
-        p.x40,
-        p.x44,
-        p.x48,
+        f(p.pausecam_unread.into()),
+        f(p.pausecam_zpos_min),
+        f(p.pausecam_zpos_init),
+        f(p.pausecam_zpos_max),
+        p.cam_angle_up,
+        p.cam_angle_down,
+        p.cam_angle_left,
+        p.cam_angle_right,
     );
-    set_fixed_cam(game, Vec3::new(p.x50, p.x54, p.x58), p.x5C, p.x60, p.x64);
-    set_cam_track_ratio(game, p.x20);
-    set_cam_fixed_zoom(game, p.x24);
+    set_fixed_cam(
+        game,
+        Vec3::new(p.fixed_cam_x, p.fixed_cam_y, p.fixed_cam_z),
+        p.fixed_cam_fov,
+        p.fixed_cam_vert_angle,
+        p.fixed_cam_horz_angle,
+    );
+    set_cam_track_ratio(game, p.cam_track_ratio);
+    set_cam_fixed_zoom(game, p.cam_fixed_zoom);
     if let Some(items) = game.stage_info.itemdata {
         let mut at = items;
         while let Some(item) = data.ptr(at) {
@@ -1350,7 +1362,7 @@ pub fn on_load(r: &mut Running, grkind: i32) {
 #[doc(alias = "Ground_801C0FB8")]
 pub fn start(r: &mut Running, grkind: i32) {
     (registry::stage(grkind).start)(r);
-    let mut cur = r.game.stage_info.x6A4;
+    let mut cur = r.game.stage_info.start_hooks;
     while let Some(h) = cur {
         let hook = r.game.gr.start_hooks[h.0].clone();
         cur = hook.next;
@@ -1360,7 +1372,7 @@ pub fn start(r: &mut Running, grkind: i32) {
         crate::hsd::heap::mem_free(r.game.gr.start_hooks.addr(h.0));
         r.game.gr.start_hooks.free(h.0);
     }
-    r.game.stage_info.x6A4 = None;
+    r.game.stage_info.start_hooks = None;
     let gobj = r.game.world.create(3, 5, 0);
     r.game.world.setup_proc(gobj, CodeRef(0x801C_0C2C), 10);
 }
@@ -1373,17 +1385,23 @@ pub fn destroy(r: &mut Running, gobj: Option<GObjId>) {
     let g = ground_of(r.game, gobj);
     let jobj = jobj_of(r.game, gobj);
     let map_id = r.game.grounds[g.0].map_id;
-    if let Some(cb) = r.game.grounds[g.0].x1C_callback {
+    if let Some(cb) = r.game.grounds[g.0].callback3 {
         super::super::code::run_proc(r, gobj, cb);
     }
     if r.game.stage_info.map_gobjs[map_id as usize] == Some(gobj) {
         r.game.stage_info.map_gobjs[map_id as usize] = None;
     }
     r.stop_object_sounds(Some(g));
-    if let Some(cg) = r.game.grounds[g.0].x18 {
+    if let Some(cg) = r.game.grounds[g.0].camera {
         // `removeStageGObj`: the camera leaves the stage's cameras.
         if let Some(Obj::CObj(c)) = r.game.world.gobj(cg).obj
-            && let Some(p) = r.game.stage_info.x694.0.iter_mut().find(|p| **p == Some(c))
+            && let Some(p) = r
+                .game
+                .stage_info
+                .cameras
+                .0
+                .iter_mut()
+                .find(|p| **p == Some(c))
         {
             *p = None;
         }
@@ -1436,12 +1454,12 @@ fn forget_points(
         return;
     }
     for i in 0..0x57 * 3 {
-        if let Some(mut j) = game.stage_info.x280[i] {
+        if let Some(mut j) = game.stage_info.points[i] {
             while let Some(p) = game.objs.jobjs[j].parent {
                 j = p;
             }
             if j == root {
-                game.stage_info.x280[i] = None;
+                game.stage_info.points[i] = None;
             }
         }
     }
@@ -1482,9 +1500,9 @@ pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId
     if super::super::gm::is_1p_mode(r.game) {
         let id = r.stage_trophy_draw();
         r.stage_trophy_load(id);
-        r.game.stage_info.x6E4[0] = id;
+        r.game.stage_info.drawn_trophies[0] = id;
     } else {
-        r.game.stage_info.x6E4[0] = -1;
+        r.game.stage_info.drawn_trophies[0] = -1;
     }
 }
 
@@ -1526,7 +1544,7 @@ pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bo
         i.map_texg = None;
         i.yakumono_param = None;
         i.map_plit = None;
-        i.x6C8 = None;
+        i.unread_6c8 = None;
         r.game.gr.param = Some(read_ground_param(r.data, at(0x803E_0848)));
         return;
     };
@@ -1668,10 +1686,10 @@ pub fn item_frequencies(game: &mut Game, data: &Archives, stkind: i32) {
                 let v = i32::from(a) * i32::from(b);
                 let si = &mut game.stage_info;
                 if j == 0 {
-                    si.xA0 = v;
+                    si.item_frequencies = v;
                 } else {
                     let at = 4 * (j as usize - 1);
-                    si.xA4_pad[at..at + 4].copy_from_slice(&v.to_be_bytes());
+                    si.item_frequencies_rest[at..at + 4].copy_from_slice(&v.to_be_bytes());
                 }
             }
             return;
@@ -1781,7 +1799,7 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
             }
         };
         if flags & 0x10 != 0 {
-            si.unk8C.b0 = false;
+            si.bits.picked_alt_song = false;
             if flags & 1 != 0 {
                 bgm = w(0xC) as i32;
             } else if flags & 2 != 0 {
@@ -1790,17 +1808,17 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
         } else if flags & 0x20 != 0 {
             if flags & 1 != 0 {
                 bgm = w(0xC) as i32;
-                si.unk8C.b0 = false;
+                si.bits.picked_alt_song = false;
             } else if flags & 2 != 0 {
                 (bgm, alternate) = pick(w(0xC), w(0x10));
-                si.unk8C.b0 = alternate;
+                si.bits.picked_alt_song = alternate;
             }
         } else if flags & 1 != 0 {
             bgm = w(4) as i32;
-            si.unk8C.b0 = false;
+            si.bits.picked_alt_song = false;
         } else if flags & 2 != 0 {
             (bgm, alternate) = pick(w(4), w(8));
-            si.unk8C.b0 = alternate;
+            si.bits.picked_alt_song = alternate;
         }
         break;
     }

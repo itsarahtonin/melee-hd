@@ -147,22 +147,22 @@ pub fn hold_kind_of(kind: i32) -> i32 {
 
 /// Adds `delta` to the count a hold kind's items keep (`Item_804A0C64`), as `Item_802675A8`
 /// and `Item_802676F4` pick it.
-pub fn bump_count(n: &mut super::super::structs::HSD_ObjAllocUnk, hold_kind: i32, delta: i32) {
+pub fn bump_count(n: &mut super::super::structs::ItemCounts, hold_kind: i32, delta: i32) {
     let add = |c: &mut i32| *c = c.wrapping_add(delta);
     match hold_kind {
-        0 => add(&mut n.x0),
-        1 => add(&mut n.x8),
-        2 => add(&mut n.x10),
-        3 => add(&mut n.x58),
-        4 => add(&mut n.x3C),
-        5 => add(&mut n.x40),
-        6 => add(&mut n.x2C),
-        7 => add(&mut n.x34),
-        8 => n.x18 = n.x18.wrapping_add(delta as u32),
-        9 => add(&mut n.x1C),
-        10 => add(&mut n.x24),
-        11 => add(&mut n.x48),
-        12 => add(&mut n.x50),
+        0 => add(&mut n.common),
+        1 => add(&mut n.common_shots),
+        2 => add(&mut n.food),
+        3 => add(&mut n.stage_hurtboxes),
+        4 => add(&mut n.stage_items),
+        5 => add(&mut n.stage_shots),
+        6 => add(&mut n.monsters),
+        7 => add(&mut n.monster_shots),
+        8 => n.fighter_articles = n.fighter_articles.wrapping_add(delta as u32),
+        9 => add(&mut n.pokemon),
+        10 => add(&mut n.pokemon_shots),
+        11 => add(&mut n.trophies),
+        12 => add(&mut n.coins),
         _ => {}
     }
 }
@@ -176,7 +176,7 @@ pub fn uncount(game: &mut Game, gobj: GObjId) {
     };
     bump_count(&mut game.it.counts, hold_kind, -1);
     if super::super::gm::is_training(game) && x18 == 1 {
-        game.it.counts.x60 = game.it.counts.x60.wrapping_sub(1);
+        game.it.counts.training_items = game.it.counts.training_items.wrapping_sub(1);
     }
 }
 
@@ -191,12 +191,14 @@ pub fn count(game: &mut Game, gobj: GObjId) {
         bump_count(&mut game.it.counts, hold_kind, 1);
     }
     match hold_kind {
-        0 if kind == ItKind::PokeBall => game.it.counts.x1C = game.it.counts.x1C.wrapping_add(1),
+        0 if kind == ItKind::PokeBall => {
+            game.it.counts.pokemon = game.it.counts.pokemon.wrapping_add(1)
+        }
         2 => super::lib2725::count_food(game),
         _ => {}
     }
     if super::super::gm::is_training(game) && x18 == 1 {
-        game.it.counts.x60 = game.it.counts.x60.wrapping_add(1);
+        game.it.counts.training_items = game.it.counts.training_items.wrapping_add(1);
     }
 }
 
@@ -206,23 +208,23 @@ pub fn count(game: &mut Game, gobj: GObjId) {
 pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
     let n = &mut game.it.counts;
     match hold_kind {
-        0 => n.x0 >= n.x4,
-        1 => n.x8 >= n.xC,
-        2 => n.x10 >= n.x14,
-        3 => n.x58 >= n.x5C,
-        5 => n.x40 >= n.x44,
-        7 => n.x34 >= n.x38,
+        0 => n.common >= n.common_limit,
+        1 => n.common_shots >= n.common_shots_limit,
+        2 => n.food >= n.food_limit,
+        3 => n.stage_hurtboxes >= n.stage_hurtboxes_limit,
+        5 => n.stage_shots >= n.stage_shots_limit,
+        7 => n.monster_shots >= n.monster_shots_limit,
         9 => {
-            if n.x1C > n.x20 {
-                n.x1C = n.x1C.wrapping_sub(1);
+            if n.pokemon > n.pokemon_limit {
+                n.pokemon = n.pokemon.wrapping_sub(1);
                 true
             } else {
                 false
             }
         }
-        10 => n.x24 >= n.x28,
-        11 => n.x48 >= n.x4C,
-        12 => n.x50 >= n.x54,
+        10 => n.pokemon_shots >= n.pokemon_shots_limit,
+        11 => n.trophies >= n.trophies_limit,
+        12 => n.coins >= n.coins_limit,
         _ => false,
     }
 }
@@ -313,7 +315,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         let ip = item_mut(r.game, gobj);
         ip.kind = spawn.kind;
         ip.hold_kind = spawn.hold_kind;
-        ip.spawn_origin = spawn.x10;
+        ip.spawn_origin = spawn.origin;
         ip.spawn_num = made;
         ip.entity = Some(gobj);
     }
@@ -380,15 +382,15 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.throw_coll_box = ip.kind_coll_box.clone();
     ip.flags.flags.hits_counted = a.hits_counted(data);
     ip.flags.flags.shield_hitlag = true;
-    ip.hit_flags.x0.b01 = a.cam_kind(data);
+    ip.hit_flags.bits.b01 = a.cam_kind(data);
     set_flag(&mut ip.hurt_flags, 3, false);
     ip.throw_count = 0;
     ip.land_count = 0;
     ip.slide_frames = 0;
     ip.skid = 2;
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
     ip.state_flags.b4567 = 15;
-    ip.ignore_id = super::IgnoreId(Some(spawn.x40 as u32));
+    ip.ignore_id = super::IgnoreId(Some(spawn.ignore_id as u32));
     ip.destroy_type = 4;
     set_flag(&mut ip.hurt_flags, 5, false);
     set_flag(&mut ip.hurt_flags, 4, false);
@@ -411,10 +413,10 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.min_hitlag = 0.0;
     ip.flags.flags.hitlag_counting = false;
     ip.flags.flags.damage_hitlag = false;
-    ip.state_flags.b1 = false;
+    ip.state_flags.keeps_owner_reflected = false;
     ip.reflect_speed_mul = 1.0;
     ip.reflect_damage_mul = 1.0;
-    ip.state_flags.b2 = false;
+    ip.state_flags.keeps_pokeball_reflected = false;
     set_flag(&mut ip.status_flags, 0, false);
     set_flag(&mut ip.hurt_flags, 6, false);
     set_flag(&mut ip.draw_flags, 0, false);
@@ -424,12 +426,12 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     set_flag(&mut ip.hurt_flags, 7, true);
     ip.scl = a.f32(data, attr::SCALE);
     ip.hitbox_scale = 0.0;
-    ip.hit_flags.x0.b3 = false;
-    ip.hit_flags.x0.b4 = false;
+    ip.hit_flags.bits.no_slide = false;
+    ip.hit_flags.bits.stops_on_land = false;
     set_flag(&mut ip.status_flags, 7, false);
     ip.effect_queue = Default::default();
     set_flag(&mut ip.phys_flags, 1, false);
-    ip.hit_flags.x0.b2 = false;
+    ip.hit_flags.bits.silenced = false;
     ip.sfx = NO_SFX;
     ip.sfx_loop_2 = NO_SFX;
     ip.sfx_loop_1 = NO_SFX;
@@ -442,7 +444,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     super::hitbox::clear_hit_ids(r.game, gobj);
     super::hitbox::clear_hit_ids2(r.game, gobj);
     lib2725::stop_holding_still(r.game, gobj);
-    let parent = spawn.x0_parent_gobj;
+    let parent = spawn.owner;
     let parent_is_fighter = is_fighter(r.game, parent);
     let ip = item_mut(r.game, gobj);
     ip.flags.flags.not_from_fighter = !parent_is_fighter;
@@ -704,7 +706,7 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         super::owner::inc_fighter_refs(r.game, fkind);
     }
     // `foobar3`: the camera follows some items.
-    let cam = super::item(r.game, gobj).hit_flags.x0.b01;
+    let cam = super::item(r.game, gobj).hit_flags.bits.b01;
     if cam != 0 {
         let b = r.game.camera.alloc_box(if cam == 1 { 0 } else { 2 });
         item_mut(r.game, gobj).camera_box = Some(b);
@@ -730,7 +732,7 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         ip.pos = spawn.prev_pos;
         ip.facing_dir = spawn.facing_dir;
         ip.init_facing_dir = spawn.facing_dir;
-        ip.owner = spawn.x0_parent_gobj;
+        ip.owner = spawn.owner;
         let dir = if reg(ip.facing_dir) == fp::fneg(1.0) {
             -1
         } else {
@@ -745,18 +747,18 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         ip.anim_frame = 0.0;
         ip.anim_speed = 1.0;
     }
-    lib2725::set_damage_taken(r.game, gobj, spawn.x3C_damage);
+    lib2725::set_damage_taken(r.game, gobj, spawn.damage);
     super::hitbox::clear_dealt(r.game, gobj);
     {
         let ip = item_mut(r.game, gobj);
         ip.reflector = None;
-        ip.state_flags.b0 = false;
+        ip.state_flags.keeps_reflected_damage = false;
         ip.absorber = None;
         ip.invincibility = 0;
     }
     lib26b1::enable_pickup(r.game, gobj);
     item_mut(r.game, gobj).flags.flags.held = false;
-    if spawn.x48_ground_or_air == 1 {
+    if spawn.ground_or_air == 1 {
         super::maplib::enter_air(item_mut(r.game, gobj));
     } else {
         super::maplib::enter_ground(item_mut(r.game, gobj));
@@ -847,8 +849,8 @@ pub fn logic(game: &Game, gobj: GObjId) -> &'static tables::ItemLogic {
 /// Makes an item in the air, `Item_80268B18`.
 #[doc(alias = "Item_80268B18")]
 pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
-    spawn.x48_ground_or_air = 1;
-    spawn.x10 = 0;
+    spawn.ground_or_air = 1;
+    spawn.origin = 0;
     spawn.hold_kind = hold_kind_of(spawn.kind);
     create(r, spawn)
 }
@@ -856,8 +858,8 @@ pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
 /// Makes an item on the ground, `Item_80268B5C`.
 #[doc(alias = "Item_80268B5C")]
 pub fn spawn_ground(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
-    spawn.x48_ground_or_air = 0;
-    spawn.x10 = 0;
+    spawn.ground_or_air = 0;
+    spawn.origin = 0;
     spawn.hold_kind = hold_kind_of(spawn.kind);
     create(r, spawn)
 }
@@ -876,20 +878,20 @@ pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
     }
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = -1.0;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     spawn
 }
 
 /// Makes an item on the ground with `x18` set, `Item_80268B9C`.
 #[doc(alias = "Item_80268B9C")]
 pub fn spawn_ground_marked(r: &mut Running, spawn: &mut SpawnItem) {
-    spawn.x48_ground_or_air = 0;
-    spawn.x10 = 1;
+    spawn.ground_or_air = 0;
+    spawn.origin = 1;
     spawn.hold_kind = hold_kind_of(spawn.kind);
     create(r, spawn);
 }
@@ -1029,7 +1031,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     }
     if flags & COLANIM_PRESERVE == 0 {
         let colanims = r.game.it.colanims.expect("no item color animations");
-        let i = i32::from_be_bytes(super::item(r.game, gobj).color_overlay.x28_colanim);
+        let i = i32::from_be_bytes(super::item(r.game, gobj).color_overlay.colanim);
         if data.u8(colanims.at(8 * i as u32 + 5)) != 0 {
             super::anim::clear_overlay(item_mut(r.game, gobj));
         }
@@ -1237,14 +1239,17 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     if !ip.flags.flags.held {
         if !ip.flags.flags.in_hitlag {
             let mut v = vec_add(ip.vel, ip.nudge);
-            if ip.ground_or_air == 0 && !ip.hit_flags.x0.b3 {
+            if ip.ground_or_air == 0 && !ip.hit_flags.bits.no_slide {
                 super::maplib::slide(r.game, r.data, gobj, &mut v);
             }
             let ip = item_mut(r.game, gobj);
             ip.pos = vec_add(ip.pos, v);
         }
         let ip = super::item(r.game, gobj);
-        if ip.state_flags.b3 && ip.state_flags.b4567 & 0xF != 0 && check_blast_zones(r, gobj) {
+        if ip.state_flags.checks_blast_zones
+            && ip.state_flags.b4567 & 0xF != 0
+            && check_blast_zones(r, gobj)
+        {
             return;
         }
         let ip = super::item(r.game, gobj);
@@ -1308,7 +1313,7 @@ pub fn proc_accessory(r: &mut Running, gobj: GObjId) {
         call(r, gobj, cb);
     }
     let ip = super::item(r.game, gobj);
-    if ip.hit_flags.x0.b01 != 0
+    if ip.hit_flags.bits.b01 != 0
         && let Some(b) = ip.camera_box
     {
         let pos = ip.pos;
@@ -1415,10 +1420,10 @@ pub fn clear_hit_record(ip: &mut Item) {
     ip.hit_item_pos = Vec3::new(0.0, 0.0, 0.0);
     set_flag(&mut ip.hurt_flags, 5, false);
     set_flag(&mut ip.hurt_flags, 4, false);
-    ip.state_flags.b1 = false;
+    ip.state_flags.keeps_owner_reflected = false;
     ip.reflect_speed_mul = 1.0;
     ip.reflect_damage_mul = 1.0;
-    ip.state_flags.b2 = false;
+    ip.state_flags.keeps_pokeball_reflected = false;
     ip.flags.flags.damage_hitlag = false;
     ip.hitlag_damage = 0;
     ip.flags.flags.hit_hitlag_asked = false;
@@ -1480,7 +1485,9 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "Item_80269F14")]
 pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
     let ip = super::item(r.game, gobj);
-    if !ip.state_flags.b1 && (ip.kind != ItKind::PokeBall || !ip.state_flags.b2) {
+    if !ip.state_flags.keeps_owner_reflected
+        && (ip.kind != ItKind::PokeBall || !ip.state_flags.keeps_pokeball_reflected)
+    {
         let reflector = ip.reflector;
         let team = super::owner::team(r.game, reflector);
         let ip = item_mut(r.game, gobj);
@@ -1510,7 +1517,7 @@ pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
     if react_with(r, gobj, cb) {
         return true;
     }
-    if !super::item(r.game, gobj).state_flags.b0 {
+    if !super::item(r.game, gobj).state_flags.keeps_reflected_damage {
         let max = common_data(r.game).u32(r.data, common::XD8);
         for i in 0..4 {
             let ip = super::item(r.game, gobj);
@@ -1802,11 +1809,11 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_80267454")]
 pub fn remove_camera_box(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    if ip.hit_flags.x0.b01 != 0
+    if ip.hit_flags.bits.b01 != 0
         && let Some(b) = ip.camera_box
     {
         ip.camera_box = None;
-        ip.hit_flags.x0.b01 = 0;
+        ip.hit_flags.bits.b01 = 0;
         game.camera.free_box(b);
     }
 }
@@ -2065,32 +2072,32 @@ pub fn init_globals(game: &mut Game, data: &Archives) {
     let c = common_data(game);
     let w = |off: u32| c.i32(data, off);
     let n = &mut game.it.counts;
-    n.x0 = 0;
-    n.x8 = 0;
-    n.x10 = 0;
-    n.x18 = 0;
-    n.x1C = 0;
-    n.x24 = 0;
-    n.x2C = 0;
-    n.x34 = 0;
-    n.x3C = 0;
-    n.x40 = 0;
-    n.x48 = 0;
-    n.x50 = 0;
-    n.x58 = 0;
-    n.x60 = 0;
-    n.x4 = w(0);
-    n.xC = w(4);
-    n.x14 = w(8);
-    n.x20 = w(0xC);
-    n.x28 = w(0x10);
-    n.x30 = w(0x14);
-    n.x38 = w(0x18);
-    n.x44 = w(0x1C);
-    n.x4C = w(0x24);
-    n.x54 = w(0x20);
-    n.x5C = w(0x28);
-    n.x64 = w(0x148);
+    n.common = 0;
+    n.common_shots = 0;
+    n.food = 0;
+    n.fighter_articles = 0;
+    n.pokemon = 0;
+    n.pokemon_shots = 0;
+    n.monsters = 0;
+    n.monster_shots = 0;
+    n.stage_items = 0;
+    n.stage_shots = 0;
+    n.trophies = 0;
+    n.coins = 0;
+    n.stage_hurtboxes = 0;
+    n.training_items = 0;
+    n.common_limit = w(0);
+    n.common_shots_limit = w(4);
+    n.food_limit = w(8);
+    n.pokemon_limit = w(0xC);
+    n.pokemon_shots_limit = w(0x10);
+    n.monsters_limit = w(0x14);
+    n.monster_shots_limit = w(0x18);
+    n.stage_shots_limit = w(0x1C);
+    n.trophies_limit = w(0x24);
+    n.coins_limit = w(0x20);
+    n.stage_hurtboxes_limit = w(0x28);
+    n.training_items_limit = w(0x148);
     game.it.ft_track.untracked[0] |= 0x80;
     game.it.ft_track.count = 1;
     game.it.pokemon.last_kind = UNSELECTED;

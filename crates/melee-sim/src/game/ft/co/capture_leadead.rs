@@ -50,7 +50,7 @@ impl Running<'_> {
         // `Fighter_SetDamageCallbacks`.
         fp.take_dmg_cb = Some(crate::game::handles::CodeRef(HIT));
         fp.death2_cb = Some(crate::game::handles::CodeRef(DEATH));
-        let redead = fp.dmg.x1868_source;
+        let redead = fp.dmg.source;
         fp.mv.set_gobj_at(LEADEAD, redead);
         self.stop_dead(gobj);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
@@ -70,7 +70,7 @@ impl Running<'_> {
         let t = fp::fadds(fp::fmadds(x720, hand, x71c), place);
         let shake_rows = self.data.u32(self.load_common(0x28).at(4)) as u8;
         let fp = &mut self.game.fighters[f.0];
-        let timer = fp::fmadds(reg(fp.dmg.x1830_percent), x730, t);
+        let timer = fp::fmadds(reg(fp.dmg.percent), x730, t);
         // `ftCommon_InitGrab(fp, 1, timer)`.
         fp.grab_timer = mem(timer);
         fp.mash_stick_y = 0;

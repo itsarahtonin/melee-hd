@@ -215,10 +215,10 @@ impl Default for Names {
 fn name_byte(d: &NameTagData, k: usize) -> u8 {
     match k {
         0..8 => d.namedata[k] as u8,
-        8 => d.x1A0 as u8,
+        8 => d.name_end as u8,
         9 => d.rumble_enabled,
-        10 => d.x1A2 as u8,
-        11 => d.padding_x1A2,
+        10 => d.handicap as u8,
+        11 => d.pad_1a3,
         _ => panic!("a name read past its name tag"),
     }
 }
@@ -226,7 +226,7 @@ fn name_byte(d: &NameTagData, k: usize) -> u8 {
 fn set_name_byte(d: &mut NameTagData, k: usize, v: u8) {
     match k {
         0..8 => d.namedata[k] = v as i8,
-        8 => d.x1A0 = v as i8,
+        8 => d.name_end = v as i8,
         _ => panic!("a name written past its name tag's name"),
     }
 }
@@ -604,11 +604,11 @@ impl Running<'_> {
             }
         };
         let g = &mut *self.game.game_data;
-        adjust(&mut g.vs.unk_51C.nametag);
-        adjust(&mut g.vs.unk_522.nametag);
-        adjust(&mut g.vs.unk_528.nametag);
-        adjust(&mut g.vs.unk_530.nametag);
-        adjust(&mut g.vs.unk_530.unk_584.unk_586);
+        adjust(&mut g.vs.classic.nametag);
+        adjust(&mut g.vs.adventure.nametag);
+        adjust(&mut g.vs.all_star.nametag);
+        adjust(&mut g.vs.event.nametag);
+        adjust(&mut g.vs.event.target_test.nametag);
         for p in &mut self.game.modes.homerun.start.players {
             adjust(&mut p.nametag);
         }
@@ -619,9 +619,9 @@ impl Running<'_> {
                 adjust(&mut p.nametag);
             }
         }
-        clear(&mut g.x1850.unk_x10);
-        clear(&mut g.x1850.x11);
-        clear(&mut g.x1850.x13);
+        clear(&mut g.rules.name_cursor_hi);
+        clear(&mut g.rules.name_cursor_lo);
+        clear(&mut g.rules.diagram2_name);
     }
 
     /// `mnName_MainInput`, the list's input: B back from the places to the buttons, or out
@@ -2281,7 +2281,7 @@ impl Running<'_> {
         n.text[6] = 0;
         n.text[9] = 0;
         self.keys_open(count);
-        let bgm = self.game.game_data.x1850.bgm;
+        let bgm = self.game.game_data.rules.bgm;
         self.lb_play_music(i32::from(bgm));
     }
 

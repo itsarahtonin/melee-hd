@@ -63,10 +63,10 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     }
     // A tip's damage, held back while its hitlag lasted, lands.
     let fp = &mut g.game.fighters[f.0];
-    if !(reg(fp.dmg.x189C_unk_num_frames) <= 0.0) {
-        fp.dmg.x189C_unk_num_frames = mem(fp::fsubs(reg(fp.dmg.x189C_unk_num_frames), 1.0));
-        if reg(fp.dmg.x189C_unk_num_frames) <= 0.0 && reg(fp.dmg.kb_applied) == 0.0 {
-            fp.dmg.x189C_unk_num_frames = 0.0;
+    if !(reg(fp.dmg.hit_frames) <= 0.0) {
+        fp.dmg.hit_frames = mem(fp::fsubs(reg(fp.dmg.hit_frames), 1.0));
+        if reg(fp.dmg.hit_frames) <= 0.0 && reg(fp.dmg.kb_applied) == 0.0 {
+            fp.dmg.hit_frames = 0.0;
             g.delayed_tip_damage(gobj);
         }
     }
@@ -77,8 +77,8 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     let mut knocked = false;
     if reg(kb) != 0.0 {
         let ga = fp.ground_or_air;
-        g.game.fighters[f.0].dmg.x189C_unk_num_frames = 0.0;
-        let dmg = reg(g.game.fighters[f.0].dmg.x1838_percentTemp);
+        g.game.fighters[f.0].dmg.hit_frames = 0.0;
+        let dmg = reg(g.game.fighters[f.0].dmg.pending_damage);
         g.take_damage_coins(f, dmg);
         g.calc_knockback(f);
         g.kb_maybe_lose_copy(gobj);
@@ -111,19 +111,16 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
                 _ => {}
             }
             let fp = &g.game.fighters[f.0];
-            let (element, applied, mul) = (
-                fp.dmg.x1860_element,
-                fp.dmg.x183C_applied,
-                fp.hitlag_vibrate_mul,
-            );
+            let (element, applied, mul) =
+                (fp.dmg.element, fp.dmg.damage_applied, fp.hitlag_vibrate_mul);
             knocked = true;
             g.start_hit_shake(f, element, applied, msid, ga, mul);
-            let dmg = fp::fctiwz(reg(g.game.fighters[f.0].dmg.x1838_percentTemp));
+            let dmg = fp::fctiwz(reg(g.game.fighters[f.0].dmg.pending_damage));
             g.damage_rumble(f, dmg);
             strength = applied;
         }
-    } else if reg(fp.dmg.x18a0) != 0.0 {
-        strength = fp.dmg.x1840;
+    } else if reg(fp.dmg.tip_kb_applied) != 0.0 {
+        strength = fp.dmg.max_tip_damage;
         tip = true;
     } else if fp.shield_hit_damage != 0 {
         if shield_broke {
@@ -134,32 +131,35 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         }
         strength = g.game.fighters[f.0].shield_hit_damage;
     } else if fp.dmg.int_value != 0 {
-        if reg(fp.dmg.x191C) != 0.0 && fp.victim_gobj.is_none() && fp.target_item_gobj.is_none() {
+        if reg(fp.dmg.clank_damage) != 0.0
+            && fp.victim_gobj.is_none()
+            && fp.target_item_gobj.is_none()
+        {
             g.damage_hooks(gobj);
             g.enter_rebound(gobj);
         }
         strength = g.game.fighters[f.0].dmg.int_value;
-    } else if fp.dmg.x1914 != 0 {
+    } else if fp.dmg.item_hit_damage != 0 {
         if let Some(cb) = fp.deal_dmg_cb {
             run_fighter_cb(g, gobj, cb);
         }
         let fp = &g.game.fighters[f.0];
-        strength = fp.dmg.x1914;
+        strength = fp.dmg.item_hit_damage;
         if fp.attack_flags[3] == 0x46 {
             g.start_rumble(f, 0xE, 0);
         } else {
             g.hit_rumble(f, strength);
         }
-    } else if fp.dmg.x1924 != 0 {
-        strength = fp.dmg.x1924;
-    } else if fp.reflect.x1A3C_damageOver != 0 {
+    } else if fp.dmg.max_shield_damage != 0 {
+        strength = fp.dmg.max_shield_damage;
+    } else if fp.reflect.damage_over != 0 {
         // A reflector overpowered breaks like a shield (`ftCo_80098C9C`).
         g.enter_shield_break(gobj);
-    } else if reg(fp.reflect.x1A2C_reflectHitDirection) != 0.0 {
+    } else if reg(fp.reflect.hit_direction) != 0.0 {
         if let Some(cb) = fp.reflect_hit_cb {
             run_fighter_cb(g, gobj, cb);
         }
-    } else if reg(fp.absorb.x1A40_absorbHitDirection) != 0.0 {
+    } else if reg(fp.absorb.hit_direction) != 0.0 {
         // `ftData_OnAbsorb`: Ness's and Mr. Game & Watch's.
         match fp.fighter_kind() {
             FighterKind::Ness => g.ness_on_absorb(gobj),
@@ -171,8 +171,8 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     {
         run_fighter_cb(g, gobj, cb);
     }
-    if reg(kb) == 0.0 && reg(g.game.fighters[f.0].dmg.x1838_percentTemp) != 0.0 {
-        let dmg = reg(g.game.fighters[f.0].dmg.x1838_percentTemp);
+    if reg(kb) == 0.0 && reg(g.game.fighters[f.0].dmg.pending_damage) != 0.0 {
+        let dmg = reg(g.game.fighters[f.0].dmg.pending_damage);
         g.take_damage_coins(f, dmg);
         g.kb_maybe_lose_copy_no_knockback(gobj);
         g.forget_attacker_grounded(f);
@@ -182,23 +182,23 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         let mul = g.game.fighters[f.0].hitlag_vibrate_mul;
         let lag = g.hitlag(strength, msid, mul);
         let fp = &mut g.game.fighters[f.0];
-        fp.dmg.x195c_hitlag_frames = mem(lag);
-        if !(reg(fp.dmg.x195c_hitlag_frames) >= reg(fp.min_hitlag)) {
-            fp.dmg.x195c_hitlag_frames = fp.min_hitlag;
+        fp.dmg.hitlag_frames = mem(lag);
+        if !(reg(fp.dmg.hitlag_frames) >= reg(fp.min_hitlag)) {
+            fp.dmg.hitlag_frames = fp.min_hitlag;
         }
-        let lag = reg(fp.dmg.x195c_hitlag_frames);
+        let lag = reg(fp.dmg.hitlag_frames);
         if !(lag <= 0.0) {
             let max = g.common().f32(0x194);
             let fp = &mut g.game.fighters[f.0];
             if !(lag <= reg(max)) {
-                fp.dmg.x195c_hitlag_frames = max;
+                fp.dmg.hitlag_frames = max;
             }
             fp.allow_sdi = true;
             if knocked {
                 fp.in_hitstun_sdi = true;
             }
             if tip {
-                fp.dmg.x189C_unk_num_frames = fp.dmg.x195c_hitlag_frames;
+                fp.dmg.hit_frames = fp.dmg.hitlag_frames;
             }
             if !fp.in_hitlag {
                 g.start_hitlag(gobj);
@@ -208,7 +208,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         g.queued_sounds(f);
     }
     let fp = &g.game.fighters[f.0];
-    if fp.pending_hitlag || reg(fp.dmg.x1958) != 0.0 {
+    if fp.pending_hitlag || reg(fp.dmg.pending_hitlag_frames) != 0.0 {
         if !fp.in_hitlag {
             g.start_hitlag(gobj);
         }
@@ -217,18 +217,18 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             fp.hitlag_held = true;
             fp.pending_hitlag = false;
         } else {
-            if !(reg(fp.dmg.x1958) <= reg(fp.dmg.x1954)) {
-                fp.dmg.x1954 = fp.dmg.x1958;
+            if !(reg(fp.dmg.pending_hitlag_frames) <= reg(fp.dmg.hold_frames)) {
+                fp.dmg.hold_frames = fp.dmg.pending_hitlag_frames;
             }
-            fp.dmg.x1958 = 0.0;
+            fp.dmg.pending_hitlag_frames = 0.0;
         }
     }
     let c = g.common();
     let (push_mul, push_add) = (c.f32(0x3E0), c.f32(0x3E4));
     let fp = &mut g.game.fighters[f.0];
-    if reg(fp.dmg.x1928) != 0.0 {
-        let push = fp::fmadds(reg(fp.dmg.x1928), reg(push_mul), reg(push_add));
-        fp.ground_attacker_shield_kb_vel = mem(if !(reg(fp.dmg.x192c) >= 0.0) {
+    if reg(fp.dmg.shield_push) != 0.0 {
+        let push = fp::fmadds(reg(fp.dmg.shield_push), reg(push_mul), reg(push_add));
+        fp.ground_attacker_shield_kb_vel = mem(if !(reg(fp.dmg.shield_push_dir) >= 0.0) {
             push
         } else {
             fp::fneg(push)
@@ -236,31 +236,31 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         g.shield_push(gobj);
     }
     let fp = &mut g.game.fighters[f.0];
-    fp.dmg.x1838_percentTemp = 0.0;
-    fp.dmg.x183C_applied = 0;
+    fp.dmg.pending_damage = 0.0;
+    fp.dmg.damage_applied = 0;
     fp.hit_reaction = 0;
     fp.dmg.kb_applied = 0.0;
-    fp.dmg.x18a0 = 0.0;
-    fp.dmg.x1840 = 0;
-    fp.dmg.x1914 = 0;
+    fp.dmg.tip_kb_applied = 0.0;
+    fp.dmg.max_tip_damage = 0;
+    fp.dmg.item_hit_damage = 0;
     fp.dmg.int_value = 0;
-    fp.dmg.x191C = 0.0;
+    fp.dmg.clank_damage = 0.0;
     fp.hit_by = None;
     fp.hit_this_frame = false;
-    fp.dmg.x1924 = 0;
-    fp.dmg.x1928 = 0.0;
+    fp.dmg.max_shield_damage = 0;
+    fp.dmg.shield_push = 0.0;
     fp.shield_damage_taken = 0;
     fp.shield_hit_damage = 0;
     fp.shield_hit_by = None;
-    fp.reflect.x1A3C_damageOver = 0;
-    fp.reflect.x1A2C_reflectHitDirection = 0.0;
-    fp.absorb.x1A40_absorbHitDirection = 0.0;
-    fp.absorb.x1A44_damageTaken = 0;
-    fp.absorb.x1A48_hitsTaken = 0;
+    fp.reflect.damage_over = 0;
+    fp.reflect.hit_direction = 0.0;
+    fp.absorb.hit_direction = 0.0;
+    fp.absorb.damage_taken = 0;
+    fp.absorb.hits_taken = 0;
     fp.hitlag_vibrate_mul = 1.0;
     fp.min_hitlag = 0.0;
-    fp.dmg.x1950 = 0;
-    if !fp.was_in_hitlag || fp.dmg.x18F4 != 0 {
+    fp.dmg.stepped_on_item = 0;
+    if !fp.was_in_hitlag || fp.dmg.cape_turn_frames != 0 {
         g.afterimage(f);
     }
     g.cpu_hurt_bounds(f);
@@ -309,17 +309,17 @@ impl Running<'_> {
     /// `ftCo_80090718`.
     #[doc(alias = "ftCo_80090718")]
     pub(crate) fn queued_sounds(&mut self, f: FighterId) {
-        let id = self.game.fighters[f.0].dmg.x1908;
+        let id = self.game.fighters[f.0].dmg.queued_sfx;
         if id != -1 {
             self.fighter_play_sfx(f, id, 0x7F, 0x40);
-            self.game.fighters[f.0].dmg.x1908 = -1;
+            self.game.fighters[f.0].dmg.queued_sfx = -1;
         }
-        if let Some(arr) = self.game.fighters[f.0].dmg.x190C {
+        if let Some(arr) = self.game.fighters[f.0].dmg.queued_sfx_table {
             // `FtSFXArr`: a count and its ids.
             let n = self.data.u32(arr) as i32;
             let at = self.data.ptr(arr.at(4)).expect("a voice set's ids");
             self.fighter_random_voice_in(f, at, n);
-            self.game.fighters[f.0].dmg.x190C = None;
+            self.game.fighters[f.0].dmg.queued_sfx_table = None;
         }
     }
 
@@ -395,8 +395,8 @@ impl Running<'_> {
             .mtx
             .m;
         let fp = &mut self.game.fighters[f.0];
-        fp.afterimage_ring[at].x0 = pos;
-        fp.afterimage_ring[at].xC = crate::vec::Vec3::new(m[0][axis], m[1][axis], m[2][axis]);
+        fp.afterimage_ring[at].point_0 = pos;
+        fp.afterimage_ring[at].point_1 = crate::vec::Vec3::new(m[0][axis], m[1][axis], m[2][axis]);
         fp.afterimage_slot = if at == 2 { 0 } else { at as u8 + 1 };
         if fp.afterimage_mode < 3 {
             fp.afterimage_mode += 1;

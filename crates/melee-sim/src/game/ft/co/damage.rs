@@ -33,7 +33,7 @@ impl Running<'_> {
     /// `LbBf.dat` animation (fire 3, electric 4, ice 5, darkness 6, any other 2).
     #[doc(alias = "ftCo_8008DB10")]
     pub fn heavy_hit_flash(&mut self, gobj: GObjId, element: i32, kb: f32) {
-        if self.game.fighter(gobj).dmg.x1838_percentTemp == 0.0 {
+        if self.game.fighter(gobj).dmg.pending_damage == 0.0 {
             return;
         }
         let (threshold, anim) = match element {
@@ -351,7 +351,7 @@ impl Running<'_> {
         }
         let slow = self.common().f32(0x1C8);
         let fp = self.game.fighter(gobj);
-        if fp.thrown_hitbox.x134.is_set() {
+        if fp.thrown_hitbox.owner.is_set() {
             let k = fp.kb_vel;
             let sq = |v: f32| fp::fmuls(reg(v), reg(v));
             let speed = crate::math::sqrt(mem(fp::fadds(sq(k.z), fp::fadds(sq(k.x), sq(k.y)))));

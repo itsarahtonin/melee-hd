@@ -136,7 +136,7 @@ fn joint_mtx(objs: &mut Objects, data: &Archives, j: Option<JObjId>) -> Mtx34 {
 /// coloured by its element, its size scaled by `scale_y` unless it keeps its own (`x43_b1`).
 #[doc(alias = "lbColl_80009F54")]
 pub fn hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> bool {
-    if hit.state == 0 || hit.x43_b2 {
+    if hit.state == 0 || hit.phantom {
         return false;
     }
     let color = match hit.element {
@@ -150,7 +150,7 @@ pub fn hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> boo
 /// A thrown fighter's hit's bubble, `lbColl_8000A044`.
 #[doc(alias = "lbColl_8000A044")]
 pub fn thrown_hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> bool {
-    if hit.state == 0 || hit.x43_b2 {
+    if hit.state == 0 || hit.phantom {
         return false;
     }
     hit_capsule(objs, hit, pass, scale_y, THROWN)
@@ -166,7 +166,7 @@ fn hit_capsule(
     if pass_of(color) != pass {
         return false;
     }
-    let size = if hit.x43_b1 {
+    let size = if hit.unscaled_offset {
         hit.scale
     } else {
         crate::fpu::mem(gekko_fp::fmuls(
@@ -177,8 +177,8 @@ fn hit_capsule(
     push(
         objs,
         DebugDraw::Capsule {
-            a: hit.x58,
-            b: hit.x4C,
+            a: hit.prev_pos,
+            b: hit.pos,
             color,
             amb,
             size,
@@ -202,14 +202,14 @@ pub fn coin_capsule(
         return false;
     }
     let size = crate::fpu::mem(gekko_fp::fmuls(
-        crate::fpu::reg(c.x0),
+        crate::fpu::reg(c.radius),
         crate::fpu::reg(scale_y),
     ));
     push(
         objs,
         DebugDraw::Capsule {
-            a: c.x14,
-            b: c.x8,
+            a: c.prev_pos,
+            b: c.pos,
             color,
             amb,
             size,
@@ -443,9 +443,9 @@ pub fn stomp(objs: &mut Objects, r: &crate::game::structs::lb_80014638_arg1_t, p
     push(
         objs,
         DebugDraw::Stomp {
-            x0: r.x8.x,
-            x1: r.x8.y,
-            y: r.x8.z,
+            x0: r.span.x,
+            x1: r.span.y,
+            y: r.span.z,
         },
     );
     true

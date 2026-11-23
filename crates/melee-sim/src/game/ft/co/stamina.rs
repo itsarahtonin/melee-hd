@@ -15,7 +15,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         if !fp.stamina_dead
             && fp.is_stamina
-            && fp.dmg.x18F0 == 0
+            && fp.dmg.healing == 0
             && self
                 .game
                 .player_remaining_hp_at(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
@@ -84,7 +84,7 @@ impl Running<'_> {
         self.damage_hooks(gobj);
         self.drop_heavy_item(gobj);
         if let Some(victim) = self.game.fighter(gobj).victim_gobj {
-            if self.game.fighter(gobj).state_flags.x221B_b5 {
+            if self.game.fighter(gobj).state_flags.holds_grab {
                 self.enter_capture_cut(victim);
             } else {
                 self.enter_capture_cut(gobj);

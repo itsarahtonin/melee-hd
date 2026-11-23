@@ -119,8 +119,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grOldKongo_8020F46C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.oldkongo_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 3, 1, 2] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -179,7 +179,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The stage's process (map 3), `stageGObj3_GObjProc`: the collision follows the model, and the
@@ -378,7 +378,7 @@ pub fn proc_birds(r: &mut Running, gobj: GObjId) {
                 })
             })
         {
-            let tick = r.game.scene.unk_8;
+            let tick = r.game.scene.game_ticks;
             r.game.display_phase.note(tick);
         }
         jobj::set_srt(&mut r.game.objs.jobjs, root, |o| o.translate.x = x);

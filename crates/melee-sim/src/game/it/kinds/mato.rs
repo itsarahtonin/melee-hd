@@ -46,7 +46,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
     ip.skid = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     enter_still(r, gobj);
 }
 

@@ -121,7 +121,8 @@ fn the_c_stick_rule_off_zooms() {
         return;
     };
     assert!(
-        out.contains("1230 ticks compared; tick 1229 differs") && out.contains("camera.x2BA"),
+        out.contains("1230 ticks compared; tick 1229 differs")
+            && out.contains("camera.zoom_step (x2BA)"),
         "{out}"
     );
 }
@@ -738,7 +739,7 @@ fn a_later_live_match_takes_the_consoles_counters() {
     for d in [
         "mpColl_804D64AC: update counter",
         "Ground_804D6954: stamp",
-        "fighter.coll_data.x38",
+        "fighter.coll_data.map_generation (x38)",
         "particles: display sorting",
     ] {
         assert!(out.contains(d), "{d}: {out}");

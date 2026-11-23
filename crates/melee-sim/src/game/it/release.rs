@@ -266,7 +266,7 @@ pub fn thrown_by_holder(r: &mut Running, gobj: GObjId, give_back: bool) {
 #[doc(alias = "it_802731A4")]
 pub fn drop_sfx(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.hit_flags.x0.b2 {
+    if !ip.hit_flags.bits.silenced {
         let sfx = ip.drop_sfx;
         super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
@@ -276,7 +276,7 @@ pub fn drop_sfx(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802731E0")]
 pub fn throw_sfx(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.hit_flags.x0.b2 {
+    if !ip.hit_flags.bits.silenced {
         let sfx = ip.throw_sfx;
         super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }

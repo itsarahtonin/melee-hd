@@ -3646,7 +3646,7 @@ fn garden_river() {
             .expect("the fighter's GObj");
         let pull = jungle_japes::river(r, ground, fighter);
         if let Some(v) = pull {
-            r.game.stage_info.x730 = v;
+            r.game.stage_info.barrel_pos = v;
         }
         Ret::Int(u32::from(pull.is_some()))
     };
@@ -4301,9 +4301,9 @@ fn kongo_path() {
         let (at, rot) =
             melee_sim::game::gr::ground::spline_pose(r.data, spline, call.regs.fpr[1].ps0 as f32);
         if let Some(at) = at {
-            r.game.stage_info.x130 = at;
+            r.game.stage_info.guides.front_near = at;
         }
-        r.game.stage_info.x13C = rot;
+        r.game.stage_info.guides.front_far = rot;
         Ret::Nothing
     };
     let si = leaf_check::sym("stage_info");
@@ -4322,7 +4322,7 @@ fn kongo_path() {
         if let Some(v) =
             melee_sim::hsd::spline::tangent(r.data, spline, call.regs.fpr[1].ps0 as f32)
         {
-            r.game.stage_info.x130 = v;
+            r.game.stage_info.guides.front_near = v;
         }
         Ret::Nothing
     };
@@ -4466,13 +4466,13 @@ fn klap() {
             state: w(0) as i32,
             damage: w(4) as f32,
             kb_angle: w(8) as i32,
-            x24: w(0xC),
-            x28: w(0x10),
-            x2C: w(0x14),
+            kb_growth: w(0xC),
+            set_kb: w(0x10),
+            base_kb: w(0x14),
             element: w(0x18),
             sfx_severity: w(0x1C) as i32,
             sfx_kind: w(0x20) as i32,
-            unk_count: w(4),
+            whole_damage: w(4),
             ..Default::default()
         };
         klap_trap::shot(
@@ -4505,9 +4505,9 @@ fn klap() {
         let w = |o: u32| peek_u32(call, g[4] + o);
         let hit = melee_sim::game::structs::HitCapsule {
             damage: f32::from_bits(w(0x8)),
-            x24: w(0x24),
-            x28: w(0x28),
-            x2C: w(0x2C),
+            kb_growth: w(0x24),
+            set_kb: w(0x28),
+            base_kb: w(0x2C),
             ..Default::default()
         };
         let gobj = (maps.gobjs.iter())
@@ -4595,13 +4595,13 @@ fn hit_desc(c: &Call, addr: u32) -> HitCapsule {
         state: w(0) as i32,
         damage: w(1) as f32,
         kb_angle: w(2) as i32,
-        x24: w(3),
-        x28: w(4),
-        x2C: w(5),
+        kb_growth: w(3),
+        set_kb: w(4),
+        base_kb: w(5),
         element: w(6),
         sfx_severity: w(7) as i32,
         sfx_kind: w(8) as i32,
-        unk_count: w(1),
+        whole_damage: w(1),
         ..HitCapsule::default()
     }
 }
@@ -4880,7 +4880,7 @@ fn greens_wind() {
             .get(&call.regs.gpr[4])
             .expect("the fighter's GObj");
         let push = green_greens::wind_push(r, ground, fighter);
-        r.game.stage_info.x730 = push.unwrap_or(Vec3::ZERO);
+        r.game.stage_info.barrel_pos = push.unwrap_or(Vec3::ZERO);
         Ret::Int(u32::from(push.is_some()))
     };
     let out = |c: &mut Call| c.regs.gpr[5] = leaf_check::sym("stage_info") + 0x730;
@@ -5599,7 +5599,7 @@ fn zebes_lava() {
             let param = r.game.gr.zebes_yakumono.expect("yakumono_param");
             assert_eq!(Some(h), r.data.ptr(param.at(0x2C)));
             let word = peek_u32(call, peek_u32(call, ZEBES_PARAM) + 0x2C);
-            r.game.stage_info.x730.x = f32::from_bits(word);
+            r.game.stage_info.barrel_pos.x = f32::from_bits(word);
         }
         Ret::Int(u32::from(hit.is_some()))
     };
@@ -8261,7 +8261,7 @@ fn icemt_touches() {
         let (objs, grounds) = (&mut r.game.objs, &mut r.game.grounds);
         icicle_mountain::ice_touched(objs, grounds, root, g, cb, &cd);
         let mut touch = icicle_mountain::ClimbTouch::default();
-        touch.touched(cd.x0_gobj);
+        touch.touched(cd.gobj);
         touch.apply(r.game);
         Ret::Nothing
     };
@@ -8288,7 +8288,7 @@ fn icemt_touches() {
     let adventure = |r: &mut Running, maps: &Maps, call: &Call| {
         let cd = coll_arg(r, maps, call);
         let mut touch = icicle_mountain::ClimbTouch::default();
-        touch.touched(cd.x0_gobj);
+        touch.touched(cd.gobj);
         touch.apply(r.game);
         Ret::Nothing
     };
@@ -10188,7 +10188,7 @@ fn castle_bills() {
     let at = |r: &mut Running, _: &Maps, _: &Call| {
         let found = peachs_castle::bill_position(r.game, r.data);
         if let Some(v) = found {
-            r.game.stage_info.x730 = v;
+            r.game.stage_info.barrel_pos = v;
         }
         Ret::Int(u32::from(found.is_some()))
     };
@@ -10476,7 +10476,7 @@ fn castle_moat() {
                 .expect("the fighter's GObj");
             let push = peachs_castle::moat(r, ground, fighter);
             if let Some(v) = push {
-                r.game.stage_info.x730 = v;
+                r.game.stage_info.barrel_pos = v;
             }
             Ret::Int(u32::from(push.is_some()))
         };
@@ -11025,7 +11025,7 @@ fn mutecity_callbacks() {
     let touched = |r: &mut Running, maps: &Maps, call: &Call| {
         let live = r.game.gr.mutecity.track_live;
         let kind = call.regs.gpr[7] as i32;
-        let owner = mc_coll_mut(r, maps, call).x0_gobj;
+        let owner = mc_coll_mut(r, maps, call).gobj;
         let item = owner.is_some_and(|o| r.game.world.gobjs[o.0].p_link == 9);
         mute_city::track_touched(live, mc_coll_mut(r, maps, call), kind, item);
         Ret::Nothing

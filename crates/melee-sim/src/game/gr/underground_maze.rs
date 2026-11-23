@@ -139,8 +139,8 @@ fn script(r: &Running, off: u32) -> Option<DataRef> {
 #[doc(alias = "grShrineRoute_OnInit")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.shrineroute_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = false;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = false;
     for map_id in [0, 4, 2] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -236,8 +236,8 @@ pub fn init_maze(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     for _ in 0..2 {
         let j = nth_joint(r.game, gobj, 1);
         material::model_to_stage_class(r.game, j);
@@ -253,8 +253,8 @@ pub fn init_maze(r: &mut Running, gobj: GObjId) {
         v.touched = 0;
         v.both_touched = 0;
     }
-    gp.x11_flags.b012 = 2;
-    r.game.stage_info.x6DC = 0;
+    gp.pass_flags.b012 = 2;
+    r.game.stage_info.route_zone = 0;
     r.game.grounds[g.0].u.shrineroute().symbols = [None; 6];
     r.game
         .gr
@@ -575,7 +575,7 @@ fn enter_arena(r: &mut Running, gobj: GObjId, result: i32) {
             r.game.geometry_mut().disable_joint(joint);
         }
     }
-    r.game.stage_info.x6DC = 1;
+    r.game.stage_info.route_zone = 1;
     let dst = point_joint(r.game, 5);
     let src = point_joint(r.game, result.wrapping_sub(0xA));
     if let (Some(dst), Some(src)) = (dst, src) {
@@ -602,7 +602,7 @@ fn leave_arena(r: &mut Running, gobj: GObjId) {
         let s = script(r, 8);
         material::start_script(r.game, r.data, portal, s, 0);
     }
-    r.game.stage_info.x6DC = 0;
+    r.game.stage_info.route_zone = 0;
     r.game.grounds[g.0].u.shrineroute().state = 4;
 }
 
@@ -614,9 +614,9 @@ pub fn init_portal(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
-    gp.x11_flags.b012 = 2;
+    gp.unread_8 = None;
+    gp.unread_c = None;
+    gp.pass_flags.b012 = 2;
     material::model_to_stage_class(r.game, j);
     let spin = nth_joint(r.game, gobj, 10);
     r.game.grounds[g.0].u.shrineroute3().spin = spin;

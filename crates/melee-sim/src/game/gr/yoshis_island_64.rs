@@ -99,8 +99,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grOldYoshi_8020E79C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.oldyoshi_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 1, 4, 5, 2, 3] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -143,7 +143,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     material::set_tree_flags(r.game, j, 1 << 27);
     material::set_tree_flags(r.game, j, 1 << 29);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// A map's collision and animation (the inline `Ground_InitMapCollAndAnim`).
@@ -160,8 +160,8 @@ fn init_coll_and_anim(r: &mut Running, gobj: GObjId) {
 pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     init_coll_and_anim(r, gobj);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The stage's process, `grOldYoshi_8020EA64`: the collision follows the model, and the wind
@@ -178,7 +178,7 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
 pub fn init_front(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     init_coll_and_anim(r, gobj);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// The clouds' setup (map 2), `grOldYoshi_8020EAFC`: their collision and animation, each
@@ -208,7 +208,7 @@ pub fn init_clouds(r: &mut Running, gobj: GObjId) {
             Some(CodeRef(CLOUD_TOUCHED)),
         );
     }
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// The clouds' process, `grOldYoshi_8020EC10`. A cloud at rest (state 0) sinks while stood on,
@@ -388,7 +388,7 @@ pub fn init_guest(r: &mut Running, gobj: GObjId) {
     let v = r.game.grounds[g.0].u.oldyoshi_guest();
     v.wait = wait as i16;
     v.part = -1;
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// A wait between the parameters' two bounds.

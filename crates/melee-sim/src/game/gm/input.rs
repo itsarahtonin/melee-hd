@@ -36,24 +36,24 @@ pub const REPEAT: CodeRef = CodeRef(0x801A_396C);
 impl Game {
     #[doc(alias = "gm_GetButtonsPressed")]
     pub fn buttons_pressed(&self, port: u8) -> u64 {
-        self.controller_map.x0[usize::from(port)].button
+        self.controller_map.ports[usize::from(port)].button
     }
 
     #[doc(alias = "gm_GetButtonsTriggered")]
     pub fn buttons_triggered(&self, port: u8) -> u64 {
-        self.controller_map.x0[usize::from(port)].trigger
+        self.controller_map.ports[usize::from(port)].trigger
     }
 
     /// The buttons repeating this frame, `gm_801A36C0`.
     #[doc(alias = "gm_801A36C0")]
     pub fn buttons_repeated(&self, port: u8) -> u64 {
-        self.controller_map.x0[usize::from(port)].repeat2
+        self.controller_map.ports[usize::from(port)].repeat2
     }
 
     /// Delays a port's (or, for 4, every port's) key repeat, `gm_801A36E0`.
     #[doc(alias = "gm_801A36E0")]
     pub fn delay_repeat(&mut self, port: i32, frames: i32) {
-        let m = &mut self.controller_map.x0;
+        let m = &mut self.controller_map.ports;
         if port == 4 {
             for c in &mut m[..4] {
                 c.repeat_timer = frames;
@@ -68,7 +68,7 @@ impl Game {
     pub fn evaluate_controller_inputs(&mut self) {
         for i in 0..4 {
             let s = self.pads.copy[i];
-            let c = &mut self.controller_map.x0[i];
+            let c = &mut self.controller_map.ports[i];
             c.button = u64::from(s.button);
             c.trigger = u64::from(s.trigger);
             c.repeat = u64::from(s.repeat);
@@ -96,12 +96,12 @@ impl Game {
                 DPAD_RIGHT | STICK_RIGHT,
                 ANY_RIGHT,
             );
-            match self.controller_map.xF0 {
+            match self.controller_map.repeat_fn {
                 Some(REPEAT) => repeat(&mut self.controller_map, i),
                 other => panic!("controller map hook {other:?} isn't ported"),
             }
         }
-        let m = &mut self.controller_map.x0;
+        let m = &mut self.controller_map.ports;
         let mut all = m[4].clone();
         all.button = 0;
         all.trigger = 0;
@@ -124,18 +124,18 @@ impl Game {
     #[doc(alias = "gm_801A3E88")]
     pub fn reset_controller_map(&mut self) {
         let mut m = ControllerMap {
-            xF4: 0x14,
-            xF6: 0x8,
-            xF8: 0x28,
-            xFA: 0x4,
-            xFC: 0x64,
-            xFE: 0x2,
+            repeat_delay: 0x14,
+            slow_repeat: 0x8,
+            mid_after: 0x28,
+            mid_repeat: 0x4,
+            fast_after: 0x64,
+            fast_repeat: 0x2,
             ..ControllerMap::default()
         };
-        for c in &mut m.x0 {
-            c.repeat_timer = i32::from(m.xF4);
+        for c in &mut m.ports {
+            c.repeat_timer = i32::from(m.repeat_delay);
         }
-        m.xF0 = Some(REPEAT);
+        m.repeat_fn = Some(REPEAT);
         self.controller_map = m;
     }
 }
@@ -143,7 +143,7 @@ impl Game {
 /// Adds `to` where any of `from` is held, pressed, repeated or released, `gm_801A3714`.
 #[doc(alias = "gm_801A3714")]
 pub fn map_any(m: &mut ControllerMap, i: usize, from: u64, to: u64) {
-    let c = &mut m.x0[i];
+    let c = &mut m.ports[i];
     if from & c.button != 0 {
         c.button |= to;
     }
@@ -162,7 +162,7 @@ pub fn map_any(m: &mut ControllerMap, i: usize, from: u64, to: u64) {
 /// `gm_801A3820`.
 #[doc(alias = "gm_801A3820")]
 pub fn map_all(m: &mut ControllerMap, i: usize, from: u64, to: u64) {
-    let c = &mut m.x0[i];
+    let c = &mut m.ports[i];
     if from == from & c.button {
         c.button |= to;
     }
@@ -181,17 +181,17 @@ pub fn map_all(m: &mut ControllerMap, i: usize, from: u64, to: u64) {
 /// once the timer runs out, faster the longer they're held.
 #[doc(alias = "fn_801A396C")]
 pub fn repeat(m: &mut ControllerMap, i: usize) {
-    let (first, x_fc, x_f8) = (m.xF4, m.xFC, m.xF8);
-    let (slow, mid, fast) = (m.xF6, m.xFA, m.xFE);
-    let c = &mut m.x0[i];
+    let (first, x_fc, x_f8) = (m.repeat_delay, m.fast_after, m.mid_after);
+    let (slow, mid, fast) = (m.slow_repeat, m.mid_repeat, m.fast_repeat);
+    let c = &mut m.ports[i];
     if c.trigger != 0 || c.release != 0 {
         c.repeat2 = c.trigger;
         c.repeat_timer = i32::from(first);
-        c.x2C = 0;
+        c.held_frames = 0;
         return;
     }
-    if c.x2C < i32::from(x_fc) {
-        c.x2C += 1;
+    if c.held_frames < i32::from(x_fc) {
+        c.held_frames += 1;
     }
     if c.repeat_timer != 0 {
         c.repeat_timer -= 1;
@@ -199,9 +199,9 @@ pub fn repeat(m: &mut ControllerMap, i: usize) {
         return;
     }
     c.repeat2 = c.button;
-    c.repeat_timer = if c.x2C >= i32::from(x_fc) {
+    c.repeat_timer = if c.held_frames >= i32::from(x_fc) {
         i32::from(fast)
-    } else if c.x2C >= i32::from(x_f8) {
+    } else if c.held_frames >= i32::from(x_f8) {
         i32::from(mid)
     } else {
         i32::from(slow)

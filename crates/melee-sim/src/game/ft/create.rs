@@ -401,7 +401,7 @@ impl Running<'_> {
         fp.heavy_down_bound = false;
         fp.jumped_from_ground = false;
         fp.low_models_own_material = false;
-        fp.smash_attrs.x2135 = -1;
+        fp.smash_attrs.rebirth_point = -1;
         fp.mushroom_scale_joint = None;
         fp.no_magnifier = false;
     }
@@ -500,11 +500,11 @@ impl Running<'_> {
         shadow::add_object(objs, Some(s), Some(root));
         shadow::set_active(objs, s, true);
         let ls = &mut self.game.fighters[f.0].shadow;
-        ls.x0_b0 = false;
-        ls.x0_b1 = false;
-        ls.x0_b3 = false;
-        ls.x0_b4 = false;
-        ls.x0_b5 = false;
+        ls.off_no_light = false;
+        ls.off_unset = false;
+        ls.off_nothing_drawn = false;
+        ls.off_by_stage = false;
+        ls.off_by_debug = false;
         ls.shadow = Some(s);
     }
 }

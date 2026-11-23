@@ -147,7 +147,7 @@ pub fn tick_lifetime(game: &mut Game, gobj: GObjId) -> bool {
 #[doc(alias = "it_80273168")]
 pub fn pickup_sfx(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.hit_flags.x0.b2 {
+    if !ip.hit_flags.bits.silenced {
         let sfx = ip.pickup_sfx;
         super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
@@ -159,7 +159,7 @@ pub fn destroy_effect(r: &mut Running, gobj: GObjId, gfx: i32, sfx: i32) {
     if gfx != -1 {
         super::effect::spawn_simple(r, gobj, gfx);
     }
-    if !item(r.game, gobj).hit_flags.x0.b2 {
+    if !item(r.game, gobj).hit_flags.bits.silenced {
         play_sfx(r, gobj, sfx);
         // Only the target's break (kind 0xD1, Target Test and the trophy stages) has it.
         if sfx == 0x12F {
@@ -171,7 +171,7 @@ pub fn destroy_effect(r: &mut Running, gobj: GObjId, gfx: i32, sfx: i32) {
 /// Plays a sound unless the item is quiet, `it_802732E4`.
 #[doc(alias = "it_802732E4")]
 pub fn play_sfx(r: &mut Running, gobj: GObjId, sfx: i32) {
-    if !item(r.game, gobj).hit_flags.x0.b2 {
+    if !item(r.game, gobj).hit_flags.bits.silenced {
         super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
 }
@@ -331,8 +331,8 @@ pub fn ecb_motion(game: &mut Game, gobj: GObjId) {
     let a = super::lib26b1::ecb_center(game, gobj);
     let b = super::lib26b1::last_ecb_center(game, gobj);
     let ip = item_mut(game, gobj);
-    ip.stomp_box.unk_x = mem(fp::fsubs(reg(a.x), reg(b.x)));
-    ip.stomp_box.unk_y = mem(fp::fsubs(reg(a.y), reg(b.y)));
+    ip.stomp_box.motion_x = mem(fp::fsubs(reg(a.x), reg(b.x)));
+    ip.stomp_box.motion_y = mem(fp::fsubs(reg(a.y), reg(b.y)));
 }
 
 /// The ECB's extent in the world, into `xB54.x8`, `it_80274D6C`.
@@ -341,9 +341,9 @@ pub fn ecb_extent(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     let e = &ip.coll.ecb;
     let (right_x, right_y, left_x, top_y) = (e.right.x, e.right.y, e.left.x, e.top.y);
-    ip.stomp_box.x8.y = mem(fp::fadds(reg(right_x), reg(ip.pos.x)));
-    ip.stomp_box.x8.x = mem(fp::fadds(reg(left_x), reg(ip.pos.x)));
-    ip.stomp_box.x8.z = mem(fp::fadds(
+    ip.stomp_box.span.y = mem(fp::fadds(reg(right_x), reg(ip.pos.x)));
+    ip.stomp_box.span.x = mem(fp::fadds(reg(left_x), reg(ip.pos.x)));
+    ip.stomp_box.span.z = mem(fp::fadds(
         reg(top_y),
         fp::fadds(reg(right_y), reg(ip.pos.y)),
     ));
@@ -353,8 +353,8 @@ pub fn ecb_extent(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80274DAC")]
 pub fn init_spin(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.stomp_box.unk_x = 0.0;
-    ip.stomp_box.unk_y = 0.0;
+    ip.stomp_box.motion_x = 0.0;
+    ip.stomp_box.motion_y = 0.0;
     ecb_extent(game, gobj);
 }
 
@@ -406,7 +406,7 @@ pub fn spin_angle(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
 #[doc(alias = "it_8027321C")]
 pub fn bounce_sfx(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if ip.hit_flags.x0.b2 {
+    if ip.hit_flags.bits.silenced {
         return;
     }
     let sfx = ip.bounce_sfx;
@@ -596,10 +596,10 @@ pub fn make_stompable(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_802750F8")]
 pub fn first_frame(r: &mut Running, gobj: GObjId) {
     let id = super::item_of(r.game, gobj);
-    r.game.items[id.0].state_flags.b3 = false;
+    r.game.items[id.0].state_flags.checks_blast_zones = false;
     super::item::proc_phys(r, gobj);
     super::item::proc_coll(r, gobj);
-    r.game.items[id.0].state_flags.b3 = true;
+    r.game.items[id.0].state_flags.checks_blast_zones = true;
 }
 
 /// Turns hitbox `idx` on where its joint is now, `it_80272674`.

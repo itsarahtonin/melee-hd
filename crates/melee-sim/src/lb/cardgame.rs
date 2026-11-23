@@ -385,7 +385,7 @@ impl Running<'_> {
             .clock_read(self.data, crate::game::session::TB_READ);
         let add = self.game.main_lib.take_power_time(now);
         // `gm_GetPowerTime`.
-        let t = &mut self.game.game_data.thing.save_data.x1A54;
+        let t = &mut self.game.game_data.thing.save_data.power_time;
         *t = t.wrapping_add(add);
         self.game.card_game.dirty = true;
     }

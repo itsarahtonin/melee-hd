@@ -19,10 +19,24 @@
 //! whose own `clone_from` builds a new table when the sizes differ) is emptied and refilled
 //! with the source's entries, keeping the table it has.
 
+//!
+//! `#[derive(Mirror)]`: the comparer's mirror of a hand-written game struct, from the addresses
+//! its fields' `#[at(..)]` attributes give ([`mod@mirror`]).
+
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as Tokens;
 use quote::{format_ident, quote};
 use syn::{Data, DeriveInput, Fields, Index, parse_macro_input, parse_quote};
+
+mod mirror;
+
+#[proc_macro_derive(Mirror, attributes(mirror, at))]
+pub fn derive_mirror(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    mirror::derive(input)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
 
 #[proc_macro_derive(CloneFrom, attributes(clone_from))]
 pub fn derive_clone_from(input: TokenStream) -> TokenStream {

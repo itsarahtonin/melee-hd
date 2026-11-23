@@ -411,7 +411,7 @@ impl Playback {
     /// after the last counted.
     pub fn next_index(game: &Game) -> i32 {
         let p = game.playback.as_ref().expect("a replay's match");
-        if game.scene.unk_0 == 0 {
+        if game.scene.ticks == 0 {
             FIRST_FRAME
         } else {
             p.frame_index.wrapping_add(1)
@@ -447,7 +447,7 @@ impl Game {
     ///
     /// The Gecko code at `0x8016D294`.
     pub fn playback_count_frame(&mut self) {
-        let first = self.scene.unk_0 == 0;
+        let first = self.scene.ticks == 0;
         let p = self.playback_mut();
         p.frame_index = if first {
             FIRST_FRAME
@@ -704,7 +704,7 @@ impl Running<'_> {
         fp.coll_data.cur_pos = pos;
         fp.coll_data.last_pos = pos;
         fp.mv[4..8].copy_from_slice(&pos.y.to_bits().to_be_bytes());
-        fp.coll_data.x38 = generation;
+        fp.coll_data.map_generation = generation;
         let (slot, which) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
         self.game.set_player_entity_pos(slot, which, pos);
         self.update_camera_box(gobj);

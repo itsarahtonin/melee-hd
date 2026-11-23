@@ -198,7 +198,7 @@ impl Running<'_> {
     /// `fn_801642A0`: whether one stage at most can come up (the random switch's mask).
     #[doc(alias = "fn_801642A0")]
     fn tou_one_stage(&self) -> bool {
-        let mask = self.game.game_data.thing.save_data.x1CB0.stage_mask;
+        let mask = self.game.game_data.thing.save_data.prefs.stage_mask;
         (0..0x1D).filter(|&i| (1u32 << i) & mask != 0).count() <= 1
     }
 
@@ -1242,7 +1242,7 @@ impl Running<'_> {
             self.sis_reset();
             self.free_gobj_links(0x19, 0x1C);
             self.free_gobj_links(0x12, 0x15);
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.game.end_scene();
             self.change_game_mode_after_scene(GameMode::Menu);
             return;

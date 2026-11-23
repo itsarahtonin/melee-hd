@@ -284,12 +284,12 @@ pub fn spawn(
     spawn.prev_pos = pos;
     spawn.pos = lib26b1::parent_ecb_center(r.game, parent);
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = Some(parent);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(parent);
+    spawn.maker = Some(parent);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let life = attr_u32(r, gobj, attr::LIFETIME);
     let xc = attr_u32(r, gobj, attr::XC);

@@ -16,6 +16,10 @@ struct from ssbm-rs's memory (a capture, or a trace region) into the mirror, and
 mirror with memory field by field. Pointer fields go through the caller's `Cx`, which knows
 how ssbm-rs's addresses relate to melee-sim's handles.
 
+The structs on `config.OWNED` are hand-written (`#[derive(Mirror)]` makes their mirrors): it
+generates neither them nor their mirrors, still walks them for the structs they hold, and the
+generated structs hold them by name (`game::structs` re-exports them).
+
 Usage: structgen.py TYPES_JSON OUT_DIR
   TYPES_JSON is ssbm-rs's typegen output (local/typegen/types.json in an ssbm-rs checkout).
   Writes OUT_DIR/structs.rs and OUT_DIR/mirror_gen.rs.
@@ -48,7 +52,14 @@ def rec_name(rid):
 
 
 def rust_type_name(rid):
+    if rec_name(rid) in config.OWNED:
+        return config.OWNED[rec_name(rid)][0]
     return config.RENAME_TYPES.get(rec_name(rid), rec_name(rid))
+
+
+def owned(rid):
+    """Whether the struct is hand-written (`config.OWNED`): generated neither it nor its mirror."""
+    return rec_name(rid) in config.OWNED
 
 
 def renamed(rid, name):
@@ -73,6 +84,7 @@ def check_names(g):
     identifiers that collide with no other field."""
     by_name = {rec_name(rid): rid for rid in g.recs}
     for struct, names in config.FIELD_NAMES.items():
+        assert struct not in config.OWNED, f"{struct} is hand-written: name its fields in its source"
         rid = by_name[struct]
         olds = [f["name"] for f in g.fields(rid)]
         for old, new in names.items():
@@ -195,7 +207,8 @@ class Gen:
             if splice:
                 if off == splice[1] and f["offset_bits"] % 8 == 0 and splice[0] not in done:
                     done.add(splice[0])
-                    out.append({"name": splice[0], "offset_bits": off * 8, "splice": splice[3]})
+                    # A splice may name a generated struct by its C name: use its Rust name.
+                    out.append({"name": splice[0], "offset_bits": off * 8, "splice": config.RENAME_TYPES.get(splice[3], splice[3])})
                 continue
             out.append(f)
         return out
@@ -204,6 +217,9 @@ class Gen:
         r = self.recs[rid]
         name = rust_type_name(rid)
         out = [f"/// `{rec_name(rid)}`, {r['size']:#x} bytes."]
+        if name != rec_name(rid):
+            # A renamed type keeps its C name as an alias, as a renamed field does.
+            out.append(f'#[doc(alias("{rec_name(rid)}"))]')
         # CloneFrom: a restore copies field by field, reusing the target's storage.
         out.append("#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]")
         out.append(f"pub struct {name} {{")
@@ -733,8 +749,13 @@ def main():
         "",
         config.PRELUDE,
         "",
+        "// The hand-written structs (`config.OWNED`), which the generated ones hold.",
+        *sorted(f"pub use {path};" for _, path in config.OWNED.values()),
+        "",
     ]
     for rid in g.order:
+        if owned(rid):
+            continue
         structs.append(g.struct(rid))
         structs.append("")
     mirror = HEADER + [
@@ -757,13 +778,15 @@ def main():
         "",
     ]
     for rid in g.order:
+        if owned(rid):
+            continue
         mirror.append(g.mirror(rid))
         mirror.append("")
     exported = set()
     for root in config.EXPORT_ROOTS:
         g.export_reach(by_name[root], exported)
     for rid in g.order:
-        if rid in exported:
+        if rid in exported and not owned(rid):
             mirror.append(g.exporter(rid))
             mirror.append("")
     laid = set()
@@ -771,14 +794,14 @@ def main():
     for root in config.LAY_ROOTS:
         g.lay_reach(by_name[root], laid, lay_splices)
     for rid in g.order:
-        if rid in laid:
+        if rid in laid and not owned(rid):
             mirror.append(g.layout(rid))
             mirror.append("")
     print("hand-written layouts needed:", ", ".join(sorted(lay_splices)))
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "structs.rs").write_text("\n".join(structs), encoding="utf-8", newline="\n")
     (out_dir / "mirror_gen.rs").write_text("\n".join(mirror), encoding="utf-8", newline="\n")
-    print(f"{len(g.order)} structs")
+    print(f"{len(g.order)} structs, {sum(owned(r) for r in g.order)} of them hand-written")
 
 
 if __name__ == "__main__":

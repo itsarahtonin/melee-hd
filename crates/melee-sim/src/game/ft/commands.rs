@@ -222,7 +222,7 @@ impl Running<'_> {
     #[doc(alias = "ftAction_8007121C")]
     fn cmd_create_hitbox(&mut self, gobj: GObjId, f: FighterId) {
         let w: [u32; 6] = std::array::from_fn(|i| self.cmd_word(f, i as u32));
-        let thrown = self.game.fighters[f.0].thrown_hitbox.x134.is_set();
+        let thrown = self.game.fighters[f.0].thrown_hitbox.owner.is_set();
         if bits(w[3], 28, 1) != 0 && !thrown {
             self.cmd_skip(f, 5);
             self.smash_since_hitbox(f);
@@ -252,15 +252,15 @@ impl Running<'_> {
         let group = bits(w[0], 9, 3);
         let fp = &mut self.game.fighters[f.0];
         let h = &fp.hitboxes[id];
-        if h.state == hitcapsule::DISABLED || h.x4 != group {
-            fp.hitboxes[id].x4 = group;
+        if h.state == hitcapsule::DISABLED || h.group != group {
+            fp.hitboxes[id].group = group;
             fp.hitboxes[id].state = hitcapsule::ENABLED;
             fp.hitboxes_set = true;
             // `ftColl_800768A0`: a box of a group already out shares its victims.
             let src = (0..4).find(|&i| {
                 i != id
                     && fp.hitboxes[i].state != hitcapsule::DISABLED
-                    && fp.hitboxes[i].x4 == group
+                    && fp.hitboxes[i].group == group
             });
             match src {
                 Some(i) => {
@@ -297,36 +297,36 @@ impl Running<'_> {
         h.b_offset.z = fixed(sfloat(sbits(w[2], 16, 16)));
         self.hitbox_angle(gobj, f, id, false, bits(w[3], 0, 9) as i32);
         let h = &mut self.game.fighters[f.0].hitboxes[id];
-        h.x24 = bits(w[3], 9, 9);
-        h.x28 = bits(w[3], 18, 9);
-        h.x43_b0 = bits(w[3], 27, 1) != 0;
-        h.x43_b1 = bits(w[3], 29, 1) != 0;
-        h.x40_b0 = bits(w[3], 30, 1) != 0;
-        h.x40_b1 = bits(w[3], 31, 1) != 0;
-        h.x2C = bits(w[4], 0, 9);
+        h.kb_growth = bits(w[3], 9, 9);
+        h.set_kb = bits(w[3], 18, 9);
+        h.item_hit_interaction = bits(w[3], 27, 1) != 0;
+        h.unscaled_offset = bits(w[3], 29, 1) != 0;
+        h.clanks = bits(w[3], 30, 1) != 0;
+        h.rebounds = bits(w[3], 31, 1) != 0;
+        h.base_kb = bits(w[4], 0, 9);
         h.element = bits(w[4], 9, 5);
-        h.x34 = sbits(w[4], 14, 8);
+        h.shield_damage = sbits(w[4], 14, 8);
         h.sfx_severity = bits(w[4], 22, 3) as i32;
         h.sfx_kind = bits(w[4], 25, 5) as i32;
-        h.x40_b2 = bits(w[4], 31, 1) != 0;
-        h.x40_b3 = bits(w[4], 30, 1) != 0;
-        h.x42_b5 = true;
-        h.x42_b7 = true;
-        h.x41_b4 = false;
-        h.x41_b6 = false;
-        h.x41_b5 = false;
-        h.x42_b0 = false;
-        h.x42_b4 = false;
-        h.x41_b7 = false;
+        h.hits_air = bits(w[4], 31, 1) != 0;
+        h.hits_ground = bits(w[4], 30, 1) != 0;
+        h.hits_fighters = true;
+        h.hits_items = true;
+        h.item_hit_alt = false;
+        h.shield_hit_alt = false;
+        h.fighter_hit_alt = false;
+        h.absorbable = false;
+        h.meets_reflector = false;
+        h.reflectable = false;
         // `x134.hit_grabbed_victim_only`, from the word after the command's five.
         if bits(w[5], 12, 1) != 0 {
-            h.x134.set_grabbed_victim_only(true);
+            h.owner.set_grabbed_victim_only(true);
         } else {
-            h.x134.set_grabbed_victim_only(false);
+            h.owner.set_grabbed_victim_only(false);
         }
-        h.x42_b1 = true;
-        h.x42_b2 = false;
-        h.x43_b2 = false;
+        h.meets_bubble = true;
+        h.misses_same_facing = false;
+        h.phantom = false;
     }
 
     /// A hitbox's damage, `ftColl_8007ABD0`: scaled by the fighter's height and a released
@@ -351,7 +351,7 @@ impl Running<'_> {
         } else {
             &mut fp.hitboxes[id]
         };
-        h.unk_count = fp::fctiwz(dmg) as u32;
+        h.whole_damage = fp::fctiwz(dmg) as u32;
         h.damage = mem(stale);
     }
 
@@ -366,9 +366,9 @@ impl Running<'_> {
         self.hitbox_damage(f, id, true, bits(w[0], 9, 23));
         self.hitbox_angle(gobj, f, id, true, bits(w[1], 0, 9) as i32);
         let h = &mut self.game.fighters[f.0].throw_hitboxes[id];
-        h.x24 = bits(w[1], 9, 9);
-        h.x28 = bits(w[1], 18, 9);
-        h.x2C = bits(w[2], 0, 9);
+        h.kb_growth = bits(w[1], 9, 9);
+        h.set_kb = bits(w[1], 18, 9);
+        h.base_kb = bits(w[2], 0, 9);
         h.element = bits(w[2], 9, 4);
         h.sfx_severity = bits(w[2], 13, 3) as i32;
         h.sfx_kind = bits(w[2], 16, 4) as i32;
@@ -385,8 +385,8 @@ impl Running<'_> {
         fp::fmuls(
             damage,
             fp::fmadds(
-                fp::fsubs(reg(a.x2120_damageMul), 1.0),
-                fp::fdivs(reg(a.x2118_frames), reg(a.x211C_holdFrame)),
+                fp::fsubs(reg(a.damage_mul), 1.0),
+                fp::fdivs(reg(a.frames), reg(a.hold_frame)),
                 1.0,
             ),
         )
@@ -409,11 +409,11 @@ impl Running<'_> {
         let (lo, hi) = (c.u32(0x7E8), c.u32(0x7EC));
         if a != 361 && lo <= a && a <= hi {
             let fp = &mut self.game.fighters[f.0];
-            if fp.attack_record.x10[0] & 0x80 == 0 {
-                fp.attack_record.x10[0] |= 0x80;
+            if fp.attack_record.flags[0] & 0x80 == 0 {
+                fp.attack_record.flags[0] |= 0x80;
                 let slot = i32::from(fp.player_idx);
                 let stats = self.game.player_action_stats(slot);
-                stats.attacks.x1A8 = stats.attacks.x1A8.wrapping_add(1);
+                stats.attacks.spikes_count = stats.attacks.spikes_count.wrapping_add(1);
             }
         }
     }
@@ -422,8 +422,8 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_80080484")]
     fn smash_since_hitbox(&mut self, f: FighterId) {
         let a = &mut self.game.fighters[f.0].smash_attrs;
-        if a.x2138_smashSinceHitbox == -1.0 {
-            a.x2138_smashSinceHitbox = 0.0;
+        if a.smash_since_hitbox == -1.0 {
+            a.smash_since_hitbox = 0.0;
         }
     }
 
@@ -448,8 +448,8 @@ impl Running<'_> {
         let (ty, v) = (bits(w, 30, 1), bits(w, 31, 1) != 0);
         let h = self.cmd_hitbox(f, bits(w, 6, 24));
         match ty {
-            0 => h.x42_b5 = v,
-            _ => h.x42_b7 = v,
+            0 => h.hits_fighters = v,
+            _ => h.hits_items = v,
         }
     }
 
@@ -830,10 +830,10 @@ impl Running<'_> {
         let color = mem(ufloat(bits(self.cmd_word(f, 0), 0, 8)));
         let a = &mut self.game.fighters[f.0].smash_attrs;
         a.state = 1;
-        a.x2118_frames = 0.0;
-        a.x211C_holdFrame = frames;
-        a.x2120_damageMul = mul;
-        a.x2128 = fp::fctiwz(reg(color));
+        a.frames = 0.0;
+        a.hold_frame = frames;
+        a.damage_mul = mul;
+        a.color_anim = fp::fctiwz(reg(color));
     }
 
     /// The fighter's vibration (`ftCo_800C8B60`).
@@ -842,7 +842,7 @@ impl Running<'_> {
     fn cmd_vibrate(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
         fp.refracted = bits(w, 6, 1) != 0;
-        fp.smash_attrs.x2134_vibrateFrame = bits(w, 7, 8) as u8;
+        fp.smash_attrs.vibrate_frame = bits(w, 7, 8) as u8;
     }
 
     /// Runs fighter command `index` as a state started partway in does (`ftAction_803C07AC`):
@@ -1197,7 +1197,7 @@ impl Running<'_> {
                 let w = self.cmd_word_in(f, Some(which), 0);
                 let fp = &mut self.game.fighters[f.0];
                 fp.refracted = bits(w, 6, 1) != 0;
-                fp.smash_attrs.x2134_vibrateFrame = bits(w, 7, 8) as u8;
+                fp.smash_attrs.vibrate_frame = bits(w, 7, 8) as u8;
                 self.cmd_script(f, Some(which)).skip(1);
             }
             (true, 0) => self.cmd_script(f, Some(which)).skip(5),
@@ -1253,7 +1253,7 @@ impl Running<'_> {
         fp.anim_vel.y = 0.0;
         fp.jumps_used = 1;
         fp.ecb_lock = 10;
-        fp.coll_data.x130_flags |= COLL_LOCKED;
+        fp.coll_data.ecb_lock |= COLL_LOCKED;
     }
 
     /// Takes the fighter into the air with its jumps used, `ftCommon_8007D60C`.
@@ -1270,7 +1270,7 @@ impl Running<'_> {
         fp.anim_vel.y = 0.0;
         fp.jumps_used = fp.co_attrs.max_jumps as u8;
         fp.ecb_lock = 5;
-        fp.coll_data.x130_flags |= COLL_LOCKED;
+        fp.coll_data.ecb_lock |= COLL_LOCKED;
     }
 
     /// Sets the state of the hurtbox on bone `bone`, `ftColl_8007B128`.

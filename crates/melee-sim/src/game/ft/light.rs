@@ -26,7 +26,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C0658")]
     pub fn active_overlay(&self, f: FighterId) -> &ColorOverlay {
         let fp = &self.game.fighters[f.0];
-        if fp.main_overlay.x28_colanim != [0; 4] {
+        if fp.main_overlay.colanim != [0; 4] {
             &fp.main_overlay
         } else {
             &fp.secondary_overlay
@@ -40,7 +40,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009F5AC")]
     pub fn fighter_light(&mut self, f: FighterId) {
         let o = self.active_overlay(f).clone();
-        if !o.x7C_flag2 {
+        if !o.flag2 {
             return;
         }
         let light = self.game.fighters[f.0]
@@ -62,12 +62,9 @@ impl Running<'_> {
                 "jobj rotation"
             );
             let rot_y = j.rotate.y;
-            let yz = fp::fmuls(reg(DEG_TO_RAD), reg(o.x78_light_rot_yz));
+            let yz = fp::fmuls(reg(DEG_TO_RAD), reg(o.light_rot_yz));
             let x = fp::frsp(fp::fdiv(
-                fp::fmuls(
-                    fp::fmuls(reg(DEG_TO_RAD), reg(o.x74_light_rot_x)),
-                    reg(rot_y),
-                ),
+                fp::fmuls(fp::fmuls(reg(DEG_TO_RAD), reg(o.light_rot_x)), reg(rot_y)),
                 fp::fdiv(std::f64::consts::PI, 2.0),
             ));
             let neg = mem(fp::fneg(yz));
@@ -76,8 +73,8 @@ impl Running<'_> {
             let xs = mem(fp::fmuls(reg(z), reg(math::sin(mem(x)))));
             let z = mem(fp::fmuls(reg(z), reg(math::cos(mem(x)))));
             lobj::set_position(&mut self.game.objs, light, Vec3::new(xs, y, z));
-            let c = o.x50_light_color;
-            if o.x7C_light_enable {
+            let c = o.light_color;
+            if o.light_enable {
                 let color = [WHITE[0], WHITE[1], WHITE[2], c.a];
                 lobj::set_color(&mut self.game.objs.lobjs, light, color);
                 lobj::set_flags(&mut self.game.objs.lobjs, Some(light), ALPHA);
@@ -88,7 +85,7 @@ impl Running<'_> {
             self.game.fighters[f.0].light_changed = false;
         }
         let (lobj0, lobj1) = (self.game.ft.lobj0, self.game.ft.lobj1);
-        if o.x7C_light_enable {
+        if o.light_enable {
             lobj::replace_current(&mut self.game.objs, lobj0);
         } else {
             lobj::set_current_all(&mut self.game.objs, lobj1);
@@ -102,7 +99,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009F75C")]
     pub fn fighter_light_alpha(&mut self, f: FighterId, alpha: bool) {
         let o = self.active_overlay(f);
-        if !(o.x7C_flag2 && o.x7C_light_enable) {
+        if !(o.flag2 && o.light_enable) {
             return;
         }
         let light = self.game.fighters[f.0].light;
@@ -125,7 +122,7 @@ impl Running<'_> {
     /// The fighters' lights back after a lit fighter draws, `ftCo_8009F7F8`.
     #[doc(alias = "ftCo_8009F7F8")]
     pub fn fighter_light_reset(&mut self, f: FighterId) {
-        if self.active_overlay(f).x7C_flag2 {
+        if self.active_overlay(f).flag2 {
             let lobj0 = self.game.ft.lobj0;
             lobj::replace_current(&mut self.game.objs, lobj0);
             self.setup_lights();

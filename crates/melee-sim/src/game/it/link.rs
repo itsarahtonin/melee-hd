@@ -157,7 +157,7 @@ pub fn init_coll(r: &mut Running, l: ItemLinkId, size: f32) {
     k.coll_data.last_pos = k.coll_data.cur_pos;
     let mut cd = k.coll_data.clone();
     with_stage_coll(r.game, r.data, |c| c.init(&mut cd));
-    cd.x34_flags.b1234 = 5;
+    cd.ecb_flags.b1234 = 5;
     cd.set_ecb_source_box(None, size, size, size, size);
     link_mut(r.game, l).coll_data = cd;
 }

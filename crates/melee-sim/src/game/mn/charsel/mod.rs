@@ -1005,7 +1005,7 @@ impl Running<'_> {
     /// A port's handicap as the sliders show it (the inline `getHandicapValue`): its name
     /// tag's under the auto handicap, else its own; 1 for none.
     fn handicap_value(&mut self, port: usize) -> i32 {
-        let h = if self.game.game_data.x1850.handicap == 1 {
+        let h = if self.game.game_data.rules.handicap == 1 {
             let tag = self.css().vs.start.players[port].nametag;
             self.nametag_handicap(port as u8, tag) as u8
         } else {
@@ -1017,7 +1017,7 @@ impl Running<'_> {
     /// `gm_801685D4`: the handicap the auto handicap gives a port's name tag, 0 for none.
     #[doc(alias = "gm_801685D4")]
     pub(crate) fn nametag_handicap(&mut self, port: u8, tag: u8) -> i8 {
-        if self.game.game_data.x1850.handicap == 1 {
+        if self.game.game_data.rules.handicap == 1 {
             return *self.auto_handicap(usize::from(port), tag);
         }
         0
@@ -1115,7 +1115,7 @@ impl Running<'_> {
         if match_type != 0 {
             self.sfx_play(MODE_INFO[usize::from(match_type)].2, 0x7F, 0x40);
         } else {
-            let id = match self.game.game_data.x1850.mode {
+            let id = match self.game.game_data.rules.mode {
                 0 => Some(0x7535),
                 1 => Some(0x7538),
                 2 => Some(0x7537),
@@ -1179,7 +1179,7 @@ impl Running<'_> {
         self.charsel_press_start();
         self.charsel_doors_from_players();
         self.charsel_mode_texture(match_type);
-        let bgm = self.game.game_data.x1850.bgm;
+        let bgm = self.game.game_data.rules.bgm;
         self.lb_play_music(i32::from(bgm));
     }
 

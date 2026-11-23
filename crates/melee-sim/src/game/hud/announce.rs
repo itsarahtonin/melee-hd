@@ -68,16 +68,16 @@ impl Running<'_> {
         let data = self.data;
         let k = kind as usize;
         let e = &mut self.game.hud.announcements[k];
-        e.x20 = sfx1;
-        e.x24 = sfx2;
-        e.x11 = frame2 as u8;
-        if let Some(old) = e.x0 {
+        e.sfx_1 = sfx1;
+        e.sfx_2 = sfx2;
+        e.sfx_2_frame = frame2 as u8;
+        if let Some(old) = e.gobj {
             gobj::free(self, old);
         }
         let g = &mut *self.game;
         let e = &g.hud.announcements[k];
-        let model = e.x14.expect("an announcement's model");
-        let proc = e.x8;
+        let model = e.model.expect("an announcement's model");
+        let proc = e.proc;
         let o = g.world.create(0xE, 0xE, 0);
         let j = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
         crate::lb::joint::set_mobj_flags(&mut g.objs, j, 0x0800_0000);
@@ -95,12 +95,12 @@ impl Running<'_> {
             Some(j),
         );
         let e = &mut g.hud.announcements[k];
-        e.x12.x0 = false;
-        e.x12.x1 = false;
-        e.x12.x2 = false;
-        e.x0 = Some(o);
-        e.x18 = on_start;
-        e.x1C = on_end;
+        e.flags.sfx_1_played = false;
+        e.flags.sfx_2_played = false;
+        e.flags.started = false;
+        e.gobj = Some(o);
+        e.on_start = on_start;
+        e.on_end = on_end;
     }
 
     /// The match's end announcement, `ifStatus_802F7034`: the rules' own, TIME!, a bonus
@@ -109,22 +109,26 @@ impl Running<'_> {
     #[doc(alias = "ifStatus_802F7034")]
     pub fn announce_match_end(&mut self, on_start: Option<CodeRef>) {
         let s = &self.game.vs.state;
-        let a = if s.unk_10 != 0 {
-            s.unk_10.wrapping_sub(1)
+        let a = if s.end_sfx_1 != 0 {
+            s.end_sfx_1.wrapping_sub(1)
         } else {
             -1
         };
-        let b = if s.unk_14 != 0 {
-            s.unk_14.wrapping_sub(1)
+        let b = if s.end_sfx_2 != 0 {
+            s.end_sfx_2.wrapping_sub(1)
         } else {
             -1
         };
-        let c = if s.unk_18 != 0 { s.unk_18 as i32 } else { 0 };
-        let kind = if s.unk_B != 0 {
-            i32::from(s.unk_B) - 1
+        let c = if s.end_sfx_2_frame != 0 {
+            s.end_sfx_2_frame as i32
+        } else {
+            0
+        };
+        let kind = if s.end_kind != 0 {
+            i32::from(s.end_kind) - 1
         } else if s.match_result == OUTCOME_TIMEOUT {
             0
-        } else if self.game.vs.start.x5_1 {
+        } else if self.game.vs.start.goes_on {
             if s.match_result == OUTCOME_1P_BONUS_STAGE_END {
                 7
             } else {
@@ -143,8 +147,8 @@ impl Running<'_> {
         let data = self.data;
         let a = self.game.hud.archive.expect("IfAll.dat");
         for e in &mut self.game.hud.announcements {
-            e.x0 = None;
-            e.x4 = 0;
+            e.gobj = None;
+            e.unread_4 = 0;
         }
         let at = data
             .get(a)
@@ -155,7 +159,7 @@ impl Running<'_> {
             offset: at,
         };
         for (i, e) in self.game.hud.announcements.iter_mut().enumerate() {
-            e.x14 = data.ptr(models.at(4 * i as u32));
+            e.model = data.ptr(models.at(4 * i as u32));
         }
     }
 
@@ -163,7 +167,7 @@ impl Running<'_> {
     #[doc(alias = "ifStatus_802F7220")]
     pub fn free_announcements(&mut self) {
         for i in 0..8 {
-            if let Some(o) = self.game.hud.announcements[i].x0.take() {
+            if let Some(o) = self.game.hud.announcements[i].gobj.take() {
                 gobj::free(self, o);
             }
         }
@@ -185,25 +189,28 @@ impl Running<'_> {
         );
         let e = self.game.hud.announcements[k].clone();
         let frame = crate::fpu::reg(frame);
-        if !e.x12.x0 && frame >= gekko_fp::frsp(f64::from(e.x10)) {
-            if e.x20 >= 0 {
-                self.sfx_play(e.x20, 127, 64);
-                self.game.hud.announcements[k].x12.x0 = true;
-            } else if e.xC >= 0 {
-                self.sfx_play(e.xC, 127, 64);
-                self.game.hud.announcements[k].x12.x0 = true;
+        if !e.flags.sfx_1_played && frame >= gekko_fp::frsp(f64::from(e.sfx_frame)) {
+            if e.sfx_1 >= 0 {
+                self.sfx_play(e.sfx_1, 127, 64);
+                self.game.hud.announcements[k].flags.sfx_1_played = true;
+            } else if e.default_sfx >= 0 {
+                self.sfx_play(e.default_sfx, 127, 64);
+                self.game.hud.announcements[k].flags.sfx_1_played = true;
             }
         }
-        if !e.x12.x1 && frame >= gekko_fp::frsp(f64::from(e.x11)) && e.x24 >= 0 {
-            self.sfx_play(e.x24, 127, 64);
-            self.game.hud.announcements[k].x12.x1 = true;
+        if !e.flags.sfx_2_played
+            && frame >= gekko_fp::frsp(f64::from(e.sfx_2_frame))
+            && e.sfx_2 >= 0
+        {
+            self.sfx_play(e.sfx_2, 127, 64);
+            self.game.hud.announcements[k].flags.sfx_2_played = true;
         }
         anim::any_animated(&self.game.objs, Some(j))
     }
 
     /// The announcement whose model is `gobj`.
     fn announcement_of(&self, gobj: GObjId) -> Option<usize> {
-        (0..8).find(|&i| self.game.hud.announcements[i].x0 == Some(gobj))
+        (0..8).find(|&i| self.game.hud.announcements[i].gobj == Some(gobj))
     }
 
     /// The start callback the first frame, then the step; at the end, the end callback and
@@ -212,21 +219,21 @@ impl Running<'_> {
         let Some(k) = self.announcement_of(gobj) else {
             return;
         };
-        if !self.game.hud.announcements[k].x12.x2 {
-            if let Some(f) = self.game.hud.announcements[k].x18 {
+        if !self.game.hud.announcements[k].flags.started {
+            if let Some(f) = self.game.hud.announcements[k].on_start {
                 code::run_hud_callback(self, f, k as i32);
             }
-            self.game.hud.announcements[k].x12.x2 = true;
+            self.game.hud.announcements[k].flags.started = true;
         }
         if !self.announcement_step(gobj, k) {
-            if let Some(f) = self.game.hud.announcements[k].x1C {
+            if let Some(f) = self.game.hud.announcements[k].on_end {
                 code::run_hud_callback(self, f, k as i32);
             }
             if free {
-                self.game.hud.announcements[k].x0 = None;
+                self.game.hud.announcements[k].gobj = None;
                 gobj::free(self, gobj);
             } else {
-                self.game.hud.announcements[k].x1C = None;
+                self.game.hud.announcements[k].on_end = None;
             }
         }
     }

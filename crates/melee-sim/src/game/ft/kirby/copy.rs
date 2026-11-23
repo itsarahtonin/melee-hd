@@ -273,7 +273,7 @@ impl Running<'_> {
             || fp.u_i32(u::HAT_KIND) == FighterKind::Kirby
             || fp.u[u::HAT_FLAGS] & 0x80 != 0
             || fp.victim_gobj.is_some()
-            || fp.dmg.x1860_element == ELEMENT_CAPE
+            || fp.dmg.element == ELEMENT_CAPE
         {
             return;
         }

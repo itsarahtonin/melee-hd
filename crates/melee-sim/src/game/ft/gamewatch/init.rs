@@ -122,7 +122,7 @@ impl Running<'_> {
             },
         );
         let bucket = self.data.ptr(items.at(4 * 10));
-        self.game.fighters[f.0].parts_vis.xC[4] = bucket;
+        self.game.fighters[f.0].parts_vis.lookups[4] = bucket;
         for (i, kind) in ITEMS.into_iter().enumerate() {
             let article = self.data.ptr(items.at(4 * i as u32));
             super::super::super::it::item::set_char_article(self.game, article, kind);

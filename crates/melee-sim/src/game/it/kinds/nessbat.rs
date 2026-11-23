@@ -71,12 +71,12 @@ pub fn spawn(
     spawn.pos = spawn.prev_pos;
     // `Item_InitSpawnCommonFields(&spawn, gobj, facing_dir, false)`.
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(ness);
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] &= !0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(ness);
+    spawn.maker = spawn.owner;
+    spawn.flags[0] &= !0x80;
+    spawn.ignore_id = 0;
     let bat = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, bat);
     // `Item_ClearCmdVars`.
@@ -84,7 +84,7 @@ pub fn spawn(
     ip.cmd_var2 = 0;
     ip.cmd_var1 = 0;
     ip.cmd_var0 = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.vars.ness_bat().ness.set(Some(ness));
     lib2725::set_lifetime(r.game, r.data, bat, 1200.0);
     pick_up(r, bat, ness, part);
@@ -105,19 +105,19 @@ pub fn spawn_demo(r: &mut Running, ness: GObjId, part: i32) -> Option<GObjId> {
     spawn.prev_pos.z = 0.0;
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(ness);
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] &= !0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(ness);
+    spawn.maker = spawn.owner;
+    spawn.flags[0] &= !0x80;
+    spawn.ignore_id = 0;
     let bat = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, bat);
     ip.cmd_var3 = 1;
     ip.cmd_var2 = 1;
     ip.cmd_var1 = 1;
     ip.cmd_var0 = 1;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.vars.ness_bat().ness.set(Some(ness));
     pick_up(r, bat, ness, part);
     Some(bat)

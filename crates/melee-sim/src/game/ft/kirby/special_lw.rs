@@ -163,7 +163,7 @@ impl Running<'_> {
                     let draw = self.game.objs.rng.below(4);
                     let fp = &mut self.game.fighters[f.0];
                     fp.set_mv_i32(mv::CHANGE, c);
-                    fp.dmg.x1834 = mem(fp::frsp(f64::from(hp)));
+                    fp.dmg.armor_hp = mem(fp::frsp(f64::from(hp)));
                     let n = (fp.u_i32(u::HAT_X4).wrapping_add(draw)) % 5 + 1;
                     fp.set_mv_i32(mv::NUMBER, n);
                     fp.set_u_i32(u::HAT_X4, n);
@@ -395,7 +395,7 @@ impl Running<'_> {
         fp.set_mv_i32(mv::CHANGE_FRAME, -1);
         self.kb_lw_clear_slopes(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.dmg.x1834 = 0.0;
+        fp.dmg.armor_hp = 0.0;
         fp.armor = false;
         let keep = fp.armor;
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
@@ -464,7 +464,7 @@ impl Running<'_> {
         self.kb_lw_step(gobj, false);
         if !self.anim_frames_remaining(gobj) {
             let fp = &mut self.game.fighters[f.0];
-            fp.dmg.x1834 = 0.0;
+            fp.dmg.armor_hp = 0.0;
             fp.armor = false;
             if toggle == 0.0 {
                 self.enter_fall(gobj);
@@ -700,7 +700,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.articles_visible = true;
         fp.hat_hidden = true;
-        fp.dmg.x1834 = 0.0;
+        fp.dmg.armor_hp = 0.0;
         fp.armor = false;
         let f = self.game.fighter_id(gobj);
         self.game.part_set_rot_x(f, 0, 0.0);

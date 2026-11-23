@@ -1003,7 +1003,7 @@ impl Running<'_> {
                 .is_some_and(|e| e.stage == 0xD)
         {
             // `gm_8017CBAC` with Classic's run and stocks (`gmMainLib_8015CDC8`).
-            let stocks = self.game.game_data.vs.unk_51C.stocks;
+            let stocks = self.game.game_data.vs.classic.stocks;
             self.one_player_clear(&run, stocks, GameMode::ClassicEnding);
         }
         if entry.flags == 0x80 && entry.bonus == 1 {
@@ -1022,25 +1022,25 @@ impl Running<'_> {
         let frames = self.game.one_player.match_exit.match_end.frame_count;
         // `Ground_801C1DE4`: the targets left and the stage's targets.
         let (left, total) = (
-            i32::from(self.game.stage_info.x6D4),
-            i32::from(self.game.stage_info.x6D2),
+            i32::from(self.game.stage_info.targets_left),
+            i32::from(self.game.stage_info.target_count),
         );
         if left == 0 {
             super::one_player::record_target_clear(self.game, sel, frames);
         }
-        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
-        if !x7c.b0 {
+        let x7c = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
+        if !x7c.target_cleared {
             if left == 0 {
-                x7c.b0 = true;
-                x7c.x94 = frames;
+                x7c.target_cleared = true;
+                x7c.target_record = frames;
                 return;
             }
             let broken = total.wrapping_sub(left) as u32;
-            if x7c.x94 < broken {
-                x7c.x94 = broken;
+            if x7c.target_record < broken {
+                x7c.target_record = broken;
             }
-        } else if left == 0 && x7c.x94 > frames {
-            x7c.x94 = frames;
+        } else if left == 0 && x7c.target_record > frames {
+            x7c.target_record = frames;
         }
     }
 }

@@ -100,8 +100,8 @@ fn map_id(game: &Game, gobj: GObjId) -> i32 {
 #[doc(alias = "grIzumi_801CBB88")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.izumi_yakumono = r.game.stage_info.yakumono_param;
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0, setup::SETUP_FRAME);
     create(r, 1, setup::SETUP_FRAME);
     create(r, MAP_FOUNTAIN, setup::SETUP_FRAME);
@@ -165,7 +165,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// The fountain's setup (map 3), `grIzumi_801CBE64`: its collision and animation, the
@@ -179,8 +179,8 @@ pub fn init_fountain(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
+    r.game.grounds[g.0].flags.shadowed = true;
     let (left, right) = (nth_joint(r.game, gobj, 1), nth_joint(r.game, gobj, 2));
     let v = r.game.grounds[g.0].u.izumi();
     v.platform_jobj = left;
@@ -209,7 +209,7 @@ pub fn init_fountain(r: &mut Running, gobj: GObjId) {
     let refl = create(r, MAP_REFLECTIONS, REFLECTIONS_FRAME);
     r.game.grounds[g.0].u.izumi().reflections = refl;
     let rg = ground_of(r.game, refl.expect("grizumi.c: the reflections"));
-    r.game.grounds[rg.0].x18 = Some(camera);
+    r.game.grounds[rg.0].camera = Some(camera);
     let p = param(r.game);
     let (h0, h1, home) = (p.f(r, 0), p.f(r, 8), p.f(r, 0xC));
     let (left, right) = {
@@ -222,8 +222,8 @@ pub fn init_fountain(r: &mut Running, gobj: GObjId) {
         let plat = create_platform(r, height, at, line, column);
         let pg = ground_of(r.game, plat);
         r.game.grounds[pg.0].u.izumi3().home_height = home;
-        r.game.grounds[pg.0].x10_flags.b3 = true;
-        r.game.grounds[pg.0].x18 = Some(camera);
+        r.game.grounds[pg.0].flags.follows_camera = true;
+        r.game.grounds[pg.0].camera = Some(camera);
     }
 }
 
@@ -274,7 +274,7 @@ pub fn create_stars(r: &mut Running) {
     };
     let g = ground_of(r.game, sub);
     r.game.world.setup_gx_link(sub, CodeRef(RENDER_STARS), 3, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The stars' render callback, `grIzumi_801CCB90`: a point size of 18, then drawn as any stage
@@ -345,8 +345,8 @@ pub fn proc_fountain(r: &mut Running, gobj: GObjId) {
 pub fn init_platform(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
 }
 
 /// `rand_range`: between the two, whichever is lower, drawn only if they differ.
@@ -510,8 +510,8 @@ pub fn init_piece(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
 }
 
 /// The platforms' reflections' setup (map 2), `grIzumi_801CCA64`: their animation, drawn in
@@ -522,8 +522,8 @@ pub fn init_reflections(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     r.game.world.gx_unlink(gobj);
     r.game.world.setup_gx_link(gobj, CodeRef(0x801C_5DB0), 2, 0);
     let a = nth_joint(r.game, gobj, 2);

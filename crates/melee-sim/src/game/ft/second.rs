@@ -308,7 +308,7 @@ impl Running<'_> {
         let flags = (super::bind::x594_word(fp.anim_bits) >> 9) & 0x1FFF;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
-        let depth = self.bone(f, part).xC_u[0];
+        let depth = self.bone(f, part).tree[0];
         let buf = if fp.second_tree.in_main {
             fp.main_anim_buf
         } else {
@@ -348,14 +348,14 @@ impl Running<'_> {
                 b += 1;
             }
             let bone = self.bone(f, b);
-            if bone.xC_u[0] <= depth && i != part {
+            if bone.tree[0] <= depth && i != part {
                 break;
             }
             if !bone_flag(&bone, 0) && !bone_flag(&bone, 5) {
                 bind_tracks(
                     &mut self.game.objs,
                     data,
-                    bone.x4_jobj2,
+                    bone.interp_joint,
                     tree,
                     track,
                     frames,
@@ -423,7 +423,7 @@ impl Running<'_> {
             }
             let bone = self.bone(f, i);
             if !bone_flag(&bone, 0) && !bone_flag(&bone, 5) {
-                let j = if blend { bone.x4_jobj2 } else { bone.joint };
+                let j = if blend { bone.interp_joint } else { bone.joint };
                 let jobjs = &mut self.game.objs.jobjs;
                 if bone_flag(&bone, 4) {
                     crate::lb::anim::reset_pose(jobjs, self.data, j, Some(desc));

@@ -67,19 +67,19 @@ pub fn spawn(
     spawn.prev_pos.z = 0.0;
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = Some(parent);
-    spawn.x44_flag[0] &= !0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(parent);
+    spawn.maker = Some(parent);
+    spawn.flags[0] &= !0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
     ip.cmd_var3 = 0;
     ip.cmd_var2 = 0;
     ip.cmd_var1 = 0;
     ip.cmd_var0 = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     vars(r.game, gobj).parent.set(Some(parent));
     pick_up(r, gobj, parent, bone);
     Some(gobj)

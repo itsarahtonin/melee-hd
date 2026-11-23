@@ -312,7 +312,7 @@ impl Running<'_> {
         if let Some(handle) = crate::game::live::entry_sound_handle(id) {
             return SfxStart::Driver(handle);
         }
-        let frame = self.game.scene.unk_8 as i32;
+        let frame = self.game.scene.game_ticks as i32;
         let logs = id != SFX_NONE
             && self.game.runs_sound_codes()
             && self.game.audio.sfx_known(self.data, id);

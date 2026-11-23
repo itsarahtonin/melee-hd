@@ -55,8 +55,8 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     {
         let ip = item_mut(r.game, gobj);
         let hit = &mut ip.hitboxes[idx].hit;
-        if hit.state == hitcapsule::DISABLED || hit.x4 != group {
-            hit.x4 = group;
+        if hit.state == hitcapsule::DISABLED || hit.group != group {
+            hit.group = group;
             hit.state = hitcapsule::ENABLED;
             ip.flags.flags.hitbox_on = true;
             set_flag(&mut ip.debug_flags, 2, false);
@@ -104,23 +104,23 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     {
         let hit = &mut item_mut(r.game, gobj).hitboxes[idx].hit;
         hit.kb_angle = field(w3, 0, 9) as i32;
-        hit.x24 = field(w3, 9, 9);
-        hit.x28 = field(w3, 18, 9);
-        hit.x43_b1 = false;
+        hit.kb_growth = field(w3, 9, 9);
+        hit.set_kb = field(w3, 18, 9);
+        hit.unscaled_offset = false;
     }
     skip(r, gobj, 1);
     let w4 = word(r, gobj, 0);
     {
         let hit = &mut item_mut(r.game, gobj).hitboxes[idx].hit;
-        hit.x2C = field(w4, 0, 9);
+        hit.base_kb = field(w4, 0, 9);
         hit.element = field(w4, 9, 5);
-        hit.x40_b0 = field(w4, 14, 1) != 0;
-        hit.x40_b1 = false;
-        hit.x34 = sfield(w4, 15, 8);
+        hit.clanks = field(w4, 14, 1) != 0;
+        hit.rebounds = false;
+        hit.shield_damage = sfield(w4, 15, 8);
         hit.sfx_severity = field(w4, 23, 3) as i32;
         hit.sfx_kind = field(w4, 26, 4) as i32;
-        hit.x40_b2 = field(w4, 31, 1) != 0;
-        hit.x40_b3 = field(w4, 30, 1) != 0;
+        hit.hits_air = field(w4, 31, 1) != 0;
+        hit.hits_ground = field(w4, 30, 1) != 0;
     }
     skip(r, gobj, 1);
     let w5 = word(r, gobj, 0);
@@ -128,25 +128,25 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
         let ip = item_mut(r.game, gobj);
         let hb = &mut ip.hitboxes[idx];
         let hit = &mut hb.hit;
-        hit.x40_b4 = field(w5, 0, 8) as u8;
-        hit.x41_b4 = field(w5, 8, 1) != 0;
-        hit.x41_b5 = field(w5, 9, 1) != 0;
-        hit.x41_b6 = field(w5, 10, 1) != 0;
-        hit.x41_b7 = field(w5, 11, 1) != 0;
-        hit.x42_b0 = field(w5, 12, 1) != 0;
-        hit.x42_b1 = field(w5, 13, 1) != 0;
-        hit.x42_b2 = field(w5, 14, 1) != 0;
-        hit.x42_b3 = field(w5, 15, 1) != 0;
+        hit.rehit_rate = field(w5, 0, 8) as u8;
+        hit.item_hit_alt = field(w5, 8, 1) != 0;
+        hit.fighter_hit_alt = field(w5, 9, 1) != 0;
+        hit.shield_hit_alt = field(w5, 10, 1) != 0;
+        hit.reflectable = field(w5, 11, 1) != 0;
+        hit.absorbable = field(w5, 12, 1) != 0;
+        hit.meets_bubble = field(w5, 13, 1) != 0;
+        hit.misses_same_facing = field(w5, 14, 1) != 0;
+        hit.bounces_off_shield = field(w5, 15, 1) != 0;
         let b2 = (w5 >> 8) as u8;
-        hit.x42_b4 = b2 >> 7 & 1 != 0;
-        hit.x42_b5 = b2 >> 6 & 1 != 0;
-        hit.x42_b6 = b2 >> 5 & 1 != 0;
-        hit.x42_b7 = b2 >> 4 & 1 != 0;
-        hit.x43_b0 = b2 >> 3 & 1 != 0;
+        hit.meets_reflector = b2 >> 7 & 1 != 0;
+        hit.hits_fighters = b2 >> 6 & 1 != 0;
+        hit.grabbable_hurtboxes_only = b2 >> 5 & 1 != 0;
+        hit.hits_items = b2 >> 4 & 1 != 0;
+        hit.item_hit_interaction = b2 >> 3 & 1 != 0;
         hb.always_hits = b2 >> 2 & 1 != 0;
     }
     skip(r, gobj, 1);
-    item_mut(r.game, gobj).hitboxes[idx].hit.x43_b2 = false;
+    item_mut(r.game, gobj).hitboxes[idx].hit.phantom = false;
     let w = &r.game.world;
     if let Some(p) = w.current_proc()
         && w.procs[p.0].s_link > 11

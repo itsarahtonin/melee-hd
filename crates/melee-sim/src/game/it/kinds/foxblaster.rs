@@ -357,7 +357,7 @@ pub fn set_command_vars(ip: &mut Item, value: u32) {
 pub fn reset(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     set_command_vars(ip, 0);
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     let v = ip.vars.fox_blaster();
     v.recoil_frame.set(0);
     v.pulse.set(0);
@@ -395,12 +395,12 @@ pub fn spawn(
     spawn.pos = spawn.prev_pos;
     // `Item_InitSpawnCommonFields`, without a first collision.
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(fighter);
-    spawn.x4_parent_gobj2 = Some(fighter);
-    spawn.x44_flag[0] &= !0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(fighter);
+    spawn.maker = Some(fighter);
+    spawn.flags[0] &= !0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     item_mut(r.game, gobj)
         .vars
@@ -426,12 +426,12 @@ pub fn spawn_demo(r: &mut Running, fighter: GObjId, part: i32, kind: i32) -> Opt
     spawn.prev_pos.z = 0.0;
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(fighter);
-    spawn.x4_parent_gobj2 = Some(fighter);
-    spawn.x44_flag[0] &= !0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(fighter);
+    spawn.maker = Some(fighter);
+    spawn.flags[0] &= !0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     item_mut(r.game, gobj)
         .vars

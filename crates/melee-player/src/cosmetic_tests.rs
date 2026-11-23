@@ -60,13 +60,13 @@ const HAT_DYNAMICS: &[&str] = &[
     ".objs.jobjs.pool.slots[].rotate.x",
     ".objs.jobjs.pool.slots[].rotate.y",
     ".objs.jobjs.pool.slots[].rotate.z",
-    ".fighter_dynamics.slots[].desc.unk_2C.x",
-    ".fighter_dynamics.slots[].desc.unk_2C.y",
-    ".fighter_dynamics.slots[].desc.unk_2C.z",
-    ".fighter_dynamics.slots[].desc.unk_38.x",
-    ".fighter_dynamics.slots[].desc.unk_38.y",
-    ".fighter_dynamics.slots[].desc.unk_38.z",
-    ".fighter_dynamics.slots[].desc.unk_44",
+    ".fighter_dynamics.slots[].desc.joint_pos.x",
+    ".fighter_dynamics.slots[].desc.joint_pos.y",
+    ".fighter_dynamics.slots[].desc.joint_pos.z",
+    ".fighter_dynamics.slots[].desc.spin_axis.x",
+    ".fighter_dynamics.slots[].desc.spin_axis.y",
+    ".fighter_dynamics.slots[].desc.spin_axis.z",
+    ".fighter_dynamics.slots[].desc.spin",
 ];
 
 /// The joints of Kirby's and Jigglypuff's hats: each hat's model (`u`'s joint at 0x10 for

@@ -181,8 +181,8 @@ pub const START_FRAME: u32 = setup::SETUP_FRAME - 0x10;
 #[doc(alias = "grBigBlueRoute_8020B89C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.bigblueroute_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 0x20, 0x1F] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -247,7 +247,7 @@ pub fn init_backdrop(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The far background's setup (map 32), `grBigBlueRoute_8020BB10`: its animation, looping.
@@ -284,9 +284,9 @@ pub fn init_track(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
-    gp.x10_flags.b5 = true;
+    gp.unread_8 = None;
+    gp.unread_c = None;
+    gp.flags.shadowed = true;
     gp.u.bigblueroute().zone = 0;
     if let Some(origin) = point(r.game, r.data, 148) {
         for i in 0..4 {
@@ -349,7 +349,7 @@ pub fn proc_track(r: &mut Running, gobj: GObjId) {
         {
             r.game.grounds[g.0].u.bigblueroute().zone = zone.wrapping_add(1);
         }
-        r.game.stage_info.x6DC = r.game.grounds[g.0].u.bigblueroute().zone;
+        r.game.stage_info.route_zone = r.game.grounds[g.0].u.bigblueroute().zone;
     }
     let level = r.game.gr.wind_level;
     r.game.gr.wind_level = crate::lb::wind::tick(&mut r.game.gr.winds, level);

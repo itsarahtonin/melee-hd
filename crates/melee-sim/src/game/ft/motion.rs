@@ -377,7 +377,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_80070F28")]
     fn end_part_anims(&mut self, f: FighterId) {
         for i in 0..5 {
-            if self.game.fighters[f.0].part_anims[i].x11 == -1 {
+            if self.game.fighters[f.0].part_anims[i].anim == -1 {
                 continue;
             }
             let fp = &self.game.fighters[f.0];
@@ -394,9 +394,9 @@ impl Running<'_> {
             let parts = fp.parts.expect("a fighter without parts");
             for j in 0..n {
                 let part = self.data.u8(list.expect("part animation parts").at(j));
-                self.game.fighter_parts[parts.0][part as usize].x8[0] &= !0x04;
+                self.game.fighter_parts[parts.0][part as usize].flags[0] &= !0x04;
             }
-            self.game.fighters[f.0].part_anims[i].x11 = -1;
+            self.game.fighters[f.0].part_anims[i].anim = -1;
         }
     }
 
@@ -405,7 +405,7 @@ impl Running<'_> {
     fn reapply_part_anims(&mut self, f: FighterId) {
         let gobj = self.game.fighters[f.0].gobj.expect("a fighter's GObj");
         for i in 0..5 {
-            let anim = self.game.fighters[f.0].part_anims[i].x10;
+            let anim = self.game.fighters[f.0].part_anims[i].part;
             if anim != -1 {
                 self.apply_part_anim(gobj, i as i32, i32::from(anim), 0.0);
             }
@@ -486,7 +486,7 @@ impl Running<'_> {
                 0 => 1,
                 n => n,
             };
-            self.game.fighters[f.0].attack_record.x2088 = before;
+            self.game.fighters[f.0].attack_record.record_id = before;
         }
         let fp = &self.game.fighters[f.0];
         if fp.kind == FighterKind::Luigi && val[3] == 113 {
@@ -510,13 +510,13 @@ impl Running<'_> {
     pub(crate) fn reset_attack_record(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         let r = &mut fp.attack_record;
-        r.x2074_vec.x = 0;
-        r.x2074_vec.y = 0;
-        r.x207C.x = 0.0;
-        r.x207C.y = 6;
-        r.x10[0] = 0;
-        r.x10[1] &= 0x07;
-        r.x2074_vec.x = fp::fctiwz(reg(fp.dmg.x1830_percent));
+        r.percents.x = 0;
+        r.percents.y = 0;
+        r.kb_and_thrower.x = 0.0;
+        r.kb_and_thrower.y = 6;
+        r.flags[0] = 0;
+        r.flags[1] &= 0x07;
+        r.percents.x = fp::fctiwz(reg(fp.dmg.percent));
         let bits = [
             (0x40, fp.is_metal),
             (0x20, fp.bunny_hood.is_some()),
@@ -527,7 +527,7 @@ impl Running<'_> {
         ];
         for (mask, set) in bits {
             if set {
-                fp.attack_record.x10[0] |= mask;
+                fp.attack_record.flags[0] |= mask;
             }
         }
     }
@@ -560,7 +560,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.reset_attack_record(f);
         let n = self.game.next_attack_record();
-        self.game.fighters[f.0].attack_record.x2088 = n;
+        self.game.fighters[f.0].attack_record.record_id = n;
         self.count_attack(gobj, [0; 4]);
     }
 
@@ -571,7 +571,7 @@ impl Running<'_> {
         let tf = self.game.fighter(thrower);
         let (team, slot) = (tf.team, tf.player_idx);
         let fp = &mut self.game.fighters[f.0];
-        fp.thrown_hitbox.x134 = crate::lb::hitcapsule::HitOwner::Thrower(thrower);
+        fp.thrown_hitbox.owner = crate::lb::hitcapsule::HitOwner::Thrower(thrower);
         fp.thrown_team = team;
         fp.thrower_slot = slot;
     }
@@ -623,7 +623,7 @@ impl Running<'_> {
             }
         }
         if flags & SKIP_THROW_EXCEPTION == 0 {
-            self.game.fighters[f.0].thrown_hitbox.x134 = Default::default();
+            self.game.fighters[f.0].thrown_hitbox.owner = Default::default();
         }
         if flags & KEEP_COL_ANIM_HIT_STATUS == 0 {
             if self.game.fighters[f.0].hit_status != 0 {
@@ -683,8 +683,8 @@ impl Running<'_> {
             let fp = &mut self.game.fighters[f.0];
             // `ftCommon_8007E2F4`.
             fp.grab_immune = 0;
-            if fp.dmg.x18F4 != 0 {
-                fp.dmg.x18F4 = 0;
+            if fp.dmg.cape_turn_frames != 0 {
+                fp.dmg.cape_turn_frames = 0;
                 fp.turn_spin = false;
             }
             if flags & UNK_19 == 0 {
@@ -703,13 +703,13 @@ impl Running<'_> {
             fp.is_sleeping = false;
             fp.out_of_play = false;
             fp.blast_immune_state = false;
-            fp.dmg.x182c_behavior = 1.0;
+            fp.dmg.damage_scale = 1.0;
             fp.dmg.kb_applied = 0.0;
-            fp.dmg.x18A8 = 0.0;
+            fp.dmg.hit_kb = 0.0;
             fp.dmg.armor1 = 0.0;
-            fp.dmg.x18a0 = 0.0;
+            fp.dmg.tip_kb_applied = 0.0;
             fp.shield_was_hit = false;
-            fp.state_flags.x221B_b0 = false;
+            fp.state_flags.shield_bubble = false;
             fp.powershield_early = false;
             fp.counter_min_hitlag = 0.0;
             fp.counter_item_min_hitlag = 0.0;
@@ -737,7 +737,7 @@ impl Running<'_> {
             fp.coll_data.floor_skip = -1;
             // `ftCo_800DEEA8`.
             fp.smash_attrs.state = 0;
-            fp.smash_attrs.x2138_smashSinceHitbox = -1.0;
+            fp.smash_attrs.smash_since_hitbox = -1.0;
             fp.wind_immune = false;
         }
         if flags & SKIP_ITEM_VIS == 0 {
@@ -833,10 +833,10 @@ impl Running<'_> {
         if self.game.fighters[f.0].ground_or_air == GA_GROUND
             && flags & SKIP_HIT_STUN_START == 0
             && ms.move_bits & 0x0040_0000 != 0
-            && self.game.fighters[f.0].dmg.x18C8 == -1
+            && self.game.fighters[f.0].dmg.source_attack == -1
         {
             let x814 = self.common().i32(0x814);
-            self.game.fighters[f.0].dmg.x18C8 = if x814 > 0 { x814 } else { 1 };
+            self.game.fighters[f.0].dmg.source_attack = if x814 > 0 { x814 } else { 1 };
         }
         let prev_attack = self.game.fighters[f.0].attack_flags;
         self.set_attack_id(f, ms.move_bits >> 24);
@@ -940,7 +940,7 @@ impl Running<'_> {
                     let bone = self.bone(f, bone_index);
                     let (j, j2) = (
                         bone.joint.expect("a part without a joint"),
-                        bone.x4_jobj2.expect("a part without a second joint"),
+                        bone.interp_joint.expect("a part without a second joint"),
                     );
                     let (t, q) = (
                         self.game.objs.jobjs[j2].translate,

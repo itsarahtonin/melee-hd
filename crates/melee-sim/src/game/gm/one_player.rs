@@ -78,23 +78,27 @@ pub fn target_stage(ckind: u8) -> u16 {
 /// A character's best time in the session's records (`gmMainLib_8015D450`, `x4C[selkind]`),
 /// whose last 21 entries the decomp's type calls padding.
 #[doc(alias = "gmMainLib_8015D450")]
-fn target_best(rec: &crate::game::structs::gmm_retval_EDBC, sel: u8) -> i32 {
+fn target_best(rec: &crate::game::structs::TrophyRecords, sel: u8) -> i32 {
     let i = usize::from(sel);
     if i < 4 {
-        return rec.x4C[i];
+        return rec.target_best[i];
     }
     let o = 4 * (i - 4);
-    i32::from_be_bytes(rec.padding_x4C[o..o + 4].try_into().expect("four bytes"))
+    i32::from_be_bytes(
+        rec.target_best_rest[o..o + 4]
+            .try_into()
+            .expect("four bytes"),
+    )
 }
 
-fn set_target_best(rec: &mut crate::game::structs::gmm_retval_EDBC, sel: u8, v: i32) {
+fn set_target_best(rec: &mut crate::game::structs::TrophyRecords, sel: u8, v: i32) {
     let i = usize::from(sel);
     if i < 4 {
-        rec.x4C[i] = v;
+        rec.target_best[i] = v;
         return;
     }
     let o = 4 * (i - 4);
-    rec.padding_x4C[o..o + 4].copy_from_slice(&v.to_be_bytes());
+    rec.target_best_rest[o..o + 4].copy_from_slice(&v.to_be_bytes());
 }
 
 /// A cleared target stage in `selkind`'s records (Target Test's `gm_801B65D4`, Classic's
@@ -103,15 +107,23 @@ fn set_target_best(rec: &mut crate::game::structs::gmm_retval_EDBC, sel: u8, v: 
 /// `x1C`, `gmMainLib_8015EDB0`'s `x4`).
 pub fn record_target_clear(game: &mut crate::game::state::Game, sel: u8, frames: u32) {
     let bit = 1i32 << sel;
-    let rec = &mut game.game_data.thing.save_data.unk_30;
-    if rec.x8 & bit == 0 {
+    let rec = &mut game.game_data.thing.save_data.trophy_records;
+    if rec.target_cleared & bit == 0 {
         set_target_best(rec, sel, frames as i32);
-        rec.x8 |= bit;
+        rec.target_cleared |= bit;
     } else if target_best(rec, sel) as u32 > frames {
         set_target_best(rec, sel, frames as i32);
     }
-    game.game_data.thing.save_data.unk_8.x1C |= bit;
-    game.game_data.thing.save_data.unk_28.x4 |= bit;
+    game.game_data
+        .thing
+        .save_data
+        .challenger_records
+        .target_cleared |= bit;
+    game.game_data
+        .thing
+        .save_data
+        .stage_unlock_records
+        .target_cleared |= bit;
 }
 
 /// `gmPlayerData`: a 1P run's player.
@@ -681,7 +693,7 @@ impl Running<'_> {
     /// `gmClassic_801B3DD8`: Classic's select from its saved choices.
     #[doc(alias = "gmClassic_801B3DD8")]
     pub fn classic_enter_css(&mut self) {
-        let s = self.game.game_data.vs.unk_51C.clone();
+        let s = self.game.game_data.vs.classic.clone();
         let slot = self.game.one_player.classic.base.player.slot;
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
@@ -719,9 +731,9 @@ impl Running<'_> {
             super::setup_players::css_one_player_choice(&self.game.one_player.css);
         let d = &mut self.game.game_data.vs;
         let s = match mode {
-            GameMode::Classic => &mut d.unk_51C,
-            GameMode::Adventure => &mut d.unk_522,
-            _ => &mut d.unk_528,
+            GameMode::Classic => &mut d.classic,
+            GameMode::Adventure => &mut d.adventure,
+            _ => &mut d.all_star,
         };
         s.c_kind = ckind;
         s.stocks = stocks;
@@ -741,7 +753,7 @@ impl Running<'_> {
         p.cpu_level = s.cpu_level;
         p.stocks = s.stocks;
         p.nametag = s.nametag;
-        s.x5
+        s.round
     }
 
     /// `gm_80168F88`: the announcer's bank (bank 2's 0x10) wanted and waited for.
@@ -799,7 +811,7 @@ impl Running<'_> {
     #[doc(alias = "gmClassic_801B2BA4")]
     fn classic_pick(&self, table: usize) -> Option<MatchupRef> {
         let (off, t, at) = CLASSIC_TABLES[table];
-        let me = i32::from(self.game.game_data.vs.unk_51C.c_kind);
+        let me = i32::from(self.game.game_data.vs.classic.c_kind);
         let picks: Vec<Matchup> = self
             .game
             .one_player
@@ -859,7 +871,7 @@ impl Running<'_> {
     /// `gm_801B42E8`: Adventure's select from its saved choices.
     #[doc(alias = "gm_801B42E8")]
     pub fn adventure_enter_css(&mut self) {
-        let s = self.game.game_data.vs.unk_522.clone();
+        let s = self.game.game_data.vs.adventure.clone();
         let slot = self.game.one_player.adventure.base.player.slot;
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
@@ -921,7 +933,7 @@ impl Running<'_> {
     /// `gm_801B5F50`: All-Star's select from its saved choices.
     #[doc(alias = "gm_801B5F50")]
     pub fn allstar_enter_css(&mut self) {
-        let s = self.game.game_data.vs.unk_528.clone();
+        let s = self.game.game_data.vs.all_star.clone();
         let slot = self.game.one_player.allstar.base.player.slot;
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
@@ -947,7 +959,7 @@ impl Running<'_> {
         let x5 = self.save_one_player_choice(GameMode::AllStar);
         self.set_next_game_mode_state_id(x5.wrapping_mul(8) & 0xF8);
         self.load_announcer_bank();
-        let round = self.game.game_data.vs.unk_528.x5;
+        let round = self.game.game_data.vs.all_star.round;
         self.allstar_round_setup(usize::from(round));
     }
 
@@ -1034,17 +1046,17 @@ impl Running<'_> {
         if self.game.one_player.target_entries != 0 {
             self.save_after_run();
         }
-        let t = self.game.game_data.vs.unk_530.unk_584.clone();
+        let t = self.game.game_data.vs.event.target_test.clone();
         let slot = self.game.one_player.target_slot;
         let css = &mut self.game.one_player.target_css;
         css.vs.start.rules = super::vs_mode::rules_defaults();
         super::setup_players::css_one_player(
             css,
             STADIUM_TARGET,
-            t.unk_584,
+            t.ckind,
             1,
-            t.unk_585 as i8,
-            t.unk_586,
+            t.color as i8,
+            t.nametag,
             0,
             slot,
         );
@@ -1063,10 +1075,10 @@ impl Running<'_> {
             return;
         }
         let (ckind, _, color, nametag, _) = super::setup_players::css_one_player_choice(css);
-        let t = &mut self.game.game_data.vs.unk_530.unk_584;
-        t.unk_584 = ckind;
-        t.unk_585 = color;
-        t.unk_586 = nametag;
+        let t = &mut self.game.game_data.vs.event.target_test;
+        t.ckind = ckind;
+        t.color = color;
+        t.nametag = nametag;
         self.load_announcer_bank();
     }
 
@@ -1077,7 +1089,7 @@ impl Running<'_> {
     /// the character's target stage, in the game cache too; and the rumble setting.
     #[doc(alias = "gm_801B6428")]
     pub fn target_enter_match(&mut self) {
-        let t = self.game.game_data.vs.unk_530.unk_584.clone();
+        let t = self.game.game_data.vs.event.target_test.clone();
         let slot = self.game.one_player.target_slot;
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
@@ -1091,30 +1103,26 @@ impl Running<'_> {
         r.time_limit = 0;
         r.timer_counts_up = true;
         r.timer_shows_hours = true;
-        r.x4_2 = true;
-        r.x2_5 = false;
-        r.x5_1 = true;
-        r.x4_3 = true;
-        r.x4_4 = false;
-        r.x3_1 = false;
-        r.x3_3 = true;
-        r.x3_2 = true;
+        r.single_player = true;
+        r.damage_display_kos = false;
+        r.goes_on = true;
+        r.game_over_scene = true;
+        r.clear_scores = false;
+        r.pause_shows_stick = false;
+        r.pause_shows_z = true;
+        r.pause_z_retries = true;
         r.sd_penalty = -1;
-        r.x18 = 0;
-        r.x20 = 0;
-        r.x3_7 = true;
-        r.x9 = 1;
+        r.score = 0;
+        r.item_switch = 0;
+        r.pause_shows_timers = true;
+        r.run_kind = 1;
         r.item_freq = -1;
         r.on_pause_override = Some(CodeRef(0x8016_5290));
         super::vs_mode::all_player_defaults(&mut s.players);
-        let ckind = if t.unk_584 == 14 {
-            0x20
-        } else {
-            t.unk_584 as u8
-        };
-        super::setup_players::setup_human(&mut s.players[0], ckind, t.unk_585, 1, slot);
-        s.players[0].nametag = t.unk_586;
-        s.players[0].xC_b1 = false;
+        let ckind = if t.ckind == 14 { 0x20 } else { t.ckind as u8 };
+        super::setup_players::setup_human(&mut s.players[0], ckind, t.color, 1, slot);
+        s.players[0].nametag = t.nametag;
+        s.players[0].enters = false;
         let stkind = target_stage(s.players[0].ckind as u8);
         s.rules.stkind = stkind;
         self.dvd_mut().cache.scene.game_cache.stkind = i32::from(stkind);
@@ -1133,37 +1141,37 @@ impl Running<'_> {
     #[doc(alias = "gm_801B65D4")]
     pub fn target_exit_match(&mut self) {
         let end = self.game.one_player.target_exit.match_end.clone();
-        let t = self.game.game_data.vs.unk_530.unk_584.clone();
+        let t = self.game.game_data.vs.event.target_test.clone();
         let slot = self.game.one_player.target_slot;
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
-        self.results_add_coins(i32::from(end.player_standings[0].xE));
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
+        self.results_add_coins(i32::from(end.player_standings[0].coins));
         if end.outcome == super::match_exit::OUTCOME_RETRY {
             self.set_next_game_mode_state_id(1);
             return;
         }
-        let sel = super::match_exit::selkind(t.unk_584 as u8);
+        let sel = super::match_exit::selkind(t.ckind as u8);
         let (left, total) = (
-            i32::from(self.game.stage_info.x6D4),
-            i32::from(self.game.stage_info.x6D2),
+            i32::from(self.game.stage_info.targets_left),
+            i32::from(self.game.stage_info.target_count),
         );
         let frames = end.frame_count;
         if left == 0 {
             record_target_clear(self.game, sel, frames);
         }
         let mut improved = false;
-        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
-        if !x7c.b0 {
+        let x7c = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
+        if !x7c.target_cleared {
             if left == 0 {
-                x7c.b0 = true;
+                x7c.target_cleared = true;
                 improved = true;
-                x7c.x94 = frames;
-            } else if x7c.x94 < total.wrapping_sub(left) as u32 {
-                x7c.x94 = total.wrapping_sub(left) as u32;
+                x7c.target_record = frames;
+            } else if x7c.target_record < total.wrapping_sub(left) as u32 {
+                x7c.target_record = total.wrapping_sub(left) as u32;
             }
         } else if left == 0 {
-            if x7c.x94 > frames {
-                x7c.x94 = frames;
+            if x7c.target_record > frames {
+                x7c.target_record = frames;
             }
             improved = true;
         }
@@ -1178,10 +1186,10 @@ impl Running<'_> {
             self.special_unlocks(0x80);
             if challenger != CharacterKind::NONE {
                 self.init_challenger(
-                    t.unk_584 as u8,
-                    t.unk_585,
+                    t.ckind as u8,
+                    t.color,
                     slot,
-                    t.unk_586,
+                    t.nametag,
                     challenger,
                     GameMode::TargetTest.id(),
                 );
@@ -1220,8 +1228,8 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D0F4")]
     #[doc(alias = "gmMainLib_8015D21C")]
     pub(super) fn all_cleared_one_mode(&self) -> bool {
-        let r = &self.game.game_data.thing.save_data.unk_8;
-        [r.x1C, r.x10, r.x14]
+        let r = &self.game.game_data.thing.save_data.challenger_records;
+        [r.target_cleared, r.classic_cleared, r.adventure_cleared]
             .into_iter()
             .any(|w| (0..0x19).all(|i| i == 3 || w & (1 << i) != 0))
     }
@@ -1231,7 +1239,13 @@ impl Running<'_> {
     #[doc(alias = "gm_8017341C")]
     #[doc(alias = "gmMainLib_8015D5DC")]
     fn target_stage_unlock(&self) -> u16 {
-        let w = self.game.game_data.thing.save_data.unk_28.x4;
+        let w = self
+            .game
+            .game_data
+            .thing
+            .save_data
+            .stage_unlock_records
+            .target_cleared;
         if (0..0x19).all(|i| w & (1 << i) != 0) && !self.stage_unlocked(0x1C) {
             return 0x1C;
         }
@@ -1244,8 +1258,8 @@ impl Running<'_> {
     #[doc(alias = "gm_80173AA4")]
     #[doc(alias = "gmMainLib_8015D640")]
     fn target_trophies(&mut self) {
-        let rec = &self.game.game_data.thing.save_data.unk_30;
-        if !(0..0x19).all(|i| rec.x8 & (1 << i) != 0) {
+        let rec = &self.game.game_data.thing.save_data.trophy_records;
+        if !(0..0x19).all(|i| rec.target_cleared & (1 << i) != 0) {
             return;
         }
         let sum = (0..0x19u8).fold(0u32, |a, i| a.wrapping_add(target_best(rec, i) as u32));
@@ -1596,8 +1610,8 @@ pub const ADVENTURE_CSS: u8 = 0x70;
 
 impl super::super::state::Game {
     /// A character's 1P records (`GetPersistentFighterData(hud)->x7C`).
-    pub fn record_1p(&self, hud: u8) -> &crate::game::structs::FighterData_x7C {
-        &self.game_data.thing.save_data.x1F2C[usize::from(hud)].x7C
+    pub fn record_1p(&self, hud: u8) -> &crate::game::structs::FighterRecords {
+        &self.game_data.thing.save_data.fighters[usize::from(hud)].records
     }
 
     /// A character's high score in Classic, Adventure or All-Star (`mode` 0 to 2):
@@ -1611,7 +1625,7 @@ impl super::super::state::Game {
     #[doc(alias = "gmMainLib_8015D310")]
     pub fn high_score_1p(&self, mode: usize, hud: u8) -> i32 {
         let r = self.record_1p(hud);
-        [r.x88, r.x8C, r.x90][mode]
+        [r.classic_score, r.adventure_score, r.all_star_score][mode]
     }
 
     /// Every character's high scores summed (`gm_80162C48`, `gm_80162E44`, `gm_80163040`):
@@ -1628,7 +1642,7 @@ impl super::super::state::Game {
     pub fn cleared_1p_all(&self, mode: usize) -> bool {
         (0..25u8).all(|i| {
             let r = self.record_1p(i);
-            [r.b4, r.b5, r.b6][mode]
+            [r.classic_cleared, r.adventure_cleared, r.all_star_cleared][mode]
         })
     }
 
@@ -1641,7 +1655,7 @@ impl super::super::state::Game {
     pub fn cleared_1p_worst(&self, mode: usize) -> u8 {
         (0..25u8).fold(4, |m, i| {
             let r = self.record_1p(i);
-            m.min([r.x80, r.x81, r.x82][mode])
+            m.min([r.classic_level, r.adventure_level, r.all_star_level][mode])
         })
     }
 
@@ -1652,7 +1666,11 @@ impl super::super::state::Game {
     #[doc(alias = "gmMainLib_8015D48C")]
     pub fn target_record(&self, hud: u8) -> i32 {
         let r = self.record_1p(hud);
-        if !r.b0 { r.x94 as i32 } else { -1 }
+        if !r.target_cleared {
+            r.target_record as i32
+        } else {
+            -1
+        }
     }
 
     /// Frames as hours, minutes, seconds and hundredths (`(99 * (frames % 60)) / 59`).
@@ -1676,10 +1694,10 @@ impl super::super::state::Game {
     pub fn target_time(&self, hud: u8) -> [u8; 4] {
         let r = self.record_1p(hud);
         assert!(
-            r.b0,
+            r.target_cleared,
             "gm_80163374 for a stage not cleared leaves its outputs unwritten"
         );
-        Self::frames_to_time(r.x94)
+        Self::frames_to_time(r.target_record)
     }
 
     /// Every character's best times summed, once every stage is cleared (`gm_801634D4`).
@@ -1688,10 +1706,10 @@ impl super::super::state::Game {
         let mut total = 0u32;
         for i in 0..25u8 {
             let r = self.record_1p(i);
-            if !r.b0 {
+            if !r.target_cleared {
                 return None;
             }
-            total = total.wrapping_add(r.x94);
+            total = total.wrapping_add(r.target_record);
         }
         Some(Self::frames_to_time(total))
     }
@@ -1700,7 +1718,7 @@ impl super::super::state::Game {
     #[doc(alias = "gm_801631CC")]
     #[doc(alias = "gmMainLib_8015D06C")]
     pub fn homerun_record(&self, hud: u8) -> u32 {
-        self.record_1p(hud).x84 as u32
+        self.record_1p(hud).home_run_distance as u32
     }
 
     /// Every character's best distances summed, wrapping as the scores' totals do
@@ -1716,7 +1734,11 @@ impl super::super::state::Game {
     #[doc(alias = "gm_801639C0")]
     pub fn multi_man_won(&self, hundred: bool, hud: u8) -> bool {
         let r = self.record_1p(hud);
-        if hundred { r.b2 } else { r.b1 }
+        if hundred {
+            r.hundred_man_cleared
+        } else {
+            r.ten_man_cleared
+        }
     }
 
     /// 10-Man's (or 100-Man's) best KOs without a win, -1 with one (`gm_80163690`,
@@ -1728,9 +1750,9 @@ impl super::super::state::Game {
         if self.multi_man_won(hundred, hud) {
             -1
         } else if hundred {
-            r.x9C
+            r.hundred_man_time
         } else {
-            r.x98
+            r.ten_man_time
         }
     }
 
@@ -1744,7 +1766,11 @@ impl super::super::state::Game {
             "gm_801636D8 without a win leaves its outputs unwritten"
         );
         let r = self.record_1p(hud);
-        Self::frames_to_time(if hundred { r.x9C } else { r.x98 } as u32)
+        Self::frames_to_time(if hundred {
+            r.hundred_man_time
+        } else {
+            r.ten_man_time
+        } as u32)
     }
 
     /// Every character's best 10-Man (or 100-Man) times summed, once every one has won
@@ -1758,7 +1784,11 @@ impl super::super::state::Game {
                 return None;
             }
             let r = self.record_1p(i);
-            total = total.wrapping_add(if hundred { r.x9C } else { r.x98 } as u32);
+            total = total.wrapping_add(if hundred {
+                r.hundred_man_time
+            } else {
+                r.ten_man_time
+            } as u32);
         }
         Some(Self::frames_to_time(total))
     }
@@ -1771,10 +1801,10 @@ impl super::super::state::Game {
     pub fn multi_man_kos(&self, mode: u8, hud: u8) -> i32 {
         let r = self.record_1p(hud);
         match mode {
-            0 => i32::from(r.xA0),
-            1 => i32::from(r.xA2),
-            2 => r.xA4,
-            _ => r.xA8,
+            0 => i32::from(r.three_min_kos),
+            1 => i32::from(r.fifteen_min_kos),
+            2 => r.endless_kos,
+            _ => r.cruel_kos,
         }
     }
 
@@ -1791,6 +1821,6 @@ impl super::super::state::Game {
     #[doc(alias = "gm_80163274")]
     #[doc(alias = "gmMainLib_8015D7EC")]
     pub fn training_record(&self, hud: u8) -> u16 {
-        self.record_1p(hud).x7E
+        self.record_1p(hud).training_combo
     }
 }

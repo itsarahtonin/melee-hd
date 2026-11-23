@@ -1122,7 +1122,7 @@ impl Running<'_> {
         } else {
             ckind
         };
-        let color = self.game.game_data.vs.unk_522.color;
+        let color = self.game.game_data.vs.adventure.color;
         let d = &mut self.game.one_player.adventure_cutscene;
         d[0] = kind;
         d[1] = color;
@@ -1296,7 +1296,7 @@ impl Running<'_> {
     pub fn adventure_enter_ness(&mut self) {
         self.adventure_enter_vs();
         let rules = &mut self.game.one_player.match_start.rules;
-        rules.x20 = 1 << 7;
+        rules.item_switch = 1 << 7;
         rules.item_freq = 4;
     }
 
@@ -1355,7 +1355,7 @@ impl Running<'_> {
             && run.base.player.cpu_level >= 2
             && run.base.frames.wrapping_add(self.game.vs_frame_count()) < 0xFD20;
         if !giga {
-            self.game.vs.start.x4_5 = true;
+            self.game.vs.start.allows_continue = true;
         }
         self.game.one_player.adventure.feats[3] = u8::from(giga);
         self.set_next_game_mode_state_id(BOWSERTOY_CUTSCENE);
@@ -1365,7 +1365,7 @@ impl Running<'_> {
     /// into the ending (mode 0x16).
     fn adventure_clear(&mut self) {
         let run = self.game.one_player.adventure.base;
-        let stocks = self.game.game_data.vs.unk_522.stocks;
+        let stocks = self.game.game_data.vs.adventure.stocks;
         self.one_player_clear(&run, stocks, GameMode::AdventureEnding);
     }
 

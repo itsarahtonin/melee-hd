@@ -12,7 +12,7 @@ use melee_sim::game::it::spawn::{PickTable, Spawner, Tables};
 use melee_sim::game::it::{BoneTable, CHAR_ARTICLES, ItemVars, Member, vars_kind};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::structs::{
-    HSD_ObjAllocUnk, Item, Item_FtTrack, PokemonSelectionState, db_ItemAndPokemonMenu_t,
+    Item, Item_FtTrack, ItemCounts, PokemonSelectionState, db_ItemAndPokemonMenu_t,
 };
 
 use crate::MEM1;
@@ -233,7 +233,7 @@ impl Importer<'_> {
     pub fn items(&mut self) {
         let cap = self.cap;
         let m = mem(&cap.call.mem1);
-        self.game.it.counts = HSD_ObjAllocUnk::import(&m, sym("Item_804A0C64"), self);
+        self.game.it.counts = ItemCounts::import(&m, sym("Item_804A0C64"), self);
         self.game.it.ft_track = Item_FtTrack::import(&m, sym("Item_804A0CCC"), self);
         self.game.it.made = cap.u32(sym("it_804D6D10")) as i32;
         self.game.it.next_attack_id = cap.u32(sym("it_804D6D14"));
@@ -507,7 +507,7 @@ impl Comparer<'_> {
                 let off = 0x378 + 0x1C + 4 * k;
                 block[off..off + 4].copy_from_slice(&v.to_bits().to_be_bytes());
             }
-            for (k, v) in [item.stomp_box.unk_x, item.stomp_box.unk_y]
+            for (k, v) in [item.stomp_box.motion_x, item.stomp_box.motion_y]
                 .into_iter()
                 .enumerate()
             {

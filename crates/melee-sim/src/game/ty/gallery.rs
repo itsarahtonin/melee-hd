@@ -512,7 +512,7 @@ impl Running<'_> {
             self.toy_editor();
             return;
         }
-        let song = self.game.game_data.x1850.unk_14;
+        let song = self.game.game_data.rules.gallery_song;
         if song != -1 {
             self.lb_play_music(song);
         }

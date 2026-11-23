@@ -40,7 +40,7 @@ impl Running<'_> {
         self.init_coll(gobj);
         self.init_x1930(f);
         let fp = &self.game.fighters[f.0];
-        if fp.smash_attrs.x2135 == -1
+        if fp.smash_attrs.rebirth_point == -1
             && self.land_on_spawn(f)
             && !self.game.fighters[f.0].spawn_in_air
         {
@@ -122,59 +122,59 @@ impl Running<'_> {
         fp.frame_speed_mul = 1.0;
         fp.freeze_rate_step = 1.0;
         fp.dmg.kb_applied = 0.0;
-        fp.dmg.x18A4_knockbackMagnitude = 0.0;
-        fp.dmg.x18A8 = 0.0;
-        fp.dmg.x18ac_time_since_hit = -1;
+        fp.dmg.kb_magnitude = 0.0;
+        fp.dmg.hit_kb = 0.0;
+        fp.dmg.time_since_hit = -1;
         fp.dmg.armor0 = 0.0;
         fp.dmg.armor1 = 0.0;
         fp.hit_reaction = 0;
         fp.in_hitstun = false;
-        fp.dmg.x18a0 = 0.0;
+        fp.dmg.tip_kb_applied = 0.0;
         fp.jumps_used = 0;
         fp.walljumps_used = 0;
         fp.hitlag_mul = 0.0;
         fp.ledge_cooldown = 0;
-        fp.dmg.x1838_percentTemp = 0.0;
-        fp.dmg.x183C_applied = 0;
-        fp.dmg.x18C0 = 0;
-        fp.dmg.x18c4_source_ply = 6;
-        fp.dmg.x18C8 = -1;
-        fp.dmg.x18F0 = 0;
-        fp.dmg.x18CC = 0;
-        fp.dmg.x18D0 = -10;
+        fp.dmg.pending_damage = 0.0;
+        fp.dmg.damage_applied = 0;
+        fp.dmg.source_spawn = 0;
+        fp.dmg.source_player = 6;
+        fp.dmg.source_attack = -1;
+        fp.dmg.healing = 0;
+        fp.dmg.source_class = 0;
+        fp.dmg.source_kind = -10;
         fp.last_hit_by_sub = false;
         fp.damage_col_anim = false;
-        fp.dmg.x18F4 = 0;
-        fp.dmg.x18F8 = 1;
-        fp.dmg.x18fa_model_shift_frames = 0;
-        fp.dmg.x18FD = 0;
-        fp.dmg.x18FC = 0;
-        fp.dmg.x1834 = 0.0;
+        fp.dmg.cape_turn_frames = 0;
+        fp.dmg.shake_kind = 1;
+        fp.dmg.model_shift_frames = 0;
+        fp.dmg.shake_len = 0;
+        fp.dmg.shake_step = 0;
+        fp.dmg.armor_hp = 0.0;
         fp.no_turn = false;
-        fp.dmg.x1840 = 0;
+        fp.dmg.max_tip_damage = 0;
         fp.in_hitlag = false;
         fp.was_in_hitlag = false;
         fp.hitlag_held = false;
         fp.pending_hitlag = false;
         fp.thaw_size = false;
-        fp.dmg.x1954 = 0.0;
-        fp.dmg.x1958 = 0.0;
+        fp.dmg.hold_frames = 0.0;
+        fp.dmg.pending_hitlag_frames = 0.0;
         fp.allow_sdi = false;
-        fp.dmg.x195c_hitlag_frames = 0.0;
+        fp.dmg.hitlag_frames = 0.0;
         fp.in_hitstun_sdi = false;
         fp.hitlag_vibrate_mul = 1.0;
         fp.min_hitlag = 0.0;
-        fp.dmg.x189C_unk_num_frames = 0.0;
+        fp.dmg.hit_frames = 0.0;
         fp.buried = false;
         fp.turn_spin = false;
-        fp.dmg.x1914 = 0;
+        fp.dmg.item_hit_damage = 0;
         fp.dmg.int_value = 0;
-        fp.dmg.x191C = 0.0;
-        fp.dmg.x1924 = 0;
-        fp.dmg.x1928 = 0.0;
+        fp.dmg.clank_damage = 0.0;
+        fp.dmg.max_shield_damage = 0;
+        fp.dmg.shield_push = 0.0;
         fp.stepped_on_item = false;
-        fp.dmg.x1950 = 0;
-        fp.dmg.x1948 = 0;
+        fp.dmg.stepped_on_item = 0;
+        fp.dmg.bounce_frames = 0;
         fp.no_item_bounce = false;
         fp.nudge_vel.y = 0.0;
         fp.nudge_vel.x = 0.0;
@@ -194,13 +194,13 @@ impl Running<'_> {
         fp.intangible_frames = 0;
         fp.invincible_frames = 0;
         fp.starman = false;
-        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.holds_grab = false;
         fp.victim_gobj = None;
         fp.partner = None;
-        fp.state_flags.x221B_b6 = false;
+        fp.state_flags.item_grab_set = false;
         fp.target_item_gobj = None;
         fp.caught_item = Default::default();
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.grounded_catch = false;
         fp.held_hit_light = false;
         fp.leg_reach = 0;
         fp.hit_by = None;
@@ -213,10 +213,10 @@ impl Running<'_> {
         fp.combo_push_frames = 0;
         fp.combo_victim = None;
         fp.shield_was_hit = false;
-        fp.state_flags.x221B_b0 = false;
-        fp.state_flags.x221B_b1 = false;
-        fp.state_flags.x221B_b3 = false;
-        fp.state_flags.x221B_b4 = false;
+        fp.state_flags.shield_bubble = false;
+        fp.state_flags.shield_deflects = false;
+        fp.state_flags.bubble_faces = false;
+        fp.state_flags.bubble_reflectors_only = false;
         fp.powershield_early = false;
         fp.powershield_late = false;
         fp.powershield = false;
@@ -230,13 +230,13 @@ impl Running<'_> {
         fp.shield_hit_by_sub = false;
         fp.reflecting = false;
         fp.reflect_kept = false;
-        fp.reflect.x1A3C_damageOver = 0;
-        fp.reflect.x1A2C_reflectHitDirection = 0.0;
+        fp.reflect.damage_over = 0;
+        fp.reflect.hit_direction = 0.0;
         fp.absorbing = false;
         fp.absorb_any = false;
-        fp.absorb.x1A40_absorbHitDirection = 0.0;
-        fp.absorb.x1A44_damageTaken = 0;
-        fp.absorb.x1A48_hitsTaken = 0;
+        fp.absorb.hit_direction = 0.0;
+        fp.absorb.damage_taken = 0;
+        fp.absorb.hits_taken = 0;
         fp.lstick_angle = 0.0;
         fp.air_grab_timer = 0;
         fp.air_item_caught = false;
@@ -262,16 +262,16 @@ impl Running<'_> {
         fp.mash_shake_rows = 0;
         fp.mash_shake_row = 0;
         fp.wall_jump_input_timer = 254;
-        fp.dmg.x1910 = 0;
+        fp.dmg.dot_frames = 0;
         fp.map_coll_done = false;
         fp.hat_hidden = true;
         fp.hits_others_team = false;
-        fp.dmg.x18BC = 0.0;
-        fp.dmg.x18B8 = 0.0;
+        fp.dmg.shake_y = 0.0;
+        fp.dmg.shake_x = 0.0;
         fp.held_in_model = false;
         fp.hold_dy = 0.0;
-        fp.dmg.x1908 = -1;
-        fp.dmg.x190C = None;
+        fp.dmg.queued_sfx = -1;
+        fp.dmg.queued_sfx_table = None;
         fp.tumble_early = false;
         fp.ledge_caught = -1;
         fp.special_air_used = false;
@@ -280,10 +280,10 @@ impl Running<'_> {
         fp.held_in_ice = false;
         fp.dead_holder_slot = 6;
         fp.coin_odd_frame = true;
-        fp.dmg.x1830_percent = mem(fp::frsp(f64::from(damage)));
+        fp.dmg.percent = mem(fp::frsp(f64::from(damage)));
         fp.part_35_rot_x = -1.0;
         fp.throw_flags = [0; 4];
-        fp.thrown_hitbox.x134 = Default::default();
+        fp.thrown_hitbox.owner = Default::default();
         fp.sound_handle_4 = -1;
         fp.sound_handle_5 = -1;
         fp.sound_handle_6 = -1;
@@ -300,7 +300,7 @@ impl Running<'_> {
         // `ftCo_800C88A0`.
         fp.cloak = false;
         fp.refracted = false;
-        fp.smash_attrs.x2134_vibrateFrame = 0;
+        fp.smash_attrs.vibrate_frame = 0;
         fp.cloak_frames = 0;
         fp.cloak_look = false;
         fp.stamina_dead = false;
@@ -308,7 +308,7 @@ impl Running<'_> {
         // `ftCo_800DEEA8`: no smash attack charging.
         fp.smash_attrs.state = 0;
         fp.voice_muted = fp.rules_voice_muted;
-        fp.smash_attrs.x2138_smashSinceHitbox = -1.0;
+        fp.smash_attrs.smash_since_hitbox = -1.0;
     }
 
     /// The multi-jumps' rises (`Fighter_x2D0_t::x14`, `x28` of them) scaled by the fighter's
@@ -558,10 +558,10 @@ impl Running<'_> {
         };
         let cd = &mut game.fighters[f.0].coll_data;
         coll.init(cd);
-        cd.x34_flags.b1234 = 1;
+        cd.ecb_flags.b1234 = 1;
         cd.set_ecb_source_joints(Some(gobj), root, joints, x124);
         cd.set_ledge_snap(sx, sy, sh);
-        cd.x50 = weight;
+        cd.weight = weight;
         if cd.ecb_source.kind == crate::mp::coll::ECB_SOURCE_JOBJ {
             cd.ecb_source.min_height = x128;
             cd.ecb_source.min_width = x128;
@@ -574,11 +574,11 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let p = fp.coll_data.cur_pos;
         let (lx, rx) = (fp.coll_data.ecb.left.x, fp.coll_data.ecb.right.x);
-        let v = &mut fp.dmg.x1930;
-        v.xC.x = mem(fp::fadds(reg(lx), reg(p.x)));
-        v.xC.y = mem(fp::fadds(reg(rx), reg(p.x)));
-        v.xC.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
-        v.x0 = v.xC;
+        let v = &mut fp.dmg.item_pickup_bounds;
+        v.feet.x = mem(fp::fadds(reg(lx), reg(p.x)));
+        v.feet.y = mem(fp::fadds(reg(rx), reg(p.x)));
+        v.feet.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.feet_height)));
+        v.prev_feet = v.feet;
     }
 
     /// Whether the fighter has a floor within 10 below where it spawns, put on it if so,
@@ -743,22 +743,22 @@ impl Running<'_> {
         let joint = self.bone(f, bone).joint;
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.thrown_hitbox;
-        h.x4 = 0;
+        h.group = 0;
         h.state = 1;
         // `lbColl_80008440`.
         for v in &mut h.victims_1 {
             v.victim = Default::default();
         }
-        h.x44 = 0;
+        h.victims_1_len = 0;
         for v in &mut h.victims_2 {
             v.victim = Default::default();
         }
-        h.x45 = 0;
+        h.victims_2_len = 0;
         h.jobj.set(joint);
         h.scale = scale;
         h.b_offset = Vec3::new(0.0, 0.0, 0.0);
-        h.x43_b1 = false;
-        h.x43_b2 = false;
+        h.unscaled_offset = false;
+        h.phantom = false;
         fp.thrown_hitbox_live = false;
         self.thrown_hitbox_follow(gobj);
     }
@@ -785,10 +785,10 @@ impl Running<'_> {
                 Some(offset),
             );
             let p = &mut self.game.fighters[f.0].stamina_markers[i as usize];
-            p.x4 = joint;
-            p.x0 = x0;
-            p.x8 = Vec3::new(v.x, v.y, 0.0);
-            p.x14 = p.x8;
+            p.joint = joint;
+            p.radius = x0;
+            p.pos = Vec3::new(v.x, v.y, 0.0);
+            p.prev_pos = p.pos;
         }
     }
 
@@ -857,36 +857,36 @@ fn set_mv_box(fp: &mut Fighter, off: usize, b: &ftCollisionBox) {
 /// Clears the records of what the fighter last hit and was hit by, `ft_800892D4`.
 #[doc(alias = "ft_800892D4")]
 fn clear_hit_records(fp: &mut Fighter) {
-    fp.dmg.x18d4 = [0; 4];
-    fp.attack_flags = fp.dmg.x18d4;
+    fp.dmg.attack_record = [0; 4];
+    fp.attack_flags = fp.dmg.attack_record;
     let r = &mut fp.attack_record;
-    r.x2074_vec.x = 0;
-    r.x2074_vec.y = 0;
-    r.x207C.x = 0.0;
-    r.x207C.y = 6;
+    r.percents.x = 0;
+    r.percents.y = 0;
+    r.kb_and_thrower.x = 0.0;
+    r.kb_and_thrower.y = 6;
     // `x2084`'s bits only: the first byte's eight and the second's top five.
-    r.x10[0] = 0;
-    r.x10[1] &= 0x07;
-    r.x2088 = 0;
-    let d = &mut fp.dmg.x18d8;
-    d.x0 = 0;
-    d.x4 = 0;
+    r.flags[0] = 0;
+    r.flags[1] &= 0x07;
+    r.record_id = 0;
+    let d = &mut fp.dmg.hit_records;
+    d.attacker_percent = 0;
+    d.victim_percent = 0;
     d.kb_applied1 = 0.0;
-    d.xC = 6;
-    d.x10_b0 = false;
-    d.x11_b3 = false;
-    d.x10_b1 = false;
-    d.x10_b2 = false;
-    d.x10_b3 = false;
-    d.x10_b4 = false;
-    d.x10_b5 = false;
-    d.x10_b6 = false;
-    d.x10_b7 = false;
-    d.x11_b0 = false;
-    d.x11_b1 = false;
-    d.x11_b2 = false;
-    d.x11_b4 = false;
-    fp.dmg.x18ec_instancehitby = 0;
+    d.item_thrower = 6;
+    d.spike = false;
+    d.spike_after_strong = false;
+    d.metal = false;
+    d.bunny_hood = false;
+    d.starman = false;
+    d.cloak = false;
+    d.giant = false;
+    d.tiny = false;
+    d.landed = false;
+    d.from_behind = false;
+    d.at_edge = false;
+    d.on_ledge = false;
+    d.forward_attack = false;
+    fp.dmg.instance_hit_by = 0;
 }
 
 impl super::super::state::Game {

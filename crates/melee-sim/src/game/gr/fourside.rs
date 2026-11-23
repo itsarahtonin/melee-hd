@@ -145,8 +145,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grFourside_801F2D10")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.fourside_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 4, 6, 2, 1, 3, 5] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -207,8 +207,8 @@ pub fn init_city(r: &mut Running, gobj: GObjId) {
         Some(CodeRef(ROOF_TOUCHED)),
     );
     let gp = &mut r.game.grounds[g.0];
-    gp.x10_flags.b5 = true;
-    gp.x11_flags.b012 = 1;
+    gp.flags.shadowed = true;
+    gp.pass_flags.b012 = 1;
 }
 
 /// The city's process, `grFourside_801F3078`: the collision follows the model, and the wind
@@ -245,10 +245,10 @@ pub fn touch(
 #[doc(alias = "grFourside_801F30F0")]
 pub fn init_buildings(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].x10_flags.b2 = false;
+    r.game.grounds[g.0].flags.keeps_fog = false;
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The crane's setup (map 1), `grFourside_801F3154`: its collision, its swing animation
@@ -274,8 +274,8 @@ pub fn init_crane(r: &mut Running, gobj: GObjId) {
     v.height = v.target;
     v.state = 0;
     let gp = &mut r.game.grounds[g.0];
-    gp.x10_flags.b5 = true;
-    gp.x11_flags.b012 = 1;
+    gp.flags.shadowed = true;
+    gp.pass_flags.b012 = 1;
 }
 
 /// The crane's process (map 1), `grFourside_801F3274`. Waiting (state 0), it swings its
@@ -422,7 +422,7 @@ pub fn init_ufo(r: &mut Running, gobj: GObjId) {
     v.sound_state = 0;
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     r.game.geometry_mut().disable_joint(UFO_JOINT);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The UFO's process (map 5), `grFourside_801F3894`. Waiting (state 0), each time its wait
@@ -572,7 +572,7 @@ pub fn frame_ufo(r: &mut Running, gobj: GObjId) {
 pub fn init_heli(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     r.game.grounds[g.0].u.fourside2().state = 0;
     let p = param(r.game);

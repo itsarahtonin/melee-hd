@@ -395,7 +395,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::reset(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.skid = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.flags.flags.pickup = false;
     hitbox::clear_dcd_b7(r.game, gobj);
     let t = item(r.game, gobj)

@@ -20,8 +20,11 @@
 
 mod air;
 mod ceiling;
+mod data;
 mod ground;
 mod walls;
+
+pub use data::{CollData, Ecb, Surface};
 
 use gekko_fp as fp;
 
@@ -29,7 +32,7 @@ use super::{Geometry, Kinds};
 use crate::fpu::{copy, mem, reg};
 use crate::game::handles::CodeRef;
 use crate::game::mirror::{Cx, Mem, Mirror};
-use crate::game::structs::{_ftECB, CollData, SurfaceData, Vec2, ftCollisionBox};
+use crate::game::structs::{Vec2, ftCollisionBox};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::math;
@@ -594,17 +597,23 @@ impl LoopWatch {
 fn coll_bits(cd: &CollData) -> Vec<u32> {
     let mut v = Vec::with_capacity(0x70);
     let mut f = |x: f32| v.push(x.to_bits());
-    for p in [cd.cur_pos, cd.prev_pos, cd.last_pos, cd.x28_vec, cd.contact] {
+    for p in [
+        cd.cur_pos,
+        cd.prev_pos,
+        cd.last_pos,
+        cd.frame_start_pos,
+        cd.contact,
+    ] {
         f(p.x);
         f(p.y);
         f(p.z);
     }
     for e in [
-        &cd.x64_ecb,
+        &cd.unsqueezed_ecb,
         &cd.desired_ecb,
         &cd.ecb,
         &cd.prev_ecb,
-        &cd.xE4_ecb,
+        &cd.loaded_from_ecb,
     ] {
         for p in [&e.top, &e.bottom, &e.right, &e.left] {
             f(p.x);
@@ -612,7 +621,7 @@ fn coll_bits(cd: &CollData) -> Vec<u32> {
         }
     }
     for x in [
-        cd.x50,
+        cd.weight,
         cd.ledge_snap_x,
         cd.ledge_snap_y,
         cd.ledge_snap_height,
@@ -632,21 +641,21 @@ fn coll_bits(cd: &CollData) -> Vec<u32> {
             | u32::from(e.b7)
     };
     v.extend([
-        cd.x0_gobj.map_or(u32::MAX, |g| g.0),
-        flags(&cd.x34_flags),
-        u32::from(cd.x35_flags.b0) << 7 | u32::from(cd.x35_flags.rest.unwrap_or(0)),
+        cd.gobj.map_or(u32::MAX, |g| g.0),
+        flags(&cd.ecb_flags),
+        u32::from(cd.map_flags.b0) << 7 | u32::from(cd.map_flags.rest.unwrap_or(0)),
         cd.facing_dir as u32,
-        cd.x38 as u32,
+        cd.map_generation as u32,
         cd.floor_skip as u32,
         cd.ledge_id_right as u32,
         cd.ledge_id_left as u32,
         cd.joint_id_skip as u32,
         cd.joint_id_only as u32,
         src.kind as u32,
-        cd.x130_flags,
+        cd.ecb_lock,
         cd.env_flags as u32,
         cd.prev_env_flags as u32,
-        cd.x13C as u32,
+        cd.unread_13c as u32,
     ]);
     match &src.shape {
         EcbShape::Joints { root, bones } => {
@@ -713,8 +722,8 @@ fn set(v: &mut Vec2, x: f32, y: f32) {
 }
 
 /// The default ECB a new source gets: 8 high, 8 wide, standing on its position.
-fn default_ecb() -> _ftECB {
-    let mut e = _ftECB::default();
+fn default_ecb() -> Ecb {
+    let mut e = Ecb::default();
     set(&mut e.top, 0.0, 8.0);
     set(&mut e.bottom, 0.0, 0.0);
     set(&mut e.right, 4.0, 4.0);
@@ -722,8 +731,8 @@ fn default_ecb() -> _ftECB {
     e
 }
 
-fn zero_ecb(e: &mut _ftECB) {
-    *e = _ftECB::default();
+fn zero_ecb(e: &mut Ecb) {
+    *e = Ecb::default();
 }
 
 impl CollData {
@@ -738,22 +747,22 @@ impl CollData {
         bones: [Option<JObjId>; 6],
         side_lift: f32,
     ) {
-        self.x0_gobj = gobj;
+        self.gobj = gobj;
         self.ecb_source.kind = ECB_SOURCE_JOBJ;
         self.ecb_source.shape = EcbShape::Joints { root, bones };
         self.ecb_source.side_lift = side_lift;
         self.ecb_source.min_height = 10.0;
         self.ecb_source.min_width = 10.0;
         self.ecb_source.tail_zeroed = false;
-        if self.x34_flags.b0 {
+        if self.ecb_flags.b0 {
             self.ecb = default_ecb();
             self.prev_ecb = self.ecb.clone();
-            self.xE4_ecb = self.ecb.clone();
-            self.x64_ecb = self.ecb.clone();
+            self.loaded_from_ecb = self.ecb.clone();
+            self.unsqueezed_ecb = self.ecb.clone();
             self.desired_ecb = self.ecb.clone();
         }
         self.facing_dir = -1;
-        self.x50 = 0.0;
+        self.weight = 0.0;
     }
 
     /// Sets the ECB to a fixed box, `mpColl_SetECBSource_Fixed`.
@@ -766,7 +775,7 @@ impl CollData {
         front: f32,
         back: f32,
     ) {
-        self.x0_gobj = gobj;
+        self.gobj = gobj;
         self.ecb_source.kind = ECB_SOURCE_FIXED;
         self.ecb_source.shape = EcbShape::Box {
             up,
@@ -775,11 +784,11 @@ impl CollData {
             back,
             angle: 0.0,
         };
-        if self.x34_flags.b0 {
+        if self.ecb_flags.b0 {
             self.ecb = default_ecb();
             self.prev_ecb = self.ecb.clone();
-            self.xE4_ecb = self.ecb.clone();
-            self.x64_ecb = self.ecb.clone();
+            self.loaded_from_ecb = self.ecb.clone();
+            self.unsqueezed_ecb = self.ecb.clone();
             self.desired_ecb = self.ecb.clone();
         }
         self.facing_dir = -1;
@@ -798,7 +807,7 @@ impl CollData {
     #[doc(alias = "mpColl_80042384")]
     pub fn fix_desired_ecb(&mut self) {
         let d = &mut self.desired_ecb;
-        let mid = |d: &_ftECB| mem(fp::fmuls(0.5, add(d.top.y, d.bottom.y)));
+        let mid = |d: &Ecb| mem(fp::fmuls(0.5, add(d.top.y, d.bottom.y)));
         if abs(fp::fsubs(reg(d.top.y), reg(d.bottom.y))) < 1.0 {
             d.top.y = mem(fp::fadds(reg(d.top.y), 1.0));
             let m = mid(d);
@@ -837,11 +846,11 @@ impl CollData {
 
     /// Zeroes the ECB if a clear was requested, and saves it before a load.
     fn begin_load(&mut self) {
-        if self.x130_flags & CLEAR_ECB != 0 {
+        if self.ecb_lock & CLEAR_ECB != 0 {
             zero_ecb(&mut self.ecb);
-            self.x130_flags &= !CLEAR_ECB;
+            self.ecb_lock &= !CLEAR_ECB;
         }
-        self.xE4_ecb = self.ecb.clone();
+        self.loaded_from_ecb = self.ecb.clone();
     }
 
     /// Loads the desired ECB from the fixed box, rotated by its angle,
@@ -928,7 +937,7 @@ impl CollData {
         let mid_y = mem(fp::fmuls(0.5, add(top_y, bottom_y)));
         set(&mut d.right, right_x, mid_y);
         set(&mut d.left, left_x, mid_y);
-        self.x34_flags.b0 = false;
+        self.ecb_flags.b0 = false;
     }
 
     /// Loads the desired ECB from a given box, `mpColl_80042C58`.
@@ -940,7 +949,7 @@ impl CollData {
         set(&mut d.bottom, 0.0, copy(b.bottom));
         set(&mut d.right, copy(b.right.x), copy(b.right.y));
         set(&mut d.left, copy(b.left.x), copy(b.left.y));
-        self.x34_flags.b0 = false;
+        self.ecb_flags.b0 = false;
     }
 
     /// Moves the ECB `time` of the way to the desired one, `mpCollInterpolateECB`, first
@@ -948,9 +957,9 @@ impl CollData {
     #[doc(alias = "mpCollInterpolateECB")]
     pub fn interpolate_ecb(&mut self, time: f32) {
         self.prev_ecb = self.ecb.clone();
-        if self.x34_flags.b6 {
-            self.ecb = self.x64_ecb.clone();
-            self.x34_flags.b6 = false;
+        if self.ecb_flags.b6 {
+            self.ecb = self.unsqueezed_ecb.clone();
+            self.ecb_flags.b6 = false;
         }
         let t = reg(time);
         let lerp = |dest: &mut Vec2, src: &Vec2| {
@@ -981,7 +990,7 @@ impl CollData {
     /// Requests the ECB be zeroed at the next load, `mpColl_80043670`.
     #[doc(alias = "mpColl_80043670")]
     pub fn request_clear(&mut self) {
-        self.x130_flags |= CLEAR_ECB;
+        self.ecb_lock |= CLEAR_ECB;
     }
 
     /// Places the object, `mpColl_80043680`: all three positions, and the ECB zeroed at the
@@ -991,7 +1000,7 @@ impl CollData {
         self.cur_pos = pos;
         self.prev_pos = self.cur_pos;
         self.last_pos = self.prev_pos;
-        self.x130_flags |= CLEAR_ECB;
+        self.ecb_lock |= CLEAR_ECB;
     }
 
     #[doc(alias = "mpCollSetFacingDir")]
@@ -1032,16 +1041,16 @@ impl CollData {
                 reg(self.ecb.left.x),
             ),
         );
-        if !self.x34_flags.b6 {
-            self.x64_ecb = self.ecb.clone();
+        if !self.ecb_flags.b6 {
+            self.unsqueezed_ecb = self.ecb.clone();
         }
-        self.x34_flags.b6 = true;
+        self.ecb_flags.b6 = true;
         self.cur_pos.x = mem(fp::fsubs(fp::fadds(right, reg(self.ecb.right.x)), half));
         self.ecb.right.x = mem(half);
         self.ecb.left.x = mem(fp::fneg(half));
         self.desired_ecb.right.x = self.ecb.right.x;
         self.desired_ecb.left.x = self.ecb.left.x;
-        self.x34_flags.b5 = Some(false);
+        self.ecb_flags.b5 = Some(false);
     }
 
     /// Shortens the ECB to fit between a ceiling and a floor whose corrections put the object
@@ -1054,10 +1063,10 @@ impl CollData {
             fp::fadds(reg(self.ecb.top.y), fp::fsubs(top, bottom)),
             reg(self.ecb.bottom.y),
         );
-        if !self.x34_flags.b6 {
-            self.x64_ecb = self.ecb.clone();
+        if !self.ecb_flags.b6 {
+            self.unsqueezed_ecb = self.ecb.clone();
         }
-        self.x34_flags.b6 = true;
+        self.ecb_flags.b6 = true;
         let e = &mut self.ecb;
         if height < 3.0 {
             let old = fp::fsubs(reg(e.top.y), reg(e.bottom.y));
@@ -1081,7 +1090,7 @@ impl CollData {
         d.bottom.y = e.bottom.y;
         d.left.y = e.left.y;
         d.right.y = e.right.y;
-        self.x34_flags.b5 = Some(false);
+        self.ecb_flags.b5 = Some(false);
     }
 
     /// The floor's friction, 1 off the ground, `mpColl_8004CA6C`.
@@ -1113,26 +1122,26 @@ impl CollData {
         self.cur_pos = src.cur_pos;
         self.prev_pos = src.prev_pos;
         self.last_pos = src.last_pos;
-        self.x34_flags.b0 = src.x34_flags.b0;
-        self.x34_flags.b1234 = src.x34_flags.b1234;
-        self.x34_flags.b5 = src.x34_flags.b5;
-        self.x34_flags.b6 = src.x34_flags.b6;
+        self.ecb_flags.b0 = src.ecb_flags.b0;
+        self.ecb_flags.b1234 = src.ecb_flags.b1234;
+        self.ecb_flags.b5 = src.ecb_flags.b5;
+        self.ecb_flags.b6 = src.ecb_flags.b6;
         self.facing_dir = src.facing_dir;
-        self.x38 = src.x38;
+        self.map_generation = src.map_generation;
         self.floor_skip = src.floor_skip;
         self.ledge_id_left = src.ledge_id_left;
         self.ledge_id_right = src.ledge_id_right;
         self.joint_id_skip = src.joint_id_skip;
         self.lstick_x = src.lstick_x;
-        self.x64_ecb = src.x64_ecb.clone();
+        self.unsqueezed_ecb = src.unsqueezed_ecb.clone();
         self.desired_ecb = src.desired_ecb.clone();
         self.ecb = src.ecb.clone();
         self.prev_ecb = src.prev_ecb.clone();
-        self.xE4_ecb = src.xE4_ecb.clone();
-        self.x130_flags = src.x130_flags;
+        self.loaded_from_ecb = src.loaded_from_ecb.clone();
+        self.ecb_lock = src.ecb_lock;
         self.env_flags = src.env_flags;
         self.prev_env_flags = src.prev_env_flags;
-        self.x13C = src.x13C;
+        self.unread_13c = src.unread_13c;
         self.contact = src.contact;
         self.floor = src.floor.clone();
         self.left_facing_wall = src.left_facing_wall.clone();
@@ -1146,21 +1155,21 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
     /// nothing, with zeroed ECBs and no source.
     #[doc(alias = "mpColl_80041EE4")]
     pub fn init(&mut self, cd: &mut CollData) {
-        cd.x0_gobj = None;
-        cd.x34_flags.b0 = true;
-        cd.x34_flags.b6 = false;
-        cd.x34_flags.b7 = false;
-        cd.x35_flags.b0 = true;
-        cd.x34_flags.b1234 = 0;
+        cd.gobj = None;
+        cd.ecb_flags.b0 = true;
+        cd.ecb_flags.b6 = false;
+        cd.ecb_flags.b7 = false;
+        cd.map_flags.b0 = true;
+        cd.ecb_flags.b1234 = 0;
         cd.env_flags = 0;
-        cd.x130_flags = 0;
+        cd.ecb_lock = 0;
         cd.prev_pos = cd.cur_pos;
         cd.last_pos = cd.cur_pos;
-        cd.x28_vec = cd.cur_pos;
+        cd.frame_start_pos = cd.cur_pos;
         cd.floor_skip = -1;
         cd.ledge_id_right = -1;
         cd.ledge_id_left = -1;
-        let surface = |ny: f32| SurfaceData {
+        let surface = |ny: f32| Surface {
             index: -1,
             flags: 0,
             normal: Vec3::new(0.0, ny, 0.0),
@@ -1169,8 +1178,8 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         cd.ceiling = surface(-1.0);
         cd.right_facing_wall = surface(1.0);
         cd.left_facing_wall = surface(-1.0);
-        cd.x38 = self.g.generation;
-        cd.x50 = 0.0;
+        cd.map_generation = self.g.generation;
+        cd.weight = 0.0;
         cd.joint_id_skip = -1;
         cd.joint_id_only = -1;
         cd.ledge_snap_x = 0.0;
@@ -1178,10 +1187,10 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         cd.ledge_snap_height = 0.0;
         zero_ecb(&mut cd.ecb);
         zero_ecb(&mut cd.prev_ecb);
-        zero_ecb(&mut cd.xE4_ecb);
+        zero_ecb(&mut cd.loaded_from_ecb);
         cd.ecb_source = EcbSource::default();
         zero_ecb(&mut cd.desired_ecb);
-        zero_ecb(&mut cd.x64_ecb);
+        zero_ecb(&mut cd.unsqueezed_ecb);
     }
 
     /// Starts a frame's collision, `mpCollPrev`: clears the floor filter and remembers the
@@ -1190,7 +1199,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
     pub fn prev(&mut self, cd: &mut CollData) {
         self.s.floor_filter = None;
         self.s.floor_filter_gobj = None;
-        cd.x28_vec = cd.cur_pos;
+        cd.frame_start_pos = cd.cur_pos;
     }
 
     /// Marks the joints outside the box the substep sweeps (with the ledge snap box when
@@ -1333,7 +1342,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         set(&mut d.bottom, 0.0, bottom_y);
         set(&mut d.right, right_x, right_y);
         set(&mut d.left, left_x, left_y);
-        cd.x34_flags.b0 = false;
+        cd.ecb_flags.b0 = false;
     }
 
     /// Loads the desired ECB from its source and keeps it proper, `mpColl_LoadECB` (with
@@ -1346,10 +1355,10 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
 
     /// [`Self::load_ecb`] before `mpColl_80042384`.
     fn load_ecb_unfixed(&mut self, cd: &mut CollData, flags: u32) {
-        let locked = (cd.x130_flags & KEEP_ECB_BOTTOM != 0)
+        let locked = (cd.ecb_lock & KEEP_ECB_BOTTOM != 0)
             .then(|| (copy(cd.desired_ecb.bottom.x), copy(cd.desired_ecb.bottom.y)));
         self.load_ecb_raw(cd, flags);
-        if cd.x130_flags & KEEP_ECB_BOTTOM != 0 {
+        if cd.ecb_lock & KEEP_ECB_BOTTOM != 0 {
             let (x, y) = locked.expect("the lock doesn't change during a load");
             cd.desired_ecb.bottom.x = x;
             cd.desired_ecb.bottom.y = y;
@@ -1374,7 +1383,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             let (cb, data) = self.g.ledge_callback(joint);
             if let Some(cb) = cb {
                 let kind = if landed { 1 } else { 2 };
-                let x50 = fp::fctiwz(reg(cd.x50));
+                let x50 = fp::fctiwz(reg(cd.weight));
                 self.hooks
                     .joint_callback(self.g, cb, data, joint, cd, x50, kind, dy);
             }
@@ -1392,7 +1401,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         if joint != -1 {
             let (cb, data) = self.g.ledge_callback(joint);
             if let Some(cb) = cb {
-                let x50 = fp::fctiwz(reg(cd.x50));
+                let x50 = fp::fctiwz(reg(cd.weight));
                 self.hooks
                     .joint_callback(self.g, cb, data, joint, cd, x50, 3, 0.0);
             }
@@ -1405,7 +1414,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         if joint != -1 {
             let (cb, data) = self.g.callback(joint);
             if let Some(cb) = cb {
-                let x50 = fp::fctiwz(reg(cd.x50));
+                let x50 = fp::fctiwz(reg(cd.weight));
                 self.hooks
                     .joint_callback(self.g, cb, data, joint, cd, x50, 0, dy);
             }
@@ -1481,7 +1490,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             1
         };
         cd.cur_pos = cd.last_pos;
-        cd.x34_flags.b5 = Some(false);
+        cd.ecb_flags.b5 = Some(false);
         // A move so long that the count overflows (over 1e10 units, or infinite) runs no
         // substep, and the original returns whatever its caller left in a register; the game
         // never moves that far, and melee-sim stops there by name.
@@ -1492,7 +1501,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         }
         let mut ret = false;
         let mut step = 0;
-        while step < steps && !cd.x34_flags.b5() {
+        while step < steps && !cd.ecb_flags.b5() {
             let left = fp::frsp(f64::from(steps - step));
             cd.interpolate_ecb(mem(fp::fdivs(1.0, left)));
             cd.prev_pos = cd.cur_pos;
@@ -1506,7 +1515,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             };
             self.g.uncheck_bounding();
             step += 1;
-            cd.x38 = self.g.generation;
+            cd.map_generation = self.g.generation;
         }
         ret
     }
@@ -1518,7 +1527,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
     #[doc(alias = "mpCollGetSpeedCeiling")]
     #[doc(alias = "mpCollGetSpeedLeftWall")]
     #[doc(alias = "mpCollGetSpeedRightWall")]
-    pub fn surface_speed(&self, cd: &CollData, surface: &SurfaceData) -> Option<Vec3> {
+    pub fn surface_speed(&self, cd: &CollData, surface: &Surface) -> Option<Vec3> {
         let top = Vec3::new(cd.ecb.top.x, cd.ecb.top.y, 0.0);
         self.g.line_speed(surface.index, top)
     }

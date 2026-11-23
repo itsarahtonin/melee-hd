@@ -84,6 +84,7 @@ pub mod target_test;
 pub mod test_stage;
 #[doc(alias("figure"))]
 pub mod trophy_stages;
+pub mod types;
 #[doc(alias("shrineroute"))]
 pub mod underground_maze;
 pub mod vars;

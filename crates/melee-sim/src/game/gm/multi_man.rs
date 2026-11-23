@@ -253,8 +253,8 @@ impl MultiMan {
 /// A won 15-Minute Melee's mark in the character's record, `gmMainLib_8015D780` (its selkind's:
 /// Master Hand's, by the character select's name entry, is Mario's, docs/melee-bugs.md).
 #[doc(alias = "gmMainLib_8015D780")]
-fn set_15min_cleared(rec: &mut crate::game::structs::FighterData_x7C) {
-    rec.b3 = true;
+fn set_15min_cleared(rec: &mut crate::game::structs::FighterRecords) {
+    rec.fifteen_min_cleared = true;
 }
 
 impl Running<'_> {
@@ -262,9 +262,9 @@ impl Running<'_> {
         &self.game.game_data.modes.table[VS_MODE]
     }
 
-    fn mm_record_1p(&mut self, ckind: i8) -> &mut crate::game::structs::FighterData_x7C {
+    fn mm_record_1p(&mut self, ckind: i8) -> &mut crate::game::structs::FighterRecords {
         let sel = selkind(ckind as u8);
-        &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C
+        &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records
     }
 
     /// `gm_Mode_10ManVs_OnLoad`, the six modes' load: the confirming port, the count, and
@@ -349,22 +349,22 @@ impl Running<'_> {
         r.timer_counts_up = true;
         r.time_limit = 0;
         r.timer_shows_hours = true;
-        r.x4_2 = true;
-        r.x2_5 = false;
-        r.x5_0 = false;
-        r.x4_4 = false;
-        r.x4_3 = true;
-        r.x5_1 = true;
+        r.single_player = true;
+        r.damage_display_kos = false;
+        r.endless = false;
+        r.clear_scores = false;
+        r.game_over_scene = true;
+        r.goes_on = true;
         r.is_teams = 1;
         r.stkind = STKIND.id();
-        r.x18 = 0;
+        r.score = 0;
         r.item_freq = 2;
-        r.x2C = 0.5;
-        r.x20 = 0xFFFF_FFFF_FFFB_FCFF;
+        r.quake_scale = 0.5;
+        r.item_switch = 0xFFFF_FFFF_FFFB_FCFF;
         r.on_match_start = Some(CodeRef(ON_MATCH_START));
-        r.x3_3 = true;
-        r.x3_2 = true;
-        r.x0_3 = 6;
+        r.pause_shows_z = true;
+        r.pause_z_retries = true;
+        r.damage_display = 6;
     }
 
     /// The six matches' entries' players (the inline `gmMultiman_InitPlayers`, and Cruel
@@ -392,10 +392,10 @@ impl Running<'_> {
         for p in &mut s.players[1..6] {
             p.team = team;
             if cruel {
-                p.xD_b4 = true;
+                p.dies_up = true;
             }
             if clear_xc_b1 {
-                p.xC_b1 = false;
+                p.enters = false;
             }
         }
         super::vs_mode::load_rumble_enabled_with(s, &prefs, &tags);
@@ -446,8 +446,8 @@ impl Running<'_> {
                 r.timer_enabled = false;
                 r.timer_counts_up = false;
                 r.time_limit = 0;
-                r.x5_0 = true;
-                r.x5_1 = false;
+                r.endless = true;
+                r.goes_on = false;
             }
             _ => {}
         }
@@ -462,9 +462,9 @@ impl Running<'_> {
         match mode {
             GameMode::TenMan | GameMode::HundredMan => {
                 let (saved, won) = if mode == GameMode::TenMan {
-                    (rec.x98, rec.b1)
+                    (rec.ten_man_time, rec.ten_man_cleared)
                 } else {
-                    (rec.x9C, rec.b2)
+                    (rec.hundred_man_time, rec.hundred_man_cleared)
                 };
                 let mut r = mm.record_of(own, m);
                 r.set_won(won);
@@ -482,9 +482,9 @@ impl Running<'_> {
             }
             GameMode::ThreeMinute | GameMode::FifteenMinute => {
                 let saved = if mode == GameMode::ThreeMinute {
-                    rec.xA0
+                    rec.three_min_kos
                 } else {
-                    rec.xA2
+                    rec.fifteen_min_kos
                 };
                 let mut r = mm.record_of(own, m);
                 let won = saved != 0;
@@ -496,9 +496,9 @@ impl Running<'_> {
             }
             _ => {
                 let saved = if mode == GameMode::Endless {
-                    rec.xA4
+                    rec.endless_kos
                 } else {
-                    rec.xA8
+                    rec.cruel_kos
                 };
                 let mut r = mm.record_of(own, m);
                 r.kos = saved as u16;
@@ -530,8 +530,8 @@ impl Running<'_> {
             return;
         }
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
-        self.results_add_coins(i32::from(end.player_standings[0].xE));
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
+        self.results_add_coins(i32::from(end.player_standings[0].coins));
         self.multi_man_store_result();
         let own = self.multi_man_data().start.players[0].ckind;
         let m = i32::from(mode.id());
@@ -541,19 +541,19 @@ impl Running<'_> {
             GameMode::TenMan | GameMode::HundredMan => {
                 let v = if r.won() { r.score } else { i32::from(r.kos) };
                 if mode == GameMode::TenMan {
-                    rec.b1 = r.won();
-                    rec.x98 = v;
+                    rec.ten_man_cleared = r.won();
+                    rec.ten_man_time = v;
                 } else {
-                    rec.b2 = r.won();
-                    rec.x9C = v;
+                    rec.hundred_man_cleared = r.won();
+                    rec.hundred_man_time = v;
                 }
             }
             GameMode::ThreeMinute | GameMode::FifteenMinute => {
                 let v = if r.won() { r.kos } else { 0 };
                 if mode == GameMode::ThreeMinute {
-                    rec.xA0 = v;
+                    rec.three_min_kos = v;
                 } else {
-                    rec.xA2 = v;
+                    rec.fifteen_min_kos = v;
                     if r.won() {
                         set_15min_cleared(rec);
                     }
@@ -561,9 +561,9 @@ impl Running<'_> {
             }
             _ => {
                 if mode == GameMode::Endless {
-                    rec.xA4 = i32::from(r.kos);
+                    rec.endless_kos = i32::from(r.kos);
                 } else {
-                    rec.xA8 = i32::from(r.kos);
+                    rec.cruel_kos = i32::from(r.kos);
                 }
             }
         }
@@ -676,11 +676,11 @@ impl Running<'_> {
         let mm_mode = mode as u8;
         if mm_mode == GameMode::TenMan || mm_mode == GameMode::HundredMan {
             let sel = usize::from(selkind(idx as u8));
-            let x7c = &self.game.game_data.thing.save_data.x1F2C[sel].x7C;
+            let x7c = &self.game.game_data.thing.save_data.fighters[sel].records;
             let cleared = if mm_mode == GameMode::TenMan {
-                x7c.b1
+                x7c.ten_man_cleared
             } else {
-                x7c.b2
+                x7c.hundred_man_cleared
             };
             let blk = &mut self.game.multi_man.blocks[b];
             if r.won != 0 {
@@ -725,8 +725,8 @@ impl Running<'_> {
                 if r.won != 0 {
                     (r.frames as u32) < score
                 } else {
-                    self.game.vs.state.unk_14 = 0x149;
-                    self.game.vs.state.unk_18 = 40;
+                    self.game.vs.state.end_sfx_2 = 0x149;
+                    self.game.vs.state.end_sfx_2_frame = 40;
                     false
                 }
             }
@@ -737,8 +737,8 @@ impl Running<'_> {
             _ => false,
         };
         if record {
-            self.game.vs.state.unk_10 = 0x9C41;
-            self.game.vs.state.unk_14 = 0x145;
+            self.game.vs.state.end_sfx_1 = 0x9C41;
+            self.game.vs.state.end_sfx_2 = 0x145;
             self.tou_rumble(r.port as usize, r.nametag, 0xD, 0x5A);
         }
     }
@@ -776,7 +776,7 @@ impl Running<'_> {
         p.ckind = CharacterKind::Boy as i8;
         p.slot_type = 1;
         p.stocks = 1;
-        p.xD_b4 = true;
+        p.dies_up = true;
         mm.joiner = p;
         if let Some(b) = block_index(i32::from(mode)) {
             let t = self.game.multi_man.tables[b].expect("a Multi-Man table");

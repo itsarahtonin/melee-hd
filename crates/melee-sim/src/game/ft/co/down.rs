@@ -378,7 +378,7 @@ impl Running<'_> {
         }
         // `ftCo_80090574`.
         self.air_coll_ledges_snap(gobj);
-        self.game.fighters[f.0].dmg.x18A8 = mem(mag);
+        self.game.fighters[f.0].dmg.hit_kb = mem(mag);
         self.start_rumble(f, 7, 0);
         let frames = self.common().i32(0x1B8);
         self.set_intangible(gobj, frames);
@@ -593,7 +593,7 @@ impl Running<'_> {
             ms::DOWN_WAIT_D,
             ms::DOWN_DAMAGE_D,
         ];
-        if down.contains(&m) && (fp.stamina_dead || reg(fp.dmg.x1838_percentTemp) < x428) {
+        if down.contains(&m) && (fp.stamina_dead || reg(fp.dmg.pending_damage) < x428) {
             // `ftCo_8009F184`.
             let msid = if m == ms::DOWN_WAIT_U {
                 ms::DOWN_DAMAGE_U

@@ -348,8 +348,8 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.partner = Some(hand);
         fp.victim_gobj = Some(hand);
-        fp.state_flags.x221B_b5 = false;
-        fp.state_flags.x221B_b7 = false;
+        fp.state_flags.holds_grab = false;
+        fp.state_flags.grounded_catch = false;
         fp.facing_dir = hf;
         let timer = mem(self.grab_escape_time(hand));
         let fp = self.game.fighter_mut(gobj);

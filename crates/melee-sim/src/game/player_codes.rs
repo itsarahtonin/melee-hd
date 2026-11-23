@@ -483,7 +483,7 @@ impl Running<'_> {
             StartRules::Items if at != Scene::Other => {
                 r.item_freq = 3;
                 r.time_limit = 120;
-                r.x20 = r.x20 & 0xFFFF_FF00_0000_0000 | 0x0000_00FD_FFFB_F8FF;
+                r.item_switch = r.item_switch & 0xFFFF_FF00_0000_0000 | 0x0000_00FD_FFFB_F8FF;
             }
             StartRules::Time if at == Scene::Vs => r.time_limit = 180,
             _ => {}
@@ -536,14 +536,14 @@ impl Running<'_> {
             2 => (0.0, 0.0, 255.0),
             _ => (255.0, 0.0, 255.0),
         };
-        o.x30_color_red = r;
-        o.x34_color_green = g;
-        o.x38_color_blue = b;
-        o.x3C_color_alpha = 255.0;
-        o.x40_colorblend_red = 0.0;
-        o.x44_colorblend_green = 0.0;
-        o.x48_colorblend_blue = 0.0;
-        o.x4C_colorblend_alpha = 0.0;
+        o.color_red = r;
+        o.color_green = g;
+        o.color_blue = b;
+        o.color_alpha = 255.0;
+        o.colorblend_red = 0.0;
+        o.colorblend_green = 0.0;
+        o.colorblend_blue = 0.0;
+        o.colorblend_alpha = 0.0;
         set_overlay_flags(o, 0x80);
     }
 
@@ -562,28 +562,28 @@ impl Running<'_> {
             return;
         }
         let o = &mut fp.secondary_overlay;
-        o.x30_color_red = 255.0;
-        o.x3C_color_alpha = 255.0;
-        o.x34_color_green = 0.0;
-        o.x38_color_blue = 0.0;
-        o.x40_colorblend_red = 0.0;
-        o.x44_colorblend_green = 0.0;
-        o.x48_colorblend_blue = 0.0;
-        o.x4C_colorblend_alpha = 0.0;
+        o.color_red = 255.0;
+        o.color_alpha = 255.0;
+        o.color_green = 0.0;
+        o.color_blue = 0.0;
+        o.colorblend_red = 0.0;
+        o.colorblend_green = 0.0;
+        o.colorblend_blue = 0.0;
+        o.colorblend_alpha = 0.0;
         set_overlay_flags(o, 0x91);
     }
 }
 
 /// A color overlay's flag byte (`x7C`) as one store sets it.
 fn set_overlay_flags(o: &mut super::structs::ColorOverlay, b: u8) {
-    o.x7C_color_enable = b & 0x80 != 0;
-    o.x7C_flag2 = b & 0x40 != 0;
-    o.x7C_light_enable = b & 0x20 != 0;
-    o.x7C_flag4 = b & 0x10 != 0;
-    o.x7C_flag5 = b & 0x08 != 0;
-    o.x7C_flag6 = b & 0x04 != 0;
-    o.x7C_flag7 = b & 0x02 != 0;
-    o.x7C_flag8 = b & 0x01 != 0;
+    o.color_enable = b & 0x80 != 0;
+    o.flag2 = b & 0x40 != 0;
+    o.light_enable = b & 0x20 != 0;
+    o.flag4 = b & 0x10 != 0;
+    o.flag5 = b & 0x08 != 0;
+    o.flag6 = b & 0x04 != 0;
+    o.flag7 = b & 0x02 != 0;
+    o.flag8 = b & 0x01 != 0;
 }
 
 /// The camera code's values for the stage's camera, from the tilt (`x18`) to the depth
@@ -610,8 +610,8 @@ impl Game {
         let [tilt, pan, x20, x24, ratio, zoom, smooth, rate, depth] = CAMERA.map(f32::from_bits);
         c.cam_vertical_tilt = tilt;
         c.cam_pan_degrees = pan;
-        c.x20 = x20;
-        c.x24 = x24;
+        c.cam_pan_rate = x20;
+        c.cam_tilt_rate = x24;
         c.cam_track_ratio = ratio;
         c.cam_fixed_zoom = zoom;
         c.cam_track_smooth = smooth;

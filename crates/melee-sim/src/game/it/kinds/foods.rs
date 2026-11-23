@@ -75,7 +75,7 @@ fn attrs(r: &Running, gobj: GObjId) -> DataRef {
 /// in the air at its position.
 #[doc(alias = "it_8028F8E4")]
 pub fn let_fall(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).state_flags.b3 = true;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     lib26b1::enable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.coll.cur_pos = ip.pos;
@@ -88,7 +88,7 @@ pub fn let_fall(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8028F968")]
 pub fn carried(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
     lib26b1::disable_pickup(r.game, gobj);
 }
 
@@ -116,11 +116,11 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3) -> Option<GObjI
     };
     spawn.facing_dir = -1.0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x3C_damage = 0;
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.damage = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     lib2725::count_spawned(r.game);
     Some(gobj)

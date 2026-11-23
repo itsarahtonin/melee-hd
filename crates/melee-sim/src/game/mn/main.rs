@@ -1906,7 +1906,7 @@ impl Running<'_> {
         }
         self.sfx_stop_all();
         self.lb_audio_call(0);
-        self.game.game_data.x1850.force_main_menu = 1;
+        self.game.game_data.rules.force_main_menu = 1;
         self.menu_sound_balance();
         self.card_complete_all_tasks();
         self.mthp_release();
@@ -1960,7 +1960,7 @@ impl Running<'_> {
                 self.make_list(IDLE);
             }
         }
-        let bgm = self.game.game_data.x1850.bgm;
+        let bgm = self.game.game_data.rules.bgm;
         self.lb_play_music(i32::from(bgm));
         self.card_game_save_changes();
     }
@@ -2068,7 +2068,7 @@ impl Running<'_> {
     /// `gm_801603B0`: the announcer's and the effects' volumes from the save's sound
     /// balance (`gmMainLib_8015ED74`, `lbAudioAx_80024614`, `lbAudioAx_800245F4`).
     pub(crate) fn menu_sound_balance(&mut self) {
-        let b = self.game.game_data.thing.save_data.x1CB0.sound_balance;
+        let b = self.game.game_data.thing.save_data.prefs.sound_balance;
         self.game.audio.lb_apply_balance(b);
     }
 }

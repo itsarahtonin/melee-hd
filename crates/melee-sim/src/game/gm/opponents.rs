@@ -405,7 +405,7 @@ impl Opponents {
 /// A match's rules point at the joining opponents (`x54`), `gm_8016A21C`.
 #[doc(alias = "gm_8016A21C")]
 pub fn point_rules(rules: &mut super::super::structs::StartMeleeRules) {
-    rules.x54 = super::super::handles::RawPtr(ADDR);
+    rules.opponent_list = super::super::handles::RawPtr(ADDR);
 }
 
 /// `lbl_8046B488`'s address.
@@ -669,7 +669,7 @@ impl Running<'_> {
             }
         }
         let s = &mut self.game.vs.state;
-        s.unk_C = super::results_exit::add_u8_saturating(u32::from(s.unk_C), 1) as u8;
+        s.joiners = super::results_exit::add_u8_saturating(u32::from(s.joiners), 1) as u8;
         self.game.replace_player(slot);
         let idx = self.game.gm.opponents.left();
         self.game.gm.opponents.slot_index[slot as usize] = idx as i8;

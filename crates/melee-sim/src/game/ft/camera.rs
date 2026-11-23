@@ -39,8 +39,8 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8008021C")]
     pub fn model_shake(&mut self, f: FighterId) {
         let d = &mut self.game.fighters[f.0].dmg;
-        d.x18BC = 0.0;
-        d.x18B8 = 0.0;
+        d.shake_y = 0.0;
+        d.shake_x = 0.0;
         // At most three shakes, held inline: the hit's, the grab mash's, the smash charge's.
         let mut shakes = [None; 3];
         if let Some(s) = self.hit_shake(f) {
@@ -56,12 +56,12 @@ impl Running<'_> {
         if s.state == SMASH_CHARGING || s.state == SMASH_HELD {
             let table = self.load_common(0x2C);
             let row = self.data.ptr(table).expect("the smash charge shake table");
-            shakes[2] = Some(self.vec2(row, u32::from(s.x212C)));
+            shakes[2] = Some(self.vec2(row, u32::from(s.shake_row)));
         }
         let d = &mut self.game.fighters[f.0].dmg;
         for (x, y) in shakes.into_iter().flatten() {
-            d.x18B8 = mem(fp::fadds(reg(d.x18B8), reg(x)));
-            d.x18BC = mem(fp::fadds(reg(d.x18BC), reg(y)));
+            d.shake_x = mem(fp::fadds(reg(d.shake_x), reg(x)));
+            d.shake_y = mem(fp::fadds(reg(d.shake_y), reg(y)));
         }
     }
 
@@ -77,21 +77,21 @@ impl Running<'_> {
     fn hit_shake(&self, f: FighterId) -> Option<(f32, f32)> {
         let fp = &self.game.fighters[f.0];
         let d = &fp.dmg;
-        if d.x18fa_model_shift_frames == 0 {
+        if d.model_shift_frames == 0 {
             return None;
         }
         let table = self.load_common(0x24);
         let row = self
             .data
-            .ptr(table.at(4 * 2 * u32::from(d.x18F8)))
+            .ptr(table.at(4 * 2 * u32::from(d.shake_kind)))
             .expect("a hit shake row");
-        let (vx, vy) = self.vec2(row, u32::from(d.x18FC));
+        let (vx, vy) = self.vec2(row, u32::from(d.shake_step));
         let facing = reg(fp.facing_dir);
-        Some(if d.x18F8 == 1 {
+        Some(if d.shake_kind == 1 {
             let x = fp::fmuls(reg(vx), facing);
             (
-                mem(fp::fmuls(reg(d.x1904), x)),
-                mem(fp::fmadds(fp::fneg(reg(d.x1900)), x, reg(vy))),
+                mem(fp::fmuls(reg(d.shake_normal_y), x)),
+                mem(fp::fmadds(fp::fneg(reg(d.shake_normal_x)), x, reg(vy))),
             )
         } else {
             (mem(fp::fmuls(reg(vx), facing)), vy)
@@ -160,7 +160,7 @@ impl Running<'_> {
             .expect("ftData::x0");
         let bone = self.data.u32(attrs.at(0x16C));
         let parts = fp.parts.expect("a fighter without parts");
-        let offset = fp.co_attrs.x170;
+        let offset = fp.co_attrs.camera_bone_offset;
         let joint = self.game.fighter_parts[parts.0][bone as usize].joint;
         world_position(&mut self.game.objs, self.data, joint, Some(offset))
     }

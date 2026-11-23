@@ -222,13 +222,17 @@ impl Game {
             let trans = Mtx34::translation(t.x, t.y, t.z);
             let base = parent_mtx.concat(&trans);
             let link = &self.fighter_dynamics[cur.0].desc;
-            let rest = Vec3::new(link.unk_58.x, link.unk_58.y, link.unk_58.z);
+            let rest = Vec3::new(
+                link.rest_rotation.x,
+                link.rest_rotation.y,
+                link.rest_rotation.z,
+            );
             let rest_mtx = base.concat(&Mtx34::from_euler_approx(rest));
             let scale = Mtx34::scale(s.x, s.y, s.z);
             let bone_mtx = base.concat(&Mtx34::from_euler_approx(euler)).concat(&scale);
             let rest_mtx = rest_mtx.concat(&scale);
             let pos = Vec3::new(bone_mtx.m[0][3], bone_mtx.m[1][3], bone_mtx.m[2][3]);
-            self.fighter_dynamics[cur.0].desc.unk_2C = pos;
+            self.fighter_dynamics[cur.0].desc.joint_pos = pos;
             let child_t = self.objs.jobjs[child].translate;
             let sub = |a: Vec3, b: Vec3| {
                 Vec3::new(
@@ -239,7 +243,7 @@ impl Game {
             };
             let mut natural = sub(rest_mtx.transform(child_t), pos);
             let mut current = sub(bone_mtx.transform(child_t), pos);
-            let next_pos = self.fighter_dynamics[next.0].desc.unk_2C;
+            let next_pos = self.fighter_dynamics[next.0].desc.joint_pos;
             let mut dir = sub(next_pos, pos);
             natural.normalize();
             current.normalize();
@@ -247,7 +251,7 @@ impl Game {
             let saved = dir;
             let l = self.fighter_dynamics[cur.0].desc.clone();
             // Stiffness: toward where the animation points it.
-            let stiff = fp::fmuls(reg(l.unk_4C), reg(desc.pos.x));
+            let stiff = fp::fmuls(reg(l.stiffness), reg(desc.pos.x));
             if !(stiff >= 1.0) {
                 // The original's `fabsf` macro takes the angle up to three times; it's a pure
                 // function of the same two vectors, so once gives the same bits.
@@ -256,14 +260,14 @@ impl Game {
                 if 0.0 != a {
                     let mut axis = dir.sdk_cross(current);
                     axis.normalize();
-                    let k = fp::frsp(fp::fsub(1.0, fp::fmuls(reg(l.unk_4C), reg(desc.pos.x))));
+                    let k = fp::frsp(fp::fsub(1.0, fp::fmuls(reg(l.stiffness), reg(desc.pos.x))));
                     dir.rotate_about(axis, mem(fp::fmuls(a, k)));
                 }
             }
             // Gravity.
             let a = dir.angle(DOWN);
             if 0.0 != reg(a) {
-                let turn = abs(fp::fmuls(reg(l.unk_8C), reg(math::sin(a))));
+                let turn = abs(fp::fmuls(reg(l.gravity), reg(math::sin(a))));
                 let mut axis = dir.sdk_cross(DOWN);
                 axis.normalize();
                 dir.rotate_about(axis, mem(turn));
@@ -277,7 +281,7 @@ impl Game {
                 if 0.0 != reg(a) {
                     let turn = abs(fp::fdivs(
                         fp::fmuls(force, reg(math::sin(a))),
-                        reg(l.unk_48),
+                        reg(l.length),
                     ));
                     let mut axis = dir.sdk_cross(wind);
                     axis.normalize();
@@ -285,35 +289,35 @@ impl Game {
                 }
             }
             // The spin left from the last frame.
-            if 0.0 != reg(l.unk_44) {
-                dir.rotate_about(l.unk_38, l.unk_44);
+            if 0.0 != reg(l.spin) {
+                dir.rotate_about(l.spin_axis, l.spin);
             }
             // The swing's limit in a frame, unless the wind is stronger.
-            if !(force >= fp::fmuls(reg(l.unk_8C), reg(l.unk_48))) {
+            if !(force >= fp::fmuls(reg(l.gravity), reg(l.length))) {
                 let mut clamp = saved;
-                if !(reg(clamp.angle(dir)) <= reg(l.unk_88)) {
+                if !(reg(clamp.angle(dir)) <= reg(l.max_swing)) {
                     let mut axis = clamp.sdk_cross(dir);
                     axis.normalize();
-                    clamp.rotate_about(axis, l.unk_88);
+                    clamp.rotate_about(axis, l.max_swing);
                     dir = clamp;
                 }
             }
             // Back toward the animation's direction.
-            if !(reg(l.unk_50) <= 0.0) {
-                if !(reg(natural.angle(dir)) >= reg(l.unk_50)) {
+            if !(reg(l.return_rate) <= 0.0) {
+                if !(reg(natural.angle(dir)) >= reg(l.return_rate)) {
                     dir = natural;
                 } else {
                     let mut axis = dir.sdk_cross(natural);
                     axis.normalize();
-                    dir.rotate_about(axis, l.unk_50);
+                    dir.rotate_about(axis, l.return_rate);
                 }
             }
             // At most so far from it.
             let a = reg(natural.angle(dir));
-            if !(a <= reg(l.unk_68)) {
+            if !(a <= reg(l.max_angle)) {
                 let mut axis = dir.sdk_cross(natural);
                 axis.normalize();
-                dir.rotate_about(axis, mem(fp::fsubs(a, reg(l.unk_68))));
+                dir.rotate_about(axis, mem(fp::fsubs(a, reg(l.max_angle))));
             }
             if !colliders.is_empty() {
                 dir.normalize();
@@ -332,16 +336,16 @@ impl Game {
             dir = turned;
             let spin = if on_ground { 0.0 } else { saved.angle(dir) };
             let d = &mut self.fighter_dynamics[cur.0].desc;
-            d.unk_44 = spin;
-            if !(abs(reg(d.unk_44)) <= 0.0) {
+            d.spin = spin;
+            if !(abs(reg(d.spin)) <= 0.0) {
                 let mut a = saved.sdk_cross(dir);
                 a.normalize();
-                d.unk_38 = a;
+                d.spin_axis = a;
             }
-            let v = reg(d.unk_44);
+            let v = reg(d.spin);
             if 0.0 != v {
-                let damp = reg(d.unk_84);
-                d.unk_44 = if !(v <= damp) {
+                let damp = reg(d.spin_damping);
+                d.spin = if !(v <= damp) {
                     mem(fp::fsubs(v, damp))
                 } else if !(v >= fp::fneg(damp)) {
                     mem(fp::fadds(v, damp))
@@ -366,7 +370,7 @@ impl Game {
             // Each link eases back about its main axis.
             let r = self.objs.jobjs[j].rotate;
             let ease = |v: f32| mem(fp::fmuls(reg(0.9), reg(v)));
-            match self.fighter_dynamics[cur.0].desc.unk_54 {
+            match self.fighter_dynamics[cur.0].desc.ease_axis {
                 -1 => jobj::set_rotation_z(&mut self.objs.jobjs, j, ease(r.z)),
                 0 => jobj::set_rotation_x(&mut self.objs.jobjs, j, ease(r.x)),
                 _ => jobj::set_rotation_y(&mut self.objs.jobjs, j, ease(r.y)),
@@ -386,25 +390,25 @@ impl Game {
             .concat(&Mtx34::translation(t.x, t.y, t.z))
             .concat(&Mtx34::from_euler_approx(euler))
             .concat(&Mtx34::scale(s.x, s.y, s.z));
-        self.fighter_dynamics[cur.0].desc.unk_2C = Vec3::new(m.m[0][3], m.m[1][3], m.m[2][3]);
+        self.fighter_dynamics[cur.0].desc.joint_pos = Vec3::new(m.m[0][3], m.m[1][3], m.m[2][3]);
     }
 
     /// Turns a link's direction around a collider it would pass through.
     fn avoid_collider(
         &mut self,
-        l: &crate::game::structs::lb_00F9_UnkDesc0,
+        l: &crate::game::structs::SwingLink,
         c: &Collider,
         dir: &mut Vec3,
     ) {
         let end = Vec3::new(
-            mem(fp::fmadds(reg(dir.x), reg(l.unk_48), reg(l.unk_2C.x))),
-            mem(fp::fmadds(reg(dir.y), reg(l.unk_48), reg(l.unk_2C.y))),
-            mem(fp::fmadds(reg(dir.z), reg(l.unk_48), reg(l.unk_2C.z))),
+            mem(fp::fmadds(reg(dir.x), reg(l.length), reg(l.joint_pos.x))),
+            mem(fp::fmadds(reg(dir.y), reg(l.length), reg(l.joint_pos.y))),
+            mem(fp::fmadds(reg(dir.z), reg(l.length), reg(l.joint_pos.z))),
         );
         let to = Vec3::new(
-            mem(fp::fsubs(reg(c.center.x), reg(l.unk_2C.x))),
-            mem(fp::fsubs(reg(c.center.y), reg(l.unk_2C.y))),
-            mem(fp::fsubs(reg(c.center.z), reg(l.unk_2C.z))),
+            mem(fp::fsubs(reg(c.center.x), reg(l.joint_pos.x))),
+            mem(fp::fsubs(reg(c.center.y), reg(l.joint_pos.y))),
+            mem(fp::fsubs(reg(c.center.z), reg(l.joint_pos.z))),
         );
         let (x, y, z) = (reg(to.x), reg(to.y), reg(to.z));
         let sq = fp::fadds(fp::fmuls(z, z), fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)));
@@ -412,7 +416,7 @@ impl Game {
         if dist <= reg(c.radius) {
             return;
         }
-        let hit = crate::lb::collision::segment_sphere(l.unk_2C, end, c.center, 0.1, c.radius);
+        let hit = crate::lb::collision::segment_sphere(l.joint_pos, end, c.center, 0.1, c.radius);
         if !hit.is_some_and(|h| h.touching) {
             return;
         }
@@ -436,7 +440,7 @@ impl Game {
     fn probe_floor(
         &mut self,
         probe: &FloorProbe,
-        l: &crate::game::structs::lb_00F9_UnkDesc0,
+        l: &crate::game::structs::SwingLink,
         on_ground: bool,
         dir: &mut Vec3,
     ) -> bool {
@@ -464,8 +468,8 @@ impl Game {
             *dir = n;
         };
         dir.normalize();
-        let end_x = mem(fp::fmadds(reg(dir.x), reg(l.unk_48), reg(l.unk_2C.x)));
-        let end_y = mem(fp::fmadds(reg(dir.y), reg(l.unk_48), reg(l.unk_2C.y)));
+        let end_x = mem(fp::fmadds(reg(dir.x), reg(l.length), reg(l.joint_pos.x)));
+        let end_y = mem(fp::fmadds(reg(dir.y), reg(l.length), reg(l.joint_pos.y)));
         if on_ground {
             let up = mem(fp::frsp(fp::fadd(1.0, reg(end_y))));
             let down = mem(fp::frsp(fp::fsub(reg(end_y), 1.0)));
@@ -473,7 +477,7 @@ impl Game {
             lie(dir, QUARTER_TURN);
             return hit != Crossing::None;
         }
-        let (x, y) = (l.unk_2C.x, l.unk_2C.y);
+        let (x, y) = (l.joint_pos.x, l.joint_pos.y);
         let up = mem(fp::frsp(fp::fadd(1.0, reg(y))));
         if cross(self, x, up, x, y) != Crossing::None {
             lie(dir, QUARTER_TURN);
@@ -487,7 +491,7 @@ impl Game {
             }
         };
         let h = abs(fp::fsubs(reg(y), reg(at.y)));
-        let len = reg(l.unk_48);
+        let len = reg(l.length);
         let w = sqrt_inline(fp::fnmsubs(h, h, fp::fmuls(len, len)));
         // `fabsf` of the angle, which the original computes again in the branch taken.
         let a = reg(math::atan2(mem(w), mem(h)));

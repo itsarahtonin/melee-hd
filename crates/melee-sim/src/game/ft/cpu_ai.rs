@@ -673,7 +673,7 @@ impl Running<'_> {
         };
         self.nana_record_input(popo, f);
         let r5;
-        let level = fp::fdivs(reg(self.game.fighters[popo.0].dmg.x1830_percent), 20.0);
+        let level = fp::fdivs(reg(self.game.fighters[popo.0].dmg.percent), 20.0);
         let level = if fp::fctiwz(level) > 9 {
             9
         } else {
@@ -904,9 +904,9 @@ impl Running<'_> {
         i.lstick.y = ly;
         i.cstick.x = cx;
         i.cstick.y = cy;
-        i.x4 = trigger;
-        i.x5 = trigger;
-        i.x0 = buttons;
+        i.ltrigger = trigger;
+        i.rtrigger = trigger;
+        i.buttons = buttons;
         i.cur_pos = pos;
         i.facing_dir = facing;
     }
@@ -947,9 +947,9 @@ impl Running<'_> {
         c.lstick.y = rec.lstick.y;
         c.cstick.x = rec.cstick.x;
         c.cstick.y = rec.cstick.y;
-        c.buttons = rec.x0;
-        c.ltrigger = rec.x4;
-        c.rtrigger = rec.x5;
+        c.buttons = rec.buttons;
+        c.ltrigger = rec.ltrigger;
+        c.rtrigger = rec.rtrigger;
         if fpp.nana_follows {
             fpp.cur_pos.x = mem(fp::frsp(fp::fmadd(
                 0.95,

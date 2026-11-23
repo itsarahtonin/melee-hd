@@ -255,9 +255,9 @@ impl Running<'_> {
         let standings = self.game.vs_melee.exit.match_end.player_standings.clone();
         for p in &standings {
             if p.pkind != 3 {
-                self.game.add_kos(p.x20 as i32);
+                self.game.add_kos(p.kos as i32);
                 self.game.add_self_destructs(i32::from(p.self_destructs));
-                self.game.add_damage(p.x44 as i32);
+                self.game.add_damage(p.damage_taken as i32);
             }
         }
     }
@@ -375,7 +375,7 @@ impl Running<'_> {
     #[doc(alias = "mnStageSel_8025BC08")]
     #[doc(alias = "gm_80167FC4")]
     pub(crate) fn sss_stage_rule(&mut self) {
-        let sel = self.game.game_data.x1850.stage_sel;
+        let sel = self.game.game_data.rules.stage_sel;
         if sel == 1 {
             let id = self.random_stage() as i8;
             self.game.vs_melee.sss.force_stage_id = id;

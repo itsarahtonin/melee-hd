@@ -376,7 +376,7 @@ impl Running<'_> {
         let _ = self.tou_triggered(4);
         if self.game.buttons_triggered(4) & crate::game::mn::main::PAD_LR_START != 0 {
             self.lb_audio_call(0);
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.game.end_scene();
             self.change_game_mode_after_scene(GameMode::Menu);
             return;
@@ -546,7 +546,7 @@ impl Running<'_> {
                 }
             }
         }
-        if self.game.game_data.x1850.handicap == 1 {
+        if self.game.game_data.rules.handicap == 1 {
             let mut hbuf = [0u8; 4];
             for (i, h) in hbuf.iter_mut().enumerate().take(n as usize) {
                 let j = self.alt_entrant_kept(results[i]);
@@ -624,7 +624,7 @@ impl Running<'_> {
         self.load_font_named(0, super::lib::strings_file(us), "SIS_TournamentData");
         self.alt_make();
         self.game.audio.lb_wait_for_banks(self.data);
-        let bgm = i32::from(self.game.game_data.x1850.bgm);
+        let bgm = i32::from(self.game.game_data.rules.bgm);
         self.lb_play_music(bgm);
         let mut chars = [0i32; 4];
         let mut colors = [0u8; 4];

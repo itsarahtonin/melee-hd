@@ -1337,7 +1337,7 @@ fn setters_and_getters() {
             r.game.camera.set_standard();
             let s = r.game.camera.mode();
             r.game.camera.set_fixed();
-            vec![Out::R3(s as u32)]
+            vec![Out::R3(s.raw() as u32)]
         },
         |ctx, _| {
             fns::Camera_SetModeToStandard(ctx);
@@ -1805,9 +1805,9 @@ fn cutscene_camera() {
             c.script_transition(g(7) as i32);
             if g(8) != 0 {
                 let c = r.game.camera.raw_parts_mut().cam;
-                c.x341_b5_b6 = 2;
-                c.x378 = fv(10).to_be_bytes();
-                c.x37C = fv(11).to_be_bytes();
+                c.script_progress_kind = 2;
+                c.script_frame = fv(10).to_be_bytes();
+                c.script_length = fv(11).to_be_bytes();
             }
             our_frames(r, g(6));
             let done = r.game.camera.script_done();

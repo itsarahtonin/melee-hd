@@ -449,7 +449,7 @@ impl Running<'_> {
             return;
         }
         let part = self.bone_index(&self.game.fighters[f.0], super::super::parts::TRANS_N);
-        let j = self.bone(f, part).x4_jobj2;
+        let j = self.bone(f, part).interp_joint;
         let fp = &mut self.game.fighters[f.0];
         let left = fp::fsubs(reg(fp.mv_f32(MV_TURN_LEFT)), 1.0);
         fp.set_mv_f32(MV_TURN_LEFT, left);

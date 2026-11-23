@@ -126,7 +126,7 @@ const PKIND_CPU: u8 = 1;
 /// Whether the rules' item switch can spawn a Super Scope: items on (`it_8026D018`) with its
 /// kind in the switch's mask, which the spawner, the containers and the Party Ball all follow.
 fn scope_on(rules: &super::structs::StartMeleeRules) -> bool {
-    rules.item_freq != -1 && rules.x20 >> ItKind::SuperScope.id() & 1 != 0
+    rules.item_freq != -1 && rules.item_switch >> ItKind::SuperScope.id() & 1 != 0
 }
 
 /// A player in [`Settings::vs`].
@@ -528,9 +528,9 @@ impl Match {
             // state) last until the loop's setup clears them, after the scene's entry. The
             // sound log takes their game ticks for the frame of a sound the entry starts (Big
             // Blue's first cars' engines): 1, past the last frame logged, the current slot.
-            game.scene.unk_0 = 1;
-            game.scene.unk_8 = 1;
-            game.scene.unk_C = 1;
+            game.scene.ticks = 1;
+            game.scene.game_ticks = 1;
+            game.scene.ending = 1;
         }
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         game.gm.unlocks = settings.unlocks;
@@ -759,7 +759,7 @@ impl Match {
                 m.game.stage_info.ground_kind(),
                 super::gr::GrKind::Inishie1 | super::gr::GrKind::Inishie2
             )
-            && let Some(fast) = super::gr::mushroom_kingdom::fast_song(m.game.stage_info.x98)
+            && let Some(fast) = super::gr::mushroom_kingdom::fast_song(m.game.stage_info.bgm)
         {
             let name = crate::lb::audio::HPS_NAMES[fast as usize];
             let file = load(&format!("audio/{name}"));

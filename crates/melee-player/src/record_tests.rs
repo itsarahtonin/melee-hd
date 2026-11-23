@@ -328,7 +328,7 @@ fn a_recording_carries_the_item_settings() {
             let info = melee_slippi::start(&replay).info;
             let rules = &s.start.rules;
             assert_eq!(info[0xB] as i8, rules.item_freq);
-            assert_eq!(info[0x20..0x28], rules.x20.to_be_bytes());
+            assert_eq!(info[0x20..0x28], rules.item_switch.to_be_bytes());
             let payload = &(replay.events.iter())
                 .find(|e| e.command == event::GAME_START)
                 .expect("a game start")
@@ -338,7 +338,7 @@ fn a_recording_carries_the_item_settings() {
             let enabled =
                 (payload[0x28 - 1..0x2D - 1].iter()).fold(0u64, |m, &b| m << 8 | u64::from(b));
             assert_eq!(behavior, if prefs.item_freq == 0xFF { -1 } else { 3 });
-            assert_eq!(enabled, rules.x20 & ((1 << 40) - 1));
+            assert_eq!(enabled, rules.item_switch & ((1 << 40) - 1));
             if prefs.item_freq != 0xFF {
                 let kinds: Vec<u32> = (0..35).filter(|k| enabled >> k & 1 != 0).collect();
                 assert_eq!(
@@ -1067,9 +1067,9 @@ fn a_paused_live_match_follows_playbacks_camera_readers() {
             let c = g.camera.raw_parts().cam;
             let model = c.quake_gobj.is_some();
             (
-                c.x2B0.to_bits(),
-                c.x2B4.to_bits(),
-                c.x2B8,
+                c.average_width.to_bits(),
+                c.width_sum.to_bits(),
+                c.width_samples,
                 c.quake_frames_left,
                 model,
             )
@@ -1090,7 +1090,7 @@ fn a_paused_live_match_follows_playbacks_camera_readers() {
                 let g = &mut m.game;
                 if g.camera.mode() == melee_sim::game::camera::PAUSE {
                     // The pause camera looking at no one: the standard camera's update.
-                    g.camera.raw_parts_mut().cam.x2C4 = 11;
+                    g.camera.raw_parts_mut().cam.pauser_slot = 11;
                 }
                 let Some(f) = frame(m) else { return };
                 let g = &m.game;
@@ -1206,7 +1206,7 @@ fn the_players_live_match_counts_camera_reads_after_a_pause_only() {
             assert!(!m.game.follows_playback_camera(), "a second camera");
             let d = &m.game.display_phase;
             if d.lost && off.is_none() {
-                off = Some(m.game.scene.unk_8);
+                off = Some(m.game.scene.game_ticks);
                 before = d.differing;
             }
             (after, first) = (d.differing, d.first);
@@ -1448,7 +1448,7 @@ fn gameplay(g: &melee_sim::game::state::Game) -> (u32, Vec<(u32, u32, i32, u32)>
                 f.cur_pos.x.to_bits(),
                 f.cur_pos.y.to_bits(),
                 f.motion_id,
-                f.dmg.x1830_percent.to_bits(),
+                f.dmg.percent.to_bits(),
             )
         })
         .collect();
@@ -1684,11 +1684,16 @@ fn playback_counters(g: &mut melee_sim::game::state::Game, play: &melee_sim::gam
             }
         };
     }
-    each_slot!(g.fighters, play.fighters, |a, b| a.coll_data.x38 =
-        b.coll_data.x38);
-    each_slot!(g.items, play.items, |a, b| a.coll.x38 = b.coll.x38);
-    each_slot!(g.it.links, play.it.links, |a, b| a.coll_data.x38 =
-        b.coll_data.x38);
+    each_slot!(g.fighters, play.fighters, |a, b| a
+        .coll_data
+        .map_generation =
+        b.coll_data.map_generation);
+    each_slot!(g.items, play.items, |a, b| a.coll.map_generation =
+        b.coll.map_generation);
+    each_slot!(g.it.links, play.it.links, |a, b| a
+        .coll_data
+        .map_generation =
+        b.coll_data.map_generation);
     let o = &mut g.objs;
     o.generators.idnum = play.objs.generators.idnum;
     o.psdisp.clone_from(&play.objs.psdisp);

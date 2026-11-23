@@ -235,7 +235,7 @@ fn held_check(g: &Running, gobj: GObjId, a: u32) {
     if name_of(a) == "ftCo_800C7590"
         && !fp
             .dmg
-            .x1868_source
+            .source
             .is_some_and(|i| it::lib26b1::kind(g.game, i) == ItKind::ReDead)
     {
         panic!("{SKIP}ftCo_800C7590 takes a fighter a ReDead hit");

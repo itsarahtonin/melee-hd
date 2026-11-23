@@ -237,16 +237,16 @@ pub fn spawn(
     s.prev_pos = at;
     s.pos = at;
     s.facing_dir = 0.0;
-    s.x3C_damage = 0;
+    s.damage = 0;
     s.vel = Vec3::new(0.0, 0.0, 0.0);
-    s.x0_parent_gobj = None;
-    s.x4_parent_gobj2 = None;
+    s.owner = None;
+    s.maker = None;
     if fall {
-        s.x44_flag[0] |= 0x80;
+        s.flags[0] |= 0x80;
     } else {
-        s.x44_flag[0] &= !0x80;
+        s.flags[0] &= !0x80;
     }
-    s.x40 = 0;
+    s.ignore_id = 0;
     r.game.it.yaku_attr = true;
     // `it_804D6D38[It_PKind_Random - It_Kind_Kuriboh]->x0_common_attr = &it_803F8C08`: the
     // table's last entry, an article in `ItCo.dat`'s data, which the heap's image takes where
@@ -271,12 +271,12 @@ pub fn spawn(
     v.touched.set(touched);
     let model = jobj_of(r.game, gobj).expect("a stage item without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, model, SCALE);
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
     super::super::hitbox::start_blink(r.game, gobj);
     change_state(r, gobj, state, super::super::item::change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
     ip.touched = Some(CodeRef(TOUCHED));
-    ip.coll.x34_flags.b1234 = 5;
+    ip.coll.ecb_flags.b1234 = 5;
     Some(gobj)
 }
 

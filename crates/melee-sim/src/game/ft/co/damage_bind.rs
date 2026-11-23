@@ -49,7 +49,7 @@ impl Running<'_> {
         let hand = fp::fsubs(x660, fp::frsp(f64::from(handicap)));
         let t = fp::fadds(fp::fmadds(x65c, hand, x658), place);
         let fp = &mut self.game.fighters[f.0];
-        let timer = fp::fmadds(reg(fp.dmg.x1830_percent), x66c, t);
+        let timer = fp::fmadds(reg(fp.dmg.percent), x66c, t);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
         fp.mash_stick_y = 0;

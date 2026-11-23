@@ -68,8 +68,8 @@ fn param(game: &Game) -> DataRef {
 #[doc(alias = "grStory_801E3030")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.story_yakumono = r.game.stage_info.yakumono_param;
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0, setup::SETUP_FRAME);
     create(r, 1, setup::SETUP_FRAME);
     create(r, 3, setup::SETUP_FRAME);
@@ -100,7 +100,7 @@ pub fn init_background(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let map_id = r.game.grounds[g.0].map_id;
     anime::start_map(r.game, r.data, gobj, map_id, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
     let j = nth_joint(r.game, gobj, 1);
     material::set_tree_flags(r.game, j, 0x2000_0000);
 }
@@ -133,7 +133,7 @@ pub fn init_shyguys(r: &mut Running, gobj: GObjId) {
     anime::start(r.game, r.data, gobj, 5, 7, 1, 0.0, 1.0, true);
     reset_timer(r.game, r.data);
     r.game.grounds[g.0].u.story_shyguys().timer = 120;
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The Shy Guys' controller's process, `grStory_801E3334`: the flights, the collision

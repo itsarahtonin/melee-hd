@@ -176,12 +176,12 @@ pub fn spawn_at(r: &mut Running, pos: crate::vec::Vec3) -> Option<GObjId> {
     spawn.prev_pos.z = 0.0;
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = -1.0;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = crate::vec::Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = super::super::item::spawn_air(r, &mut spawn)?;
     held::landed(r, gobj);
     Some(gobj)

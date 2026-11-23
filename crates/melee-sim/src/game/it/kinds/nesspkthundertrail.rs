@@ -80,12 +80,12 @@ pub fn spawn(
     spawn.prev_pos.z = 0.0;
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = owner;
-    spawn.x4_parent_gobj2 = Some(ball);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = attack_id as _;
+    spawn.owner = owner;
+    spawn.maker = Some(ball);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = attack_id as _;
     let trail = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, trail);
     // `Item_ClearCmdVars`.
@@ -102,7 +102,7 @@ pub fn spawn(
     lib2725::show(r.game, trail);
     let ip = item_mut(r.game, trail);
     ip.vel = Vec3::new(0.0, 0.0, 0.0);
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     if owner.is_some() {
         debug_owner_bubbles(r.game, trail, owner);
     }

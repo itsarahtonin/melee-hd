@@ -139,16 +139,13 @@ impl Running<'_> {
         let x790 = reg(self.common().f32(0x790));
         let fp = &mut self.game.fighters[f.0];
         // `ftCommon_InitGrab(fp, 0, timer)`.
-        fp.grab_timer = mem(fp::fmuls(reg(fp.dmg.x1838_percentTemp), x790));
+        fp.grab_timer = mem(fp::fmuls(reg(fp.dmg.pending_damage), x790));
         fp.mash_stick_y = 0;
         fp.mash_stick_x = 0;
         fp.can_mash = false;
         let fp = &self.game.fighters[f.0];
         let (xi, yi) = (self.bone_index(fp, XROT_N), self.bone_index(fp, YROT_N));
-        let (y, z) = (
-            fp.co_attrs.x154_damageice_unk,
-            fp.co_attrs.x150_damageice_unk,
-        );
+        let (y, z) = (fp.co_attrs.ice_offset_y, fp.co_attrs.ice_offset_z);
         let xrotn = self
             .bone(f, xi)
             .joint
@@ -253,11 +250,11 @@ impl Running<'_> {
         let mult = reg(self.common().f32(0x79C));
         let fp = self.game.fighter_mut(gobj);
         fp.grab_timer = mem(fp::fnmsubs(
-            reg(fp.dmg.x1838_percentTemp),
+            reg(fp.dmg.pending_damage),
             mult,
             reg(fp.grab_timer),
         ));
-        if fp.dmg.x1860_element == ELEMENT_FIRE {
+        if fp.dmg.element == ELEMENT_FIRE {
             fp.grab_timer = 0.0;
         }
     }

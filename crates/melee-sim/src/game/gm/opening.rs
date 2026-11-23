@@ -504,26 +504,26 @@ pub fn stage_select_kind(i: u8) -> u16 {
 
 /// The attract loop's history (`struct gm_random_history` over the game's data): how often
 /// each character (from byte 2) and stage select entry (from byte 0x1C) has played.
-fn char_usage(g: &crate::game::structs::gmm_x0, c: usize) -> u8 {
+fn char_usage(g: &crate::game::structs::GameData, c: usize) -> u8 {
     if c == 0 {
-        g.unk_2
+        g.attract_history
     } else {
-        g.pad_3[c - 1] as u8
+        g.attract_history_rest[c - 1] as u8
     }
 }
 
-fn add_char_usage(g: &mut crate::game::structs::gmm_x0, c: usize) {
+fn add_char_usage(g: &mut crate::game::structs::GameData, c: usize) {
     if c == 0 {
-        g.unk_2 = g.unk_2.wrapping_add(1);
+        g.attract_history = g.attract_history.wrapping_add(1);
     } else {
-        g.pad_3[c - 1] = g.pad_3[c - 1].wrapping_add(1);
+        g.attract_history_rest[c - 1] = g.attract_history_rest[c - 1].wrapping_add(1);
     }
 }
 
-fn stage_usage(g: &crate::game::structs::gmm_x0, s: usize) -> u8 {
-    g.pad_3[0x19 + s] as u8
+fn stage_usage(g: &crate::game::structs::GameData, s: usize) -> u8 {
+    g.attract_history_rest[0x19 + s] as u8
 }
 
-fn add_stage_usage(g: &mut crate::game::structs::gmm_x0, s: usize) {
-    g.pad_3[0x19 + s] = g.pad_3[0x19 + s].wrapping_add(1);
+fn add_stage_usage(g: &mut crate::game::structs::GameData, s: usize) {
+    g.attract_history_rest[0x19 + s] = g.attract_history_rest[0x19 + s].wrapping_add(1);
 }

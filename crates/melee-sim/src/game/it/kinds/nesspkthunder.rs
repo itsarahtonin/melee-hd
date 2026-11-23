@@ -149,12 +149,12 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     spawn.prev_pos.z = 0.0;
     spawn.pos = lib26b1::parent_ecb_center(r.game, owner);
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(owner);
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = super::super::item::next_attack_id(r.game) as _;
+    spawn.owner = Some(owner);
+    spawn.maker = spawn.owner;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = super::super::item::next_attack_id(r.game) as _;
     let ball = spawn_air(r, &mut spawn)?;
     let life = attr_f32(r, ball, attr::LIFETIME);
     let first = mem(fp::fmuls(
@@ -185,7 +185,7 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     v.ness.set(Some(owner));
     v.unread_f08.set(None);
     start(r, ball);
-    item_mut(r.game, ball).state_flags.b3 = false;
+    item_mut(r.game, ball).state_flags.checks_blast_zones = false;
     if crate::game::gr::stage::stkind(r.game) == crate::game::gr::StKind::HomeRun {
         super::super::item::remove_camera_box(r.game, ball);
     }

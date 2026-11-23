@@ -169,12 +169,12 @@ fn spawn_desc(p1: Option<GObjId>, p2: Option<GObjId>, pos: Vec3, vel: Vec3) -> S
     };
     s.prev_pos = pos;
     s.pos = s.prev_pos;
-    s.x3C_damage = 0;
+    s.damage = 0;
     s.vel = vel;
-    s.x0_parent_gobj = p1;
-    s.x4_parent_gobj2 = p2;
-    s.x44_flag[0] |= 0x80;
-    s.x40 = 0;
+    s.owner = p1;
+    s.maker = p2;
+    s.flags[0] |= 0x80;
+    s.ignore_id = 0;
     s
 }
 
@@ -340,7 +340,7 @@ fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
     v.wait_a.set(w4);
     v.wait_b.set(w8);
     v.pickable.set(s.pickable);
-    ip.hit_flags.x0.b6 = true;
+    ip.hit_flags.bits.hits_own_team = true;
     ip.bounce_sfx = xd84;
     ip.scl = scale;
     set_model(r, gobj, joint);
@@ -398,7 +398,7 @@ pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
     }
     let w = reg(v.wait_b.get());
     if w <= 0.0 {
-        if !ip.hit_flags.x0.b5 {
+        if !ip.hit_flags.bits.hits_own_player {
             hitbox::set_hit_ids(r.game, gobj);
             item_mut(r.game, gobj)
                 .vars
@@ -418,7 +418,7 @@ pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802E6658")]
 pub fn limit_coins(r: &mut Running) {
     let limit = super::super::item::common_data(r.game).u32(r.data, 0x20);
-    if r.game.it.counts.x50 as u32 >= limit.wrapping_sub(2) {
+    if r.game.it.counts.coins as u32 >= limit.wrapping_sub(2) {
         let last = super::super::spawn::find_kind(r.game, ItKind::VsCoin.id());
         super::super::item::destroy(r, last.expect("it_802E6658: no coin to take off"));
     }
@@ -509,7 +509,7 @@ pub fn lands(r: &mut Running, gobj: GObjId, bounce: bool) -> bool {
         ip.vel.y = 0.0;
     }
     let slow = abs(ip.vel.x) <= stop && abs(ip.vel.y) <= stop;
-    if slow || ip.hit_flags.x0.b4 || keep == 0.0 {
+    if slow || ip.hit_flags.bits.stops_on_land || keep == 0.0 {
         ip.vel = Vec3::new(0.0, 0.0, 0.0);
         ip.land_count = 0;
         return landed;

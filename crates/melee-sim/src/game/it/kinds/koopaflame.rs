@@ -138,12 +138,12 @@ pub fn spawn(
     spawn.prev_pos.z = 0.0;
     spawn.pos = lib26b1::parent_ecb_center(r.game, parent);
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = Some(parent);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = attack_id as i32;
+    spawn.owner = Some(parent);
+    spawn.maker = Some(parent);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = attack_id as i32;
     let gobj = spawn_air(r, &mut spawn)?;
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
     let ip = item_mut(r.game, gobj);
@@ -217,7 +217,7 @@ pub fn spawn(
     v.spawned.set(0);
     v.gfx.set(gfx);
     v.direction.set(Vec3::new(facing, 0.0, 0.0));
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     setup(r, gobj, parent);
     Some(gobj)
 }

@@ -142,8 +142,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grOnett_801E3738")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.onett_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 2, 5, 4, 3] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -205,7 +205,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The street's start hook, `grOnett_801E3930`: the awnings' callbacks, and a camera subject
@@ -242,7 +242,7 @@ pub fn init_street(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     r.game.grounds[g.0].u.onett().subject = None;
     for (i, part) in [(0, 0xE), (1, 0xF)] {
         let aj = nth_joint(r.game, gobj, part);
@@ -312,9 +312,9 @@ pub fn init_store(r: &mut Running, gobj: GObjId) {
     v.hit_count = 0;
     v.frame = 0;
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
-    gp.x10_flags.b5 = true;
+    gp.unread_8 = None;
+    gp.unread_c = None;
+    gp.flags.shadowed = true;
     let user = Some(super::CollUser::Ground(g));
     for joint in [3, 4] {
         r.game
@@ -479,8 +479,8 @@ pub fn init_cars(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     let n = |r: &Running, k: i32| nth_joint(r.game, gobj, k);
     let cars = [n(r, 0xB), n(r, 1), n(r, 6), n(r, 0x10), n(r, 0x10)];
     let wheels = [n(r, 0xF), n(r, 5), n(r, 0xA), n(r, 0x14), n(r, 0x14)];
@@ -748,7 +748,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
 /// the centre and right edge the CObj gives, `horn` the horn's distance past the edge.
 fn note_other_phase(r: &mut Running, car_j: Option<jobj::JObjId>, span: [f32; 2], horn: f32) {
     let Some(spans) = r.game.playback_spans(r.data) else {
-        let tick = r.game.scene.unk_8;
+        let tick = r.game.scene.game_ticks;
         r.game.display_phase.note(tick);
         return;
     };
@@ -767,7 +767,7 @@ fn note_other_phase(r: &mut Running, car_j: Option<jobj::JObjId>, span: [f32; 2]
     if (spans.into_iter().flatten())
         .any(|[_, center, right]| car_outcome(x, [center, right], horn, street) != ours)
     {
-        let tick = r.game.scene.unk_8;
+        let tick = r.game.scene.game_ticks;
         r.game.display_phase.note(tick);
     }
 }

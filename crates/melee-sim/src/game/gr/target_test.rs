@@ -182,8 +182,8 @@ pub fn on_init(r: &mut Running, stage: usize) {
     if let Some(y) = t.yakumono {
         r.game.gr.target_yakumono[y] = super::ground::yakumono_param(r.game);
     }
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in 0..3 {
         create(r, stage, map_id);
     }
@@ -297,7 +297,7 @@ pub fn on_start(r: &mut Running) {
 pub fn spawn_targets(r: &mut Running) -> i32 {
     let mut count: i32 = 0;
     for i in TARGET_POINTS {
-        let Some(j) = r.game.stage_info.x280[i] else {
+        let Some(j) = r.game.stage_info.points[i] else {
             continue;
         };
         if super::super::it::zako::spawn(r, ItKind::Target.id(), None, Some(j), None, false)
@@ -306,8 +306,8 @@ pub fn spawn_targets(r: &mut Running) -> i32 {
             count = count.wrapping_add(1);
         }
     }
-    r.game.stage_info.x6D4 = count as i16;
-    r.game.stage_info.x6D2 = count as i16;
+    r.game.stage_info.targets_left = count as i16;
+    r.game.stage_info.target_count = count as i16;
     count
 }
 
@@ -316,7 +316,7 @@ pub fn spawn_targets(r: &mut Running) -> i32 {
 #[doc(alias = "Ground_801C42AC")]
 pub fn spawn_flippers(r: &mut Running) {
     for i in FLIPPER_POINTS {
-        if let Some(j) = r.game.stage_info.x280[i] {
+        if let Some(j) = r.game.stage_info.points[i] {
             super::super::it::lib26b1::drop_flipper(r, ItKind::Flipper.id(), j, true);
         }
     }

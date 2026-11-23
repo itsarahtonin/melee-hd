@@ -62,12 +62,12 @@ pub fn spawn(
     spawn.prev_pos = prev;
     spawn.pos = prev;
     spawn.facing_dir = owner::facing_for(r.game, r.data, prev);
-    spawn.x3C_damage = 0;
-    spawn.x44_flag[0] |= 0x80;
+    spawn.damage = 0;
+    spawn.flags[0] |= 0x80;
     spawn.vel = vel.unwrap_or(Vec3::new(0.0, 0.0, 0.0));
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.ignore_id = 0;
     let gobj = if use_init {
         spawn_air(r, &mut spawn)
     } else {
@@ -77,7 +77,7 @@ pub fn spawn(
     v.set_jobj(jobj);
     v.set_idx(-1);
     v.set_word(2, 0);
-    item_mut(r.game, gobj).coll.x34_flags.b1234 = 3;
+    item_mut(r.game, gobj).coll.ecb_flags.b1234 = 3;
     Some(gobj)
 }
 
@@ -939,7 +939,7 @@ impl Game {
     pub fn vs_add_score(&mut self, player: i32, points: i32) {
         if player == 0 {
             let s = &mut self.vs.state;
-            s.unk_2E = time_add(u32::from(s.unk_2E), points) as u16;
+            s.score = time_add(u32::from(s.score), points) as u16;
         }
     }
 }
@@ -1191,7 +1191,7 @@ pub fn fling_away(r: &mut Running, gobj: GObjId, e: &Enemy) {
 #[doc(alias = "it_802EA2A0")]
 pub fn fling(r: &mut Running, gobj: GObjId, e: &Enemy) {
     if e.flung_checks_blast_zones {
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     }
     maplib::enter_air(item_mut(r.game, gobj));
     launch(r, gobj, false);

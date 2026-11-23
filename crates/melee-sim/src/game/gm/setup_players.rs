@@ -23,7 +23,7 @@ pub fn setup_sudden_death(start: &mut StartMeleeData, end: &MatchEnd) {
     let r = &mut start.rules;
     r.match_kind = 1;
     r.timer_enabled = false;
-    r.x2_5 = false;
+    r.damage_display_kos = false;
     for i in 0..6 {
         if start.players[i].slot_type == PKIND_NONE {
             continue;
@@ -36,7 +36,7 @@ pub fn setup_sudden_death(start: &mut StartMeleeData, end: &MatchEnd) {
                 i32::from(ps.stocks as u8)
             } else {
                 let s = ps.stocks as u8;
-                if ps.x28 < end.frame_count || s != 0 {
+                if ps.match_frames < end.frame_count || s != 0 {
                     i32::from(s)
                 } else {
                     1

@@ -37,9 +37,9 @@ impl Running<'_> {
         let joint = self.bone_joint(gobj, bone);
         let fp = &mut self.game.fighters[f.0];
         set_shield_hit(fp, CodeRef(cb), joint, radius, pos);
-        fp.state_flags.x221B_b3 = true;
-        fp.state_flags.x221B_b4 = true;
-        fp.state_flags.x221B_b2 = true;
+        fp.state_flags.bubble_faces = true;
+        fp.state_flags.bubble_reflectors_only = true;
+        fp.state_flags.shield_no_entry = true;
     }
 
     /// His aerials, `ftLk_AttackAir_Enter`: the one the sticks ask for; the down aerial bounces

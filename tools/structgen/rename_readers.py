@@ -8,6 +8,11 @@ rustc places each use by its type, so a field of another struct with the same of
 tree (one that predates the rename, or one merging into it): only uses that no longer build
 are touched.
 
+A renamed type (`config.RENAME_TYPES`, C name to Rust name) is renamed the same way: rustc
+reports each use of the old name it can no longer find (a path, an import, a struct
+expression or pattern, a constructor), and the old name inside that span becomes the new one.
+The C names are the decomp's (`un_804A1F10_t`), so comments citing them stay as they are.
+
 Usage: rename_readers.py [--types TYPES_JSON] [--no-regen] [-- CARGO_CHECK_ARGS...]
   TYPES_JSON defaults to $SSBM_RS_LOCAL/typegen/types.json (ssbm-rs's typegen output).
   CARGO_CHECK_ARGS default to `--workspace --all-targets -j 4`.
@@ -37,16 +42,25 @@ MESSAGES = [
     # E0026: a pattern's field.
     re.compile(r"struct `(.+)` does not have a field named `(\w+)`$"),
 ]
+# A renamed type's old name: E0412 a type, E0422 a struct expression or pattern, E0433 a path
+# (`Old::default()`), E0425 a value (a unit struct), E0432 an import, E0531 a tuple pattern.
+TYPE_CODES = {"E0412", "E0422", "E0433", "E0425", "E0432", "E0531"}
+OLD_TYPES = {c: rust for c, rust in config.RENAME_TYPES.items() if c != rust}
+OLD_TYPE_RX = re.compile(r"\b(" + "|".join(sorted(OLD_TYPES, key=len, reverse=True)) + r")\b") if OLD_TYPES else None
+
+
+C_NAMES = {rust: c for c, rust in config.RENAME_TYPES.items()}
 
 
 def struct_of(ty):
-    """The struct a type names, past references, `Box` and the path: `&mut structs::Fighter`
-    is `Fighter`."""
+    """The struct a type names, by its C name (the map's key), past references, `Box` and the
+    path: `&mut structs::Fighter` is `Fighter`, `ControllerMap` is `controller_map`."""
     ty = re.sub(r"^(&(mut )?|\*(mut|const) )+", "", ty.strip())
     m = re.fullmatch(r"(?:\w+::)*Box<(.+)>", ty)
     if m:
         return struct_of(m.group(1))
-    return re.sub(r"<.*$", "", ty).split("::")[-1]
+    name = re.sub(r"<.*$", "", ty).split("::")[-1]
+    return C_NAMES.get(name, name)
 
 
 def regenerate(types):
@@ -54,8 +68,21 @@ def regenerate(types):
     subprocess.run(["rustfmt", "--edition", "2024", f"{STRUCTS}/structs.rs", f"{STRUCTS}/mirror_gen.rs"], check=True)
 
 
+def type_spans(d):
+    """A renamed type's old name in error `d`: (file, start, end, None, None, "type") for each
+    primary span that holds it."""
+    if not OLD_TYPE_RX or not OLD_TYPE_RX.search(d["message"]):
+        return []
+    out = []
+    for s in d["spans"]:
+        if s["is_primary"] and s.get("text") and any(OLD_TYPE_RX.search(t["text"]) for t in s["text"]):
+            out.append((s["file_name"], s["byte_start"], s["byte_end"], None, None, "type"))
+    return out
+
+
 def check(args):
-    """`cargo check`'s errors: (file, start, end, old, struct, code) for each misnamed field."""
+    """`cargo check`'s errors: (file, start, end, old, struct, code) for each misnamed field,
+    and (file, start, end, None, None, "type") for each span naming a renamed type's old name."""
     p = subprocess.run(["cargo", "check", "--message-format=json", *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
     found, other = [], []
     for line in p.stdout.splitlines():
@@ -68,6 +95,11 @@ def check(args):
         if d["level"] != "error":
             continue
         code = (d.get("code") or {}).get("code")
+        if code in TYPE_CODES:
+            spans = type_spans(d)
+            if spans:
+                found.extend(spans)
+                continue
         hit = None
         if code in CODES:
             for i, rx in enumerate(MESSAGES):
@@ -87,11 +119,23 @@ def check(args):
 def fix(found):
     by_file = {}
     for f, a, b, old, struct, code in found:
-        by_file.setdefault(f, set()).add((a, b, old, struct, code))
+        # rustc spells one file's path two ways across targets (`tools\oracle\src\boot.rs`
+        # and `tools/oracle/src/boot.rs`): one key, or the second rewrite meets stale spans.
+        by_file.setdefault(os.path.normcase(os.path.normpath(f)), set()).add((a, b, old, struct, code))
     n = 0
     for f, spans in by_file.items():
+        # A type's span inside another (an import list's item and the list) is renamed by the
+        # outer one.
+        types = [s for s in spans if s[4] == "type"]
+        spans = {s for s in spans if not (s[4] == "type" and any(t != s and t[0] <= s[0] and s[1] <= t[1] for t in types))}
         data = Path(f).read_bytes()
-        for a, b, old, struct, code in sorted(spans, reverse=True):
+        for a, b, old, struct, code in sorted(spans, reverse=True, key=lambda s: (s[0], s[1])):
+            if code == "type":
+                text = data[a:b].decode()
+                new_text = OLD_TYPE_RX.sub(lambda m: OLD_TYPES[m.group(1)], text)
+                data = data[:a] + new_text.encode() + data[b:]
+                n += len(OLD_TYPE_RX.findall(text))
+                continue
             assert data[a:b].decode() == old, f"{f}@{a}: {data[a:b]!r} isn't {old}"
             new = config.FIELD_NAMES[struct][old]
             rest = data[b:].lstrip()
@@ -119,16 +163,21 @@ def leftovers():
         for line in lines:
             defined.update(re.findall(r"(?:^\s*|[(,]\s*)(?:pub(?:\([^)]*\))?\s+)?(\w+)\s*:\s*[\w&\[(<]", line))
     olds = {o for names in config.FIELD_NAMES.values() for o in names} - defined
-    if not olds:
-        return []
-    rx = re.compile(r"\.(" + "|".join(sorted(olds, key=len, reverse=True)) + r")\b")
+    rx = re.compile(r"\.(" + "|".join(sorted(olds, key=len, reverse=True)) + r")\b") if olds else None
+    # Old type names that aren't also a field's or a binding's (`controller_map`).
+    old_types = set(OLD_TYPES) - defined
+    trx = re.compile(r"\b(" + "|".join(sorted(old_types, key=len, reverse=True)) + r")\b") if old_types else None
     out = []
     for p, lines in files:
         if p.name in ("structs.rs", "mirror_gen.rs"):
             continue
         for i, line in enumerate(lines, 1):
             s = line.strip()
-            if not s.startswith("//") and rx.search(line):
+            if s.startswith("//"):
+                continue
+            # A renamed type's old name outside comments and aliases.
+            code = re.sub(r'#\[doc\(alias.*$|"[^"]*"', "", line)
+            if (rx and rx.search(line)) or (trx and trx.search(code)):
                 out.append(f"{p}:{i}: {s}")
     return out
 
@@ -158,7 +207,7 @@ def main():
             print(o)
     left = leftovers()
     if left:
-        print(f"{len(left)} lines still name an old field after a `.` (another struct's, or code not built here):")
+        print(f"{len(left)} lines still name an old field after a `.` or an old type (another struct's, or code not built here):")
         for line in left[:200]:
             print("  " + line)
     sys.exit(1 if other else 0)

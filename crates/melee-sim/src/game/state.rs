@@ -10,8 +10,8 @@ use super::camera::CameraState;
 use super::gr;
 use super::handles::{CodeRef, FighterId, GroundId, ItemId};
 use super::structs::{
-    _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, StageInfo,
-    VsSceneController, gm_80479D58_t, ifMagnify,
+    _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, SceneLoop,
+    StageInfo, VsSceneController, ifMagnify,
 };
 use super::{ft, gm, pl};
 use crate::hsd::Objects;
@@ -358,7 +358,7 @@ pub struct Game {
     pub coll: crate::mp::coll::CollStatics,
     /// The scene loop's state (`gm_80479D58`): its tick counts, the debug pause flags and
     /// the pause mask the scheduler reads.
-    pub scene: gm_80479D58_t,
+    pub scene: SceneLoop,
     /// How engine ticks fall on frames (`lb_804329F0`).
     pub pacing: crate::lb::pacing::Pacing,
     /// The audio driver's voices, the synth and AX voices under them, and the timeline that
@@ -417,7 +417,7 @@ pub struct Game {
     /// card's data, as the boot resets them and the memory card loads them. Boxed: inline, its
     /// 0x10A30 bytes made a `Game` half again as large, and every `Game` moved or copied on the
     /// stack with it.
-    pub game_data: Box<super::structs::gmm_x0>,
+    pub game_data: Box<super::structs::GameData>,
     /// The power-on state (`gmMainLib_8046B0F0`) and the clock at power-on.
     pub main_lib: super::gm::main_lib::MainLib,
     /// The game modes' machine (`state_machine`) and where its loops stand.

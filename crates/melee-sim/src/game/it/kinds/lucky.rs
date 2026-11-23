@@ -347,12 +347,12 @@ pub fn spawn_egg(
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = vel;
-    spawn.x0_parent_gobj = owner;
-    spawn.x4_parent_gobj2 = Some(parent);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = owner;
+    spawn.maker = Some(parent);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     spawn_air(r, &mut spawn)
 }
 

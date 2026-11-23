@@ -40,13 +40,13 @@ impl Game {
     /// Where the timer goes, `ifAll_GetTimerPosition`.
     #[doc(alias = "ifAll_GetTimerPosition")]
     pub fn timer_position(&self) -> Vec3 {
-        self.hud.all.xC
+        self.hud.all.timer_pos
     }
 
     /// Where player `idx`'s display goes, `ifAll_GetPlayerHUDPosition`.
     #[doc(alias = "ifAll_GetPlayerHUDPosition")]
     pub fn player_hud_position(&self, idx: i32) -> Vec3 {
-        self.hud.all.x18[idx as usize]
+        self.hud.all.player_pos[idx as usize]
     }
 
     /// `ifAll_HideHUD`.
@@ -88,13 +88,13 @@ impl Running<'_> {
     /// five or six.
     #[doc(alias = "ifAll_802F343C")]
     pub fn place_player_displays(&mut self, count: i32) {
-        let root = self.game.hud.all.x8;
+        let root = self.game.hud.all.root;
         let put = |r: &mut Self, i: usize, index: i32| {
             let p = r.layout_point(root, index);
-            r.game.hud.all.x18[i] = p;
+            r.game.hud.all.player_pos[i] = p;
         };
         let narrow = |r: &mut Self, i: usize| {
-            let v = &mut r.game.hud.all.x18[i];
+            let v = &mut r.game.hud.all.player_pos[i];
             v.x = mem(fp::fmuls(reg(v.x), reg(0.65)));
         };
         match count {
@@ -126,20 +126,20 @@ impl Running<'_> {
         let models = data.ptr(scene).expect("the scene's models");
         let model = data.ptr(models).expect("the scene's first model");
         let root = jobj::load_joint(&mut self.game.objs, data, data.ptr(model));
-        self.game.hud.all.x8 = root;
+        self.game.hud.all.root = root;
         let p = self.layout_point(root, 0xD);
-        self.game.hud.all.xC = p;
+        self.game.hud.all.timer_pos = p;
         for i in 0..6 {
             let p = self.layout_point(root, i + 2);
-            self.game.hud.all.x18[i as usize] = p;
+            self.game.hud.all.player_pos[i as usize] = p;
         }
         for i in 0..3 {
             let p = self.layout_point(root, i + 8);
-            self.game.hud.all.x60[i as usize] = p;
+            self.game.hud.all.player_pos_3[i as usize] = p;
         }
         for i in 0..2 {
             let p = self.layout_point(root, i + 11);
-            self.game.hud.all.x84[i as usize] = p;
+            self.game.hud.all.player_pos_2[i as usize] = p;
         }
         gobj::free(self, g);
     }

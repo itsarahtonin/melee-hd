@@ -786,7 +786,14 @@ fn camera_boxes(game: &Game, img: &mut Image) {
         l.f32s(at + 0x40, &e(&s.target_ext));
         l.f32s(
             at + 0x54,
-            &[s.x54.x, s.x54.y, s.x54.z, s.x60.x, s.x60.y, s.x60.z],
+            &[
+                s.unread_54.x,
+                s.unread_54.y,
+                s.unread_54.z,
+                s.unread_60.x,
+                s.unread_60.y,
+                s.unread_60.z,
+            ],
         );
     }
     l.put(img);
@@ -808,48 +815,48 @@ fn color_overlay(img: &Image, l: &mut Lay, off: u32, c: &super::structs::ColorOv
         };
         l.word(off + 0x10 + 4 * i as u32, w);
     }
-    l.u32(off + 0x24, c.x24 as u32);
-    l.bytes(off + 0x28, &c.x28_colanim);
+    l.u32(off + 0x24, c.unused_24 as u32);
+    l.bytes(off + 0x28, &c.colanim);
     let rgba = |g: &super::structs::_GXColor| [g.r, g.g, g.b, g.a];
-    l.bytes(off + 0x2C, &rgba(&c.x2C_hex));
+    l.bytes(off + 0x2C, &rgba(&c.hex));
     l.f32s(
         off + 0x30,
         &[
-            c.x30_color_red,
-            c.x34_color_green,
-            c.x38_color_blue,
-            c.x3C_color_alpha,
-            c.x40_colorblend_red,
-            c.x44_colorblend_green,
-            c.x48_colorblend_blue,
-            c.x4C_colorblend_alpha,
+            c.color_red,
+            c.color_green,
+            c.color_blue,
+            c.color_alpha,
+            c.colorblend_red,
+            c.colorblend_green,
+            c.colorblend_blue,
+            c.colorblend_alpha,
         ],
     );
-    l.bytes(off + 0x50, &rgba(&c.x50_light_color));
+    l.bytes(off + 0x50, &rgba(&c.light_color));
     l.f32s(
         off + 0x54,
         &[
-            c.x54_light_red,
-            c.x58_light_green,
-            c.x5C_light_blue,
-            c.x60_light_alpha,
-            c.x64_lightblend_red,
-            c.x68_lightblend_green,
-            c.x6C_lightblend_blue,
-            c.x70_lightblend_alpha,
-            c.x74_light_rot_x,
-            c.x78_light_rot_yz,
+            c.light_red,
+            c.light_green,
+            c.light_blue,
+            c.light_alpha,
+            c.lightblend_red,
+            c.lightblend_green,
+            c.lightblend_blue,
+            c.lightblend_alpha,
+            c.light_rot_x,
+            c.light_rot_yz,
         ],
     );
     let bits = [
-        c.x7C_color_enable,
-        c.x7C_flag2,
-        c.x7C_light_enable,
-        c.x7C_flag4,
-        c.x7C_flag5,
-        c.x7C_flag6,
-        c.x7C_flag7,
-        c.x7C_flag8,
+        c.color_enable,
+        c.flag2,
+        c.light_enable,
+        c.flag4,
+        c.flag5,
+        c.flag6,
+        c.flag7,
+        c.flag8,
     ];
     l.u8(off + 0x7C, msb_bits(&bits));
 }
@@ -876,8 +883,8 @@ pub fn bg_flash(game: &Game, img: &mut Image) {
 /// The background flash's user data's fields laid out into `l` (its block at `l`'s start):
 /// its alpha and color overlay.
 pub fn bg_flash_fields(img: &Image, l: &mut Lay, u: &super::structs::BgFlashUserData) {
-    l.u8(0, u.x0);
-    color_overlay(img, l, 4, &u.x4);
+    l.u8(0, u.alpha);
+    color_overlay(img, l, 4, &u.overlay);
 }
 
 /// A Pokémon Stadium screen's user data (`grStadium_801D2BEC`'s `TextWrapper`, 0x20;
@@ -972,28 +979,37 @@ pub fn lay_ground(game: &Game, img: &Image, l: &mut Lay, g: super::handles::Grou
     let o = &game.grounds[g.0];
     let ga = |x: Option<GObjId>| x.map_or(0, |x| game.world.gobjs.addr(x.0));
     let code = |c: Option<super::handles::CodeRef>| c.map_or(0, |c| c.0);
-    l.u32(0, o.x0 as u32);
+    l.u32(0, o.unread_0 as u32);
     l.u32(4, ga(o.gobj));
-    l.u32(8, code(o.x8_callback));
-    l.u32(0xC, code(o.xC_callback));
-    let f = &o.x10_flags;
+    l.u32(8, code(o.unread_8));
+    l.u32(0xC, code(o.unread_c));
+    let f = &o.flags;
     l.u8(
         0x10,
-        msb_bits(&[f.b0, f.b1, f.b2, f.b3, f.b4, f.b5, f.b6, f.b7]),
+        msb_bits(&[
+            f.unread_b0,
+            f.unread_b1,
+            f.keeps_fog,
+            f.follows_camera,
+            f.overlay_done,
+            f.shadowed,
+            f.tinted,
+            f.debug_lines,
+        ]),
     );
     // The pass, and the five bits no code touches as the block held them where known.
-    match o.x11_flags.rest {
-        Some(rest) => l.u8(0x11, (o.x11_flags.b012 & 7) << 5 | rest & 0x1F),
-        None => l.put_bits(at + 0x11, 0, 3, u32::from(o.x11_flags.b012 & 7)),
+    match o.pass_flags.rest {
+        Some(rest) => l.u8(0x11, (o.pass_flags.b012 & 7) << 5 | rest & 0x1F),
+        None => l.put_bits(at + 0x11, 0, 3, u32::from(o.pass_flags.b012 & 7)),
     }
     l.u32(0x14, o.map_id as u32);
-    l.u32(0x18, ga(o.x18));
-    l.u32(0x1C, code(o.x1C_callback));
-    for (i, &v) in o.x20.iter().enumerate() {
+    l.u32(0x18, ga(o.camera));
+    l.u32(0x1C, code(o.callback3));
+    for (i, &v) in o.sounds.iter().enumerate() {
         l.u32(0x20 + 4 * i as u32, v as u32);
     }
     color_overlay(img, l, 0x40, &o.color_overlay);
-    l.f32(0xC0, o.xC0);
+    l.f32(0xC0, o.material_alpha);
     match &o.u.vars {
         super::gr::GroundVars::Bytes(b) => l.bytes(0xC4, b),
         v => {

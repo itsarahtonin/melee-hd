@@ -151,8 +151,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grOldPupupu_802107E0")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.oldpupupu_yakumono = r.game.stage_info.yakumono_param;
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 3, 7, 5, 4, 6, 1, 8] {
         create(r, map_id, SETUP_FRAME);
     }
@@ -238,7 +238,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The stage's setup (map 5), `grOldPupupu_80210B58`: its collision and animation.
@@ -249,7 +249,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// The stage's process, `grOldPupupu_80210BC0`: the wind sources.
@@ -265,7 +265,7 @@ pub fn init_flyer(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// A cloud or star's process, `grOldPupupu_80210C34`: it goes once its flight's animation
@@ -331,7 +331,7 @@ pub fn proc_flights(r: &mut Running, gobj: GObjId) {
             })
         })
     {
-        let tick = r.game.scene.unk_8;
+        let tick = r.game.scene.game_ticks;
         r.game.display_phase.note(tick);
     }
     let rand = reg(r.game.objs.rng.draw_f32());
@@ -388,9 +388,9 @@ pub fn init_sky(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x10_flags.b2 = false;
+    r.game.grounds[g.0].flags.keeps_fog = false;
     material::set_tree_flags(r.game, j, 0x2800_0000);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// `randrange`: between the two, whichever is lower, drawn only if they differ.
@@ -418,7 +418,7 @@ pub fn init_whispy(r: &mut Running, gobj: GObjId) {
     v.facing = 1;
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// Registers a stage object's wind with the fighter code, `ftCo_800C06E8`: its one slot.

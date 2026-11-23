@@ -35,14 +35,14 @@ pub fn cam_zoom_rate(game: &Game) -> f32 {
 #[doc(alias = "Stage_GetCamInfoX20")]
 #[doc(alias("cam_x20"))]
 pub fn cam_pan_rate(game: &Game) -> f32 {
-    game.stage_info.cam_info.x20
+    game.stage_info.cam_info.cam_pan_rate
 }
 
 /// The camera's `x24`, `Stage_GetCamInfoX24`.
 #[doc(alias = "Stage_GetCamInfoX24")]
 #[doc(alias("cam_x24"))]
 pub fn cam_tilt_rate(game: &Game) -> f32 {
-    game.stage_info.cam_info.x24
+    game.stage_info.cam_info.cam_tilt_rate
 }
 
 /// The camera's fixed zoom, `Stage_GetCamFixedZoom`.
@@ -332,7 +332,7 @@ impl super::super::state::Running<'_> {
     #[doc(alias = "Stage_80225074")]
     pub fn start_stage_music(&mut self, which: i32) -> i32 {
         let flags = if self.game.vs_sudden_death() != 0 {
-            if self.game.stage_info.unk8C.b0 || which == 2 {
+            if self.game.stage_info.bits.picked_alt_song || which == 2 {
                 0x12
             } else {
                 0x11
@@ -355,8 +355,8 @@ impl super::super::state::Running<'_> {
         let stkind = self.game.gr.stkind;
         let (bgm, alternate) = super::setup::music(self.game, self.data, stkind, flags);
         self.lb_play_music(bgm);
-        self.game.stage_info.x98 = bgm;
-        self.game.stage_info.unk8C.b1 = alternate;
+        self.game.stage_info.bgm = bgm;
+        self.game.stage_info.bits.playing_alt_song = alternate;
         which
     }
 }

@@ -60,13 +60,13 @@ impl Running<'_> {
     /// `gmMainLib_8015ED74`: the save's sound balance.
     #[doc(alias = "gmMainLib_8015ED74")]
     pub fn sound_balance(&self) -> u8 {
-        self.game.game_data.thing.save_data.x1CB0.sound_balance as u8
+        self.game.game_data.thing.save_data.prefs.sound_balance as u8
     }
 
     /// `gmMainLib_8015ED80`.
     #[doc(alias = "gmMainLib_8015ED80")]
     pub fn set_sound_balance(&mut self, b: i8) {
-        self.game.game_data.thing.save_data.x1CB0.sound_balance = b;
+        self.game.game_data.thing.save_data.prefs.sound_balance = b;
     }
 
     /// `updateCenterText`: the row's description.

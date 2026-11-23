@@ -36,7 +36,10 @@ impl Game {
     fn part_joints(&self, fp: &Fighter, part_idx: i32) -> (JObjId, Option<JObjId>) {
         let parts = &self.fighter_parts[fp.parts.expect("a fighter without parts").0];
         let bone = &parts[part_idx as usize];
-        (bone.joint.expect("a part without a joint"), bone.x4_jobj2)
+        (
+            bone.joint.expect("a part without a joint"),
+            bone.interp_joint,
+        )
     }
 
     /// The joint whose rotation a part's angles set: its own, or for a joint animated by
@@ -101,9 +104,9 @@ pub const MAX_SECOND_DOBJS: usize = 32;
 pub fn set_bone_bit(b: &mut FighterBone, byte: usize, bit: u32, v: bool) {
     let m = 0x80u8 >> bit;
     if v {
-        b.x8[byte] |= m;
+        b.flags[byte] |= m;
     } else {
-        b.x8[byte] &= !m;
+        b.flags[byte] &= !m;
     }
 }
 
@@ -117,13 +120,13 @@ pub fn bone_from_joint(bone: &mut FighterBone, flags: u32, depth: u32) {
     set_bone_bit(bone, 1, 2, flags & (1 << 18) != 0);
     set_bone_bit(bone, 1, 3, flags & (1 << 20) != 0);
     set_bone_bit(bone, 1, 4, flags & (1 << 19) != 0);
-    bone.xC_u[0] = depth as u8;
+    bone.tree[0] = depth as u8;
 }
 
 /// Sets a part's last DObj index, the seven-bit `xC_u.x0.xD` (the top bits of its byte).
 #[doc(alias("set_bone_xd"))]
 pub fn set_bone_last_dobj(b: &mut FighterBone, v: u8) {
-    b.xC_u[1] = (b.xC_u[1] & 1) | (v << 1);
+    b.tree[1] = (b.tree[1] & 1) | (v << 1);
 }
 
 /// The walk the parts take over a joint tree: the next joint after `j` depth first (an
@@ -302,11 +305,11 @@ impl Running<'_> {
         let mut i = 0u32;
         while let Some(cur) = j {
             if self.part_mask(kind, i as i32) != 0 {
-                self.game.fighter_parts[parts][i as usize].x4_jobj2 = None;
+                self.game.fighter_parts[parts][i as usize].interp_joint = None;
                 i += 1;
                 continue;
             }
-            self.game.fighter_parts[parts][i as usize].x4_jobj2 = Some(cur);
+            self.game.fighter_parts[parts][i as usize].interp_joint = Some(cur);
             i += 1;
             j = next_in_tree(&self.game.objs.jobjs, cur).0;
         }
@@ -339,7 +342,7 @@ impl Running<'_> {
         }
         let fp = &mut self.game.fighters[f.0];
         fp.parts_vis.model_num = model_num;
-        fp.parts_vis.xC = xc;
+        fp.parts_vis.lookups = xc;
         fp.parts_vis.cleared = [1; 5];
         let (main, second) = (fp.dobj_list.data, fp.second_dobjs.data);
         for (idx, list) in [(0, main), (1, main), (2, second), (3, main), (4, main)] {
@@ -358,7 +361,9 @@ impl Running<'_> {
     #[doc(alias = "ftParts_80074B6C")]
     pub fn show_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {
         let vis = &self.game.fighters[f.0].parts_vis;
-        let Some(lookup) = vis.xC[idx] else { return };
+        let Some(lookup) = vis.lookups[idx] else {
+            return;
+        };
         if vis.cleared[idx] != 0 {
             return;
         }
@@ -436,7 +441,9 @@ impl Running<'_> {
     #[doc(alias = "ftParts_80074D7C")]
     pub fn hide_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {
         let vis = &self.game.fighters[f.0].parts_vis;
-        let Some(lookup) = vis.xC[idx] else { return };
+        let Some(lookup) = vis.lookups[idx] else {
+            return;
+        };
         if vis.cleared[idx] == 0 {
             return;
         }

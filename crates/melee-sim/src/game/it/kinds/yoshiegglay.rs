@@ -87,12 +87,12 @@ pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
     spawn.prev_pos.z = 0.0;
     spawn.pos = spawn.prev_pos;
     spawn.facing_dir = laid.facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = laid.vel;
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     vars(r.game, gobj).damage_mul.set(laid.damage_mul);
     item_mut(r.game, gobj).unread_c98 = laid.damage_behavior;

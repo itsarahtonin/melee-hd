@@ -63,7 +63,7 @@ impl Running<'_> {
         self.set_model_variant(f, 0, 0);
         self.set_hurtbox_state(f, HURT_ENABLED);
         let fp = &self.game.fighters[f.0];
-        let size = fp.co_attrs.xBC.size;
+        let size = fp.co_attrs.egg.size;
         let part = self.bone_index(fp, HIP_N);
         let joint = self.bone(f, part).joint;
         let args = [ef::Arg::Float(size)];
@@ -171,7 +171,7 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        if fp.mv_i32(mv::GUARD_XC) != 0 || (!fp.state_flags.x221B_b0 && !fp.reflecting) {
+        if fp.mv_i32(mv::GUARD_XC) != 0 || (!fp.state_flags.shield_bubble && !fp.reflecting) {
             self.enter_guard_off(gobj);
         } else {
             self.ys_shield_crack(gobj);
@@ -283,7 +283,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::GUARD_ON_1, SKIP_MODEL, frame, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.shield_was_hit = false;
-        fp.state_flags.x221B_b0 = false;
+        fp.state_flags.shield_bubble = false;
         self.ys_powershield_start_late(gobj);
     }
 

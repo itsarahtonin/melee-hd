@@ -54,11 +54,11 @@ pub(crate) fn set_shield_hit(
     radius: f32,
     offset: Vec3,
 ) {
-    fp.state_flags.x221B_b0 = true;
-    fp.state_flags.x221B_b1 = false;
-    fp.state_flags.x221B_b2 = false;
-    fp.state_flags.x221B_b3 = false;
-    fp.state_flags.x221B_b4 = false;
+    fp.state_flags.shield_bubble = true;
+    fp.state_flags.shield_deflects = false;
+    fp.state_flags.shield_no_entry = false;
+    fp.state_flags.bubble_faces = false;
+    fp.state_flags.bubble_reflectors_only = false;
     fp.shield_hit_cb = Some(cb);
     fp.shield_hit.bone = joint;
     fp.shield_hit.size = radius;
@@ -206,7 +206,7 @@ impl Running<'_> {
     pub fn shield_pose(&mut self, gobj: GObjId, t: f32) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if !(fp.reflecting || fp.state_flags.x221B_b0) {
+        if !(fp.reflecting || fp.state_flags.shield_bubble) {
             return;
         }
         self.shield_tilt(gobj);
@@ -344,7 +344,7 @@ impl Running<'_> {
     /// health drains by it, and at nothing the shield breaks (true).
     #[doc(alias = "ftCo_800925A4")]
     pub fn shield_drain(&mut self, gobj: GObjId) -> bool {
-        if !self.game.fighter(gobj).state_flags.x221B_b0 {
+        if !self.game.fighter(gobj).state_flags.shield_bubble {
             return false;
         }
         let c = self.common();
@@ -359,7 +359,7 @@ impl Running<'_> {
         if fp.shield_health < 0.0 {
             fp.shield_health = 0.0;
             fp.shield_was_hit = false;
-            fp.state_flags.x221B_b0 = false;
+            fp.state_flags.shield_bubble = false;
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             self.record_shield_break(slot, sub);
             self.enter_shield_break(gobj);
@@ -408,7 +408,7 @@ impl Running<'_> {
         self.guard_note_release(gobj);
         let fp = self.game.fighter_mut(gobj);
         if (fp.mv_i32(GUARD_XC) != 0 && fp.mv_f32(GUARD_X10) == 0.0)
-            || (!fp.state_flags.x221B_b0 && !fp.reflecting)
+            || (!fp.state_flags.shield_bubble && !fp.reflecting)
         {
             self.enter_guard_off(gobj);
             return true;
@@ -741,9 +741,9 @@ impl Running<'_> {
         fp.reflecting = true;
         fp.reflect_kept = false;
         fp.reflect_hit_cb = cb;
-        fp.reflect.x1A30_maxDamage = d.max_damage;
-        fp.reflect.x1A34_damageMul = d.damage_mul;
-        fp.reflect.x1A38_speedMul = d.speed_mul;
+        fp.reflect.max_damage = d.max_damage;
+        fp.reflect.damage_mul = d.damage_mul;
+        fp.reflect.speed_mul = d.speed_mul;
         fp.reflect_behavior = d.behavior & 1 != 0;
         fp.reflect_hit.bone = joint;
         fp.reflect_hit.size = d.size;
@@ -800,7 +800,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.active_timer.trigger = 0xFE;
         fp.shield_was_hit = false;
-        fp.state_flags.x221B_b0 = false;
+        fp.state_flags.shield_bubble = false;
         self.powershield_timers(gobj);
         self.powershield_reflect_shape(gobj, ON_POWERSHIELD_REFLECT);
     }

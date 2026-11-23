@@ -90,13 +90,13 @@ impl Game {
     /// the rules' `x2_7`, the display then goes after 200 frames.
     #[doc(alias = "ifStatus_802F6948")]
     pub fn explode_damage_display(&mut self, slot: i32) {
-        let fade = self.vs.start.x2_7;
+        let fade = self.vs.start.damage_display_fades;
         let p = &mut self.hud.status.players[slot as usize];
         if !p.flags.explode_animation {
             p.flags.explode_animation = true;
             p.flags.randomize_velocity = true;
             if fade {
-                p.unk9 = 1;
+                p.fade_frames = 1;
             }
         }
     }
@@ -349,7 +349,7 @@ impl Running<'_> {
         }
         let animated = anim::any_animated(&self.game.objs, Some(root));
         let p = &self.game.hud.status.players[i];
-        if p.flags.unk10 && (p.flags.animation_status_id != 1 || !animated) {
+        if p.flags.heal_anim && (p.flags.animation_status_id != 1 || !animated) {
             self.game.hud.status.players[i].flags.animation_status_id = 1;
             let s = &self.game.hud.status;
             let (an, mat, shape) = (
@@ -415,9 +415,9 @@ impl Running<'_> {
             .display_of(gobj)
             .expect("the original reads a null display");
         let p = &mut self.game.hud.status.players[i];
-        if p.unk9 != 0 {
-            p.unk9 = p.unk9.wrapping_add(1);
-            if p.unk9 > 0xC8 {
+        if p.fade_frames != 0 {
+            p.fade_frames = p.fade_frames.wrapping_add(1);
+            if p.fade_frames > 0xC8 {
                 let slot = p.player_slot;
                 self.free_damage_display(slot);
                 return;
@@ -433,14 +433,14 @@ impl Running<'_> {
         } else {
             self.game.player_damage(slot)
         };
-        let explode = stamina && self.game.vs.state.fighters[slot as usize].x4[0] & 0x04 != 0;
+        let explode = stamina && self.game.vs.state.fighters[slot as usize].flags[0] & 0x04 != 0;
         let p = &mut self.game.hud.status.players[i];
         p.old_damage = p.damage_percent;
         p.damage_percent = (value as i16).clamp(0, 0x3E7);
         let (old, now) = (p.old_damage, p.damage_percent);
         let (fell, rose) = (old != -1 && now < old, old != -1 && now > old);
         let (shake, animate) = if stamina { (fell, rose) } else { (rose, fell) };
-        p.flags.unk10 = animate;
+        p.flags.heal_anim = animate;
         p.flags.force_digit_shake = shake;
         if shake {
             p.damage_from_last_attack = (i32::from(old) - i32::from(now)).unsigned_abs() as u8;
@@ -574,7 +574,7 @@ impl Running<'_> {
         let g = &mut *self.game;
         if g.player_pkind(slot) == PKIND_NONE
             || i32::from(g.hud.status_count) <= slot
-            || !g.vs.start.x2_6
+            || !g.vs.start.damage_displays_on
         {
             return;
         }
@@ -586,16 +586,16 @@ impl Running<'_> {
         p.flags.explode_animation = false;
         p.flags.randomize_velocity = false;
         p.flags.force_digit_shake = false;
-        p.flags.unk10 = false;
+        p.flags.heal_anim = false;
         p.player_slot = slot as u8;
-        p.unk9 = 0;
+        p.fade_frames = 0;
         self.create_damage_mark(i, i as i32);
         self.create_damage_digits(i, i as i32);
         let rules = self.game.vs.start.clone();
-        if rules.x3_0 && self.game.vs_sudden_death() == 0 {
+        if rules.shows_score && self.game.vs_sudden_death() == 0 {
             self.create_score(slot);
         }
-        let mode = if rules.match_kind == 1 || rules.x4_2 {
+        let mode = if rules.match_kind == 1 || rules.single_player {
             0
         } else if rules.match_kind == 2 {
             2
@@ -675,7 +675,7 @@ impl Running<'_> {
     /// the display blows apart, a stock match announces a player out, and outside stock
     /// matches the rules' `x2_5` shows the KO's mark (`mark`, an `if_2F72` function).
     fn stock_loss(&mut self, slot: i32, mark: u32) {
-        self.game.vs.state.unk_D = slot as u8;
+        self.game.vs.state.last_ko = slot as u8;
         self.game.explode_damage_display(slot);
         let k = self.game.player_pkind(slot);
         if self.game.vs.start.is_stock
@@ -685,7 +685,7 @@ impl Running<'_> {
             self.vs_announce_entry(slot, k as u8);
         }
         let s = &self.game.vs.start;
-        if s.match_kind != 1 && s.x2_5 {
+        if s.match_kind != 1 && s.damage_display_kos {
             self.ko_mark(mark, slot);
         }
     }
@@ -695,7 +695,7 @@ impl Running<'_> {
     #[doc(alias = "ifStatus_802F69C0")]
     pub fn damage_display_teammate_ko(&mut self, slot: i32, by: i32) {
         let s = &self.game.vs.start;
-        if s.match_kind != 1 && s.x2_5 {
+        if s.match_kind != 1 && s.damage_display_kos {
             self.ko_mark(super::announce::MARK_7C30, by);
         }
         self.stock_loss(slot, super::announce::MARK_7BB4);

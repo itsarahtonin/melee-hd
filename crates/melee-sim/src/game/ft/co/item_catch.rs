@@ -145,7 +145,7 @@ impl Running<'_> {
         if fp.stamina_dead {
             return;
         }
-        fp.dmg.x18F0 = fp.dmg.x18F0.wrapping_add(amount);
+        fp.dmg.healing = fp.dmg.healing.wrapping_add(amount);
         self.start_color_anim(gobj, 8, 0);
         self.start_rumble(f, 2, 0);
     }
@@ -187,6 +187,6 @@ impl Running<'_> {
         if sub != 0 {
             return;
         }
-        self.game.player_stale_moves(slot).xCA8 = 0;
+        self.game.player_stale_moves(slot).ray_gun_hits = 0;
     }
 }

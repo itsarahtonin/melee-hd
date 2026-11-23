@@ -296,7 +296,7 @@ impl Running<'_> {
         let c = self.common();
         let (mul, add) = (c.f32(0x3D8), c.f32(0x3DC));
         let fp = self.game.fighter_mut(gobj);
-        let strength = reg(fp.dmg.x191C);
+        let strength = reg(fp.dmg.clank_damage);
         let speed = fp::fdivs(
             fp::fadds(f64::from(0.1_f32), reg(fp.co_attrs.clank_animation_length)),
             strength,

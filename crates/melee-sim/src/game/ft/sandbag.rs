@@ -75,7 +75,7 @@ impl Running<'_> {
         const DIRECTION: u32 = 0x9000_0002;
         let f = self.game.fighter_id(gobj);
         let b = self.bones(f).to_vec();
-        let both = |p: usize| [b[p].joint, b[p].x4_jobj2];
+        let both = |p: usize| [b[p].joint, b[p].interp_joint];
         let pairs = [
             (WAIST_N, R_LEG_J, POSITION),
             (WAIST_N, L_SHOULDER_N, POSITION),

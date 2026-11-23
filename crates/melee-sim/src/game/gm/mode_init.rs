@@ -83,16 +83,16 @@ impl Running<'_> {
         d.modes.nametags = [5; 4];
         // Classic, Adventure, All-Star: no character chosen, their stocks.
         for (s, stocks) in [
-            (&mut d.vs.unk_51C, 3),
-            (&mut d.vs.unk_522, 3),
-            (&mut d.vs.unk_528, 1),
+            (&mut d.vs.classic, 3),
+            (&mut d.vs.adventure, 3),
+            (&mut d.vs.all_star, 1),
         ] {
             s.c_kind = 0x21;
             s.color = 0;
             s.stocks = stocks;
             s.cpu_level = 0;
             s.nametag = 0x78;
-            s.x5 = 0;
+            s.round = 0;
         }
         init_vs_mode(&mut d.modes.table[VS_CAMERA]);
         // The trophy gallery (`Toy_Mode_OnInit`): its screens' state cleared, the gallery
@@ -100,10 +100,10 @@ impl Running<'_> {
         self.toy_mode_init();
         let d = &mut self.game.game_data;
         // Target Test: no character, no name tag.
-        let t = &mut d.vs.unk_530.unk_584;
-        t.unk_584 = 0x21;
-        t.unk_585 = 0;
-        t.unk_586 = 0x78;
+        let t = &mut d.vs.event.target_test;
+        t.ckind = 0x21;
+        t.color = 0;
+        t.nametag = 0x78;
         for m in [VS_SUPER_SUDDEN_DEATH, VS_INVISIBLE, VS_SLOMO, VS_LIGHTNING] {
             init_vs_mode(&mut d.modes.table[m]);
         }
@@ -128,44 +128,44 @@ impl Running<'_> {
         init_vs_mode(&mut d.modes.table[VS_MULTIMAN]);
         init_vs_mode(&mut d.modes.table[VS_FIXED_CAMERA]);
         // Events: none chosen, no name tag.
-        let e = &mut d.vs.unk_530;
-        e.x0 = 0;
-        e.x1 = 0;
-        e.x2 = 0x21;
-        e.x3 = 0;
+        let e = &mut d.vs.event;
+        e.char_kind = 0;
+        e.char_color = 0;
+        e.chosen_char = 0x21;
+        e.chosen_color = 0;
         e.nametag = 0x78;
-        e.unk_535 = 0;
-        e.x6 = 0;
-        e.x7 = 0;
-        e.x8 = -1;
-        e.x9 = -1;
-        e.xA = -1;
-        e.xB_0 = false;
-        e.xB_1 = false;
-        e.xB_2 = false;
-        e.xB_3 = false;
-        e.xB_4 = false;
-        e.xB_5 = false;
-        e.xB_6 = false;
-        e.xC = 0;
-        e.x10 = 0;
-        e.x14 = 0;
-        e.x18 = 0;
-        e.x1C = 1.0;
-        e.x20 = 0;
-        e.x24 = 0;
-        e.x28 = 0;
-        e.x2C = 0;
-        e.x30 = 0;
-        e.x34 = 0;
-        e.x38 = 0x21;
-        e.x3C = 0;
-        e.x40 = 0;
-        e.x44 = -1;
-        e.x45 = 0;
-        e.x48 = 0;
-        e.x4C = [0x21; 4];
-        e.x50 = [0; 4];
+        e.event = 0;
+        e.port = 0;
+        e.team = 0;
+        e.random_char_1 = -1;
+        e.random_char_2 = -1;
+        e.random_char_3 = -1;
+        e.timer_counts_up = false;
+        e.cleared = false;
+        e.round_won = false;
+        e.crowd = false;
+        e.series = false;
+        e.voices_loaded = false;
+        e.timed = false;
+        e.score = 0;
+        e.proc_counter = 0;
+        e.unread_14 = 0;
+        e.proc_state = 0;
+        e.quake_scale = 1.0;
+        e.round = 0;
+        e.round_stocks = 0;
+        e.round_damage = 0;
+        e.round_seconds = 0;
+        e.round_frames = 0;
+        e.series_frames = 0;
+        e.kept_char = 0x21;
+        e.coins = 0;
+        e.play_frames = 0;
+        e.load_kind = -1;
+        e.crowd_kirby_copies = 0;
+        e.stage = 0;
+        e.chars = [0x21; 4];
+        e.colors = [0; 4];
         init_vs_mode(&mut d.modes.table[VS_SINGLE_BUTTON]);
         let _ = player_defaults;
     }

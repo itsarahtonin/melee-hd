@@ -76,7 +76,7 @@ impl Running<'_> {
         let joint = self.bone_joint(gobj, bone);
         let fp = &mut self.game.fighters[f.0];
         set_shield_hit(fp, CodeRef(addr::SPECIAL_LW_COUNTER), joint, size, offset);
-        fp.state_flags.x221B_b1 = true;
+        fp.state_flags.shield_deflects = true;
     }
 
     /// The stance (`ftMs_SpecialLw_Anim`, `ftMs_SpecialAirLw_Anim`): the bubble once the
@@ -92,7 +92,7 @@ impl Running<'_> {
                 fp.counter_min_hitlag = push;
                 fp.counter_item_min_hitlag = push;
             }
-            0 => self.game.fighters[f.0].state_flags.x221B_b0 = false,
+            0 => self.game.fighters[f.0].state_flags.shield_bubble = false,
             _ => {}
         }
         if !self.anim_frames_remaining(gobj) {

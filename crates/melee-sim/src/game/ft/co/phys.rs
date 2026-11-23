@@ -110,7 +110,7 @@ impl Running<'_> {
         }
         let slow = reg(self.common().f32(0x1C8));
         let fp = self.game.fighter(gobj);
-        if fp.thrown_hitbox.x134.is_set() {
+        if fp.thrown_hitbox.owner.is_set() {
             let k = fp.kb_vel;
             let sq = |v: f32| fp::fmuls(reg(v), reg(v));
             let speed = sqrt_reg(fp::fadds(sq(k.z), fp::fadds(sq(k.x), sq(k.y))));

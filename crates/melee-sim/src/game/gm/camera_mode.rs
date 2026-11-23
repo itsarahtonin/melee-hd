@@ -353,26 +353,26 @@ impl Running<'_> {
         start.rules.clone_from(&vs.rules);
         let r = &mut start.rules;
         r.match_kind = 0;
-        vs.rules.x4_4 = false;
+        vs.rules.clear_scores = false;
         r.timer_enabled = false;
-        r.x5_0 = true;
-        r.x1_2 = true;
-        r.x1_3 = true;
-        r.x2_5 = false;
-        r.x2_6 = false;
-        r.x3_1 = false;
-        r.x4_0 = false;
+        r.endless = true;
+        r.long_countdown = true;
+        r.alt_go = true;
+        r.damage_display_kos = false;
+        r.damage_displays_on = false;
+        r.pause_shows_stick = false;
+        r.pause_camera = false;
         r.on_unpause_override = Some(CodeRef(PAUSE_CAMERA));
         r.on_pause_override = Some(CodeRef(PAUSE_CAMERA));
         r.check_for_pauser_override = Some(CodeRef(GET_PAUSER));
         r.on_match_start = Some(CodeRef(MATCH_START));
         r.on_frame_start = Some(CodeRef(FRAME_START));
         r.on_frame_end = Some(CodeRef(FRAME_END));
-        r.xD = 1;
+        r.end_wait = 1;
         r.disable_pausing = false;
         for (p, v) in start.players.iter_mut().zip(&vs.players) {
             p.clone_from(v);
-            p.xD_b3 = true;
+            p.no_magnifier = true;
         }
         vs_mode::setup_sub_colors(&mut start);
         let tags = self.nametag_rumbles();
@@ -441,7 +441,7 @@ impl Running<'_> {
             self.camera_check_texts();
         } else if self.game.buttons_triggered(4) & PAD_LR_START != 0 {
             self.lb_audio_call(SFX_BACK);
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.cam().check_exit = 2;
             self.game.end_scene();
         } else if self.game.buttons_triggered(4) & (PAD_START | PAD_A) != 0 {
@@ -708,7 +708,7 @@ impl Running<'_> {
             }
             let s = &mut self.game.vs.state;
             s.hud_enabled = 1;
-            s.unk_3 = 0;
+            s.photo_mode = 0;
         }
         self.camera_free_texts();
     }
@@ -750,7 +750,7 @@ impl Running<'_> {
         }
         let s = &mut self.game.vs.state;
         s.hud_enabled = 0;
-        s.unk_3 = 1;
+        s.photo_mode = 1;
         self.cm_snap_request();
     }
 

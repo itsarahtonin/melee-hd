@@ -14,12 +14,12 @@ impl _StaticPlayer {
     /// A word of `pl_StaleMoveTableExt_t` past the stale-move table, by its offset there.
     pub fn ext_u32(&self, off: usize) -> u32 {
         let i = off - EXT;
-        u32::from_be_bytes(self.xDB0[i..i + 4].try_into().unwrap())
+        u32::from_be_bytes(self.stats_ext[i..i + 4].try_into().unwrap())
     }
 
     pub fn set_ext_u32(&mut self, off: usize, v: u32) {
         let i = off - EXT;
-        self.xDB0[i..i + 4].copy_from_slice(&v.to_be_bytes());
+        self.stats_ext[i..i + 4].copy_from_slice(&v.to_be_bytes());
     }
 
     pub fn ext_f32(&self, off: usize) -> f32 {
@@ -31,11 +31,11 @@ impl _StaticPlayer {
     }
 
     pub fn ext_u8(&self, off: usize) -> u8 {
-        self.xDB0[off - EXT]
+        self.stats_ext[off - EXT]
     }
 
     pub fn set_ext_u8(&mut self, off: usize, v: u8) {
-        self.xDB0[off - EXT] = v;
+        self.stats_ext[off - EXT] = v;
     }
 }
 
@@ -46,8 +46,8 @@ impl Game {
         use gekko_fp as fp;
         let abs = |v: f64| if v < fp::frsp(0.0) { fp::fneg(v) } else { v };
         let t = self.player_stale_moves(slot);
-        t.xCDC = crate::fpu::mem(fp::fadds(crate::fpu::reg(t.xCDC), abs(dx)));
-        t.xCE0 = crate::fpu::mem(fp::fadds(crate::fpu::reg(t.xCE0), abs(dy)));
+        t.sdi_distance_x = crate::fpu::mem(fp::fadds(crate::fpu::reg(t.sdi_distance_x), abs(dx)));
+        t.sdi_distance_y = crate::fpu::mem(fp::fadds(crate::fpu::reg(t.sdi_distance_y), abs(dy)));
     }
 
     /// Clears every slot for a new match, `Player_InitAllPlayers`.
@@ -153,25 +153,25 @@ impl Game {
         clear_attack_stats(&mut s.hits);
         // `x358.x358_hits`, a third `plAttackStats` the mirror keeps as bytes; its first
         // 0x194 bytes are the total and counts, then five counts and `x1A8`.
-        s.x358.fill(0);
-        s.x504.fill(0);
-        s.x568 = 0;
-        s.x570 = 0;
-        s.x56C = 0;
-        s.x574 = 0;
-        s.x578 = 0;
-        s.x57C = 0;
-        s.x580 = 0;
-        s.x584 = 0;
-        s.x588 = 0;
-        s.x58C = 0;
-        s.x590 = 0;
-        s.x594 = 0;
-        s.x598 = [0; 8];
-        s.x5BC_b0 = false;
-        s.x5BC_b1 = false;
-        s.x5BC_b2 = false;
-        s.x5BC_b3 = false;
+        s.landed.fill(0);
+        s.victims.fill(0);
+        s.front_hits = 0;
+        s.other_hits = 0;
+        s.back_hits = 0;
+        s.down_hits = 0;
+        s.turns = 0;
+        s.squats = 0;
+        s.walks = 0;
+        s.dashes = 0;
+        s.runs = 0;
+        s.jumps = 0;
+        s.air_jumps = 0;
+        s.wall_bounces = 0;
+        s.more_actions = [0; 8];
+        s.has_turned = false;
+        s.has_walked = false;
+        s.has_jumped = false;
+        s.has_air_jumped = false;
     }
 
     /// Clears a player's bonus records, `pl_8003891C`: the stale moves, the attack counts,
@@ -185,57 +185,57 @@ impl Game {
         self.reset_bob_omb_ring(slot);
         let p = self.player_mut(slot);
         let t = &mut p.stale_moves;
-        t.x674 = [0; 39];
-        t.x710 = [0; 39];
-        t.x7AC = [0; 39];
-        t.x848 = [0; 30];
-        t.x904 = [0; 215];
-        t.xC60 = 0.0;
-        t.xC64 = 0.0;
-        t.xC68 = 0;
-        t.xC6C = 0.0;
-        t.xC70 = 0.0;
-        t.xC74 = 0.0;
-        t.xC78 = [0.0; 6];
-        t.xC90 = 0;
-        t.xC94 = 0;
-        t.xC98 = 0.0;
-        t.xC9C = 0.0;
-        t.xCA0 = 0.0;
-        t.xCA4 = 0;
-        t.xCAC = 6;
-        t.xCB4 = 0;
-        t.xCB8 = 6;
-        t.xCBC = [0; 4];
-        let c = &mut t.xCC0;
-        c.x0 = 0;
-        c.x4 = 0;
+        t.items_picked_up = [0; 39];
+        t.fresh_items_picked_up = [0; 39];
+        t.container_runs = [0; 39];
+        t.pokemon_released = [0; 30];
+        t.bonuses = [0; 215];
+        t.damage_taken = 0.0;
+        t.peak_damage = 0.0;
+        t.damage_recovered = 0;
+        t.damage_dealt = 0.0;
+        t.pummel_damage = 0.0;
+        t.scope_damage = 0.0;
+        t.damage_to = [0.0; 6];
+        t.combo_step = 0;
+        t.star_falls = 0;
+        t.stage_damage = 0.0;
+        t.average_percent = 0.0;
+        t.victim_percent_sum = 0.0;
+        t.victim_percent_count = 0;
+        t.flowered_by = 6;
+        t.up_kos = 0;
+        t.last_ko_by = 6;
+        t.last_ko_attack = [0; 4];
+        let c = &mut t.last_ko_hit;
+        c.attacker_percent = 0;
+        c.victim_percent = 0;
         c.kb_applied1 = 0.0;
-        c.xC = 6;
-        c.x10_b0 = false;
-        c.x11_b3 = false;
-        c.x10_b1 = false;
-        c.x10_b2 = false;
-        c.x10_b3 = false;
-        c.x10_b4 = false;
-        c.x10_b5 = false;
-        c.x10_b6 = false;
-        c.x10_b7 = false;
-        c.x11_b0 = false;
-        c.x11_b1 = false;
-        c.x11_b2 = false;
-        c.x11_b4 = false;
-        t.xCD4 = 0;
-        t.xCD8 = 0;
-        t.xCE0 = 0.0;
-        t.xCDC = 0.0;
-        t.xCE4 = 0;
-        t.xCE8 = 0;
-        t.xCEC = 0;
-        t.xCF0 = 0;
+        c.item_thrower = 6;
+        c.spike = false;
+        c.spike_after_strong = false;
+        c.metal = false;
+        c.bunny_hood = false;
+        c.starman = false;
+        c.cloak = false;
+        c.giant = false;
+        c.tiny = false;
+        c.landed = false;
+        c.from_behind = false;
+        c.at_edge = false;
+        c.on_ledge = false;
+        c.forward_attack = false;
+        t.last_ko_instance = 0;
+        t.powershields = 0;
+        t.sdi_distance_y = 0.0;
+        t.sdi_distance_x = 0.0;
+        t.strong_hits_taken = 0;
+        t.ledge_catches = 0;
+        t.mash_frames = 0;
+        t.mashes = 0;
         p.set_ext_u32(0xCF4, 0);
         p.set_ext_f32(0xCF8, 0.0);
-        p.stale_moves.xCA8 = 0;
+        p.stale_moves.ray_gun_hits = 0;
         for off in (0xD04..=0xD54).step_by(4) {
             p.set_ext_u32(off, 0);
         }
@@ -275,23 +275,23 @@ impl Game {
             return;
         }
         let t = self.player_stale_moves(slot);
-        t.xC68 = t.xC68.wrapping_add(amount);
+        t.damage_recovered = t.damage_recovered.wrapping_add(amount);
     }
 
     #[doc(alias = "pl_80040DDC")]
     pub fn reset_frame_counters(&mut self, slot: i32) {
         let t = self.player_combos(slot);
-        t.x0 = 0;
-        t.x4 = 0.0;
-        t.x8 = 0;
-        t.xC = 0;
-        for e in &mut t.x10 {
-            e.x0 = 0.0;
-            e.x4 = 0;
-            e.x8 = 0;
-            e.xC = 0;
-            e.x10 = 0;
-            e.x12_b0 = false;
+        t.last_victim = 0;
+        t.last_damage = 0.0;
+        t.combo_hits = 0;
+        t.combo_count = 0;
+        for e in &mut t.by_attacker {
+            e.damage = 0.0;
+            e.hits = 0;
+            e.repeats = 0;
+            e.attack = 0;
+            e.air_hits = 0;
+            e.shield_jabbed = false;
         }
     }
 
@@ -299,12 +299,12 @@ impl Game {
     #[doc(alias("reset_x8c0"))]
     #[doc(alias = "pl_80041524")]
     pub fn reset_ko_ring(&mut self, slot: i32) {
-        let t = &mut self.player_stale_moves(slot).x8C0;
-        t.x0 = 0;
-        for e in &mut t.x4 {
-            e.x0 = 0;
-            e.x2 = 0;
-            e.x3_b0 = false;
+        let t = &mut self.player_stale_moves(slot).ko_ring;
+        t.next = 0;
+        for e in &mut t.entries {
+            e.instance = 0;
+            e.kos = 0;
+            e.self_ko = false;
         }
     }
 
@@ -312,12 +312,12 @@ impl Game {
     #[doc(alias("reset_x8d8"))]
     #[doc(alias = "pl_800418F4")]
     pub fn reset_bob_omb_ring(&mut self, slot: i32) {
-        let t = &mut self.player_stale_moves(slot).x8D8;
-        t.x0 = 0;
-        for e in &mut t.x4 {
-            e.x0 = 0;
-            e.x4_b0 = false;
-            e.x4_b1 = false;
+        let t = &mut self.player_stale_moves(slot).bombhei_ring;
+        t.next = 0;
+        for e in &mut t.entries {
+            e.spawn = 0;
+            e.hit = false;
+            e.used = false;
         }
     }
 
@@ -325,9 +325,9 @@ impl Game {
     /// among the five the player last threw (`x8D8`) is marked as having hit, `pl_80041B08`.
     #[doc(alias = "pl_80041B08")]
     pub fn count_bombhei_hit(&mut self, slot: i32, spawn: u16) {
-        for e in &mut self.player_stale_moves(slot).x8D8.x4 {
-            if u32::from(spawn) == e.x0 {
-                e.x4_b0 = true;
+        for e in &mut self.player_stale_moves(slot).bombhei_ring.entries {
+            if u32::from(spawn) == e.spawn {
+                e.hit = true;
             }
         }
     }
@@ -335,7 +335,7 @@ impl Game {
     /// Clears a player's bonus counts (`x904`), `fn_80038FB8`.
     #[doc(alias = "fn_80038FB8")]
     pub fn reset_bonus_counts(&mut self, slot: i32) {
-        self.player_stale_moves(slot).x904 = [0; 215];
+        self.player_stale_moves(slot).bonuses = [0; 215];
     }
 
     /// Clears the records that follow who KO'd whom when a slot is replaced, `pl_80038F10`.
@@ -352,8 +352,8 @@ impl Game {
                 o.set_ext_u32(0xD60, 0);
                 o.set_ext_u32(0xD64, 6);
             }
-            if slot == o.stale_moves.xCAC as i32 {
-                o.stale_moves.xCAC = 6;
+            if slot == o.stale_moves.flowered_by as i32 {
+                o.stale_moves.flowered_by = 6;
             }
             if slot == o.ext_u32(0xD6C) as i32 {
                 o.set_ext_u32(0xD6C, 6);
@@ -369,7 +369,7 @@ fn clear_attack_stats(s: &mut plAttackStats) {
     s.thrown_item_count = 0;
     s.aerials_count = 0;
     s.specials_count = 0;
-    s.x1A0_count = 0;
-    s.x1A4_count = 0;
-    s.x1A8 = 0;
+    s.strikes_count = 0;
+    s.reflectors_count = 0;
+    s.spikes_count = 0;
 }

@@ -379,6 +379,28 @@ EXTERNAL = {
     "CostumeTObjList": "CostumeTObjList",
 }
 
+# Structs written by hand (design call 3's second half, docs/refactor.md), by C name: their Rust
+# name and path. structgen generates neither them nor their mirrors (`#[derive(Mirror)]` makes
+# those from each field's address, and `game::mirror`'s layout check holds them to the decomp's
+# layout, which lists the same names); the structs it still generates hold them by name, and
+# `game::structs` re-exports them. Their field names live in their source, not in `names.py`.
+OWNED = {
+    "CollData": ("CollData", "crate::mp::coll::CollData"),
+    "_ftECB": ("Ecb", "crate::mp::coll::Ecb"),
+    "SurfaceData": ("Surface", "crate::mp::coll::Surface"),
+    "Camera": ("Camera", "crate::game::camera::types::Camera"),
+    "CameraTransformState": ("CameraTransformState", "crate::game::camera::types::CameraTransformState"),
+    "CameraQuake": ("CameraQuake", "crate::game::camera::types::CameraQuake"),
+    "Camera_x2D0": ("OrbitLimits", "crate::game::camera::types::OrbitLimits"),
+    "StageInfo": ("StageInfo", "crate::game::gr::types::StageInfo"),
+    "StageCameraInfo": ("StageCameraInfo", "crate::game::gr::types::StageCameraInfo"),
+    "StageBlastZone": ("StageBlastZone", "crate::game::gr::types::StageBlastZone"),
+    "StageInfo_unk8C": ("StageBits", "crate::game::gr::types::StageBits"),
+    "GroundParam": ("GroundParam", "crate::game::gr::types::GroundParam"),
+    "Ground": ("Ground", "crate::game::gr::types::Ground"),
+    "Ground_x10_flags": ("GroundFlags", "crate::game::gr::types::GroundFlags"),
+}
+
 # Pointee types that live in loaded game data: pointers to them become DataRef.
 DATA_TYPES = {
     "HSD_Joint",
@@ -406,6 +428,12 @@ TRACKED = {r for r in ROOTS if r.endswith("_ItemVars")}
 DEFAULT_POINTER = "RawPtr"
 
 RENAME_TYPES = {"controller_map": "ControllerMap", "gm_controller_map": "GmControllerMap"}
+# Step 3's type names (`names_step3.TYPE_NAMES`): the address-named structs of the save, the
+# modes and the HUD. A renamed type keeps its C name as an alias, and `rename_readers.py`
+# renames its uses as it does a field's.
+from names_step3 import TYPE_NAMES  # noqa: E402
+
+RENAME_TYPES.update(TYPE_NAMES)
 RENAME_FIELDS = {}
 
 # The port's names for the fields the decomp names by offset, by struct (C name to Rust name):

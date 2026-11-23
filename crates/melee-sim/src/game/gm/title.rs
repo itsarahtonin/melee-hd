@@ -622,7 +622,7 @@ impl Running<'_> {
         } else {
             0x34
         };
-        self.game.game_data.x1850.bgm = bgm;
+        self.game.game_data.rules.bgm = bgm;
     }
 
     /// `gmTitleMode_OnEnter`: the preload cache keeps the VS mode's class.

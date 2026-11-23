@@ -131,7 +131,7 @@ fn kos(me: &MatchEnd, slot: usize, killer: usize, victim: usize) -> i32 {
         let k = if victim < 4 {
             me.player_standings[killer].kills[victim]
         } else {
-            me.player_standings[killer].x18
+            me.player_standings[killer].kills_rest
         };
         return stat(i32::from(k));
     }
@@ -176,44 +176,51 @@ pub fn stat_value(me: &MatchEnd, us: bool, getter: u32, slot: usize) -> i32 {
     let f = |v: u32| stat(v as i32);
     match getter {
         // `fn_8017ADA8`: coins.
-        0x8017_ADA8 => stat(p.x1C),
-        0x8017_AE0C => f(p.x20),
+        0x8017_ADA8 => stat(p.coins_held),
+        0x8017_AE0C => f(p.kos),
         0x8017_AE70 => kos(me, 0, slot, 0),
         0x8017_AED8 => kos(me, 1, slot, 1),
         0x8017_AF40 => kos(me, 2, slot, 2),
         0x8017_AFA8 => kos(me, 3, slot, 3),
-        0x8017_B010 => stat(p.x24.wrapping_sub(i32::from(p.self_destructs))),
+        0x8017_B010 => stat(p.falls.wrapping_sub(i32::from(p.self_destructs))),
         0x8017_B07C => kos(me, 0, 0, slot),
         0x8017_B0E4 => kos(me, 1, 1, slot),
         0x8017_B14C => kos(me, 2, 2, slot),
         0x8017_B1B4 => kos(me, 3, 3, slot),
         0x8017_B21C => stat(i32::from(p.self_destructs)),
-        0x8017_B280 => f(p.x40),
-        0x8017_B2E4 => f(p.x44),
-        0x8017_B348 => f(p.x48),
-        0x8017_B3AC => f(p.x4C),
+        0x8017_B280 => f(p.damage_dealt),
+        0x8017_B2E4 => f(p.damage_taken),
+        0x8017_B348 => f(p.damage_recovered),
+        0x8017_B3AC => f(p.peak_damage),
         0x8017_B410 => {
             // The peak height: in feet (a 30.4788 cm one) in English, else meters.
             if us {
-                let v = gekko_fp::fdivs(gekko_fp::frsp(f64::from(p.x5C)), f64::from(30.4788_f32));
+                let v = gekko_fp::fdivs(
+                    gekko_fp::frsp(f64::from(p.peak_height)),
+                    f64::from(30.4788_f32),
+                );
                 f(crate::ppc::cvt_fp2unsigned(v))
             } else {
-                f(p.x5C / 100)
+                f(p.peak_height / 100)
             }
         }
-        0x8017_B4D0 => f(p.x6C),
-        0x8017_B534 => f(p.x70),
-        0x8017_B598 => stat(i32::from(p.x34)),
-        0x8017_B5FC => f(p.x74),
-        0x8017_B660 => f(p.x78),
-        0x8017_B6C4 => f(p.x7C),
-        0x8017_B728 => f(p.x84),
-        0x8017_B78C => f(p.x88),
-        0x8017_B7F0 => f(p.x8C),
-        0x8017_B854 => f(p.x80),
-        0x8017_B8B8 => f(p.x90),
+        0x8017_B4D0 => f(p.air_time),
+        0x8017_B534 => f(p.ground_time),
+        0x8017_B598 => stat(i32::from(p.hit_percent)),
+        0x8017_B5FC => f(p.ground_attacks),
+        0x8017_B660 => f(p.air_attacks),
+        0x8017_B6C4 => f(p.items_thrown),
+        0x8017_B728 => f(p.grabs),
+        0x8017_B78C => f(p.down_attacks),
+        0x8017_B7F0 => f(p.ledge_catches),
+        0x8017_B854 => f(p.specials),
+        0x8017_B8B8 => f(p.items_picked_up),
         0x8017_B91C | 0x8017_B9F4 => {
-            let raw = if getter == 0x8017_B91C { p.x94 } else { p.x98 };
+            let raw = if getter == 0x8017_B91C {
+                p.timed_stat_1
+            } else {
+                p.timed_stat_2
+            };
             let v = gekko_fp::frsp(f64::from(raw));
             let v = if us {
                 gekko_fp::frsp(v / 30.4788)

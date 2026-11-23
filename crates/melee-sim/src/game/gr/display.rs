@@ -52,7 +52,12 @@ impl Running<'_> {
         let f = self.game.fighter_id(g);
         let fp = &self.game.fighters[f.0];
         let ls = &fp.shadow;
-        let any = ls.x0_b0 || ls.x0_b1 || ls.x0_b2 || ls.x0_b3 || ls.x0_b4 || ls.x0_b5;
+        let any = ls.off_no_light
+            || ls.off_unset
+            || ls.off_over_limit
+            || ls.off_nothing_drawn
+            || ls.off_by_stage
+            || ls.off_by_debug;
         let casts = !fp.dead_flag && !fp.cloak && !fp.is_sub_fighter;
         let s = ls.shadow.expect("a fighter without a shadow");
         crate::hsd::shadow::set_active(&mut self.game.objs, s, !any && casts);
@@ -64,7 +69,7 @@ impl Running<'_> {
     pub fn shadow_limit(&mut self) {
         let mut f = self.first_fighter();
         while let Some(g) = f {
-            self.game.fighter_mut(g).shadow.x0_b2 = false;
+            self.game.fighter_mut(g).shadow.off_over_limit = false;
             f = self.game.world.gobj(g).next;
         }
         let mut count = 0;
@@ -72,11 +77,16 @@ impl Running<'_> {
         while let Some(g) = f {
             f = self.game.world.gobj(g).next;
             let ls = &mut self.game.fighter_mut(g).shadow;
-            let any = ls.x0_b0 || ls.x0_b1 || ls.x0_b2 || ls.x0_b3 || ls.x0_b4 || ls.x0_b5;
+            let any = ls.off_no_light
+                || ls.off_unset
+                || ls.off_over_limit
+                || ls.off_nothing_drawn
+                || ls.off_by_stage
+                || ls.off_by_debug;
             if !any {
                 count += 1;
                 if count > 5 {
-                    ls.x0_b2 = true;
+                    ls.off_over_limit = true;
                 }
             }
             self.shadow_update(g);
@@ -110,7 +120,7 @@ impl Running<'_> {
             let mut f = self.first_fighter();
             while let Some(g) = f {
                 let casts = self.game.camera.shadows() || self.stage_receives_shadow(g, j);
-                self.game.fighter_mut(g).shadow.x0_b4 = !casts;
+                self.game.fighter_mut(g).shadow.off_by_stage = !casts;
                 f = self.game.world.gobj(g).next;
             }
             self.shadow_limit();
@@ -150,7 +160,7 @@ impl Running<'_> {
     pub fn render_stage_object(&mut self, gobj: GObjId, pass: i32) {
         let gid = ground_of(self.game, gobj);
         let gp = &self.game.grounds[gid.0];
-        if gp.x11_flags.b012 != self.game.camera.layer() {
+        if gp.pass_flags.b012 != self.game.camera.layer() {
             return;
         }
         let rendering = self
@@ -159,7 +169,7 @@ impl Running<'_> {
             .rendering_camera
             .expect("the drawing camera");
         let rendering_obj = self.game.world.gobj(rendering).obj;
-        let (x18, follows) = (gp.x18, gp.x10_flags.b3);
+        let (x18, follows) = (gp.camera, gp.flags.follows_camera);
         match x18 {
             Some(cam) => {
                 if self.game.world.gobj(cam).obj != rendering_obj {
@@ -190,7 +200,7 @@ impl Running<'_> {
             return;
         }
         let gp = &self.game.grounds[gid.0];
-        let (keeps_fog, shadowed) = (gp.x10_flags.b2, gp.x10_flags.b5);
+        let (keeps_fog, shadowed) = (gp.flags.keeps_fog, gp.flags.shadowed);
         if !keeps_fog {
             display::fog_set(&mut self.game.objs, None);
         }
@@ -202,15 +212,15 @@ impl Running<'_> {
             let mut f = self.first_fighter();
             while let Some(g) = f {
                 f = self.game.world.gobj(g).next;
-                self.game.fighter_mut(g).shadow.x0_b4 = false;
+                self.game.fighter_mut(g).shadow.off_by_stage = false;
                 self.shadow_update(g);
             }
             self.render_jobj(gobj, pass);
         }
         if !keeps_fog
             && !self.game.camera.draw_collisions()
-            && self.game.stage_info.unk8C.b2
-            && let Some(fg) = self.game.stage_info.x12C
+            && self.game.stage_info.bits.fog_enabled
+            && let Some(fg) = self.game.stage_info.fog
             && let Some(Obj::Fog(f)) = self.game.world.gobj(fg).obj
         {
             display::fog_set(&mut self.game.objs, Some(f));

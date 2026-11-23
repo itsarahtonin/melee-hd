@@ -189,7 +189,7 @@ pub fn draw(r: &mut Running, ball: GObjId) -> i32 {
 
 /// Which Pokémon comes out (`It_PKind_*` less `It_PKind_Start`), as `it_8027AB64` picks it.
 fn choose(r: &mut Running, ball: GObjId) -> i32 {
-    let forced = r.game.vs.start.x28;
+    let forced = r.game.vs.start.forced_pokemon;
     if forced != 0 {
         if forced == 1 {
             return event_list(r, ball);
@@ -258,15 +258,15 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
         vel: Vec3::new(0.0, up, 0.0),
         prev_pos,
         pos: center,
-        x3C_damage: 0,
+        damage: 0,
         facing_dir: facing,
         kind: kind.wrapping_add(ItKind::FIRST_POKEMON.id()),
-        x0_parent_gobj: owner,
-        x4_parent_gobj2: Some(ball),
-        x40: 0,
+        owner,
+        maker: Some(ball),
+        ignore_id: 0,
         ..Default::default()
     };
-    spawn.x44_flag[0] |= 0x80;
+    spawn.flags[0] |= 0x80;
     if spawn.kind == ItKind::Celebi {
         r.record_rare_pokemon(RECORD_CEREBI);
     }
@@ -297,8 +297,8 @@ pub fn count_for_owner(r: &mut Running, gobj: GObjId) {
         return;
     }
     let slot = r.game.fighter(owner.expect("an owner")).player_idx as usize;
-    let n =
-        &mut r.game.players[slot].stale_moves.x848[(kind - ItKind::FIRST_POKEMON.id()) as usize];
+    let n = &mut r.game.players[slot].stale_moves.pokemon_released
+        [(kind - ItKind::FIRST_POKEMON.id()) as usize];
     *n = n.wrapping_add(1);
 }
 
@@ -324,8 +324,8 @@ pub fn count_attack(r: &mut Running, gobj: GObjId) {
         (0x08, &mut a.thrown_item_count),
         (0x04, &mut a.aerials_count),
         (0x01, &mut a.specials_count),
-        (0x02, &mut a.x1A0_count),
-        (0x10, &mut a.x1A4_count),
+        (0x02, &mut a.strikes_count),
+        (0x10, &mut a.reflectors_count),
     ] {
         if ev[2] & mask != 0 {
             *n = n.wrapping_add(1);

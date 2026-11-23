@@ -413,7 +413,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.giant = true;
         fp.mushroom_frames = frames;
-        let mut percent = reg(fp.dmg.x1830_percent);
+        let mut percent = reg(fp.dmg.percent);
         if percent > from {
             percent = fp::fsubs(percent, from);
             if percent >= max {
@@ -517,7 +517,7 @@ impl Running<'_> {
         let Some(victim) = fp.victim_gobj else {
             return;
         };
-        if fp.state_flags.x221B_b5 {
+        if fp.state_flags.holds_grab {
             self.enter_capture_cut(victim);
         } else {
             self.enter_capture_cut(gobj);

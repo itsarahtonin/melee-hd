@@ -96,12 +96,12 @@ pub fn create(r: &mut Running, map_id: i32) -> Option<GObjId> {
 /// 80 times its size; then the camera limits and blast zones measured.
 #[doc(alias = "grTest_80206E30")]
 pub fn on_init(r: &mut Running) {
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0);
     let g = create(r, 2).expect("grtest.c: map 2");
     let gp = ground_of(r.game, g);
-    r.game.grounds[gp.0].x8_callback = Some(CodeRef(X8_CALLBACK));
+    r.game.grounds[gp.0].unread_8 = Some(CodeRef(X8_CALLBACK));
     let g = create(r, 1).expect("grtest.c: map 1");
     let j = jobj_of(r.game, g).expect("map 1's model");
     // `HSD_JObjSetScaleX`, `Y` and `Z`, each marking the matrix dirty.

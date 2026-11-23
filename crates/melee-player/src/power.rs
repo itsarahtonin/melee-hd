@@ -320,7 +320,7 @@ pub fn step(s: &mut Session, console: &mut dyn session::Console) -> Frame {
 /// files only the real console reads, or takes a Camera Mode snapshot, whose frame is the real
 /// tick's. `disc` names the files the copy has read already ([`Held`]).
 pub fn step_predicted(s: &mut Session, pads: PadData, disc: Option<&Disc>) -> Frame {
-    let busy = s.game.scene.unk_C != 0 || s.game.camera_mode.snap.image != 0;
+    let busy = s.game.scene.ending != 0 || s.game.camera_mode.snap.image != 0;
     if busy {
         return Frame {
             events: Vec::new(),

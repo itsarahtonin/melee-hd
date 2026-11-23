@@ -74,10 +74,10 @@ impl Running<'_> {
         p.color = 0;
         p.ckind = CharacterKind::CrazyHand as i8;
         p.team = 4;
-        p.xC_b7 = true;
+        p.stamina = true;
         p.hp = self.game.one_player.boss.hp as u16;
-        p.xD_b2 = true;
-        p.xD_b0 = true;
+        p.no_offscreen_damage = true;
+        p.hp_explodes = true;
         p.spawn_dir = 1;
         self.vs_add_player(SLOT_CRAZY, &p);
     }

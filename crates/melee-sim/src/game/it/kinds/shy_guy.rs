@@ -258,7 +258,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::reset(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.skid = 0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     let pos = ip.pos;
     let food = super::foods::spawn(r, None, pos);
     vars(r.game, gobj).food.set(food);
@@ -482,7 +482,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         super::foods::fell(r, food);
         vars(r.game, gobj).food.set(None);
     }
-    item_mut(r.game, gobj).state_flags.b3 = true;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
     // `**attr`: the attributes' first word is a pointer to the health.
     let health = zako::health(r, gobj);
     let limit = fp::fctiwz(fp::fmuls(reg(0.8), fp::frsp(f64::from(health))));
@@ -607,7 +607,7 @@ pub fn blast_zones(r: &mut Running, gobj: GObjId) {
             || y < fp::fsubs(reg(stage::blast_bottom(r.game)), 20.0)
     };
     if leave {
-        item_mut(r.game, gobj).state_flags.b3 = true;
+        item_mut(r.game, gobj).state_flags.checks_blast_zones = true;
         if let Some(food) = vars(r.game, gobj).food.get() {
             super::foods::gone(r, food);
             vars(r.game, gobj).food.set(None);

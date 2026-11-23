@@ -30,7 +30,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         filter: FloorFilter,
     ) -> Option<Hit> {
         let (ax, ay, bx, by) = (mem(a.0), mem(a.1), mem(b.0), mem(b.1));
-        let remap = cd.x38 != self.g.generation;
+        let remap = cd.map_generation != self.g.generation;
         let (skip, jskip, jonly) = (cd.floor_skip, cd.joint_id_skip, cd.joint_id_only);
         let Coll { g, hooks, .. } = self;
         let mut decide;
@@ -620,7 +620,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         );
         let (ax, ay, bx, by) = (mem(prev_top.0), mem(prev_top.1), mem(top.0), mem(top.1));
         let (skip, only) = (cd.joint_id_skip, cd.joint_id_only);
-        let hit = if cd.x38 != self.g.generation {
+        let hit = if cd.map_generation != self.g.generation {
             self.g.check_ceiling_remap(ax, ay, bx, by, skip, only)
         } else {
             self.g.check_ceiling(ax, ay, bx, by, skip, only)
@@ -722,7 +722,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             let mut x_after_right = 0.0;
             let old_squeeze = squeeze;
             let mut x_after_left = 0.0;
-            let prev_b6 = cd.x34_flags.b6;
+            let prev_b6 = cd.ecb_flags.b6;
             squeeze = 0;
             for _ in 0..2 {
                 if self.check_left_walls_air(cd) {
@@ -764,7 +764,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                     let ecb_unlocked = reg(cd.ecb.bottom.y) > 0.0;
                     if self.snap_to_floor(cd, ecb_unlocked && squeeze & 1 == 0) {
                         self.floor_walls(cd, ecb_unlocked && squeeze & 1 == 0);
-                        cd.x34_flags.b5 = Some(true);
+                        cd.ecb_flags.b5 = Some(true);
                         touched_floor = true;
                     }
                 }
@@ -780,7 +780,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                 cd.squeeze_vertical(!touched_floor, y_after_ceiling, y_after_floor);
             }
             squeeze_all |= squeeze;
-            if !(prev_b6 != cd.x34_flags.b6 || squeeze != old_squeeze) {
+            if !(prev_b6 != cd.ecb_flags.b6 || squeeze != old_squeeze) {
                 break;
             }
         }
@@ -918,16 +918,16 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             ..CollData::default()
         };
         self.init(&mut cd);
-        cd.x34_flags.b1234 = 0;
+        cd.ecb_flags.b1234 = 0;
         cd.set_ecb_source_box(None, 10.0, 10.0, 10.0, 10.0);
         cd.last_pos.x = pos.x;
         cd.last_pos.y = mem(fp::fadds(-3.0, reg(pos.y)));
         cd.last_pos.z = pos.z;
         cd.cur_pos = pos;
-        cd.x130_flags |= super::CLEAR_ECB;
+        cd.ecb_lock |= super::CLEAR_ECB;
         self.prev(&mut cd);
         self.load_ecb(&mut cd, 6);
         self.run(&mut cd, Pass::Air, 0, true);
-        cd.x34_flags.b6
+        cd.ecb_flags.b6
     }
 }

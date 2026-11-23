@@ -43,48 +43,53 @@ impl super::super::state::Game {
         let s = &self.vs.state;
         let mut st = [0u8; 0x38 + 6 * 0xE];
         st[..0x10].copy_from_slice(&[
-            s.unk_0,
+            s.phase,
             s.pauser as u8,
             s.pause_timer,
-            s.unk_3,
+            s.photo_mode,
             s.unpause_timer,
             s.hud_enabled,
             s.terminate_match,
             s.is_singleplayer,
             s.match_result,
-            s.unk_9,
-            s.unk_A,
-            s.unk_B,
-            s.unk_C,
-            s.unk_D,
+            s.cleared,
+            s.entry_delay,
+            s.end_kind,
+            s.joiners,
+            s.last_ko,
             s.match_over,
-            s.unk_F,
+            s.unused_f,
         ]);
-        st[0x10..0x14].copy_from_slice(&s.unk_10.to_be_bytes());
-        st[0x14..0x18].copy_from_slice(&s.unk_14.to_be_bytes());
-        st[0x18] = s.unk_18;
+        st[0x10..0x14].copy_from_slice(&s.end_sfx_1.to_be_bytes());
+        st[0x14..0x18].copy_from_slice(&s.end_sfx_2.to_be_bytes());
+        st[0x18] = s.end_sfx_2_frame;
         // 0x19 to 0x1B and 0x31 to 0x33 are padding nothing writes: zero, as the .bss starts.
-        st[0x1C..0x20].copy_from_slice(&s.unk_1C.0.to_be_bytes());
-        st[0x20..0x24].copy_from_slice(&s.unk_20.0.to_be_bytes());
+        st[0x1C..0x20].copy_from_slice(&s.countdown_sfx.0.to_be_bytes());
+        st[0x20..0x24].copy_from_slice(&s.entry_voices.0.to_be_bytes());
         st[0x24..0x28].copy_from_slice(&s.frame_count.to_be_bytes());
         st[0x28..0x2C].copy_from_slice(&s.timer_seconds.to_be_bytes());
-        st[0x2C..0x2E].copy_from_slice(&s.unk_2C.to_be_bytes());
-        st[0x2E..0x30].copy_from_slice(&s.unk_2E.to_be_bytes());
-        st[0x30] = s.unk_30;
-        st[0x34..0x38].copy_from_slice(&s.unk_34.to_bits().to_be_bytes());
+        st[0x2C..0x2E].copy_from_slice(&s.timer_frames.to_be_bytes());
+        st[0x2E..0x30].copy_from_slice(&s.score.to_be_bytes());
+        st[0x30] = s.end_frames;
+        st[0x34..0x38].copy_from_slice(&s.item_weight.to_bits().to_be_bytes());
         for (k, f) in s.fighters.iter().enumerate() {
             let o = 0x38 + k * 0xE;
             st[o..o + 6].copy_from_slice(&[
-                f.x0,
-                f.x1,
+                f.ckind,
+                f.entry_timer,
                 f.slot_type,
                 f.spawn_point as u8,
-                f.x4[0],
-                f.x5,
+                f.flags[0],
+                f.unused_5,
             ]);
-            st[o + 6..o + 8].copy_from_slice(&f.x6.to_be_bytes());
-            st[o + 8..o + 12].copy_from_slice(&[f.x8, f.x9, f.respawn_timer, f.xB]);
-            st[o + 12..o + 14].copy_from_slice(&f.xC.to_be_bytes());
+            st[o + 6..o + 8].copy_from_slice(&f.respawn_damage.to_be_bytes());
+            st[o + 8..o + 12].copy_from_slice(&[
+                f.platform_timer,
+                f.unread_9,
+                f.respawn_timer,
+                f.respawn_sub,
+            ]);
+            st[o + 12..o + 14].copy_from_slice(&f.respawn_flags.to_be_bytes());
         }
         b[0x38..].copy_from_slice(&st[..LEFT_LIST_READ - 0x38]);
         b.map(|v| v as i8)
@@ -130,7 +135,7 @@ impl Running<'_> {
     pub fn one_player_trophies_end(&mut self) {
         self.game.bgflash.fade_to_black(0x30);
         let snagged = crate::game::gr::ground::flags(self.game, 0x100) != 0;
-        self.game.vs.state.unk_10 = if snagged { 0x7C85E + 1 } else { 0x9C48 + 1 };
+        self.game.vs.state.end_sfx_1 = if snagged { 0x7C85E + 1 } else { 0x9C48 + 1 };
     }
 
     /// A 1P run's `u8` getter (`Unk1PData::x48` to `x60`) for a round, level and index:
@@ -228,59 +233,59 @@ impl Running<'_> {
         let level = run.player.cpu_level;
         let count = round as u8;
         let r = &mut start.rules;
-        r.x30 = 1.0;
-        r.x4_4 = true;
+        r.damage_ratio = 1.0;
+        r.clear_scores = true;
         match color_kind {
-            0 => r.xA = 0,
-            1 => r.xA = 3,
-            2 => r.xA = 2,
+            0 => r.stage_layout = 0,
+            1 => r.stage_layout = 3,
+            2 => r.stage_layout = 2,
             _ => {}
         }
-        r.x1_1 = true;
-        r.x4_2 = true;
-        r.x4_3 = true;
-        r.x2_5 = false;
-        r.x0_3 = run.stage[3];
+        r.counts_coins = true;
+        r.single_player = true;
+        r.game_over_scene = true;
+        r.damage_display_kos = false;
+        r.damage_display = run.stage[3];
         if time != 0 {
             r.time_limit = time as u32;
             r.timer_enabled = true;
         } else {
             r.timer_enabled = false;
         }
-        r.x18 = run.score as u32;
+        r.score = run.score as u32;
         r.stkind = stkind as u16;
         r.item_freq = Self::one_player_getter(run.getters[0], count, level, 0) as i8;
-        r.x20 = u64::MAX;
+        r.item_switch = u64::MAX;
         let enemies = chars.iter().filter(|&&c| c != NONE).count();
         if enemies == 0 {
-            r.x5_1 = true;
+            r.goes_on = true;
         }
         let x8 = run.stage[0];
         if x8 & 1 != 0 {
-            r.x2_7 = true;
+            r.damage_display_fades = true;
         }
         if x8 & 0x20 != 0 {
-            r.x4_5 = true;
+            r.allows_continue = true;
         }
         if x8 & 0x80 != 0 {
             run.counters[0] = 5;
             match run.stage[1] {
                 1 => {
                     r.on_pause_override = Some(CodeRef(FIXED_CAMERA));
-                    r.x9 = 1;
-                    r.x3_1 = false;
-                    start.players[0].xC_b1 = false;
+                    r.run_kind = 1;
+                    r.pause_shows_stick = false;
+                    start.players[0].enters = false;
                 }
                 2 => {
-                    r.x9 = 3;
+                    r.run_kind = 3;
                     r.on_match_start = Some(CodeRef(BONUS_START));
                 }
                 3 => {
-                    r.x9 = 2;
-                    r.x7 = 9;
-                    r.x4_4 = false;
+                    r.run_kind = 2;
+                    r.end_kind = 9;
+                    r.clear_scores = false;
                     r.on_match_end = Some(CodeRef(BONUS_END));
-                    r.xD = 0x30;
+                    r.end_wait = 0x30;
                 }
                 _ => {}
             }
@@ -326,9 +331,9 @@ impl Running<'_> {
             p.cpu_level = a.cpu_level;
             p.attack_ratio = a.attack_ratio;
             p.defense_ratio = a.defense_ratio;
-            p.xD_b1 = true;
+            p.shows_hearts = true;
             if p.ckind == CharacterKind::GKoopa {
-                p.xC_b1 = false;
+                p.enters = false;
             }
             idx += 1;
         }
@@ -357,7 +362,7 @@ impl Running<'_> {
             let first = chars[0];
             if first != CharacterKind::Kirby {
                 if (first as u8).wrapping_sub(0x1B) <= 1 {
-                    start.rules.x0_3 = 6;
+                    start.rules.damage_display = 6;
                     horde = 5;
                     colors[0] = 0;
                     special_stage = 1;
@@ -394,7 +399,7 @@ impl Running<'_> {
             }
             if special_mode == 1 {
                 self.game.gm.opponents.set_flag_ae0();
-                start.players[0].xC_b5 = true;
+                start.players[0].attrs_scaled = true;
             }
         } else if x8 & 8 != 0 {
             super::opponents::point_rules(&mut start.rules);
@@ -434,23 +439,23 @@ impl Running<'_> {
                 p.color = colors[i];
                 if x8 & 2 != 0 {
                     p.model_scale = 2.0;
-                    p.xB = 2;
+                    p.sfx_size = 2;
                 } else {
                     p.model_scale = 1.0;
-                    p.xB = 0;
+                    p.sfx_size = 0;
                 }
                 if x8 & 4 != 0 {
                     p.vs_metal = true;
                     p.cpu_kind = 0x1B;
                 }
                 if p.ckind == CharacterKind::GKoopa {
-                    p.xC_b1 = false;
+                    p.enters = false;
                 }
                 if p.ckind == CharacterKind::MasterHand || p.ckind == CharacterKind::CrazyHand {
-                    p.xC_b7 = true;
+                    p.stamina = true;
                     p.hp = 0x12C;
-                    p.xD_b2 = true;
-                    p.xD_b0 = true;
+                    p.no_offscreen_damage = true;
+                    p.hp_explodes = true;
                     p.spawn_dir = -1;
                     if p.ckind == CharacterKind::CrazyHand {
                         p.slot_type = 3;
@@ -479,12 +484,12 @@ impl Running<'_> {
         }
         if boss_count != 0 {
             let r = &mut start.rules;
-            r.x1_2 = true;
-            r.x1_3 = true;
-            r.x1_4 = true;
-            r.x0_3 = 3;
+            r.long_countdown = true;
+            r.alt_go = true;
+            r.fixed_layout = true;
+            r.damage_display = 3;
             r.disable_pausing = true;
-            r.x7 = 0;
+            r.end_kind = 0;
             r.on_match_start = Some(CodeRef(BOSS_START));
             run.counters[0] = 6;
         }
@@ -532,11 +537,11 @@ impl Running<'_> {
         let r = &mut start.rules;
         r.timer_enabled = true;
         r.timer_counts_up = true;
-        r.x1_0 = true;
+        r.exact_start_frame = true;
         r.time_limit = (a.frames as i32 / 60) as u32;
-        r.x14 = ((a.frames as i32 % 60) + 1) as u8;
-        r.x20 &= 0xFFFF_FFFF_FFFB_FCFF;
-        start.players[0].xC_b1 = id == 0;
+        r.start_frame = ((a.frames as i32 % 60) + 1) as u8;
+        r.item_switch &= 0xFFFF_FFFF_FFFB_FCFF;
+        start.players[0].enters = id == 0;
         if id == 0x60 {
             let level = a.base.player.cpu_level;
             let defense = Self::one_player_ratio(Some(CodeRef(0x8018_A1D8)), 0xC, level);
@@ -561,8 +566,8 @@ impl Running<'_> {
                 attack,
                 defense,
             );
-            start.rules.x4_5 = true;
-            start.rules.x0_3 = 6;
+            start.rules.allows_continue = true;
+            start.rules.damage_display = 6;
             super::opponents::point_rules(&mut start.rules);
         }
         start.players[0].damage = self.game.one_player.allstar.damage;
@@ -621,20 +626,20 @@ impl Running<'_> {
         let e = &self.game.one_player.match_exit;
         let (end, x0) = (e.match_end.clone(), e.run_value);
         let p = &end.player_standings[0];
-        run.coins = add(u32::from(run.coins), u32::from(p.xE)) as u16;
-        self.results_add_coins(i32::from(p.xE));
-        run.damage_taken = add(run.damage_taken as u32, p.x44) as i32;
+        run.coins = add(u32::from(run.coins), u32::from(p.coins)) as u16;
+        self.results_add_coins(i32::from(p.coins));
+        run.damage_taken = add(run.damage_taken as u32, p.damage_taken) as i32;
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
+        s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
         if run.stage[0] & 0x80 == 0 {
             run.frames = add(run.frames, end.frame_count);
         }
         run.counters[6] = u8::from(p.ftkind == FighterKind::Seak);
         let g = &*self.game;
-        if g.vs.start.x9 == 2 && super::super::gr::ground::flags(g, 0x20) != 0 {
+        if g.vs.start.run_kind == 2 && super::super::gr::ground::flags(g, 0x20) != 0 {
             run.counters[3] = 1;
         }
-        if g.vs_target_test() && g.stage_info.x6D4 == 0 {
+        if g.vs_target_test() && g.stage_info.targets_left == 0 {
             run.counters[2] = 1;
         }
         let o = end.outcome;
@@ -646,11 +651,11 @@ impl Running<'_> {
             // the menu.
             let sel = super::match_exit::selkind(run.player.ckind as u8);
             let mode = self.game.game_mode;
-            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+            let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
             let best = match GameMode::of(mode) {
-                GameMode::Classic => Some(&mut rec.x88),
-                GameMode::Adventure => Some(&mut rec.x8C),
-                GameMode::AllStar => Some(&mut rec.x90),
+                GameMode::Classic => Some(&mut rec.classic_score),
+                GameMode::Adventure => Some(&mut rec.adventure_score),
+                GameMode::AllStar => Some(&mut rec.all_star_score),
                 _ => None,
             };
             if let Some(best) = best
@@ -713,7 +718,7 @@ impl Running<'_> {
         if on && id == 0x60 {
             // `gm_8017CBAC` with All-Star's run and stocks (`gmMainLib_8015CDE0`).
             let run = self.game.one_player.allstar.base;
-            let stocks = self.game.game_data.vs.unk_528.stocks;
+            let stocks = self.game.game_data.vs.all_star.stocks;
             self.one_player_clear(&run, stocks, GameMode::AllStarEnding);
         }
     }
@@ -755,13 +760,13 @@ impl Running<'_> {
         let r = &mut start.rules;
         r.timer_enabled = false;
         r.timer_counts_up = true;
-        r.x1_0 = true;
+        r.exact_start_frame = true;
         r.time_limit = (a.frames as i32 / 60) as u32;
-        r.x14 = (a.frames as i32 % 60) as u8;
-        r.xD = 120;
+        r.start_frame = (a.frames as i32 % 60) as u8;
+        r.end_wait = 120;
         start.players[0].damage = a.damage;
-        start.players[0].xD_b2 = true;
-        start.rules.x7 = 9;
+        start.players[0].no_offscreen_damage = true;
+        start.rules.end_kind = 9;
         for i in 0..count {
             let slot = loop {
                 let s = self.game.objs.rng.below(26) as usize;
@@ -778,17 +783,17 @@ impl Running<'_> {
         }
         a.rest_counts[1] = next_count as u8;
         a.rest_counts[0] = (round + 1) as u8;
-        start.players[0].xC_b1 = false;
-        start.rules.x1_2 = true;
-        start.rules.x1_3 = true;
-        start.rules.x4_4 = false;
+        start.players[0].enters = false;
+        start.rules.long_countdown = true;
+        start.rules.alt_go = true;
+        start.rules.clear_scores = false;
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
         super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
         // `gm_8016A92C`: the list emptied and given to the rules.
         let list = &mut self.game.gm.left;
         list.arr2[0] = -2;
-        start.rules.x58 = super::super::handles::RawPtr(LEFT_LIST);
+        start.rules.challenger_record = super::super::handles::RawPtr(LEFT_LIST);
         // `gm_801B5ACC_inline1`: every character from the next round on (`gm_8016A998`).
         for entry in &table[next..] {
             let list = &mut self.game.gm.left;
@@ -825,7 +830,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B5EE4")]
     pub fn allstar_exit_game_over(&mut self) {
         let mut run = self.game.one_player.allstar.base;
-        let stocks = self.game.game_data.vs.unk_528.stocks;
+        let stocks = self.game.game_data.vs.all_star.stocks;
         self.one_player_game_over_exit(&mut run, stocks);
         self.game.one_player.allstar.base = run;
         if self.game.one_player.game_over.result != 0 {
@@ -838,7 +843,7 @@ impl Running<'_> {
     #[doc(alias = "gmClassic_801B3D84")]
     pub fn classic_exit_game_over(&mut self) {
         let mut run = self.game.one_player.classic.base;
-        let stocks = self.game.game_data.vs.unk_51C.stocks;
+        let stocks = self.game.game_data.vs.classic.stocks;
         self.one_player_game_over_exit(&mut run, stocks);
         self.game.one_player.classic.base = run;
     }
@@ -848,7 +853,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B4294")]
     pub fn adventure_exit_game_over(&mut self) {
         let mut run = self.game.one_player.adventure.base;
-        let stocks = self.game.game_data.vs.unk_522.stocks;
+        let stocks = self.game.game_data.vs.adventure.stocks;
         self.one_player_game_over_exit(&mut run, stocks);
         self.game.one_player.adventure.base = run;
     }
@@ -873,13 +878,13 @@ impl Running<'_> {
             let challenger = self.challenger_by_characters();
             let p = run.player;
             let sel = super::match_exit::selkind(p.ckind as u8);
-            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+            let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
             // `fn_80162BFC`, `fn_80162DF8`, `fn_80162FF4`: the mode's high score, a word
             // compared unsigned.
             let best = match GameMode::of(self.game.game_mode) {
-                GameMode::Classic => Some(&mut rec.x88),
-                GameMode::Adventure => Some(&mut rec.x8C),
-                GameMode::AllStar => Some(&mut rec.x90),
+                GameMode::Classic => Some(&mut rec.classic_score),
+                GameMode::Adventure => Some(&mut rec.adventure_score),
+                GameMode::AllStar => Some(&mut rec.all_star_score),
                 _ => None,
             };
             if let Some(best) = best
@@ -943,16 +948,16 @@ impl Running<'_> {
             GameMode::AdventureEnding => {
                 let s = &mut self.game.game_data.thing.save_data;
                 // `gmMainLib_8015D25C`: cleared, and this run's clear in `x14`'s mask.
-                s.x1F2C[usize::from(sel)].x7C.b5 = true;
-                s.unk_8.x14 |= 1 << sel;
-                let rec = &mut s.x1F2C[usize::from(sel)].x7C;
+                s.fighters[usize::from(sel)].records.adventure_cleared = true;
+                s.challenger_records.adventure_cleared |= 1 << sel;
+                let rec = &mut s.fighters[usize::from(sel)].records;
                 // `fn_80162DF8`: the high score, compared unsigned.
-                if (rec.x8C as u32) < run.score as u32 {
-                    rec.x8C = run.score;
+                if (rec.adventure_score as u32) < run.score as u32 {
+                    rec.adventure_score = run.score;
                 }
                 // `gmMainLib_8015D2BC`: the highest level cleared.
-                if rec.x81 < p.cpu_level {
-                    rec.x81 = p.cpu_level;
+                if rec.adventure_level < p.cpu_level {
+                    rec.adventure_level = p.cpu_level;
                 }
                 // `gmMainLib_8015D2D4`, `gmMainLib_8015D2F0`: Very Hard's fewest stocks.
                 let best = rec.b10_to_12;
@@ -963,16 +968,16 @@ impl Running<'_> {
             GameMode::ClassicEnding => {
                 let s = &mut self.game.game_data.thing.save_data;
                 // `gmMainLib_8015D134`: cleared, and this run's clear in `x10`'s mask.
-                s.x1F2C[usize::from(sel)].x7C.b4 = true;
-                s.unk_8.x10 |= 1 << sel;
-                let rec = &mut s.x1F2C[usize::from(sel)].x7C;
+                s.fighters[usize::from(sel)].records.classic_cleared = true;
+                s.challenger_records.classic_cleared |= 1 << sel;
+                let rec = &mut s.fighters[usize::from(sel)].records;
                 // `fn_80162BFC`: the high score, compared unsigned.
-                if (rec.x88 as u32) < run.score as u32 {
-                    rec.x88 = run.score;
+                if (rec.classic_score as u32) < run.score as u32 {
+                    rec.classic_score = run.score;
                 }
                 // `gmMainLib_8015D194`: the highest level cleared.
-                if rec.x80 < p.cpu_level {
-                    rec.x80 = p.cpu_level;
+                if rec.classic_level < p.cpu_level {
+                    rec.classic_level = p.cpu_level;
                 }
                 // `gmMainLib_8015D1AC`, `gmMainLib_8015D1C8`: Very Hard's fewest stocks.
                 let best = rec.b789;
@@ -1000,18 +1005,18 @@ impl Running<'_> {
     fn allstar_clear_records(&mut self, run: &OnePlayerRun, sel: u8, stocks: u8) {
         let p = run.player;
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1F2C[usize::from(sel)].x7C.b6 = true;
-        s.unk_8.x18 |= 1 << sel;
-        let rec = &mut s.x1F2C[usize::from(sel)].x7C;
-        if (rec.x90 as u32) < run.score as u32 {
-            rec.x90 = run.score;
+        s.fighters[usize::from(sel)].records.all_star_cleared = true;
+        s.challenger_records.all_star_cleared |= 1 << sel;
+        let rec = &mut s.fighters[usize::from(sel)].records;
+        if (rec.all_star_score as u32) < run.score as u32 {
+            rec.all_star_score = run.score;
         }
         if !self.stage_unlocked(0x1F) {
             self.unlock_stage(0x1F);
         }
-        let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
-        if rec.x82 < p.cpu_level {
-            rec.x82 = p.cpu_level;
+        let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
+        if rec.all_star_level < p.cpu_level {
+            rec.all_star_level = p.cpu_level;
         }
         let best = rec.b13_to_15;
         if p.cpu_level == 4 && (best == 0 || stocks < best) {
@@ -1040,7 +1045,7 @@ impl Running<'_> {
     fn one_player_enter_game_over(&mut self, run: &OnePlayerRun, kind: u8) {
         const COSTS: [[u16; 5]; 3] = [[1, 2, 3, 5, 10], [1, 2, 3, 5, 10], [10; 5]];
         // `gm_801623D8`: the save's coins.
-        let coins = self.game.game_data.thing.save_data.x1A48 as u16;
+        let coins = self.game.game_data.thing.save_data.coins as u16;
         let d = &mut self.game.one_player.game_over;
         d.score = run.score as u32;
         d.from_mode = u32::from(kind);

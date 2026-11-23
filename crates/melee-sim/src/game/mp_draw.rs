@@ -74,7 +74,7 @@ fn small_cross(p: Vec3, z: f32) -> Vec<Vec3> {
 }
 
 /// An ECB's four points around `at`, in depth `z`.
-fn diamond(at: Vec3, e: &crate::game::structs::_ftECB, z: f32) -> Vec<Vec3> {
+fn diamond(at: Vec3, e: &crate::mp::coll::Ecb, z: f32) -> Vec<Vec3> {
     [&e.top, &e.right, &e.bottom, &e.left]
         .iter()
         .map(|p| Vec3::new(adds(at.x, p.x), adds(at.y, p.y), z))
@@ -142,21 +142,26 @@ impl Running<'_> {
         prims(self, Prim::Lines, 4, small_cross(cd.prev_pos, z));
         let z = subs(cd.last_pos.z, 1.0);
         push(self, MapDraw::Color([0x20, 0x20, 0xFF, 0xFF]));
-        prims(self, Prim::Quads, 4, diamond(cd.last_pos, &cd.xE4_ecb, z));
+        prims(
+            self,
+            Prim::Quads,
+            4,
+            diamond(cd.last_pos, &cd.loaded_from_ecb, z),
+        );
         push(self, MapDraw::Color([0x10, 0x10, 0x80, 0xFF]));
         prims(self, Prim::Lines, 4, small_cross(cd.last_pos, z));
         push(self, MapDraw::Color([0xFF, 0xFF, 0xFF, 0x80]));
-        let ecb = if cd.x34_flags.b6 {
-            &cd.x64_ecb
+        let ecb = if cd.ecb_flags.b6 {
+            &cd.unsqueezed_ecb
         } else {
             &cd.ecb
         };
-        let mut v = diamond(cd.x28_vec, ecb, adds(0.5, cd.x28_vec.z));
+        let mut v = diamond(cd.frame_start_pos, ecb, adds(0.5, cd.frame_start_pos.z));
         v.push(v[0]);
         prims(self, Prim::LineStrip, 5, v);
         push(self, MapDraw::Color([0xFF, 0xFF, 0xFF, 0x80]));
-        let z = mem(fp::frsp(fp::fadd(0.5, reg(cd.x28_vec.z))));
-        prims(self, Prim::Lines, 4, small_cross(cd.x28_vec, z));
+        let z = mem(fp::frsp(fp::fadd(0.5, reg(cd.frame_start_pos.z))));
+        prims(self, Prim::Lines, 4, small_cross(cd.frame_start_pos, z));
     }
 
     /// `mpLib_DrawSnapping`: each fighter's ECBs and ledge snap boxes (each side's), for a
@@ -173,7 +178,7 @@ impl Running<'_> {
         for g in fighters {
             let f = self.game.fighter_id(g);
             let cd = self.game.fighters[f.0].coll_data.clone();
-            if !cd.x35_flags.b0 || cd.x38 != generation {
+            if !cd.map_flags.b0 || cd.map_generation != generation {
                 continue;
             }
             self.map_ecbs(&cd);
@@ -210,7 +215,7 @@ impl Running<'_> {
         for g in items {
             let ip = super::it::item(self.game, g);
             let (mut cd, kind) = (ip.coll.clone(), ip.kind);
-            if !cd.x35_flags.b0 {
+            if !cd.map_flags.b0 {
                 continue;
             }
             let i = super::it::item_of(self.game, g);
@@ -223,7 +228,7 @@ impl Running<'_> {
                 // (docs/engine.md, the Arwing laser).
                 cd.last_pos = cd.cur_pos;
             }
-            if cd.x38 == generation {
+            if cd.map_generation == generation {
                 self.map_ecbs(&cd);
             }
             if kind == ItKind::LinkHookshot {

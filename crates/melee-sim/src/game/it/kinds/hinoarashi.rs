@@ -340,14 +340,14 @@ pub fn spawn_flame(r: &mut Running, gobj: GObjId, pos: Vec3, attack_id: u32, fac
         prev_pos: Vec3::new(pos.x, pos.y, 0.0),
         pos: lib26b1::ecb_center(r.game, gobj),
         facing_dir,
-        x3C_damage: 0,
+        damage: 0,
         vel: Vec3::new(0.0, 0.0, 0.0),
-        x0_parent_gobj: owner,
-        x4_parent_gobj2: Some(gobj),
-        x40: attack_id as i32,
+        owner,
+        maker: Some(gobj),
+        ignore_id: attack_id as i32,
         ..Default::default()
     };
-    spawn.x44_flag[0] |= 0x80;
+    spawn.flags[0] |= 0x80;
     let Some(flame) = spawn_air(r, &mut spawn) else {
         return;
     };
@@ -377,7 +377,7 @@ pub fn spawn_flame(r: &mut Running, gobj: GObjId, pos: Vec3, attack_id: u32, fac
     ip.vel.x = mem(fp::fmuls(speed, reg(crate::math::cos(angle))));
     ip.vel.y = mem(fp::fmuls(speed, reg(crate::math::sin(angle))));
     ip.vel.z = 0.0;
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     let which = r.game.objs.rng.below(4);
     flame_start(r, flame, which);
 }

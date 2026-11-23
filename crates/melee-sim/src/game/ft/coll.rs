@@ -199,7 +199,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     super::super::gr::yoshis_island_64::touch(
                         &mut self.grounds[g.0],
                         joint_id,
-                        coll.x34_flags.b1234.into(),
+                        coll.ecb_flags.b1234.into(),
                     );
                 }
             }
@@ -215,7 +215,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
             super::super::gr::fourside::ROOF_TOUCHED => super::super::gr::fourside::touch(
                 self.grounds,
                 self.stage_maps.ground(5),
-                coll.x34_flags.b1234.into(),
+                coll.ecb_flags.b1234.into(),
             ),
             super::super::gr::great_bay::PLATFORM_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
@@ -241,7 +241,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     super::super::gr::peachs_castle::lift_touched(
                         &mut self.grounds[g.0],
                         joint_id,
-                        coll.x34_flags.b1234.into(),
+                        coll.ecb_flags.b1234.into(),
                         x50,
                     );
                 }
@@ -270,7 +270,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         param,
                         self.data,
                         joint_id,
-                        coll.x34_flags.b1234.into(),
+                        coll.ecb_flags.b1234.into(),
                         kind,
                     );
                 }
@@ -278,7 +278,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
             super::super::gr::rainbow_cruise::BLOCK_TOUCHED => {
                 if let Some(super::super::gr::CollUser::GObj(go)) = user_data {
                     let (g, root) = (self.stage_maps.ground_of(go), self.stage_maps.jobj(go));
-                    let kind = coll.x34_flags.b1234.into();
+                    let kind = coll.ecb_flags.b1234.into();
                     super::super::gr::rainbow_cruise::block_touched(
                         self.objs,
                         self.grounds,
@@ -306,7 +306,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
             super::super::gr::rainbow_cruise::PLANK_TOUCHED => {
                 if let Some(super::super::gr::CollUser::GObj(go)) = user_data {
                     let g = self.stage_maps.ground_of(go);
-                    let kind = coll.x34_flags.b1234.into();
+                    let kind = coll.ecb_flags.b1234.into();
                     super::super::gr::rainbow_cruise::plank_touched(
                         self.grounds,
                         g,
@@ -376,14 +376,14 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         coll,
                     );
                 }
-                self.climb.touched(coll.x0_gobj);
+                self.climb.touched(coll.gobj);
             }
-            super::super::gr::icicle_mountain::ON_JOINT => self.climb.touched(coll.x0_gobj),
+            super::super::gr::icicle_mountain::ON_JOINT => self.climb.touched(coll.gobj),
             super::super::gr::rest_area::ON_JOINT => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     super::super::gr::rest_area::portal_touched(
                         &mut self.grounds[g.0],
-                        coll.x34_flags.b1234.into(),
+                        coll.ecb_flags.b1234.into(),
                         kind,
                     );
                 }
@@ -391,39 +391,38 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
             super::super::gr::snag_the_trophies::COIN_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     let item = coll
-                        .x0_gobj
+                        .gobj
                         .is_some_and(|o| self.stage_maps.p_link(o) == ITEM_P_LINK);
                     self.coins
-                        .touched(g, coll.x34_flags.b1234, coll.x0_gobj, item, coll.cur_pos.x);
+                        .touched(g, coll.ecb_flags.b1234, coll.gobj, item, coll.cur_pos.x);
                 }
             }
             super::super::gr::race_to_the_finish::GOAL_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     super::super::gr::race_to_the_finish::goal_touched(
                         &mut self.grounds[g.0],
-                        coll.x34_flags.b1234.into(),
+                        coll.ecb_flags.b1234.into(),
                         kind,
                     );
                 }
             }
             super::super::gr::underground_maze::SYMBOL_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    self.maze
-                        .touched(g, coll.x34_flags.b1234, coll.x0_gobj, kind);
+                    self.maze.touched(g, coll.ecb_flags.b1234, coll.gobj, kind);
                 }
             }
             super::super::gr::brinstar_escape::END_TOUCHED => {
                 super::super::gr::brinstar_escape::end_touched(
                     &mut self.escape,
-                    coll.x34_flags.b1234,
-                    coll.x0_gobj,
+                    coll.ecb_flags.b1234,
+                    coll.gobj,
                     kind,
                 )
             }
             super::super::gr::mute_city::TRACK_TOUCHED => {
                 let live = self.stage_maps.gr.mutecity.track_live;
                 let item = coll
-                    .x0_gobj
+                    .gobj
                     .is_some_and(|o| self.stage_maps.p_link(o) == ITEM_P_LINK);
                 super::super::gr::mute_city::track_touched(live, coll, kind, item);
             }
@@ -629,14 +628,15 @@ impl Running<'_> {
         fp.stepped_on_item = true;
         let p = fp.coll_data.cur_pos;
         let (lx, rx) = (reg(fp.coll_data.ecb.left.x), reg(fp.coll_data.ecb.right.x));
-        fp.dmg.x1930.xC.x = mem(fp::fadds(lx, reg(p.x)));
-        fp.dmg.x1930.xC.y = mem(fp::fadds(rx, reg(p.x)));
-        fp.dmg.x1930.xC.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
+        fp.dmg.item_pickup_bounds.feet.x = mem(fp::fadds(lx, reg(p.x)));
+        fp.dmg.item_pickup_bounds.feet.y = mem(fp::fadds(rx, reg(p.x)));
+        fp.dmg.item_pickup_bounds.feet.z =
+            mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.feet_height)));
         let mut cur = self.game.world.first_in(ITEM_P_LINK);
         while let Some(item) = cur {
             cur = self.game.world.gobjs[item.0].next;
             if crate::game::it::lib26b1::is_stomp(self.game, item) {
-                let feet = self.game.fighter(gobj).dmg.x1930.clone();
+                let feet = self.game.fighter(gobj).dmg.item_pickup_bounds.clone();
                 let i = crate::game::it::item_of(self.game, item);
                 self.game.it.last_pos_known(i.0, "ft_80081A00");
                 if crate::lb::stomp::stepped_on(&feet, &self.game.items[i.0].stomp_box) {
@@ -648,14 +648,14 @@ impl Running<'_> {
                     ip.stomp_dir = if ip.pos.x > fx { -1.0 } else { 1.0 };
                     ip.stomper = Some(gobj);
                     ip.source_player = slot;
-                    self.game.fighter_mut(gobj).dmg.x1950 = 1;
+                    self.game.fighter_mut(gobj).dmg.stepped_on_item = 1;
                 }
             }
         }
         let fp = self.game.fighter_mut(gobj);
-        if fp.dmg.x1950 != 0 {
+        if fp.dmg.stepped_on_item != 0 {
             self.bounce_off_item(gobj);
-            self.game.fighter_mut(gobj).dmg.x1950 = 0;
+            self.game.fighter_mut(gobj).dmg.stepped_on_item = 0;
             return true;
         }
         false
@@ -670,8 +670,8 @@ impl Running<'_> {
         fp.item_bounce_vel.x = fp.self_vel.x;
         fp.item_bounce_vel.y = y;
         fp.item_bounce_vel.z = 0.0;
-        fp.dmg.x194C = frames;
-        fp.dmg.x1948 = frames;
+        fp.dmg.bounce_frames_left = frames;
+        fp.dmg.bounce_frames = frames;
     }
 
     /// One fighter's collision state copied to another's, `ft_800849EC` (`mpCopyCollData`

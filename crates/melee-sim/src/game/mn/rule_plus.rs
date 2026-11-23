@@ -125,12 +125,12 @@ impl Running<'_> {
     fn plus_save_from(&mut self, g: GObjId) {
         let d = self.plus_data(g);
         let v = |i: usize| d.values[i].expect("an extra rule's value");
-        let r = &mut self.game.game_data.x1850;
+        let r = &mut self.game.game_data.rules;
         r.stock_time_limit = v(0);
         r.friendly_fire = v(1);
         r.pause = v(2);
         r.score_display = v(3);
-        r.unk_xc = v(4);
+        r.sd_penalty = v(4);
     }
 
     fn plus_save(&mut self) {
@@ -530,7 +530,7 @@ impl Running<'_> {
         self.game
             .world
             .init_user_data(gobj, 0, UserData::RulePlusList(addr));
-        let r = &self.game.game_data.x1850;
+        let r = &self.game.game_data.rules;
         let f = self.game.menu.flow;
         let mut d = RulePlusData {
             menu_kind: f.cur_menu,
@@ -540,7 +540,7 @@ impl Running<'_> {
                 Some(r.friendly_fire),
                 Some(r.pause),
                 Some(r.score_display),
-                Some(r.unk_xc),
+                Some(r.sd_penalty),
                 super::leftover_bytes_known::<1>(self.data, addr + 7)[0],
             ],
             state,

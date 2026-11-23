@@ -201,13 +201,13 @@ impl Running<'_> {
         };
         let weight = self.game.fighters[f.0].co_attrs.weight;
         // `ftColl_80079EA8`: knockback at no ratio.
-        let kb = self.knockback_of(f, hit, hit.unk_count, 1.0, 1.0, 1.0, weight);
+        let kb = self.knockback_of(f, hit, hit.whole_damage, 1.0, 1.0, 1.0, weight);
         let fp = &mut self.game.fighters[f.0];
         fp.dmg.kb_applied = mem(kb);
-        fp.dmg.x1848_kb_angle = fp::fctiwz(angle);
+        fp.dmg.kb_angle = fp::fctiwz(angle);
         fp.dmg.facing_dir_1 = fp.facing_dir;
-        fp.dmg.x184c_damaged_hurtbox = 0;
-        fp.dmg.x1854_collpos = fp.cur_pos;
-        fp.dmg.x1860_element = hit.element;
+        fp.dmg.damaged_hurtbox = 0;
+        fp.dmg.coll_pos = fp.cur_pos;
+        fp.dmg.element = hit.element;
     }
 }

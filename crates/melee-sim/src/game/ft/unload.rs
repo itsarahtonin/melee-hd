@@ -123,8 +123,8 @@ impl Running<'_> {
                 continue;
             }
             let hit = &mut self.game.fighters[id.0].thrown_hitbox;
-            if hit.x134 == HitOwner::Thrower(gobj) {
-                hit.x134 = HitOwner::default();
+            if hit.owner == HitOwner::Thrower(gobj) {
+                hit.owner = HitOwner::default();
             }
         }
     }

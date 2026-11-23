@@ -171,14 +171,14 @@ impl Running<'_> {
         data.rules = super::vs_mode::rules_defaults();
         data.rules.clone_from(&vs.rules);
         data.rules.on_pause_override = Some(CodeRef(ON_PAUSE));
-        data.rules.x3_6 = true;
-        data.rules.x2_5 = false;
-        data.rules.x2_1 = true;
+        data.rules.pause_hides_controls = true;
+        data.rules.damage_display_kos = false;
+        data.rules.arrows_flag = true;
         super::vs_mode::all_player_defaults(&mut data.players);
         for i in 0..4 {
             data.players[i].clone_from(&vs.players[i]);
-            data.players[i].xC_b1 = false;
-            data.players[i].xD_b2 = true;
+            data.players[i].enters = false;
+            data.players[i].no_offscreen_damage = true;
         }
         let p0 = &vs.players[0];
         super::setup_players::setup_human(&mut data.players[0], p0.ckind as u8, p0.color, 1, slot);
@@ -209,8 +209,8 @@ impl Running<'_> {
         r.match_kind = 0;
         r.is_teams = 1;
         r.item_freq = -1;
-        r.x20 = u64::MAX;
-        r.x5_0 = true;
+        r.item_switch = u64::MAX;
+        r.endless = true;
         for i in 0..4 {
             self.game.modes.training_players[i].clone_from(&data.players[i]);
             self.game.training.players[i].clone_from(&data.players[i]);
@@ -229,7 +229,7 @@ impl Running<'_> {
         let end = self.game.training.exit.match_end.clone();
         let p = &end.player_standings[0];
         self.add_1p_time(end.frame_count / 60);
-        self.results_add_coins(i32::from(p.xE));
+        self.results_add_coins(i32::from(p.coins));
         let best = self.training_best(i32::from(p.ckind));
         self.training_record_combo(p.ckind, best as u16);
         self.training_combo_trophies(p.ckind);
@@ -245,8 +245,8 @@ impl Running<'_> {
     /// single-player time, held at the largest word.
     pub fn add_1p_time(&mut self, seconds: u32) {
         let s = &mut self.game.game_data.thing.save_data;
-        let t = s.x1A3C as u32;
-        s.x1A3C = t.saturating_add(seconds) as i32;
+        let t = s.one_player_time as u32;
+        s.one_player_time = t.saturating_add(seconds) as i32;
     }
 
     /// `gm_80188454`: a character's best combo this visit.
@@ -261,10 +261,10 @@ impl Running<'_> {
     fn training_record_combo(&mut self, ckind: i8, combo: u16) -> bool {
         let i = usize::from(super::match_exit::selkind(ckind as u8));
         let s = &mut self.game.game_data.thing.save_data;
-        if (s.unk_30.x114[i] as u32) < u32::from(combo) {
-            s.unk_30.x114[i] = i32::from(combo);
+        if (s.trophy_records.training_combo_best[i] as u32) < u32::from(combo) {
+            s.trophy_records.training_combo_best[i] = i32::from(combo);
         }
-        let record = &mut s.x1F2C[i].x7C.x7E;
+        let record = &mut s.fighters[i].records.training_combo;
         if *record < combo {
             *record = combo;
             return true;
@@ -276,7 +276,13 @@ impl Running<'_> {
     /// every character's summed at 125.
     #[doc(alias = "gm_80173BC4")]
     fn training_combo_trophies(&mut self, ckind: i8) {
-        let x114 = self.game.game_data.thing.save_data.unk_30.x114;
+        let x114 = self
+            .game
+            .game_data
+            .thing
+            .save_data
+            .trophy_records
+            .training_combo_best;
         let mine = x114[usize::from(super::match_exit::selkind(ckind as u8))];
         let sum = x114.iter().fold(0i32, |s, &v| s.wrapping_add(v));
         if mine >= 10 {
@@ -300,7 +306,7 @@ impl Running<'_> {
         self.start_vs(&start, files, None);
         self.vs_ready(0);
         self.vs_go(0);
-        self.show_damage_displays(i32::from(start.rules.x0_3));
+        self.show_damage_displays(i32::from(start.rules.damage_display));
         self.training_menu_setup();
     }
 
@@ -512,21 +518,23 @@ impl Running<'_> {
     /// The hits in a row slot `slot`'s last attacker has on it, `pl_8004134C`.
     #[doc(alias = "pl_8004134C")]
     fn combo_count_on(&mut self, slot: i32) -> i32 {
-        let by = i32::from(self.game.player_combos(slot).x0);
-        i32::from(self.game.player_combos(by).x10[slot as usize].x4)
+        let by = i32::from(self.game.player_combos(slot).last_victim);
+        i32::from(self.game.player_combos(by).by_attacker[slot as usize].hits)
     }
 
     /// The damage of those hits, `pl_80041300`.
     #[doc(alias = "pl_80041300")]
     fn combo_damage_on(&mut self, slot: i32) -> i32 {
-        let by = i32::from(self.game.player_combos(slot).x0);
-        fp::fctiwz(reg(self.game.player_combos(by).x10[slot as usize].x0))
+        let by = i32::from(self.game.player_combos(slot).last_victim);
+        fp::fctiwz(reg(
+            self.game.player_combos(by).by_attacker[slot as usize].damage
+        ))
     }
 
     /// The slot's damage taken in the frame counters, `pl_800412D0`.
     #[doc(alias = "pl_800412D0")]
     fn frame_damage(&mut self, slot: i32) -> i32 {
-        fp::fctiwz(reg(self.game.player_combos(slot).x4))
+        fp::fctiwz(reg(self.game.player_combos(slot).last_damage))
     }
 
     /// `fn_80188738`: the damage counter's digits (at most 999).
@@ -983,7 +991,7 @@ impl Running<'_> {
         );
         g.set_player_effect_color(slot, i32::from(super::vs::cap_color(color as u8)));
         self.player_create_fighters(slot);
-        if self.game.vs.state.fighters[slot as usize].x4[0] & 0x08 != 0 {
+        if self.game.vs.state.fighters[slot as usize].flags[0] & 0x08 != 0 {
             self.sfx_play(0x41F4E, 0x7F, 0x40);
         }
         self.kirby_costumes();

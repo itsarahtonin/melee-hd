@@ -36,9 +36,9 @@ pub struct Attract {
 /// The save's VS rules and preferences as `gm_80167BC8` reads them
 /// (`gmMainLib_GetGameRules`, `gmMainLib_GetGamePrefs`, `gmMainLib_8015ED30`).
 #[doc(alias = "gmMainLib_GetGamePrefs")]
-pub fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
-    let r = &g.x1850;
-    let p = &g.thing.save_data.x1CB0;
+pub fn saved_rules(g: &crate::game::structs::GameData) -> (GameRules, GamePrefs) {
+    let r = &g.rules;
+    let p = &g.thing.save_data.prefs;
     let rules = GameRules {
         mode: r.mode,
         time_limit: r.time_limit,
@@ -49,7 +49,7 @@ pub fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
         friendly_fire: r.friendly_fire,
         pause: r.pause,
         score_display: r.score_display,
-        sd_penalty: r.unk_xc,
+        sd_penalty: r.sd_penalty,
     };
     let prefs = GamePrefs {
         item_freq: p.item_freq,
@@ -81,11 +81,11 @@ impl Running<'_> {
         r.match_kind = d.match_kind;
         r.timer_enabled = false;
         r.time_limit = 0;
-        r.x1_0 = false;
-        r.x1_2 = true;
-        r.x1_3 = true;
+        r.exact_start_frame = false;
+        r.long_countdown = true;
+        r.alt_go = true;
         r.disable_pausing = true;
-        r.x7 = 0;
+        r.end_kind = 0;
         r.on_match_start = Some(CodeRef(ON_MATCH_START));
         r.game_speed = 1.0;
         r.stkind = u16::from(d.stkind as u8);
@@ -97,7 +97,7 @@ impl Running<'_> {
             p.slot_type = PKIND_CPU as u8;
             p.cpu_level = 9;
             p.cpu_kind = 4;
-            p.xC_b1 = false;
+            p.enters = false;
             if start.rules.match_kind == 1 {
                 p.stocks = 99;
             }
@@ -179,9 +179,9 @@ impl Running<'_> {
             self.lb_audio_reset();
             self.sfx_stop_all();
             if self.game.machine.routing.curr_state_id == 3
-                && self.game.game_data.unk_1.is_multiple_of(2)
+                && self.game.game_data.demo_count.is_multiple_of(2)
             {
-                self.game.game_data.unk_1 = self.game.game_data.unk_1.wrapping_add(1);
+                self.game.game_data.demo_count = self.game.game_data.demo_count.wrapping_add(1);
                 self.game.machine.routing.next_state_id = 1;
             }
             self.game.end_scene();
@@ -243,9 +243,9 @@ impl Running<'_> {
         // The mark goes on the scene's own enter data: Tournament mode's is its own
         // (`gm_804876D8`).
         if scene_mode == GameMode::Tournament {
-            self.game.tou.start.rules.x6 = 1;
+            self.game.tou.start.rules.sudden_death = 1;
         } else {
-            self.game.vs_melee.start.rules.x6 = 1;
+            self.game.vs_melee.start.rules.sudden_death = 1;
         }
         let (start, files) = self.vs_scene_files(scene_mode);
         self.game.gm.on_frame = Some(CodeRef(super::vs::ON_FRAME));

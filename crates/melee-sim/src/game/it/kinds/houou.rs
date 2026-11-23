@@ -135,7 +135,7 @@ pub fn call_fire(r: &mut Running, gobj: GObjId) {
     lg::enter(r, gobj, 5);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(FIRE_ACCESSORY));
-    ip.state_flags.b3 = true;
+    ip.state_flags.checks_blast_zones = true;
 }
 
 /// Its `on_accessory`, `it_802D2B4C`: on its script's first word an effect on each of its
@@ -178,12 +178,12 @@ pub fn sacred_fire(r: &mut Running, gobj: GObjId) {
     spawn.prev_pos = hit.pos;
     spawn.pos = home;
     spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = owner;
-    spawn.x4_parent_gobj2 = Some(gobj);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = owner;
+    spawn.maker = Some(gobj);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let fire = spawn_air(r, &mut spawn).expect("Item_80268B18 made no Sacred Fire");
     pokemon::vars(r.game, fire).set_i32(COME_FRAMES, hit.line);
 }

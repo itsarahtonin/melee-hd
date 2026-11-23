@@ -219,7 +219,7 @@ pub(crate) mod tests {
         ),
         (
             "a stage's point check",
-            "a stage's own check of a watched point (stage_info.x90 and x94): of the two stages that watch points, Mushroom Kingdom's adventure route gives none and the race's (fn_80218678) is ported",
+            "a stage's own check of a watched point (stage_info.watch_callback and watch_callback_2, x90 and x94): of the two stages that watch points, Mushroom Kingdom's adventure route gives none and the race's (fn_80218678) is ported",
         ),
         (
             "grMaterial_804D456C",

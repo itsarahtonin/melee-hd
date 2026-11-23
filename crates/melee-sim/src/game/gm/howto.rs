@@ -190,8 +190,8 @@ impl Running<'_> {
             self.lb_audio_call(1);
             self.set_pending_game_mode(GameMode::Title);
             self.set_new_game_mode_pending();
-        } else if self.game.game_data.unk_1 != 5 {
-            self.game.game_data.unk_1 = self.game.game_data.unk_1.wrapping_add(1);
+        } else if self.game.game_data.demo_count != 5 {
+            self.game.game_data.demo_count = self.game.game_data.demo_count.wrapping_add(1);
             self.game.machine.routing.next_state_id = 1;
         }
     }
@@ -211,7 +211,7 @@ impl Running<'_> {
         } else {
             self.game.end_scene();
         }
-        self.game.game_data.unk_1 = 0;
+        self.game.game_data.demo_count = 0;
         if pressed || reset {
             if !reset {
                 self.lb_audio_call(1);

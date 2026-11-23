@@ -100,12 +100,12 @@ pub fn spawn(r: &mut Running, pos: Vec3) {
     spawn.pos = pos;
     // `Item_InitSpawnCommonFields(&spawn, NULL, 1.0F, true)`.
     spawn.facing_dir = 1.0;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     if let Some(gobj) = spawn_air(r, &mut spawn) {
         fell(r, gobj);
         item_mut(r.game, gobj).vars.egg().broken.set(0);
@@ -115,7 +115,7 @@ pub fn spawn(r: &mut Running, pos: Vec3) {
 /// `itEvYoshiEgg_Logic42_Destroyed`: the event failed (`gm_801BEB68(1)`).
 #[doc(alias = "itEvYoshiEgg_Logic42_Destroyed")]
 pub fn destroyed(r: &mut Running, _: GObjId) {
-    r.game.game_data.vs.unk_530.x18 = 1;
+    r.game.game_data.vs.event.proc_state = 1;
 }
 
 /// `itEvYoshiEgg_Logic42_Spawned`: whole, falling.
@@ -213,7 +213,7 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "gm_801BEB68")]
 pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
     if item_mut(r.game, gobj).vars.egg().rand_max.get() == 40 {
-        r.game.game_data.vs.unk_530.x18 = 1;
+        r.game.game_data.vs.event.proc_state = 1;
     }
     let v = item_mut(r.game, gobj).vars.egg();
     let left = v.rand_max.get().wrapping_sub(1);

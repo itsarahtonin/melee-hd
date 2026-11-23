@@ -258,7 +258,7 @@ impl Running<'_> {
             crate::lb::anim::dobj_set_rate_all(&mut self.game.objs, d6, 0.0);
             let p = &me.player_standings[i];
             if p.pkind == PKIND_HUMAN {
-                ko_count = ko_count.wrapping_add(i32::from(p.xE));
+                ko_count = ko_count.wrapping_add(i32::from(p.coins));
             }
             if p.pkind == PKIND_NA {
                 self.rp_hide(js[1]);
@@ -284,7 +284,7 @@ impl Running<'_> {
             crate::hsd::aobj::set_current_frame(&mut o.aobjs, &mut o.fobjs, ra, f);
             crate::hsd::aobj::set_rate(&mut o.aobjs, ra, 0.0);
             if me.match_kind != 3 {
-                let costume = i32::from(p.x3_u[0] >> 2);
+                let costume = i32::from(p.flags[0] >> 2);
                 let taunt = super::vs::stock_icon_frame(ckind, cid, costume);
                 self.rp_foreach_rate(js[7], 0.0);
                 self.rp_foreach_frame(js[7], mem(taunt));
@@ -635,12 +635,12 @@ impl Running<'_> {
             let dashes = x6 == slot
                 || (me.is_teams == 1
                     && me.team_standings[usize::from(p.team)].is_big_loser == 0
-                    && (p.stocks > 0 || (p.x28 == me.frame_count && w.stocks == 0)))
+                    && (p.stocks > 0 || (p.match_frames == me.frame_count && w.stocks == 0)))
                 || (canceled(me.outcome) && (p.stocks > 0 || p.score == w.score));
             if dashes {
                 self.rp_line(t, -30.0, NO_TIME, &[], 0.11, 0.08, c);
             } else {
-                let seconds = p.x28 / 60;
+                let seconds = p.match_frames / 60;
                 let shown = seconds.min(5999);
                 let args = [
                     FmtArg::Int((shown / 60) as i32),
@@ -766,8 +766,12 @@ impl Running<'_> {
     fn stats_check(&self, getter: u32, slot: usize) -> i32 {
         let me = self.results_end();
         match getter {
-            0x8017_BACC => super::results_stats::clamp_to(me.player_standings[slot].x9C, 999_999),
-            0x8017_BB30 => super::results_stats::clamp_to(me.player_standings[slot].xA0, 999_999),
+            0x8017_BACC => {
+                super::results_stats::clamp_to(me.player_standings[slot].timed_stat_3, 999_999)
+            }
+            0x8017_BB30 => {
+                super::results_stats::clamp_to(me.player_standings[slot].timed_stat_4, 999_999)
+            }
             g => super::results_stats::stat_value(me, self.saved_us(), g, slot),
         }
     }
@@ -798,7 +802,7 @@ impl Running<'_> {
         if v == -1 {
             return None;
         }
-        let tag = me.player_standings[target].x4;
+        let tag = me.player_standings[target].nametag;
         if tag == 0x78 {
             let l = if self.saved_us() {
                 PLAYER_LABELS_US[target]
@@ -819,7 +823,12 @@ impl Running<'_> {
         let n = &self.game.game_data.thing.nametag_banks[s / NAMETAG_BANK_SIZE].inner
             [s % NAMETAG_BANK_SIZE];
         let mut b: Vec<u8> = n.namedata.iter().map(|&c| c as u8).collect();
-        b.extend([n.x1A0 as u8, n.rumble_enabled, n.x1A2 as u8, n.padding_x1A2]);
+        b.extend([
+            n.name_end as u8,
+            n.rumble_enabled,
+            n.handicap as u8,
+            n.pad_1a3,
+        ]);
         let end = b.iter().position(|&c| c == 0).unwrap_or_else(|| {
             super::super::code::unported_call("a name tag's name running past its block")
         });
@@ -945,7 +954,7 @@ impl Running<'_> {
         let mut label_id = -1;
         let mut value_id = -1;
         let entry = (list.mode != 2).then(|| list.entries[idx as usize]);
-        let me_x44c = |r: &Self| r.results_end().x44C[slot].clone();
+        let me_x44c = |r: &Self| r.results_end().decisions[slot].clone();
         let nth = |values: &[u8], n: i32| -> usize {
             let mut n = n;
             let mut i = 0;
@@ -966,7 +975,7 @@ impl Running<'_> {
             }
         } else if idx & 1 == 1 && idx < i32::from(list.count) {
             let x = me_x44c(self);
-            let i = nth(&x.x0, idx / 2 + 1);
+            let i = nth(&x.earned, idx / 2 + 1);
             let kind = super::decisions::decision_kind(i as i32);
             let us = super::super::gm::language_setting_is_us();
             let name = (super::decisions::decision_text(kind, us) - 2) as u16;
@@ -984,8 +993,8 @@ impl Running<'_> {
                     let pair = idx / 2 - 1;
                     if pair >= 0 {
                         let x = me_x44c(self);
-                        let i = nth(&x.x0, pair + 1);
-                        let v = x.x104[i];
+                        let i = nth(&x.earned, pair + 1);
+                        let v = x.points[i];
                         value_id = if v < 0 {
                             add(
                                 self,

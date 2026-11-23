@@ -283,8 +283,8 @@ pub const CARS_FRAME: u32 = setup::SETUP_FRAME - 0x28 - 0x68;
 #[doc(alias = "grBigBlue_801E57C0")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.bigblue_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0x1F, 0, 1, 2, 0x22, 0x21] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -485,10 +485,10 @@ pub fn init_map2(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x10_flags.b2 = false;
+    r.game.grounds[g.0].flags.keeps_fog = false;
     material::clear_tree_flags(r.game, j, 0x0800_0000);
     material::set_tree_flags(r.game, j, 0x2000_0000);
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
 }
 
 /// Map 1's setup, `grBigBlue_801E6298`: its animation, its six guide points (parts 5, 2, 4, 3,
@@ -506,7 +506,7 @@ pub fn init_map1(r: &mut Running, gobj: GObjId) {
     let j5 = n(r, 2);
     let p = n(r, 5);
     super::ground::set_guide_points(r.game, r.data, [p, j5, j4, j3, j2, j1]);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// `grBb_803E2D84`: the big cars' models' map ids (the first, the model object's own,
@@ -625,7 +625,7 @@ pub fn init_platforms(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     set_scale(r.game, j, Vec3::new(1.0, 1.0, 1.0));
     anime::start_map(r.game, r.data, gobj, m, 0);
     let parts = [1, 6, 11].map(|k| nth_joint(r.game, gobj, k));
@@ -1310,7 +1310,7 @@ pub fn platform_touched(
     coll: &super::super::structs::CollData,
     x50: i32,
 ) {
-    let k = coll.x34_flags.b1234;
+    let k = coll.ecb_flags.b1234;
     if k != 1 && k != 3 {
         return;
     }
@@ -1400,7 +1400,7 @@ pub fn init_flyer(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     let s = super::ground::scale(r.game);
     set_scale(r.game, j, Vec3::new(s, s, s));
     let mg = map_ground(r.game, 0x20);
@@ -1622,7 +1622,7 @@ pub fn init_relay(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
     let s = super::ground::scale(r.game);
     set_scale(r.game, j, Vec3::new(s, s, s));
     r.game.grounds[g.0].u.bigblue_relay().set_state(0);
@@ -3044,7 +3044,7 @@ pub fn car_touched(
     coll: &super::super::structs::CollData,
     kind: i32,
 ) {
-    if coll.x34_flags.b1234 != 1 {
+    if coll.ecb_flags.b1234 != 1 {
         return;
     }
     if kind != 1 {
@@ -3058,7 +3058,7 @@ pub fn car_touched(
     let v = gp.u.bigblue_cars();
     for c in v.cars.iter_mut() {
         if c.slot() == car_num {
-            c.gravity = mem(fp::fmuls(fp::fneg(reg(coll.x50)), push));
+            c.gravity = mem(fp::fmuls(fp::fneg(reg(coll.weight)), push));
         }
     }
 }

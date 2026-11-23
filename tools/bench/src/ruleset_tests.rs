@@ -146,8 +146,8 @@ fn digest(g: &Game) -> Digest {
                     f.motion_id,
                     f.cur_pos.x.to_bits(),
                     f.cur_pos.y.to_bits(),
-                    f.dmg.x1830_percent.to_bits(),
-                    f.dmg.x1910,
+                    f.dmg.percent.to_bits(),
+                    f.dmg.dot_frames,
                     g.player_stocks(i32::from(f.player_idx)),
                 )
             })
@@ -276,7 +276,7 @@ fn slippi_off_screen_damage_ignores_the_display_pass() {
             }
         },
         // A tick a fighter counts off screen by the stage's limits.
-        &|g| g.fighters.iter().any(|(_, f)| f.dmg.x1910 > 0),
+        &|g| g.fighters.iter().any(|(_, f)| f.dmg.dot_frames > 0),
     );
 }
 
@@ -784,7 +784,7 @@ fn slippi_onett_cars_note_the_other_phase() {
                 GroundVars::OnettCar(v) => Some((v.state_a, v.sub_state_a, v.curr_car)),
                 _ => None,
             })
-            .map(|c| (c, g.stage_info.x740))
+            .map(|c| (c, g.stage_info.cars_state))
     };
     let runs = on_sim_thread(FpMode::Slippi, || {
         let rules = Rules::slippi_online();
@@ -1036,7 +1036,10 @@ fn slippi_onett_cars_note_a_doubled_round() {
             GroundVars::OnettCar(v) => Some((v.state_a, v.sub_state_a, v.curr_car)),
             _ => None,
         });
-        format!("{cars:?} {} {:#x}", g.stage_info.x740, g.objs.rng.seed)
+        format!(
+            "{cars:?} {} {:#x}",
+            g.stage_info.cars_state, g.objs.rng.seed
+        )
     };
     doubled_round_notes(
         std::path::Path::new(&melee_local_data::ssbm_rs_local(
@@ -1286,7 +1289,7 @@ fn slippi_scizor_notes_reads_off_course() {
         Vec3::new(1000.0, 0.0, 0.0),
         Some((171, 2)),
         &|g, _| {
-            g.vs.start.x28 = 171;
+            g.vs.start.forced_pokemon = 171;
             let ids: Vec<u32> = g.items.iter().map(|(i, _)| i).collect();
             for i in ids {
                 let it = &mut g.items[i];

@@ -293,12 +293,12 @@ pub fn spawn(
     spawn.prev_pos = pos;
     spawn.pos = lib26b1::parent_ecb_center(r.game, owner);
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(owner);
-    spawn.x4_parent_gobj2 = Some(owner);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(owner);
+    spawn.maker = Some(owner);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let life = attr_u32(r, gobj, attr::X0);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
@@ -802,7 +802,7 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
         return false;
     }
     let ip = item(r.game, gobj);
-    let by = if !ip.state_flags.b1 {
+    let by = if !ip.state_flags.keeps_owner_reflected {
         ip.owner
     } else {
         ip.reflector

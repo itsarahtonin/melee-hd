@@ -204,7 +204,7 @@ impl Running<'_> {
     /// rules give it (`x4_6`).
     #[doc(alias = "fn_8017F09C")]
     fn clear_time_bonus(&self) -> i32 {
-        if !self.game.vs.start.x4_6 || !self.clear_time_shown() {
+        if !self.game.vs.start.time_bonus || !self.clear_time_shown() {
             return 0;
         }
         let p = (self.game.vs.state.timer_seconds as i32)
@@ -216,11 +216,11 @@ impl Running<'_> {
     /// the multiplier, in a match whose rules give it (`x4_7`).
     #[doc(alias = "fn_8017F14C")]
     fn clear_damage_bonus(&self, r: &MatchEnd) -> i32 {
-        if !self.game.vs.start.x4_7 {
+        if !self.game.vs.start.damage_bonus {
             return 0;
         }
         // `x98`: the first player's damage dealt (`player_standings[0].x40`).
-        let v = r.player_standings[0].x40 as i32;
+        let v = r.player_standings[0].damage_dealt as i32;
         v.min(9999)
             .wrapping_mul(i32::from(self.clear().damage_multiplier))
     }
@@ -243,7 +243,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8016F344")]
     fn tally_all_bonuses(&mut self) {
         for i in 0..4 {
-            if self.game.vs.state.x24C.player_standings[i].pkind != 3 {
+            if self.game.vs.state.match_end.player_standings[i].pkind != 3 {
                 self.tally_bonuses(i as i32);
             }
         }
@@ -256,7 +256,7 @@ impl Running<'_> {
         if i32::from(from) >= DECISIONS {
             return -1;
         }
-        let r = self.game.vs.state.x24C.clone();
+        let r = self.game.vs.state.match_end.clone();
         let us = super::super::gm::language_setting_is_us();
         let mut count = 0;
         for idx in i32::from(from)..DECISIONS {
@@ -325,7 +325,7 @@ impl Running<'_> {
     /// (`fn_8016F140`), then their total (`fn_8016FFD4`).
     #[doc(alias = "fn_8017F1B8")]
     fn clear_bonus_points(&mut self) -> i32 {
-        let r = self.game.vs.state.x24C.clone();
+        let r = self.game.vs.state.match_end.clone();
         let mask = self.clear_mask();
         for i in 0..0x100 {
             if mask & decision_flags(i) == 0 {
@@ -395,7 +395,7 @@ impl Running<'_> {
         let rows = self.clear().rows;
         let mask = self.clear_mask();
         self.bonus_names(&rows, from, mask, 0);
-        let r = self.game.vs.state.x24C.clone();
+        let r = self.game.vs.state.match_end.clone();
         let (mut entry, mut prev) = (i32::from(from), -999);
         for i in 0..7 {
             let idx = self.bonus_at_or_before(&r, entry as u16, mask, 0);
@@ -677,7 +677,7 @@ impl Running<'_> {
         }
         let result = self.clear_score_text();
         self.clear_total_text();
-        let r = self.game.vs.state.x24C.clone();
+        let r = self.game.vs.state.match_end.clone();
         if self.clear().has_bonus_list != 0 && self.clear().frames_shown > 0x29 {
             let first = self.clear_list(self.clear().first);
             self.clear_mut().first = first;
@@ -873,7 +873,7 @@ impl Running<'_> {
     #[doc(alias = "lb_800121FC")]
     pub fn clear_setup(&mut self, score: i32, points: i32, kind: i32, cont: bool) {
         let mut special = 0;
-        let mut coins = self.game.vs.state.x24C.player_standings[0].xE;
+        let mut coins = self.game.vs.state.match_end.player_standings[0].coins;
         self.game.one_player.clear = Clear {
             time_bonus_shown: -1,
             damage_bonus_shown: -1,
@@ -891,8 +891,8 @@ impl Running<'_> {
             1 => {
                 // `Ground_801C1DE4`: the targets left and the stage's targets.
                 let (left, total) = (
-                    i32::from(self.game.stage_info.x6D4),
-                    i32::from(self.game.stage_info.x6D2),
+                    i32::from(self.game.stage_info.targets_left),
+                    i32::from(self.game.stage_info.target_count),
                 );
                 let c = self.clear_mut();
                 c.targets_stage = 1;
@@ -919,7 +919,7 @@ impl Running<'_> {
             _ => {}
         }
         self.tally_all_bonuses();
-        let r = self.game.vs.state.x24C.clone();
+        let r = self.game.vs.state.match_end.clone();
         let c = self.clear();
         let list = c.targets_stage == 0
             && c.race_to_finish == 0
@@ -1031,7 +1031,7 @@ impl Running<'_> {
         b.mode = 1;
         b.blur_size = 1;
         b.callback = Some(CodeRef(BLUR_CALLBACK));
-        if self.game.vs.start.x1_1 && coins != 0 {
+        if self.game.vs.start.counts_coins && coins != 0 {
             if self.clear().race_to_finish == 0 {
                 self.game
                     .start_coin_counter(0x5A, 0x1AE, i32::from(coins), 5);
@@ -1040,7 +1040,7 @@ impl Running<'_> {
                     .start_coin_counter(0x86, 0xC8, i32::from(coins), 5);
             }
         }
-        self.game.vs.state.x24C.player_standings[0].xE = coins;
+        self.game.vs.state.match_end.player_standings[0].coins = coins;
         self.clear_list_texts(264.0, 211.0);
     }
 
@@ -1059,9 +1059,9 @@ impl Running<'_> {
         self.free_hud();
         self.game.clear_db_pause_flag(4);
         self.game.set_db_pause_flag(5);
-        self.game.vs.state.unk_9 = 1;
+        self.game.vs.state.cleared = 1;
         if self.game.vs.state.match_over == 0 {
-            let mut r = std::mem::take(&mut self.game.vs.state.x24C);
+            let mut r = std::mem::take(&mut self.game.vs.state.match_end);
             r.is_teams = self.game.vs.start.is_teams;
             r.outcome = self.game.vs.state.match_result;
             self.compile_results_into(&mut r);
@@ -1070,11 +1070,11 @@ impl Running<'_> {
             if o != OUTCOME_NO_CONTEST && o != OUTCOME_RETRY {
                 self.match_bonuses(&mut r);
             }
-            self.game.vs.state.x24C = r;
+            self.game.vs.state.match_end = r;
             self.game.vs.state.match_over = 1;
         }
         let s = &self.game.vs.start;
-        let (score, kind, cont) = (s.x18 as i32, i32::from(s.x9), s.x4_5);
+        let (score, kind, cont) = (s.score as i32, i32::from(s.run_kind), s.allows_continue);
         self.clear_setup(score, 0, kind, cont);
     }
 }

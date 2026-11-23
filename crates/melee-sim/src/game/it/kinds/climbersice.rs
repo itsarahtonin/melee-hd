@@ -191,12 +191,12 @@ pub fn spawn(
     spawn.pos = super::super::owner::ecb_center(r.game, parent);
     // `Item_InitSpawnCommonFields`, with a first collision.
     spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = Some(parent);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
+    spawn.owner = Some(parent);
+    spawn.maker = Some(parent);
+    spawn.flags[0] |= 0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let scale = attr_of(item(r.game, gobj)).f32(r.data, item_attr::SCALE);
     let ip = item_mut(r.game, gobj);
@@ -364,7 +364,7 @@ fn slide(r: &mut Running, gobj: GObjId) -> bool {
     let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if speed < stop_speed {
         // `it_8026BD84`.
-        item_mut(r.game, gobj).hit_flags.x0.b4 = true;
+        item_mut(r.game, gobj).hit_flags.bits.stops_on_land = true;
         lib26b1::set_quiet(r.game, gobj);
         stop(r, gobj);
         crate::game::ef::eflib::destroy_all(r, gobj);

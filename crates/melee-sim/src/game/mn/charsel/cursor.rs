@@ -423,7 +423,7 @@ impl Running<'_> {
     /// A slider the hand holds (the inline `updateGrabbedSlider`): its knob under the hand
     /// along its 10 units, the level (or handicap) from where it is, and A lets go.
     fn cursor_slider(&mut self, me: usize, door: usize, trigger: u32, handicap: bool) {
-        let joint = if handicap || self.game.game_data.x1850.handicap == 0 {
+        let joint = if handicap || self.game.game_data.rules.handicap == 0 {
             DOORS[door].cpu_slider
         } else {
             DOORS[door].cpu_slider2
@@ -551,7 +551,7 @@ impl Running<'_> {
                 }
                 let d = self.game.charsel.doors[door];
                 if d.hold_cpu_slider == 0 && d.p_kind == PKIND_CPU {
-                    let joint = if self.game.game_data.x1850.handicap != 0 {
+                    let joint = if self.game.game_data.rules.handicap != 0 {
                         DOORS[door].cpu_slider2
                     } else {
                         DOORS[door].cpu_slider
@@ -562,7 +562,7 @@ impl Running<'_> {
                     }
                 }
                 let d = self.game.charsel.doors[door];
-                if d.hold_handicap_slider == 0 && self.game.game_data.x1850.handicap == 2 {
+                if d.hold_handicap_slider == 0 && self.game.game_data.rules.handicap == 2 {
                     let pk = d.p_kind;
                     if pk != PKIND_NONE
                         && (pk == PKIND_CPU || door == usize::from(self.cursor(me).port))

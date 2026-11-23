@@ -134,11 +134,11 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         let mut hit_ceiling = false;
         if self.check_left_walls_ceiling(cd) {
             self.collide_left_walls_ground(cd);
-            cd.x34_flags.b5 = Some(true);
+            cd.ecb_flags.b5 = Some(true);
         }
         if self.check_right_walls_ceiling(cd) {
             self.collide_right_walls_ground(cd);
-            cd.x34_flags.b5 = Some(true);
+            cd.ecb_flags.b5 = Some(true);
         }
         if self.follow_ceiling(cd) {
             self.ceiling_walls(cd);
@@ -150,10 +150,10 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                     if self.stop_at_ceiling_edge(cd, ceiling_id) {
                         hit_ceiling = true;
                     } else {
-                        cd.x34_flags.b5 = Some(true);
+                        cd.ecb_flags.b5 = Some(true);
                     }
                 } else {
-                    cd.x34_flags.b5 = Some(true);
+                    cd.ecb_flags.b5 = Some(true);
                 }
             }
         }
@@ -178,7 +178,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         let (px, py) = (cd.prev_pos.x, cd.prev_pos.y);
         let (x, y) = (cd.cur_pos.x, cd.cur_pos.y);
         let (skip, only) = (cd.joint_id_skip, cd.joint_id_only);
-        let hit = if cd.x38 != self.g.generation {
+        let hit = if cd.map_generation != self.g.generation {
             self.g.check_all_remap(skip, only, px, py, x, y)
         } else {
             self.g.check_all(skip, only, px, py, x, y)

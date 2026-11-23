@@ -66,10 +66,10 @@ pub fn differences(game: &Game, mem: &[u8]) -> Vec<String> {
     let at = melee_capture::import::sym("gm_80479D58");
     let s = &game.scene;
     for (field, ours, off) in [
-        ("unk_0", s.unk_0, 0),
-        ("unk_4", s.unk_4, 4),
-        ("unk_8", s.unk_8, 8),
-        ("unk_C", s.unk_C as u32, 0xC),
+        ("unk_0", s.ticks, 0),
+        ("unk_4", s.frames_drawn, 4),
+        ("unk_8", s.game_ticks, 8),
+        ("unk_C", s.ending as u32, 0xC),
     ] {
         let i = (at + off - melee_capture::MEM1) as usize;
         let theirs = u32::from_be_bytes(mem[i..i + 4].try_into().expect("a word"));

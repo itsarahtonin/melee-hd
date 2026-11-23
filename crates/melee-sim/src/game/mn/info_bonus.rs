@@ -77,7 +77,7 @@ impl Running<'_> {
             return true;
         }
         let s = &self.game.game_data.thing.save_data;
-        super::super::gm::unlocks::bit(&s.x1C88, &s.padding_x1C88, u32::from(n))
+        super::super::gm::unlocks::bit(&s.bonuses_seen, &s.bonuses_seen_rest, u32::from(n))
     }
 
     /// `mnInfoBonus_802528F8`: how many bonuses show past the first one shown.

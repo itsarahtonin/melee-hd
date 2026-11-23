@@ -88,7 +88,10 @@ impl Game {
         ]
         .into_iter()
         .filter(|&(_, c)| self.unlock_code(c))
-        .fold(self.game_data.thing.save_data.x186C, |f, (b, _)| f | b)
+        .fold(
+            self.game_data.thing.save_data.unlocked_features,
+            |f, (b, _)| f | b,
+        )
     }
 
     /// `gmMainLib_8015D94C`: whether the save has announced special message `n`; with
@@ -99,7 +102,7 @@ impl Game {
             n != 0
         } else {
             self.unlock_code(code::RECORDS_ALL)
-                || bit(&self.game_data.thing.save_data.x1B4C, &[], n)
+                || bit(&self.game_data.thing.save_data.messages_noted, &[], n)
         }
     }
 }
@@ -136,9 +139,9 @@ impl Running<'_> {
     fn stamp_message(&mut self, n: u32) {
         let now = self.clock_seconds();
         let s = &mut self.game.game_data.thing.save_data;
-        s.x1B80[n as usize] = now;
-        s.x1B40[(n / 32) as usize] |= 1 << (n % 32);
-        s.x1B4C[(n / 32) as usize] |= 1 << (n % 32);
+        s.message_times[n as usize] = now;
+        s.messages_pending[(n / 32) as usize] |= 1 << (n % 32);
+        s.messages_noted[(n / 32) as usize] |= 1 << (n % 32);
     }
 
     /// A rare Pokémon's record when it comes out, `gm_80172BC4` (Mew) and `gm_80172C04`
@@ -169,24 +172,24 @@ impl Running<'_> {
             if n == 0 {
                 return false;
             }
-            self.game.game_data.thing.save_data.x1B58[(n / 32) as usize] &= !(1 << (n % 32));
+            self.game.game_data.thing.save_data.trophies[(n / 32) as usize] &= !(1 << (n % 32));
             return true;
         }
-        if bit(&self.game.game_data.thing.save_data.x1B58, &[], n) {
+        if bit(&self.game.game_data.thing.save_data.trophies, &[], n) {
             if self.game.unlock_code(code::RECORD_TROPHY_HELD) {
                 // The unlock-all code's answer for a trophy held: 1, its notice taken back.
-                self.game.game_data.thing.save_data.x1B58[(n / 32) as usize] &= !(1 << (n % 32));
+                self.game.game_data.thing.save_data.trophies[(n / 32) as usize] &= !(1 << (n % 32));
                 return true;
             }
             return false;
         }
         let now = self.clock_seconds();
         let g = &mut self.game.game_data;
-        g.unk_44.times[n as usize] = now;
-        g.unk_44.flags[(n / 32) as usize] |= 1 << (n % 32);
+        g.trophy_notices.times[n as usize] = now;
+        g.trophy_notices.flags[(n / 32) as usize] |= 1 << (n % 32);
         let s = &mut g.thing.save_data;
-        s.x1B58[(n / 32) as usize] |= 1 << (n % 32);
-        s.x1B58[(n / 32) as usize] &= !(1 << (n % 32));
+        s.trophies[(n / 32) as usize] |= 1 << (n % 32);
+        s.trophies[(n / 32) as usize] &= !(1 << (n % 32));
         true
     }
 
@@ -197,15 +200,15 @@ impl Running<'_> {
     pub(super) fn regive_record_trophy(&mut self, n: i32) {
         let n = n as u32;
         let (w, b) = ((n / 32) as usize, 1u32 << (n % 32));
-        self.game.game_data.thing.save_data.x1B58[w] &= !b;
+        self.game.game_data.thing.save_data.trophies[w] &= !b;
         if self.game.unlock_code(code::TROPHY_MESSAGES_OFF) {
             return;
         }
         let now = self.clock_seconds();
         let g = &mut self.game.game_data;
-        g.unk_44.times[n as usize] = now;
-        g.unk_44.flags[w] |= b;
-        g.thing.save_data.x1B58[w] |= b;
+        g.trophy_notices.times[n as usize] = now;
+        g.trophy_notices.flags[w] |= b;
+        g.thing.save_data.trophies[w] |= b;
     }
 
     /// `Toy_803048C0` over a list: whether the table in play holds every one.
@@ -229,7 +232,7 @@ impl Running<'_> {
     pub fn trophy_unlocks(&mut self) {
         self.game.sync_unlocks();
         for (selkind, &ck) in SELKIND_TO_CKIND.iter().enumerate().take(25) {
-            let n = self.game.game_data.thing.save_data.unk_30.x18[selkind];
+            let n = self.game.game_data.thing.save_data.trophy_records.plays[selkind];
             for (min, mode) in [
                 (100, GameMode::Classic),
                 (200, GameMode::Adventure),
@@ -261,7 +264,15 @@ impl Running<'_> {
         if self.game.features() & 8 != 0 {
             self.give_record_trophy(0xDC);
         }
-        if self.game.game_data.thing.save_data.unk_30.x14 >= 10000 {
+        if self
+            .game
+            .game_data
+            .thing
+            .save_data
+            .trophy_records
+            .most_coins
+            >= 10000
+        {
             self.give_record_trophy(0x10C);
         }
         if self.message_noted(0x1A) {
@@ -279,7 +290,7 @@ impl Running<'_> {
         let s = &self.game.game_data.thing.save_data;
         let all = (0..0x100u32)
             .filter(|&j| !matches!(j, 9 | 0x29 | 0x42 | 0x43 | 0xB9 | 0xC9 | 0xCA))
-            .all(|j| bit(&s.x1C88, &s.padding_x1C88, j));
+            .all(|j| bit(&s.bonuses_seen, &s.bonuses_seen_rest, j));
         if all {
             self.give_record_trophy(0x123);
         }
@@ -320,22 +331,24 @@ impl Running<'_> {
         let s = &mut self.game.game_data.thing.save_data;
         match n {
             0x16 => {
-                if s.unk_1A8.x4 == 0 && u.all_characters() {
-                    s.unk_1A8.x4 = 1;
+                if s.message_records.all_characters_shown == 0 && u.all_characters() {
+                    s.message_records.all_characters_shown = 1;
                 }
-                s.unk_1A8.x4 != 0
+                s.message_records.all_characters_shown != 0
             }
             0x18 => {
-                if s.unk_1A8.x5 == 0 && (0..6).all(|i| s.x186A & (1 << i) != 0) {
-                    s.unk_1A8.x5 = 1;
+                if s.message_records.stages_shown == 0
+                    && (0..6).all(|i| s.unlocked_stages & (1 << i) != 0)
+                {
+                    s.message_records.stages_shown = 1;
                 }
-                s.unk_1A8.x5 != 0
+                s.message_records.stages_shown != 0
             }
             0x1B => {
-                if s.unk_1A8.x6 == 0 && u.all_characters() && u.all_stages() {
-                    s.unk_1A8.x6 = 1;
+                if s.message_records.everything_shown == 0 && u.all_characters() && u.all_stages() {
+                    s.message_records.everything_shown = 1;
                 }
-                s.unk_1A8.x6 != 0
+                s.message_records.everything_shown != 0
             }
             0x1C => u.all_characters(),
             0x1D => u.all_stages(),
@@ -393,26 +406,26 @@ impl Running<'_> {
         let noted = [0x18, 0x17, 0x16, 0x1B].map(|n| self.message_noted(n));
         let s = &mut self.game.game_data.thing.save_data;
         if noted[0] {
-            s.x186C |= 2;
+            s.unlocked_features |= 2;
         } else {
-            s.x186C &= !2;
-            self.game.game_data.thing.save_data.x1CB0.stage_mask = u32::MAX;
+            s.unlocked_features &= !2;
+            self.game.game_data.thing.save_data.prefs.stage_mask = u32::MAX;
         }
         let s = &mut self.game.game_data.thing.save_data;
         if noted[1] {
-            s.x186C |= 1;
+            s.unlocked_features |= 1;
         } else {
-            s.x186C &= !1;
+            s.unlocked_features &= !1;
         }
         if noted[2] {
-            s.x186C |= 4;
+            s.unlocked_features |= 4;
         } else {
-            s.x186C &= !4;
+            s.unlocked_features &= !4;
         }
         if noted[3] {
-            s.x186C |= 8;
+            s.unlocked_features |= 8;
         } else {
-            s.x186C &= !8;
+            s.unlocked_features &= !8;
         }
         self.game.sync_unlocks();
     }
@@ -425,9 +438,10 @@ impl Running<'_> {
         }
         let g = &self.game.game_data;
         let s = &g.thing.save_data;
-        let message = (0..0x42).any(|i| self.game.message_noted(i) && bit(&s.x1B40, &[], i));
+        let message =
+            (0..0x42).any(|i| self.game.message_noted(i) && bit(&s.messages_pending, &[], i));
         let trophy =
-            (0..super::trophies::TROPHY_COUNT as u32).any(|j| bit(&g.unk_44.flags, &[], j));
+            (0..super::trophies::TROPHY_COUNT as u32).any(|j| bit(&g.trophy_notices.flags, &[], j));
         message || trophy
     }
 

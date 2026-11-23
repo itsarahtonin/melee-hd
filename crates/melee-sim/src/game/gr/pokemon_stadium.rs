@@ -276,8 +276,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grStadium_OnInit")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.stadium.yakumono = r.game.stage_info.yakumono_param;
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 0, setup::SETUP_FRAME);
     create(r, MAP_DISPLAY, setup::SETUP_FRAME);
     create(r, MAP_MAIN, setup::SETUP_FRAME);
@@ -353,7 +353,7 @@ pub fn init_display(r: &mut Running, gobj: GObjId) {
     }
     reset_display(r, gobj);
     setup::add_start_hook(r.game, gobj, CodeRef(0x801D_11E4));
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
     r.game.world.gobj_mut(gobj).render = Some(CodeRef(0x801D_5074));
 }
 
@@ -429,7 +429,7 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
         // is out.
         r.game.grounds[g.0].u.stadium().preload_out = 0;
     }
-    r.game.grounds[g.0].x11_flags.b012 = 1;
+    r.game.grounds[g.0].pass_flags.b012 = 1;
     let geo = r.game.geometry_mut();
     geo.disable_line(0x55);
     geo.disable_line(0x6F);
@@ -470,7 +470,7 @@ pub fn init_default(r: &mut Running, gobj: GObjId) {
     init_piece(r, gobj, &[4]);
     let g = ground_of(r.game, gobj);
     *r.game.grounds[g.0].u.stadium_bits() = Default::default();
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The grass stage's setup (map 4), `grStadium_801D1648`.
@@ -479,7 +479,7 @@ pub fn init_grass(r: &mut Running, gobj: GObjId) {
     init_piece(r, gobj, &[3]);
     let g = ground_of(r.game, gobj);
     *r.game.grounds[g.0].u.stadium_bits() = Default::default();
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The rock stage's setup (map 6), `grStadium_801D1720`: also its dust's generator.
@@ -490,7 +490,7 @@ pub fn init_rock(r: &mut Running, gobj: GObjId) {
     r.game.grounds[g.0].u.stadium_piece().bits = Default::default();
     let generator = grlib::generator_at(r.game, r.data, 0x7546, 0x1E, Vec3::default());
     r.game.grounds[g.0].u.stadium_piece().generator = generator;
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The rock stage's destruction, `grStadium_801D1808`: its generator removed, its joint off.
@@ -523,7 +523,7 @@ pub fn init_fire(r: &mut Running, gobj: GObjId) {
             grlib::generator_on(r.game, r.data, idx, 0x1E, Some(j));
         }
     }
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The fire stage's destruction, `grStadium_801D19F8`: part 18's generators and particles
@@ -557,7 +557,7 @@ pub fn init_water(r: &mut Running, gobj: GObjId) {
     v.turning = turning;
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, 8);
-    r.game.grounds[g.0].x10_flags.b5 = true;
+    r.game.grounds[g.0].flags.shadowed = true;
 }
 
 /// The water stage's process, `grStadium_801D1B48`: the blades follow its height, the windmill
@@ -977,7 +977,7 @@ pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
             .flatten()
             .any(|o| copy_origin(o, vp)[..2] != [copy_x, copy_y])
     }) {
-        let tick = r.game.scene.unk_8;
+        let tick = r.game.scene.game_ticks;
         r.game.display_phase.note(tick);
     }
     let z = screen_mut(r.game, SCREEN_ZOOM);

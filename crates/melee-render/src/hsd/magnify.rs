@@ -107,8 +107,15 @@ impl Ctx<'_> {
             2
         };
         let grid = [
-            &param.xB8, &param.xBC, &param.xC0, &param.xC4, &param.xC8, &param.xCC, &param.xD0,
-            &param.xD4, &param.xD8,
+            &param.bubble_color_0,
+            &param.bubble_color_1,
+            &param.bubble_color_2,
+            &param.bubble_color_3,
+            &param.bubble_color_4,
+            &param.bubble_color_5,
+            &param.bubble_color_6,
+            &param.bubble_color_7,
+            &param.bubble_color_8,
         ];
         let c = CORNERS[row * 4 + col].map(|k| grid[usize::from(k)]);
 

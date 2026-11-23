@@ -180,13 +180,13 @@ pub fn fire(r: &mut Running, gobj: GObjId) {
     // `lbColl_80008D30` from `it_803B8610`: the attributes' damage, angle, growth, fixed and
     // base knockback and element, and sound severity 1 of kind 0.
     hit.kb_angle = attr_u(r, gobj, 0x34) as i32;
-    hit.x24 = attr_u(r, gobj, 0x38);
-    hit.x28 = attr_u(r, gobj, 0x3C);
-    hit.x2C = attr_u(r, gobj, 0x40);
+    hit.kb_growth = attr_u(r, gobj, 0x38);
+    hit.set_kb = attr_u(r, gobj, 0x3C);
+    hit.base_kb = attr_u(r, gobj, 0x40);
     hit.element = attr_u(r, gobj, 0x44);
     hit.sfx_severity = 1;
     hit.sfx_kind = 0;
-    hit.unk_count = attr_u(r, gobj, 0x30);
+    hit.whole_damage = attr_u(r, gobj, 0x30);
     let half_pi = fp::fdiv(std::f64::consts::PI, 2.0);
     let two_pi = fp::fmul(2.0, std::f64::consts::PI);
     let mut angle = fp::frsp(fp::fadd(half_pi, reg(vars(r.game, gobj).turn.get())));
@@ -358,7 +358,7 @@ fn turn(r: &mut Running, gobj: GObjId) {
 /// Marks it catchable when empty (`xDCC_flag.b3`), the states' common start.
 fn mark_catchable(r: &mut Running, gobj: GObjId) {
     let empty = rider(r.game, gobj).is_none();
-    item_mut(r.game, gobj).state_flags.b3 = empty;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = empty;
 }
 
 /// `itTarucann_UnkMotion0_Anim` (and 1, 6, 7, 8): marked, then its life.

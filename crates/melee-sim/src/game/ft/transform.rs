@@ -37,7 +37,7 @@ impl Running<'_> {
         self.game.fighters[dst_id.0].is_sub_fighter = src_sub;
         self.init_reset(dst_id);
         self.stop_dead(dst_gobj);
-        let percent = self.game.fighters[src_id.0].dmg.x1830_percent;
+        let percent = self.game.fighters[src_id.0].dmg.percent;
         let pair = [src_id.0, dst_id.0];
         {
             let [src, dst] = self
@@ -49,7 +49,7 @@ impl Running<'_> {
             dst.prev_pos = src.prev_pos;
             dst.pos_delta = src.pos_delta;
             dst.facing_dir = src.facing_dir;
-            dst.dmg.x1830_percent = src.dmg.x1830_percent;
+            dst.dmg.percent = src.dmg.percent;
         }
         let (dst_slot, dst_which) = {
             let dst = &self.game.fighters[dst_id.0];
@@ -63,7 +63,7 @@ impl Running<'_> {
                 .fighters
                 .get_disjoint_mut(pair)
                 .expect("the transformation's two fighters");
-            dst.dmg.x18F0 = src.dmg.x18F0;
+            dst.dmg.healing = src.dmg.healing;
             dst.self_vel = src.self_vel;
             dst.ground_or_air = src.ground_or_air;
             dst.gr_vel = src.gr_vel;
@@ -97,20 +97,20 @@ impl Running<'_> {
             dst.frames_since_tech_shoulder = src.frames_since_tech_shoulder;
             dst.frames_since_z = src.frames_since_z;
             dst.frames_since_tech_window = src.frames_since_tech_window;
-            dst.dmg.x18c4_source_ply = src.dmg.x18c4_source_ply;
-            dst.dmg.x18C8 = src.dmg.x18C8;
+            dst.dmg.source_player = src.dmg.source_player;
+            dst.dmg.source_attack = src.dmg.source_attack;
             dst.last_hit_by_sub = src.last_hit_by_sub;
-            dst.dmg.x18CC = src.dmg.x18CC;
-            dst.dmg.x18D0 = src.dmg.x18D0;
-            dst.dmg.x18d4 = src.dmg.x18d4;
-            dst.dmg.x18ec_instancehitby = src.dmg.x18ec_instancehitby;
+            dst.dmg.source_class = src.dmg.source_class;
+            dst.dmg.source_kind = src.dmg.source_kind;
+            dst.dmg.attack_record = src.dmg.attack_record;
+            dst.dmg.instance_hit_by = src.dmg.instance_hit_by;
             dst.debug_draw_flags = src.debug_draw_flags;
             dst.parasol_from_jump = src.parasol_from_jump;
             dst.parasol_blend = src.parasol_blend;
             dst.parasol_open = src.parasol_open;
             dst.parasol_checked = src.parasol_checked;
             dst.parasol_frames = src.parasol_frames;
-            dst.dmg.x1910 = src.dmg.x1910;
+            dst.dmg.dot_frames = src.dmg.dot_frames;
             dst.jumps_used = src.jumps_used;
             dst.walljumps_used = src.walljumps_used;
             dst.shield_health = src.shield_health;
@@ -262,7 +262,7 @@ impl Running<'_> {
     pub fn scale_worn_items(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if let Some(hood) = fp.bunny_hood {
-            let s = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.x12C)));
+            let s = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.hood_ear_scale)));
             rabbitc::scale_ears(self, hood, s);
         }
         if let Some(flower) = self.game.fighter(gobj).flower {
@@ -270,7 +270,7 @@ impl Running<'_> {
             let fp = self.game.fighter(gobj);
             let petals = mem(fp::fmuls(
                 reg(fp.scale.y),
-                fp::fmuls(size, reg(fp.co_attrs.x13C)),
+                fp::fmuls(size, reg(fp.co_attrs.flower_scale)),
             ));
             flower::set_size(self, flower, petals);
         }
@@ -296,7 +296,7 @@ impl Running<'_> {
             cd.ecb_source.side_lift = x124;
             cd.set_ledge_snap(sx, sy, sh);
         }
-        cd.x50 = weight;
+        cd.weight = weight;
         if joints {
             cd.ecb_source.min_height = ten;
             cd.ecb_source.min_width = ten;

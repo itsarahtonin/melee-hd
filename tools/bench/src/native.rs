@@ -137,7 +137,7 @@ pub(crate) fn fighters(g: &Game) -> [Option<Fighter>; 8] {
             x: fp.cur_pos.x.to_bits(),
             y: fp.cur_pos.y.to_bits(),
             facing: fp.facing_dir.to_bits(),
-            percent: fp.dmg.x1830_percent.to_bits(),
+            percent: fp.dmg.percent.to_bits(),
             stocks: g.player_stocks(slot) as u8,
         });
     }
@@ -969,8 +969,8 @@ mod tests {
                     r.match_kind,
                     r.timer_enabled,
                     r.is_stock,
-                    r.x2_5,
-                    r.x3_0,
+                    r.damage_display_kos,
+                    r.shows_score,
                     r.is_vs,
                 )
             };
@@ -981,10 +981,10 @@ mod tests {
                         p.model_scale.to_bits(),
                         p.attack_ratio.to_bits(),
                         p.defense_ratio.to_bits(),
-                        p.xB,
+                        p.sfx_size,
                         p.damage1,
                         p.vs_invisible,
-                        p.xC_b7,
+                        p.stamina,
                         p.hp,
                         if s.stamina && i < 4 { p.stocks } else { 0 },
                     )
@@ -1260,7 +1260,7 @@ mod tests {
                 ours.seed = seed;
                 let (a, b) = (&ours.start.rules, &theirs.start.rules);
                 assert_eq!(a.item_freq, b.item_freq, "case {n}: the frequency");
-                assert_eq!(a.x20, b.x20, "case {n}: the kinds");
+                assert_eq!(a.item_switch, b.item_switch, "case {n}: the kinds");
                 let ours = Match::start(&ours, &mut |name| files.load(name));
                 let theirs = Match::start(&theirs, &mut |name| files.load(name));
                 let (a, b) = (&ours.game.it.spawn, &theirs.game.it.spawn);

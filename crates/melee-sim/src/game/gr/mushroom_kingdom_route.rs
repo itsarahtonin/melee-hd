@@ -114,8 +114,8 @@ const PROC_FRAME: u32 = super::corneria::PROC_LOOP - 0xA0 - 0x20;
 #[doc(alias = "grKinokoRoute_80207420")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.kinokoroute_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [2, 0, 1, 3] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -263,7 +263,7 @@ pub fn init_backdrop(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
 }
 
 /// The route's start hook, `grKinokoRoute_80207B30`: the water as a fighter device of type 6
@@ -288,9 +288,9 @@ pub fn init_route(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
-    gp.x10_flags.b5 = true;
+    gp.unread_8 = None;
+    gp.unread_c = None;
+    gp.flags.shadowed = true;
     let v = gp.u.kinokoroute2();
     v.phase = 0;
     v.zone_idx = 0;
@@ -390,14 +390,14 @@ pub fn proc_route(r: &mut Running, gobj: GObjId) {
         {
             r.game.grounds[g.0].u.kinokoroute2().zone_idx += 1;
         }
-        r.game.stage_info.x6DC = r.game.grounds[g.0].u.kinokoroute2().zone_idx;
+        r.game.stage_info.route_zone = r.game.grounds[g.0].u.kinokoroute2().zone_idx;
     } else {
         let spawn_idx = r.game.grounds[g.0].u.kinokoroute2().spawn_idx;
         fighter_pos = point_of(r.game, r.data, spawn_idx.into());
         fighter_pos.y = mem(fp::fadds(reg(fighter_pos.y), 30.0));
         cam_target = fighter_pos;
         r.game.camera.set_hold_off_plane(false);
-        r.game.stage_info.x6DC = 0;
+        r.game.stage_info.route_zone = 0;
         let reb0 = point_joint(r.game, 4);
         let eve = point_joint(r.game, 0xBD);
         let (Some(reb0), Some(eve)) = (reb0, eve) else {

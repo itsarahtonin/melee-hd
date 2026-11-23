@@ -265,7 +265,7 @@ impl Running<'_> {
             self.tou_show_bracket();
         }
         self.game.tou.tm.in_name_entry = 0;
-        let h = if self.game.game_data.x1850.handicap == 1 {
+        let h = if self.game.game_data.rules.handicap == 1 {
             5
         } else {
             9
@@ -888,9 +888,9 @@ impl Running<'_> {
         for i in 0..64 {
             self.game.tou.tm.roster[i].random = 0;
             self.game.tou.tm.roster[i].seat = i as u8;
-            if self.game.game_data.x1850.handicap == 1 {
+            if self.game.game_data.rules.handicap == 1 {
                 if self.mt() == 0 {
-                    self.game.game_data.x1850.handicap = 0;
+                    self.game.game_data.rules.handicap = 0;
                     self.game.tou.tm.roster[i].handicap = 9;
                 } else {
                     self.game.tou.tm.roster[i].handicap = 5;
@@ -943,7 +943,7 @@ impl Running<'_> {
                 x37[b as usize].seat = t;
             }
         }
-        let handicap = self.game.game_data.x1850.handicap;
+        let handicap = self.game.game_data.rules.handicap;
         let s = self.su();
         s.cursor = 0;
         s.scroll = 0;
@@ -1146,7 +1146,7 @@ impl Running<'_> {
         for (o, m) in self.game.tou.tm.opts.iter_mut().zip(&MIN) {
             *o = i32::from(m[0]);
         }
-        let handicap = self.game.game_data.x1850.handicap;
+        let handicap = self.game.game_data.rules.handicap;
         let s = self.su();
         s.editing_handicap = 0;
         s.handicap = handicap;
@@ -2104,7 +2104,7 @@ impl Running<'_> {
             self.free_gobj_links(1, 8);
             self.free_gobj_links(0x19, 0x1C);
             self.free_gobj_links(0x12, 0x15);
-            self.game.game_data.x1850.force_main_menu = 1;
+            self.game.game_data.rules.force_main_menu = 1;
             self.game.end_scene();
             self.change_game_mode_after_scene(GameMode::Menu);
             return;
@@ -2230,7 +2230,7 @@ impl Running<'_> {
         self.load_font_named(0, strings_file(us), "SIS_TournamentData");
         self.tou_setup_make();
         self.sfx_play(0x7539, 0x7F, 0x40);
-        let song = i32::from(self.game.game_data.x1850.bgm);
+        let song = i32::from(self.game.game_data.rules.bgm);
         self.lb_play_music(song);
     }
 

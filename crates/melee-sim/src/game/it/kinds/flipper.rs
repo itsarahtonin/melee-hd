@@ -143,12 +143,12 @@ pub fn spawn(r: &mut Running, jobj: Option<JObjId>) -> Option<GObjId> {
         ..Default::default()
     };
     spawn.facing_dir = 1.0;
-    spawn.x3C_damage = 0;
+    spawn.damage = 0;
     spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = None;
-    spawn.x4_parent_gobj2 = None;
-    spawn.x44_flag[0] &= !0x80;
-    spawn.x40 = 0;
+    spawn.owner = None;
+    spawn.maker = None;
+    spawn.flags[0] &= !0x80;
+    spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let v = item_mut(r.game, gobj).vars.flipper();
     v.stage_fixed.set(1);

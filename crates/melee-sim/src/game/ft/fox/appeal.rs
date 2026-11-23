@@ -25,15 +25,15 @@ const STATES: [[i32; 3]; 2] = [
 #[doc(alias = "pl_800386D8")]
 pub fn by_attack_hi(s: &plActionStats, id: i32) -> u32 {
     match id {
-        100 => s.x578,
-        101 => s.x57C,
-        102 => s.x580,
-        103 => s.x584,
-        104 => s.x588,
-        105 => s.x58C,
-        106 => s.x590,
-        107 => s.x594,
-        108..=115 => s.x598[(id - 108) as usize],
+        100 => s.turns,
+        101 => s.squats,
+        102 => s.walks,
+        103 => s.dashes,
+        104 => s.runs,
+        105 => s.jumps,
+        106 => s.air_jumps,
+        107 => s.wall_bounces,
+        108..=115 => s.more_actions[(id - 108) as usize],
         _ => unimplemented!("pl_800386D8 for attack {id:#x}"),
     }
 }

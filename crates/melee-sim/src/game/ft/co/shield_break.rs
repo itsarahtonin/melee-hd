@@ -165,7 +165,7 @@ impl Running<'_> {
         let (health, base, add) = (c.f32(0x280), reg(c.f32(0x2F8)), reg(c.f32(0x2FC)));
         let fp = &mut self.game.fighters[f.0];
         fp.shield_health = health;
-        let mut percent = fp::fsubs(base, reg(fp.dmg.x1830_percent));
+        let mut percent = fp::fsubs(base, reg(fp.dmg.percent));
         if percent < 0.0 {
             percent = 0.0;
         }

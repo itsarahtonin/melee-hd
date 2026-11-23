@@ -140,9 +140,9 @@ impl Ctx<'_> {
         for i in (0..n).rev() {
             let e = &fp.afterimage_ring[cur];
             let d = Vec3::new(
-                madd(e.xC.x, w1, e.x0.x) - prev.x,
-                madd(e.xC.y, w1, e.x0.y) - prev.y,
-                madd(e.xC.z, w1, e.x0.z) - prev.z,
+                madd(e.point_1.x, w1, e.point_0.x) - prev.x,
+                madd(e.point_1.y, w1, e.point_0.y) - prev.y,
+                madd(e.point_1.z, w1, e.point_0.z) - prev.z,
             );
             if i != n - 1 {
                 let d2 = mul(d.z, d.z) + (mul(d.x, d.x) + mul(d.y, d.y));
@@ -189,26 +189,26 @@ impl Ctx<'_> {
             let mut inner = madd(interp, inner_diff, inner0);
             dist += 1;
             let mut alpha = int(madd(interp, alpha_span, alpha_old));
-            push(e.x0, inner, outer, e.xC, alpha);
+            push(e.point_0, inner, outer, e.point_1, alpha);
             if remaining == 0 {
                 break;
             }
             let next = prev_slot(cur);
             let ne = &fp.afterimage_ring[next];
             // `lbVector_CrossprodNormalized` never returns null.
-            let axis = e.xC.cross_normalized(ne.xC);
-            let mut angle = e.xC.angle(ne.xC);
+            let axis = e.point_1.cross_normalized(ne.point_1);
+            let mut angle = e.point_1.angle(ne.point_1);
             let steps = int(div(angle, ANGLE_STEP));
             interp = 1.0 - div(cum[dist], total);
             if steps != 0 {
                 let frac = div(1.0, (steps + 1) as f32);
                 angle = mul(angle, frac);
                 let inner_step = mul(frac, madd(interp, inner_diff, inner0) - inner);
-                let mut pos = e.x0;
+                let mut pos = e.point_0;
                 let pos_step = Vec3::new(
-                    mul(frac, ne.x0.x - pos.x),
-                    mul(frac, ne.x0.y - pos.y),
-                    mul(frac, ne.x0.z - pos.z),
+                    mul(frac, ne.point_0.x - pos.x),
+                    mul(frac, ne.point_0.y - pos.y),
+                    mul(frac, ne.point_0.z - pos.z),
                 );
                 let alpha_step = int(mul(
                     frac,
@@ -222,7 +222,7 @@ impl Ctx<'_> {
                     inner += inner_step;
                     outer += outer_step;
                     alpha = alpha.wrapping_add(alpha_step);
-                    let mut dir = e.xC;
+                    let mut dir = e.point_1;
                     dir.rotate_about(axis, turned);
                     push(pos, inner, outer, dir, alpha);
                 }

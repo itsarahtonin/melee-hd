@@ -484,8 +484,8 @@ fn part_flags() {
             depth,
         );
         let mut ours = FighterBone {
-            x8: old,
-            xC_u: [old_c[0], old_c[1], 0, 0],
+            flags: old,
+            tree: [old_c[0], old_c[1], 0, 0],
             ..FighterBone::default()
         };
         bone_from_joint(&mut ours, flags, depth);
@@ -500,7 +500,7 @@ fn part_flags() {
             ctx.read_u8(bone + 0xD),
         ];
         assert_eq!(
-            [ours.x8[0], ours.x8[1], ours.xC_u[0], ours.xC_u[1]],
+            [ours.flags[0], ours.flags[1], ours.tree[0], ours.tree[1]],
             theirs,
             "flags {flags:#x}, depth {depth}"
         );

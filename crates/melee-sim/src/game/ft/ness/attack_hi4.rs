@@ -127,7 +127,7 @@ impl Running<'_> {
             cd.cur_pos = from;
             cd.last_pos = cd.cur_pos;
             cd.cur_pos = to;
-            cd.x34_flags.b1234 = 5;
+            cd.ecb_flags.b1234 = 5;
             c.air_frame_box(&mut cd, &ecb, 0);
             cd.env_flags
         });
@@ -242,14 +242,14 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let s = &mut fp.smash_attrs;
         s.state = 4;
-        s.x2124_frameSpeedMul = fp.frame_speed_mul;
+        s.frame_speed_mul = fp.frame_speed_mul;
         let s = &mut fp.smash_attrs;
-        s.x2118_frames = 0.0;
-        s.x211C_holdFrame = 60.0;
-        s.x212C = 0;
-        s.x212D = rows;
-        s.x2128 = COLANIM_CHARGE;
-        if s.x2128 != 123 {
+        s.frames = 0.0;
+        s.hold_frame = 60.0;
+        s.shake_row = 0;
+        s.shake_rows = rows;
+        s.color_anim = COLANIM_CHARGE;
+        if s.color_anim != 123 {
             self.start_color_anim(gobj, COLANIM_CHARGE, 0);
         }
         self.start_rumble(f, 36, 0);
@@ -268,7 +268,7 @@ impl Running<'_> {
             self.game.fighters[f.0].set_u_i32(u::X223C, spin.to_bits() as i32);
         }
         self.fighter_play_track(f, Track::Effect2, SFX_RELEASE, 127, 64);
-        let charge = self.game.fighters[f.0].smash_attrs.x2118_frames;
+        let charge = self.game.fighters[f.0].smash_attrs.frames;
         self.ness_yoyo_apply_damage(gobj, charge);
     }
 

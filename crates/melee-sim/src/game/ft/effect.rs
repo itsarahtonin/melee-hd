@@ -177,7 +177,7 @@ impl Running<'_> {
             }
             0x438 | 0x439 => {
                 let fp = &self.game.fighters[f.0];
-                let size = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.x144)));
+                let size = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.effect_scale)));
                 self.queue_effect(
                     gobj,
                     SpawnKind::AttachParam,

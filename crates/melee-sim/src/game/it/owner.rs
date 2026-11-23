@@ -204,7 +204,7 @@ pub fn camera_bone_pos(game: &mut Game, data: &Archives, gobj: GObjId) -> Vec3 {
         .ptr(fp.ft_data.expect("a fighter without data"))
         .expect("a fighter without attributes");
     let bone = data.u32(attrs.at(0x16C)) as usize;
-    let offset = fp.co_attrs.x170;
+    let offset = fp.co_attrs.camera_bone_offset;
     let parts = fp.parts.expect("a fighter without parts");
     let j = game.fighter_parts[parts.0][bone].joint;
     crate::lb::joint::world_position(&mut game.objs, data, j, Some(offset))
@@ -338,7 +338,7 @@ fn nearest_by_bone(
                     nearest_of(pos, &other[..n], facing_dir) != result
                 }
         }) {
-            let tick = game.scene.unk_8;
+            let tick = game.scene.game_ticks;
             game.display_phase.note(tick);
         }
     }
@@ -436,7 +436,7 @@ pub fn lowest_percent_opponent(game: &Game, gobj: Option<GObjId>) -> Option<GObj
         {
             continue;
         }
-        let percent = reg(other.dmg.x1830_percent);
+        let percent = reg(other.dmg.percent);
         if percent < fp::frsp(f64::from(lowest)) {
             lowest = fp::fctiwz(percent);
             result = Some(g);

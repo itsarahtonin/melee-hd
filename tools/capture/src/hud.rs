@@ -8,9 +8,8 @@ use melee_sim::game::hud::small::{Coins, Hazard};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::UserData;
 use melee_sim::game::structs::{
-    Element_803F9628, HudIndex, IfStockUserData, ScInfStcModels, StaticModelDesc, ifAll_804A0FD8_t,
-    ifStock_804A1ACC, ifStock_804A1378, ifStock_804A1774, ifTime_data, un_803F9E08_t,
-    un_804A1F10_t, un_804A1F58_t,
+    Announcement, CharsLeftTally, CoinCounter, HudIndex, HudLayout, HudStocks, IfStockUserData,
+    JoinerTally, OffscreenArrows, ScInfStcModels, ScoreDisplays, StaticModelDesc, ifTime_data,
 };
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::hsd::sis::TextId;
@@ -161,14 +160,10 @@ impl Importer<'_> {
             base: MEM1,
         };
         let m: &[u8] = &cap.call.mem1;
-        let all = ifAll_804A0FD8_t::import(&mem, IFALL, self);
+        let all = HudLayout::import(&mem, IFALL, self);
         let status = HudIndex::import(&mem, STATUS, self);
         let announcements = core::array::from_fn(|i| {
-            Element_803F9628::import(
-                &mem,
-                ANNOUNCEMENTS + i as u32 * Element_803F9628::SIZE,
-                self,
-            )
+            Announcement::import(&mem, ANNOUNCEMENTS + i as u32 * Announcement::SIZE, self)
         });
         let ko_marks = ScInfStcModels::import(&mem, KO_MARKS, self);
         let time = ifTime_data::import(&mem, TIME, self);
@@ -183,13 +178,13 @@ impl Importer<'_> {
         let archive = (archive != 0)
             .then(|| self.data.get(m.w(archive + 0x20)).map(|d| d.archive))
             .flatten();
-        let stock = ifStock_804A1378::import(&mem, STOCK, self);
+        let stock = HudStocks::import(&mem, STOCK, self);
         let stock_users = core::array::from_fn(|i| {
             IfStockUserData::import(&mem, STOCK_USERS + i as u32 * IfStockUserData::SIZE, self)
         });
-        let stock_1774 = ifStock_804A1774::import(&mem, STOCK_1774, self);
+        let stock_1774 = JoinerTally::import(&mem, STOCK_1774, self);
         let stock_1a8c = core::array::from_fn(|i| self.gobj_at(m.w(STOCK_1A8C + 4 * i as u32)));
-        let stock_1acc = ifStock_804A1ACC::import(&mem, STOCK_1ACC, self);
+        let stock_1acc = CharsLeftTally::import(&mem, STOCK_1ACC, self);
         let nametags = NameTags {
             model: StaticModelDesc::import(&mem, NAMETAG_MODEL, self),
             gobjs: core::array::from_fn(|i| self.gobj_at(m.w(NAMETAG_GOBJS + 4 * i as u32))),
@@ -212,14 +207,14 @@ impl Importer<'_> {
         };
         let ca = m.w(COINS_ARCHIVE);
         let coins = Coins {
-            state: un_803F9E08_t::import(&mem, COINS, self),
+            state: CoinCounter::import(&mem, COINS, self),
             archive: (ca != 0)
                 .then(|| self.data.get(m.w(ca + 0x20)).map(|d| d.archive))
                 .flatten(),
             scene: self.import_data(m.w(COINS_SCENE)),
         };
-        let arrows = un_804A1F10_t::import(&mem, ARROWS, self);
-        let scores = un_804A1F58_t::import(&mem, SCORES, self);
+        let arrows = OffscreenArrows::import(&mem, ARROWS, self);
+        let scores = ScoreDisplays::import(&mem, SCORES, self);
         let h = &mut self.game.hud;
         h.stock = stock;
         h.stock_users = stock_users;
@@ -306,7 +301,7 @@ impl Comparer<'_> {
         h.all.compare(&mem, IFALL, "hud all", self);
         h.status.compare(&mem, STATUS, "hud status", self);
         for (i, e) in h.announcements.iter().enumerate() {
-            let at = ANNOUNCEMENTS + i as u32 * Element_803F9628::SIZE;
+            let at = ANNOUNCEMENTS + i as u32 * Announcement::SIZE;
             e.compare(&mem, at, &format!("hud announcement {i}"), self);
         }
         h.ko_marks.compare(&mem, KO_MARKS, "hud KO marks", self);

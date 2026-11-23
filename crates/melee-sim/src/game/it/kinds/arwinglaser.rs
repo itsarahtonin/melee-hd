@@ -330,13 +330,13 @@ pub fn spawn_straight(
         pos: at,
         prev_pos: at,
         facing_dir: facing,
-        x3C_damage: 0,
+        damage: 0,
         vel: Vec3::new(0.0, 0.0, 0.0),
-        x0_parent_gobj: None,
-        x40: 0,
+        owner: None,
+        ignore_id: 0,
         ..Default::default()
     };
-    spawn.x44_flag[0] &= !0x80;
+    spawn.flags[0] &= !0x80;
     let gobj = spawn_air(r, &mut spawn)?;
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     lib2725::set_lifetime(r.game, r.data, gobj, 300.0);
@@ -433,13 +433,13 @@ pub fn spawn_aimed(
         pos,
         prev_pos: at,
         facing_dir: 0.0,
-        x3C_damage: 0,
+        damage: 0,
         vel: Vec3::new(0.0, 0.0, 0.0),
-        x0_parent_gobj: None,
-        x40: 0,
+        owner: None,
+        ignore_id: 0,
         ..Default::default()
     };
-    spawn.x44_flag[0] &= !0x80;
+    spawn.flags[0] &= !0x80;
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return;
     };
@@ -479,7 +479,7 @@ pub fn spawn_aimed(
     lib2725::set_rotation_z(r.game, j, 0.0);
     enter(r, gobj);
     lib2725::first_frame(r, gobj);
-    item_mut(r.game, gobj).state_flags.b3 = false;
+    item_mut(r.game, gobj).state_flags.checks_blast_zones = false;
 }
 
 /// A lead's destroy callback, `it_802E79C8`: it lets go of its beams, which let go of it.
@@ -709,7 +709,7 @@ pub fn ends(_r: &mut Running, _gobj: GObjId) -> bool {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     let ip = item(r.game, gobj);
-    let by = if !ip.state_flags.b1 {
+    let by = if !ip.state_flags.keeps_owner_reflected {
         ip.owner
     } else {
         ip.reflector

@@ -116,7 +116,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     v.set_i32(SWARM_FRAMES, 0);
     v.set_i32(SWARMS, swarms);
     let ip = item_mut(r.game, gobj);
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.facing_dir = 0.0;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
@@ -346,15 +346,15 @@ pub fn spawn_swarm(r: &mut Running, gobj: GObjId) {
         prev_pos: Vec3::new(x, y, edge.z),
         pos: lib26b1::ecb_center(r.game, gobj),
         facing_dir: facing,
-        x3C_damage: 0,
+        damage: 0,
         vel: pokemon::vars(r.game, gobj).vec(SWARM_VEL),
-        x40: 0,
+        ignore_id: 0,
         kind: ItKind::UnownSwarm.id(),
-        x0_parent_gobj: owner,
-        x4_parent_gobj2: Some(gobj),
+        owner,
+        maker: Some(gobj),
         ..Default::default()
     };
-    spawn.x44_flag[0] &= !0x80;
+    spawn.flags[0] &= !0x80;
     spawn_air(r, &mut spawn);
 }
 
@@ -366,7 +366,7 @@ pub fn swarm_spawned(r: &mut Running, gobj: GObjId) {
     lib2725::set_model(r, gobj, joint);
     let life = attr_i32(r, gobj, 0);
     let ip = item_mut(r.game, gobj);
-    ip.state_flags.b3 = false;
+    ip.state_flags.checks_blast_zones = false;
     ip.life_timer = mem(fp::frsp(f64::from(life)));
     lib2725::stop_spin(r.game, r.data, gobj);
     let slow = attr_f32(r, gobj, 0x1C);

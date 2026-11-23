@@ -17,7 +17,7 @@ use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::{
     _StaticPlayer, BgFlashUserData, Camera, CameraDebugMode, CmSubject, ControllerMap,
-    DynamicsData, Fighter, FighterBone, VsSceneController, gm_80479D58_t, ifMagnify,
+    DynamicsData, Fighter, FighterBone, SceneLoop, VsSceneController, ifMagnify,
 };
 use melee_sim::hsd::aobj::{AObj, AObjId};
 use melee_sim::hsd::cobj::{CObj, CObjId};
@@ -734,7 +734,7 @@ impl<'a> Importer<'a> {
             base: MEM1,
         };
         // The scene loop's state holds the debug pause flags.
-        self.game.scene = gm_80479D58_t::import(&mem, sym("gm_80479D58"), self);
+        self.game.scene = SceneLoop::import(&mem, sym("gm_80479D58"), self);
         self.game.gm.db_level = self.u32(sym("DbLevel")) as i32;
         self.game.gm.develop_ini = self.u32(sym("db_804D6B20")) != 0;
         self.game.gm.trophy_data = self.u32(sym("_Toy_sbss_804D6ED0")) != 0;

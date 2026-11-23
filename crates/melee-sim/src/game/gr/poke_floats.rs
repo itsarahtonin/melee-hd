@@ -172,8 +172,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grPura_80211D00")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.pura_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 1, 4] {
         create(r, map_id, INIT_FRAME);
     }
@@ -276,7 +276,7 @@ pub fn init_sky(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].x11_flags.b012 = 2;
+    r.game.grounds[g.0].pass_flags.b012 = 2;
     let c = r.game.objs.rng.below(4);
     r.game.grounds[g.0].u.pura().color_from = c as i16;
     next_color(r, g);

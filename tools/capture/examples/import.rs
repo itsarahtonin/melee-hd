@@ -48,7 +48,7 @@ fn main() {
     if std::env::var_os("PERTURB").is_some() {
         let j = melee_sim::hsd::jobj::JObjId(5);
         game.objs.jobjs[j].mtx.m[1][3] += 1.0;
-        game.fighters[0].dmg.x1830_percent += 1.0;
+        game.fighters[0].dmg.percent += 1.0;
     }
     let mut cmp = Comparer::new(&cap.call.mem1, &data, &game, maps);
     cmp.world();

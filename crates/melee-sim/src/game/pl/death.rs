@@ -64,14 +64,14 @@ impl Running<'_> {
         }
         if rival_bonuses && ko != NO_SLOT {
             let t = &self.game.player(ko).stale_moves;
-            let (rival, bits, spike) = (t.xCB8, t.xCBC, t.xCC0.x10_b0);
+            let (rival, bits, spike) = (t.last_ko_by, t.last_ko_attack, t.last_ko_hit.spike);
             if !self.no_rival(ko, rival) {
                 if (0x33..=0x3D).contains(&bits[3]) {
                     self.set_point(rival, 0x2A, 1);
                 }
                 if spike {
                     self.set_point(rival, 7, 1);
-                    let p = &mut self.game.player_mut(rival).stale_moves.x904[6];
+                    let p = &mut self.game.player_mut(rival).stale_moves.bonuses[6];
                     *p = p.saturating_sub(1);
                 }
             }
@@ -85,7 +85,7 @@ impl Running<'_> {
             slot, NO_SLOT,
             "the original's assertion failed: player != Gm_Player_Other"
         );
-        self.game.player_mut(slot).stale_moves.x904[kind] = v;
+        self.game.player_mut(slot).stale_moves.bonuses[kind] = v;
     }
 
     /// A KO's statistics, `pl_8003D644`, for the fighter in `slot` (`sub` for Nana, who
@@ -110,10 +110,10 @@ impl Running<'_> {
             .expect("a slot without its fighter");
         let fp = self.game.fighter(gobj);
         let msid = fp.motion_id;
-        let (source_type, source_kind) = (fp.dmg.x18CC, fp.dmg.x18D0);
-        let attack_bits = fp.dmg.x18d4;
-        let instance = fp.dmg.x18ec_instancehitby;
-        let hit = fp.dmg.x18d8.clone();
+        let (source_type, source_kind) = (fp.dmg.source_class, fp.dmg.source_kind);
+        let attack_bits = fp.dmg.attack_record;
+        let instance = fp.dmg.instance_hit_by;
+        let hit = fp.dmg.hit_records.clone();
         let last = self.game.ft_last_attacker(gobj);
         let last_sub = fp.last_hit_by_sub;
         // `ft_80087858`, `ft_80087878`.
@@ -125,12 +125,12 @@ impl Running<'_> {
         }
         let p = self.game.player_mut(slot);
         let t = &mut p.stale_moves;
-        t.xCB8 = last;
-        t.xCBC = attack_bits;
-        t.xCC0 = hit.clone();
-        t.xCD4 = instance;
+        t.last_ko_by = last;
+        t.last_ko_attack = attack_bits;
+        t.last_ko_hit = hit.clone();
+        t.last_ko_instance = instance;
         // `pl_8003FED0`: the first KO of the match.
-        if (0..6).all(|i| self.game.player_mut(i).stale_moves.x904[0x82] == 0) {
+        if (0..6).all(|i| self.game.player_mut(i).stale_moves.bonuses[0x82] == 0) {
             self.set_point(slot, 0x82, 1);
         }
         if (DEAD_UP_FALL..=DEAD_UP_FALL_HIT_CAMERA_ICE).contains(&msid) {
@@ -138,7 +138,7 @@ impl Running<'_> {
         }
         let p = self.game.player_mut(slot);
         if (DEAD_UP_STAR..=DEAD_UP_STAR_ICE).contains(&msid) {
-            p.stale_moves.xC94 = p.stale_moves.xC94.wrapping_add(1);
+            p.stale_moves.star_falls = p.stale_moves.star_falls.wrapping_add(1);
         }
         if (DEAD_UP..=DEAD_UP_FALL_HIT_CAMERA_ICE).contains(&msid) {
             set_dd1(p, 2);
@@ -161,8 +161,8 @@ impl Running<'_> {
         }
         match source_type {
             1 | 2 => {
-                if hit.x4 <= self.bonus_param(0x128) as i32
-                    && hit.x0 >= self.bonus_param(0x12C) as i32
+                if hit.victim_percent <= self.bonus_param(0x128) as i32
+                    && hit.attacker_percent >= self.bonus_param(0x12C) as i32
                 {
                     self.count_bonus(slot, 0x85);
                 }
@@ -221,7 +221,7 @@ impl Running<'_> {
         }
         if msid == DEAD_UP {
             let lp = &mut self.game.player_mut(last).stale_moves;
-            lp.xCB4 = lp.xCB4.wrapping_add(1);
+            lp.up_kos = lp.up_kos.wrapping_add(1);
         }
         if self.bonus_param(0x120) as i32 == self.game.player_damage(slot) {
             self.count_bonus(last, 0x76);
@@ -253,22 +253,22 @@ impl Running<'_> {
                     self.count_bonus(last, 0x72);
                 }
                 for (on, k) in [
-                    (hit.x11_b0, 0x71),
-                    (hit.x10_b0, 6),
+                    (hit.from_behind, 0x71),
+                    (hit.spike, 6),
                     (
                         reg(hit.kb_applied1) >= reg(self.bonus_param_f32(0x11C)),
                         0x74,
                     ),
-                    (hit.x11_b2, 0x75),
-                    (hit.x11_b1, 0x77),
-                    (hit.x10_b1, 0xB0),
-                    (hit.x10_b2, 0xBB),
-                    (hit.x10_b3, 0xBF),
-                    (hit.x10_b4, 0xBA),
-                    (hit.x10_b5, 0xB7),
-                    (hit.x10_b6, 0xB8),
-                    (hit.x11_b3, 0xB),
-                    (hit.x11_b4, 0x7E),
+                    (hit.on_ledge, 0x75),
+                    (hit.at_edge, 0x77),
+                    (hit.metal, 0xB0),
+                    (hit.bunny_hood, 0xBB),
+                    (hit.starman, 0xBF),
+                    (hit.cloak, 0xBA),
+                    (hit.giant, 0xB7),
+                    (hit.tiny, 0xB8),
+                    (hit.spike_after_strong, 0xB),
+                    (hit.forward_attack, 0x7E),
                 ] {
                     if on {
                         self.count_bonus(last, k);
@@ -327,11 +327,14 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        let (kb, special_fall, jumps) =
-            (fp.dmg.x18d8.kb_applied1, fp.special_air_used, fp.jumps_used);
+        let (kb, special_fall, jumps) = (
+            fp.dmg.hit_records.kb_applied1,
+            fp.special_air_used,
+            fp.jumps_used,
+        );
         if reg(kb) >= reg(self.bonus_param_f32(0x98)) {
             let t = &mut self.game.player_mut(slot).stale_moves;
-            t.xCE8 = t.xCE8.wrapping_add(1);
+            t.ledge_catches = t.ledge_catches.wrapping_add(1);
         }
         if reg(kb) >= reg(self.bonus_param_f32(0xA0)) && !special_fall && jumps <= 1 {
             self.count_bonus(slot, 0x48);
@@ -379,19 +382,19 @@ impl Running<'_> {
         if instance == 0 {
             return;
         }
-        let ring = &mut self.game.player_mut(slot).stale_moves.x8C0;
-        for e in &mut ring.x4 {
-            if e.x0 == instance {
+        let ring = &mut self.game.player_mut(slot).stale_moves.ko_ring;
+        for e in &mut ring.entries {
+            if e.instance == instance {
                 if self_ko {
-                    e.x3_b0 = true;
+                    e.self_ko = true;
                 } else {
-                    e.x2 = e.x2.wrapping_add(1);
+                    e.kos = e.kos.wrapping_add(1);
                 }
                 return;
             }
         }
-        let i = ring.x0 as usize;
-        let (n, marked) = (ring.x4[i].x2, ring.x4[i].x3_b0);
+        let i = ring.next as usize;
+        let (n, marked) = (ring.entries[i].kos, ring.entries[i].self_ko);
         let k = match n {
             5.. => Some(0x7D),
             4 => Some(0x7C),
@@ -405,16 +408,16 @@ impl Running<'_> {
         if marked && n != 0 {
             self.count_bonus(slot, 0x78);
         }
-        let ring = &mut self.game.player_mut(slot).stale_moves.x8C0;
-        let e = &mut ring.x4[i];
-        e.x0 = instance;
-        e.x2 = 0;
-        e.x3_b0 = false;
+        let ring = &mut self.game.player_mut(slot).stale_moves.ko_ring;
+        let e = &mut ring.entries[i];
+        e.instance = instance;
+        e.kos = 0;
+        e.self_ko = false;
         if self_ko {
-            e.x3_b0 = true;
+            e.self_ko = true;
         } else {
-            e.x2 = 1;
+            e.kos = 1;
         }
-        ring.x0 = if ring.x0 == 4 { 0 } else { ring.x0 + 1 };
+        ring.next = if ring.next == 4 { 0 } else { ring.next + 1 };
     }
 }

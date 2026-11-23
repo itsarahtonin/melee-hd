@@ -812,7 +812,7 @@ fn place_player_displays() {
             let mut words = Vec::new();
             for count in 0..8 {
                 r.place_player_displays(count);
-                for p in r.game.hud.all.x18 {
+                for p in r.game.hud.all.player_pos {
                     words.extend(calls::vec_words(p));
                 }
             }
@@ -1871,16 +1871,20 @@ fn announcement_run() {
             r.announce(k as i32, a.i(21), a.i(22), a.i(23), None, None);
             let mut flags = Vec::new();
             for _ in 0..90 {
-                let Some(g) = r.game.hud.announcements[k].x0 else {
+                let Some(g) = r.game.hud.announcements[k].gobj else {
                     break;
                 };
-                if r.game.hud.announcements[k].x8 == Some(CodeRef(0x802F_73C4)) {
+                if r.game.hud.announcements[k].proc == Some(CodeRef(0x802F_73C4)) {
                     r.announcement_once(g);
                 } else {
                     r.announcement_wait(g);
                 }
-                let x = &r.game.hud.announcements[k].x12;
-                flags.push(u32::from(x.x2) | u32::from(x.x1) << 1 | u32::from(x.x0) << 2);
+                let x = &r.game.hud.announcements[k].flags;
+                flags.push(
+                    u32::from(x.started)
+                        | u32::from(x.sfx_2_played) << 1
+                        | u32::from(x.sfx_1_played) << 2,
+                );
             }
             vec![
                 Out::Words(SCRATCH, flags),
@@ -2033,8 +2037,8 @@ fn steal_stock() {
         stubs: &stubs,
         ..Check::new("fn_8016C7D0", &|r, a| {
             let (t, d) = (a.i(20), a.i(21));
-            if r.game.hud.stock.player[t as usize].x0.is_none()
-                || r.game.hud.stock.player[d as usize].x0.is_none()
+            if r.game.hud.stock.player[t as usize].gobj.is_none()
+                || r.game.hud.stock.player[d as usize].gobj.is_none()
             {
                 return vec![Out::R3(9)];
             }
@@ -2071,7 +2075,7 @@ fn stock_misc() {
                 1 => r.free_stock_bonus_icons(),
                 2 => r.free_stock_tally_2(),
                 3 => {
-                    if r.game.hud.stock.player[p as usize].x0.is_some() {
+                    if r.game.hud.stock.player[p as usize].gobj.is_some() {
                         let c = a.r(22).to_be_bytes();
                         r.game.color_stock_icons(p, [c[1], c[2], c[3]]);
                     }
@@ -2302,7 +2306,7 @@ fn hazard() {
             f.regs.gpr[22] = f.below(2);
         },
         ..Check::new("fn_8016C7D0", &|r, a| {
-            let models = r.game.hud.stock.x0.expect("the icons' models");
+            let models = r.game.hud.stock.models.expect("the icons' models");
             let desc = r.data.ptr(models).unwrap();
             r.create_hazard(desc, a.i(20));
             r.game.show_hazard(r.data, a.i(21));
@@ -2540,7 +2544,7 @@ fn scores() {
             let slot = a.i(20);
             r.init_scores();
             r.create_score(slot);
-            let g = r.game.hud.scores.x8[slot as usize].x0.unwrap();
+            let g = r.game.hud.scores.entries[slot as usize].gobj.unwrap();
             r.score_proc(g);
             r.game.hide_scores();
             r.score_proc(g);

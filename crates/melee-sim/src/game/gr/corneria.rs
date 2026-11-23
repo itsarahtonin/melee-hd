@@ -561,8 +561,8 @@ pub const INIT_FRAME: u32 = setup::init_frame(0x30);
 #[doc(alias = "grCorneria_801DD350")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.corneria_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     create(r, 7, INIT_FRAME);
     create(r, 3, INIT_FRAME);
     reset_arwings(r);
@@ -688,7 +688,7 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
         v.drift_accel_y = 0.0;
         v.drift_ticks = 0;
     }
-    r.game.grounds[gid.0].x10_flags.b5 = true;
+    r.game.grounds[gid.0].flags.shadowed = true;
     anime::start_map(r.game, r.data, gobj, m, 0);
     super::fountain_of_dreams::check_archive(r.game, r.data, 3);
     let copy = create(r, 0, COPY_FRAME);
@@ -754,7 +754,7 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
     v.splash_config = front;
     v.splash_config2 = back;
     setup::add_start_hook(r.game, gobj, CodeRef(SHIP_START));
-    r.game.grounds[gid.0].x11_flags.b012 = 1;
+    r.game.grounds[gid.0].pass_flags.b012 = 1;
     let deck = nth_joint(r.game, gobj, 8);
     r.game.grounds[gid.0].u.corneria().deck = deck;
 }
@@ -1026,7 +1026,7 @@ pub fn init_path(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let arwing = (d.create)(r, d.group_arwings[group as usize], d.arwing_frame);
     if let Some(a) = arwing {
         let ag = ground_of(r.game, a);
-        r.game.grounds[ag.0].x10_flags.b2 = false;
+        r.game.grounds[ag.0].flags.keeps_fog = false;
         r.game.grounds[ag.0].u.arwing().slot = slot as i32;
     }
     let s = reg(scale(r.game));
@@ -1621,7 +1621,7 @@ pub fn init_city_middle(r: &mut Running, gobj: GObjId) {
     v.still = false;
     v.cleared_words = [0; 6];
     v.waiting = 0;
-    r.game.grounds[gid.0].x11_flags.b012 = 1;
+    r.game.grounds[gid.0].pass_flags.b012 = 1;
 }
 
 /// A city part's move (the body of `grCorneria_801DFC98` and its two siblings): it slides by
@@ -1695,7 +1695,7 @@ fn init_city_end(r: &mut Running, gobj: GObjId) {
     let m = gp_map(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     r.game.grounds[gid.0].u.corneria_city().waiting = 0;
-    r.game.grounds[gid.0].x11_flags.b012 = 1;
+    r.game.grounds[gid.0].pass_flags.b012 = 1;
 }
 
 /// The city's last part's process (map 9), `grCorneria_801DFF20`: it moves and makes the first
@@ -1842,13 +1842,13 @@ pub fn init_sky(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let m = gp_map(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[gid.0].x10_flags.b2 = false;
+    r.game.grounds[gid.0].flags.keeps_fog = false;
     let n = |r: &Running, k: i32| nth_joint(r.game, gobj, k);
     let points = [n(r, 5), n(r, 2), n(r, 4), n(r, 3), n(r, 7), n(r, 6)];
     super::ground::set_guide_points(r.game, r.data, points);
     material::clear_tree_flags(r.game, j, 1 << 27);
     material::set_tree_flags(r.game, j, 1 << 29);
-    r.game.grounds[gid.0].x11_flags.b012 = 2;
+    r.game.grounds[gid.0].pass_flags.b012 = 2;
 }
 
 /// The sky's process (map 7), `grCorneria_801E0D30`: it rides the Great Fox's sinking.

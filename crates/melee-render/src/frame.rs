@@ -778,7 +778,7 @@ fn widen(v: &mut melee_sim::hsd::display::CameraView, k: f32) {
 /// uncovered. Known by the camera's owner, as the flash records its camera GObj.
 fn fills_screen(game: &Game, c: melee_sim::hsd::cobj::CObjId) -> bool {
     use melee_sim::game::state::Obj;
-    game.bgflash.data.x44.is_some_and(|g| {
+    game.bgflash.data.camera.is_some_and(|g| {
         !game.world.gobjs.is_free(g.0) && game.world.gobj(g).obj == Some(Obj::CObj(c))
     })
 }

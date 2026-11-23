@@ -109,8 +109,8 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 #[doc(alias = "grGarden_80202B70")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.garden_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.unk8C.b4 = false;
-    r.game.stage_info.unk8C.b5 = true;
+    r.game.stage_info.bits.own_entry_points = false;
+    r.game.stage_info.bits.keeps_spawn_point = true;
     for map_id in [0, 4, 5, 6, 1, 3, 2] {
         create(r, map_id, setup::SETUP_FRAME);
     }
@@ -149,9 +149,9 @@ fn init_plain(r: &mut Running, gobj: GObjId, pass: u8) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
-    gp.x11_flags.b012 = pass;
+    gp.unread_8 = None;
+    gp.unread_c = None;
+    gp.pass_flags.b012 = pass;
 }
 
 /// The sky's setup (map 0), `stageGObj0_OnInit`: its animation.
@@ -176,12 +176,12 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
+    gp.unread_8 = None;
+    gp.unread_c = None;
     setup::add_start_hook(r.game, gobj, CodeRef(START_HOOK));
     let gp = &mut r.game.grounds[g.0];
-    gp.x11_flags.b012 = 1;
-    gp.x10_flags.b5 = true;
+    gp.pass_flags.b012 = 1;
+    gp.flags.shadowed = true;
 }
 
 /// The stage's process (map 2), `grGarden_80202E48`: the wind sources age.
@@ -224,9 +224,9 @@ pub fn init_cranky(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
-    gp.x11_flags.b012 = 1;
+    gp.unread_8 = None;
+    gp.unread_c = None;
+    gp.pass_flags.b012 = 1;
 }
 
 /// Cranky Kong's process (map 1), `grGarden_80203098`: each time his animation ends or loops,
@@ -278,9 +278,9 @@ pub fn init_klaptrap(r: &mut Running, gobj: GObjId) {
     v.count = wait;
     v.state = 0;
     let gp = &mut r.game.grounds[g.0];
-    gp.x8_callback = None;
-    gp.xC_callback = None;
-    gp.x11_flags.b012 = 1;
+    gp.unread_8 = None;
+    gp.unread_c = None;
+    gp.pass_flags.b012 = 1;
 }
 
 /// The Klaptrap's process (map 3), `grGarden_80203250`. Waiting (0), it counts down; then its

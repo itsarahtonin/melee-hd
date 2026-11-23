@@ -127,12 +127,14 @@ impl Running<'_> {
         {
             let t = self.game.player_stale_moves(slot);
             if !by(slot) {
-                t.x674[kind2 as usize] = t.x674[kind2 as usize].wrapping_add(1);
+                t.items_picked_up[kind2 as usize] =
+                    t.items_picked_up[kind2 as usize].wrapping_add(1);
             }
             if (0..6).any(by) {
                 return;
             }
-            t.x710[kind2 as usize] = t.x710[kind2 as usize].wrapping_add(1);
+            t.fresh_items_picked_up[kind2 as usize] =
+                t.fresh_items_picked_up[kind2 as usize].wrapping_add(1);
         }
     }
 
@@ -141,26 +143,29 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C37A0")]
     pub fn turn_around_tick(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].dmg.x18F4 == 0 {
+        if self.game.fighters[f.0].dmg.cape_turn_frames == 0 {
             return;
         }
         let part = self.bone_index(&self.game.fighters[f.0], TRANS_N);
         let parts = self.game.fighters[f.0].parts.expect("parts");
         let jobj = self.game.fighter_parts[parts.0][part as usize]
-            .x4_jobj2
+            .interp_joint
             .expect("TransN's second joint");
         let total = self.common().i32(0x648);
         let fp = &mut self.game.fighters[f.0];
         let rot_y = fp::frsp(fp::fdiv(
-            fp::fmul(PI, fp::frsp(f64::from(total.wrapping_sub(fp.dmg.x18F4)))),
+            fp::fmul(
+                PI,
+                fp::frsp(f64::from(total.wrapping_sub(fp.dmg.cape_turn_frames))),
+            ),
             fp::frsp(f64::from(total)),
         ));
-        fp.dmg.x18F4 = fp.dmg.x18F4.wrapping_sub(1);
+        fp.dmg.cape_turn_frames = fp.dmg.cape_turn_frames.wrapping_sub(1);
         let rot_y = mem(rot_y);
         self.game.part_set_rot_y(f, part, rot_y);
         jobj::set_rotation_y(&mut self.game.objs.jobjs, jobj, rot_y);
         let fp = &mut self.game.fighters[f.0];
-        if fp.dmg.x18F4 == 0 {
+        if fp.dmg.cape_turn_frames == 0 {
             fp.turn_spin = false;
             fp.facing_dir = mem(fp::fneg(reg(fp.facing_dir)));
             let top = mem(fp::frsp(fp::fmul(fp::fdiv(PI, 2.0), reg(fp.facing_dir))));
@@ -181,9 +186,10 @@ impl Running<'_> {
         let pos = fp.coll_data.cur_pos;
         let lx = reg(fp.coll_data.ecb.left.x);
         let rx = reg(fp.coll_data.ecb.right.x);
-        fp.dmg.x1930.x0.x = mem(fp::fadds(lx, reg(pos.x)));
-        fp.dmg.x1930.x0.y = mem(fp::fadds(rx, reg(pos.x)));
-        fp.dmg.x1930.x0.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
+        fp.dmg.item_pickup_bounds.prev_feet.x = mem(fp::fadds(lx, reg(pos.x)));
+        fp.dmg.item_pickup_bounds.prev_feet.y = mem(fp::fadds(rx, reg(pos.x)));
+        fp.dmg.item_pickup_bounds.prev_feet.z =
+            mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.feet_height)));
     }
 
     /// Whether the magnifier shows the player off screen, `ifMagnify_802FC998`.
@@ -203,7 +209,7 @@ impl Running<'_> {
         if fp.cloak && !fp.takes_damage_cloaked {
             return;
         }
-        fp.dmg.x1830_percent = mem(fp::fadds(reg(fp.dmg.x1830_percent), amount));
+        fp.dmg.percent = mem(fp::fadds(reg(fp.dmg.percent), amount));
         if fp.metal_timer != 0 {
             fp.metal_health = fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.metal_health)), amount));
         }
@@ -211,22 +217,22 @@ impl Running<'_> {
             fp.alt_metal_health =
                 fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.alt_metal_health)), amount));
         }
-        if reg(fp.dmg.x1830_percent) > 999.0 {
-            fp.dmg.x1830_percent = 999.0;
+        if reg(fp.dmg.percent) > 999.0 {
+            fp.dmg.percent = 999.0;
         }
         let (slot, sub, percent) = (
             i32::from(fp.player_idx),
             i32::from(fp.is_sub_fighter),
-            fp.dmg.x1830_percent,
+            fp.dmg.percent,
         );
         self.game
             .set_player_damage_at(slot, sub, fp::fctiwz(reg(percent)));
         // `pl_8003EC9C`: the damage taken and the highest percent.
         if sub == 0 {
             let t = self.game.player_stale_moves(slot);
-            t.xC60 = mem(fp::fadds(reg(t.xC60), amount));
-            if reg(t.xC64) < reg(percent) {
-                t.xC64 = percent;
+            t.damage_taken = mem(fp::fadds(reg(t.damage_taken), amount));
+            if reg(t.peak_damage) < reg(percent) {
+                t.peak_damage = percent;
             }
             self.game.player_mut(slot).set_ext_u32(0xD10, 0);
         }
@@ -239,8 +245,8 @@ impl Running<'_> {
     pub fn forget_attacker_grounded(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         if fp.ground_or_air == GA_GROUND {
-            fp.dmg.x18c4_source_ply = 6;
-            fp.dmg.x18C8 = -1;
+            fp.dmg.source_player = 6;
+            fp.dmg.source_attack = -1;
         }
     }
 
@@ -275,7 +281,7 @@ impl Running<'_> {
                     fp::frsp(fp::fsub(pi, a))
                 };
             }
-            let c = fp.dmg.x1854_collpos;
+            let c = fp.dmg.coll_pos;
             pos = Vec3::new(c.x, c.y, 0.0);
             angle = a;
             speed = kb;
@@ -289,7 +295,7 @@ impl Running<'_> {
             .expect("a fighter without its GObj");
         let worth =
             super::super::it::kinds::coin::drop_from(self, gobj, pos, n, 1, mem(angle), mem(speed));
-        let src = self.game.fighters[f.0].dmg.x18c4_source_ply;
+        let src = self.game.fighters[f.0].dmg.source_player;
         if src != 6 {
             let v = worth.wrapping_add(self.game.player_coins_knocked(src));
             self.game.set_player_coins_knocked(src, v);
@@ -340,27 +346,27 @@ impl Running<'_> {
         if !charging && attr.state != 4 {
             return;
         }
-        attr.x2118_frames = mem(fp::fadds(reg(attr.x2118_frames), 1.0));
-        attr.x212C = attr.x212C.wrapping_add(1);
-        if attr.x212C >= attr.x212D {
-            attr.x212C = 0;
+        attr.frames = mem(fp::fadds(reg(attr.frames), 1.0));
+        attr.shake_row = attr.shake_row.wrapping_add(1);
+        if attr.shake_row >= attr.shake_rows {
+            attr.shake_row = 0;
         }
-        if charging && attr.x2118_frames >= attr.x211C_holdFrame {
-            if attr.x2118_frames > attr.x211C_holdFrame {
-                attr.x2118_frames = attr.x211C_holdFrame;
+        if charging && attr.frames >= attr.hold_frame {
+            if attr.frames > attr.hold_frame {
+                attr.frames = attr.hold_frame;
             }
             attr.state = 3;
-            let (rate, color) = (attr.x2124_frameSpeedMul, attr.x2128);
+            let (rate, color) = (attr.frame_speed_mul, attr.color_anim);
             self.set_anim_rate(gobj, rate);
             self.end_color_anim(gobj, color);
             let f = self.game.fighter_id(gobj);
             self.stop_rumble(f, 0x24);
         }
         let attr = &self.game.fighter(gobj).smash_attrs;
-        if attr.x2130_sfxBool == 0 && attr.x2118_frames >= sfx_frame {
+        if attr.sfx_played == 0 && attr.frames >= sfx_frame {
             let f = self.game.fighter_id(gobj);
             self.fighter_play_sfx(f, 0x7B, 0x7F, 0x40);
-            self.game.fighter_mut(gobj).smash_attrs.x2130_sfxBool = 1;
+            self.game.fighter_mut(gobj).smash_attrs.sfx_played = 1;
         }
     }
 
@@ -768,7 +774,7 @@ impl Running<'_> {
         if !(1..=3).contains(&state) {
             return;
         }
-        let offset = if h.x43_b1 {
+        let offset = if h.unscaled_offset {
             let inv = fp::fdivs(1.0, reg(fp.scale.y));
             let b = h.b_offset;
             Vec3::new(
@@ -783,8 +789,8 @@ impl Running<'_> {
         if state == 1 {
             let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
             let h = &mut self.game.fighter_mut(gobj).hitboxes[i];
-            h.x4C = p;
-            h.x58 = p;
+            h.pos = p;
+            h.prev_pos = p;
             h.state = 2;
             return;
         }
@@ -792,9 +798,9 @@ impl Running<'_> {
         if state == 2 {
             h.state = 3;
         }
-        h.x58 = h.x4C;
+        h.prev_pos = h.pos;
         let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
-        self.game.fighter_mut(gobj).hitboxes[i].x4C = p;
+        self.game.fighter_mut(gobj).hitboxes[i].pos = p;
     }
 
     /// `ft_8007C224`: the thrown fighter's hitbox follows its bone, as `ftColl_8007AD18`
@@ -807,8 +813,8 @@ impl Running<'_> {
             1 => {
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
                 let h = &mut self.game.fighter_mut(gobj).thrown_hitbox;
-                h.x4C = p;
-                h.x58 = p;
+                h.pos = p;
+                h.prev_pos = p;
                 h.state = 2;
             }
             2 | 3 => {
@@ -816,9 +822,9 @@ impl Running<'_> {
                 if state == 2 {
                     h.state = 3;
                 }
-                h.x58 = h.x4C;
+                h.prev_pos = h.pos;
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
-                self.game.fighter_mut(gobj).thrown_hitbox.x4C = p;
+                self.game.fighter_mut(gobj).thrown_hitbox.pos = p;
             }
             _ => {}
         }
@@ -841,12 +847,12 @@ impl Running<'_> {
             let off = crate::game::mirror::read_vec3(self.data, table.at(0x14 * i as u32 + 4));
             let fp = self.game.fighter_mut(gobj);
             let e = &mut fp.stamina_markers[i];
-            e.x14 = e.x8;
-            let j = e.x4;
+            e.prev_pos = e.pos;
+            let j = e.joint;
             let p = world_position(&mut self.game.objs, self.data, j, Some(off));
             let e = &mut self.game.fighter_mut(gobj).stamina_markers[i];
-            e.x8 = p;
-            e.x8.z = 0.0;
+            e.pos = p;
+            e.pos.z = 0.0;
         }
     }
 }
