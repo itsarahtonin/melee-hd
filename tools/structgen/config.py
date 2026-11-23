@@ -428,6 +428,17 @@ OWNED = {
     "ColorOverlay": ("ColorOverlay", "crate::lb::colanim::ColorOverlay"),
     "LbShadow": ("LbShadow", "crate::lb::shadow::LbShadow"),
     "Fighter": ("Fighter", "crate::game::ft::types::Fighter"),
+    # The item's block and the structs only it holds.
+    "CameraBoxFlags": ("ItemHitFlags", "crate::game::it::types::ItemHitFlags"),
+    "CameraBoxFlags_x0": ("ItemHitBits", "crate::game::it::types::ItemHitBits"),
+    "ItemHitbox": ("ItemHitbox", "crate::game::it::types::ItemHitbox"),
+    "ItemModStruct": ("ItemOutline", "crate::game::it::types::ItemOutline"),
+    "Item_xDCC_flag": ("ItemStateFlags", "crate::game::it::types::ItemStateFlags"),
+    "flag32": ("ItemFlags", "crate::game::it::types::ItemFlags"),
+    "flag32_flags": ("ItemFlagBits", "crate::game::it::types::ItemFlagBits"),
+    "xB6C_t": ("DynamicsPoint", "crate::game::it::types::DynamicsPoint"),
+    "lb_80014638_arg1_t": ("StepBox", "crate::game::it::types::StepBox"),
+    "Item": ("Item", "crate::game::it::types::Item"),
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.

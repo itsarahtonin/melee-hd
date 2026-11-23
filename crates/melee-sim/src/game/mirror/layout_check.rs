@@ -39,6 +39,10 @@ fn owned() -> Vec<Layout> {
     use crate::game::gr::types::{
         Ground, GroundFlags, GroundParam, StageBits, StageBlastZone, StageCameraInfo, StageInfo,
     };
+    use crate::game::it::types::{
+        DynamicsPoint, Item, ItemFlagBits, ItemFlags, ItemHitBits, ItemHitFlags, ItemHitbox,
+        ItemOutline, ItemStateFlags, StepBox,
+    };
     use crate::lb::colanim::ColorOverlay;
     use crate::lb::shadow::LbShadow;
     use crate::mp::coll::{CollData, Ecb, Surface};
@@ -85,6 +89,16 @@ fn owned() -> Vec<Layout> {
         ColorOverlay::layout(),
         LbShadow::layout(),
         Fighter::layout(),
+        ItemHitFlags::layout(),
+        ItemHitBits::layout(),
+        ItemHitbox::layout(),
+        ItemOutline::layout(),
+        ItemStateFlags::layout(),
+        ItemFlags::layout(),
+        ItemFlagBits::layout(),
+        DynamicsPoint::layout(),
+        StepBox::layout(),
+        Item::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))

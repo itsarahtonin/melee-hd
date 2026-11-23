@@ -78,33 +78,6 @@ CM_SUBJECT = {"x54": "unread_54", "x60": "unread_60"}
 
 CAMERA_DEBUG_MODE = {"_58": "unused_58"}
 
-# An item's flag bytes the decomp types as other structs': `xDCD` (`CameraBoxFlags`, the item's
-# `hit_flags`) and `xDCC` (`Item_xDCC_flag`, its `state_flags`).
-CAMERA_BOX_FLAGS = {"x0": "bits"}
-CAMERA_BOX_FLAGS_X0 = {
-    # Its throw and drop sounds are silenced (`it_8026BD0C`).
-    "b2": "silenced",
-    # It doesn't slide on the ground (`it_8026BD6C`, held items).
-    "b3": "no_slide",
-    # It stops dead when it lands.
-    "b4": "stops_on_land",
-    # It may hit its own player, its player's team (`it_80275444` sets both), and its own
-    # player's and ownerless items may hit it (`it_80275414`).
-    "b5": "hits_own_player",
-    "b6": "hits_own_team",
-    "b7": "hit_by_own_items",
-}
-ITEM_XDCC_FLAG = {
-    # A reflection leaves its hitboxes' damage as it is (`Item_80269F14`'s reflect).
-    "b0": "keeps_reflected_damage",
-    # A reflection doesn't take the item over: one a reflector's `b4` asked for, and a Poké
-    # Ball's from its `b5`.
-    "b1": "keeps_owner_reflected",
-    "b2": "keeps_pokeball_reflected",
-    # It checks the blast zones.
-    "b3": "checks_blast_zones",
-}
-
 # A match's rules (`StartMeleeRules`, `vs.start`), which the replays' game info block holds.
 START_MELEE_RULES = {
     # How the damage displays show (`ifStatus_802F665C`).
@@ -349,8 +322,6 @@ FIGHTER_BONE = {
     # Byte 0 the bone's depth in the tree, byte 1 flags.
     "xC_u": "tree",
 }
-# An item's top that can be stepped on: its motion this frame, and its span.
-LB_STEP_TOP = {"unk_x": "motion_x", "unk_y": "motion_y", "x8": "span"}
 # A hit's record (`dmg.hit_records`), copied from the attack record and filled in at the hit.
 FT_800898B4 = {
     "x0": "attacker_percent",
@@ -995,9 +966,6 @@ GROUPS = [
     {
         "CmSubject": CM_SUBJECT,
         "CameraDebugMode": CAMERA_DEBUG_MODE,
-        "CameraBoxFlags": CAMERA_BOX_FLAGS,
-        "CameraBoxFlags_x0": CAMERA_BOX_FLAGS_X0,
-        "Item_xDCC_flag": ITEM_XDCC_FLAG,
     },
     {},
     {"StartMeleeRules": START_MELEE_RULES, "MatchPlayerData": MATCH_PLAYER_DATA},
@@ -1012,7 +980,6 @@ GROUPS = [
         "FighterData_x7C": FIGHTER_DATA_X7C,
         "FighterData": FIGHTER_DATA,
         "FighterBone": FIGHTER_BONE,
-        "lb_80014638_arg1_t": LB_STEP_TOP,
         "ft_800898B4_t": FT_800898B4,
     },
     {

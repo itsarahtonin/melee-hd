@@ -4,13 +4,13 @@ use gekko_fp as fp;
 
 use crate::fpu::{mem, reg};
 use crate::game::ft::types::StepFeet;
-use crate::game::structs::lb_80014638_arg1_t;
+use crate::game::it::types::StepBox;
 
 /// Whether feet that went from `feet.x0` to `feet.xC` (each the left and right edges in x and
 /// y, the height in z) came down onto the item's span (`top`: its left and right edges in x
 /// and y, its top in z), widened by `top.unk_x` and raised by `top.unk_y`, `lb_80014638`.
 #[doc(alias = "lb_80014638")]
-pub fn stepped_on(feet: &StepFeet, top: &lb_80014638_arg1_t) -> bool {
+pub fn stepped_on(feet: &StepFeet, top: &StepBox) -> bool {
     let (mut from, to, span) = (feet.prev_feet, feet.feet, top.span);
     from.x = mem(fp::fadds(reg(from.x), reg(top.motion_x)));
     from.y = mem(fp::fadds(reg(from.y), reg(top.motion_x)));

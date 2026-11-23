@@ -39,9 +39,9 @@ use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::kinds::{
     egg, fflower, freeze, lgun, lipstick, parasol, sscope, sscopebeam, wstar,
 };
+use melee_sim::game::it::types::StepBox;
 use melee_sim::game::it::{self, CLASS_ITEM, item};
 use melee_sim::game::state::Running;
-use melee_sim::game::structs::lb_80014638_arg1_t;
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
@@ -232,7 +232,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             prev_feet: vec_at(p),
             feet: vec_at(p + 12),
         };
-        let top = lb_80014638_arg1_t {
+        let top = StepBox {
             motion_x: f32_at(call, q),
             motion_y: f32_at(call, q + 4),
             span: vec_at(q + 8),
@@ -579,7 +579,7 @@ fn stepped_on_matches() {
                 prev_feet: Vec3::new(next(), next(), fz),
                 feet: Vec3::new(next(), next(), tz),
             };
-            let span = lb_80014638_arg1_t {
+            let span = StepBox {
                 motion_x: next() * 0.1,
                 motion_y: next() * 0.1,
                 span: Vec3::new(l.min(r), l.max(r), top),

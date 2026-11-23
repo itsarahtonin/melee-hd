@@ -31,6 +31,7 @@ pub mod release;
 pub mod spawn;
 pub mod tables;
 mod tables_gen;
+pub mod types;
 pub mod vars;
 pub mod zako;
 

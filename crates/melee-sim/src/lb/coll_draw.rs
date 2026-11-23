@@ -436,7 +436,7 @@ pub fn coin_range(objs: &mut Objects, a: Vec3, b: Vec3, x0: f32, scale: f32, pas
 /// An enemy's stomp range, `lb_800149E0`: in the opaque pass, a line across its span
 /// (`xB54`'s words 2 and 3) at its height (word 4).
 #[doc(alias = "lb_800149E0")]
-pub fn stomp(objs: &mut Objects, r: &crate::game::structs::lb_80014638_arg1_t, pass: i32) -> bool {
+pub fn stomp(objs: &mut Objects, r: &crate::game::it::types::StepBox, pass: i32) -> bool {
     if pass != 0 {
         return false;
     }
