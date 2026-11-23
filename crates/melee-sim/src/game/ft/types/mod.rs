@@ -9,9 +9,11 @@
 mod attrs;
 mod cpu;
 mod damage;
+mod fighter;
 mod parts;
 
 pub use attrs::*;
 pub use cpu::*;
 pub use damage::*;
+pub use fighter::*;
 pub use parts::*;

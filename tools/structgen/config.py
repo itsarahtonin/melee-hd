@@ -427,6 +427,7 @@ OWNED = {
     "Fighter_x1A88_xFC_t": ("PartnerInput", "crate::game::ft::types::PartnerInput"),
     "ColorOverlay": ("ColorOverlay", "crate::lb::colanim::ColorOverlay"),
     "LbShadow": ("LbShadow", "crate::lb::shadow::LbShadow"),
+    "Fighter": ("Fighter", "crate::game::ft::types::Fighter"),
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.

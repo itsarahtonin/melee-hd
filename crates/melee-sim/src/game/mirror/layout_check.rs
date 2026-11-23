@@ -32,7 +32,7 @@ fn owned() -> Vec<Layout> {
     use crate::game::camera::types::{Camera, CameraQuake, CameraTransformState, OrbitLimits};
     use crate::game::ft::types::{
         AbsorbAttrs, AfterimagePoints, AttackRecord, CommonAttrs, CpuFighter, DObjList, EggAttrs,
-        FighterDamage, FighterHurtCapsule, FighterInput, FighterStateFlags, FtInputTimers,
+        Fighter, FighterDamage, FighterHurtCapsule, FighterInput, FighterStateFlags, FtInputTimers,
         FtPartsVis, HitResult, IntVec2, ItemPickup, LedgePoint, ModelVariant, PartAnim,
         PartnerInput, ReflectAttrs, SmashAttrs, StaminaMarker, StepFeet, U8Vec2,
     };
@@ -84,6 +84,7 @@ fn owned() -> Vec<Layout> {
         PartnerInput::layout(),
         ColorOverlay::layout(),
         LbShadow::layout(),
+        Fighter::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))
