@@ -1,8 +1,8 @@
 # The refactor and the fast renderer
 
-## Status (2026-11-20, batch 10 at `7871ac5b`): the first round done or on branches, surveyed again, the next round proposed
+## Status (2026-11-23, batch 14 at `bfcd8f5c`): the second round done or on branches, surveyed a third time, the next round proposed
 
-Sarah and the coordinator agreed the goals below on 2026-11-14. Milestone 6's full verify came back green on `0b835117`, and the survey ran on 2026-11-17 from `main` at `f0fa4c81` ([what it found](#what-the-survey-found)); Sarah took all nine design calls' recommendations on 2026-11-18. By batch 10 (`7871ac5b`, 2026-11-20) tasks 1 to 5, 7 to 10 and 13 are merged, with task 11's families but three and task 12's wave 3; task 6, the other three families (the hookshot and grapple beam, the item pairs, the stage enemies), waves 2 and 5 and the fast renderer's F5 are on branches. [The second survey](#the-second-survey) measured the base again: near-copied code 26% to 23%, the kinds' integer lists gone, `Running` 7,822 methods, the offset names 93% the generated structs' fields, dispatch gone from the profile. It proposes tasks 14 to 25 ([the round](#the-refactor)) and design calls 10 to 13.
+Sarah and the coordinator agreed the goals below on 2026-11-14. Milestone 6's full verify came back green on `0b835117`, and the survey ran on 2026-11-17 from `main` at `f0fa4c81` ([what it found](#what-the-survey-found)); Sarah took all nine design calls' recommendations on 2026-11-18. By batch 10 (`7871ac5b`, 2026-11-20) tasks 1 to 5, 7 to 10 and 13 are merged, with task 11's families but three and task 12's wave 3; task 6, the other three families (the hookshot and grapple beam, the item pairs, the stage enemies), waves 2 and 5 and the fast renderer's F5 are on branches. [The second survey](#the-second-survey) measured the base again: near-copied code 26% to 23%, the kinds' integer lists gone, `Running` 7,822 methods, the offset names 93% the generated structs' fields, dispatch gone from the profile. It proposes tasks 14 to 25 ([the round](#the-refactor)) and design calls 10 to 13. By batch 14 (`bfcd8f5c`, 2026-11-23) tasks 14 to 22, 24 and 25's first part are merged, with task 23 (`refactor/wave6-rest`), design call 3's owned structs (`refactor/own-structs`), the tethers and `PSMTXConcat`'s lanes on branches. [The third survey](#the-third-survey) measured it: near-copied code still 23% (the tethers' branch the last family above 600 lines), the offset names 13,083 uses at the base and 2,435 with wave 6 (none a generated field's), 14 structs owned, the simulation 19 to 42% faster than at the start on the worker but 7.9 to 9.9 times Dolphin against a target of 20, and checking now the costliest part of a change. It proposes tasks 26 to 33 and design calls 14 to 16.
 
 ## The goal
 
@@ -47,6 +47,7 @@ Measured by the survey (2026-11-17, [quirk modelling by ruleset](#quirk-modellin
 
 - **The allocator model's addresses** (a computer player's DI reads its `Fighter*`): snapshots 16 to 31% larger and growing through the match (Sarah's 3.19 replay at tick 10,000: 2.22 MB with the model, 1.78 MB without; the materials' pool alone 501 against 251 KB), and the per-address lookups' 3.5 to 5.8% of match speed carried in from `perf/pool-trim`. The speed difference of the model alone stayed within this run's noise. **Since task 7 (2026-11-18) the pools' slots no longer follow the model's addresses** ([below](#task-7-the-pools-slots)): the growth and the lookups are gone, and with the model on a match's snapshot is the model-off one's plus the model's own bytes (the Fox ditto 1.90 MB at tick 15,000 against 1.86 MB off, 2.59 MB before).
 - **The heap's image and the menus' layouts** (`game::leftovers`, `vanilla_vs`, `from_menus`): 138 to 227 KB of a session's snapshot, 40 on/off tests in 28 files and 121 calls into the model in 59 files.
+- **The heap's image in a Vanilla session** ([the third survey](#where-a-ticks-time-goes-now-1), 2026-11-23): from power-on, the image's snapshots and writes with the song's disc lookup made the player's Vanilla session 4.97 ms of simulation a tick against 1.39 with `perf/vanilla-speed`, and its p99 tick with its prediction 17.1 ms, over a 60 Hz frame (5.1 with the branch).
 - **r5 through the computer player's frame** (`cpu_ai::Leftover` and the floor checks): bookkeeping in 7 files that runs in every match.
 
 **Since task 6 (2026-11-20) all of it is behind one test of the ruleset** ([below](#task-6-vanillas-modelling-behind-the-ruleset)): a Slippi 3.19 match of its own (a live match or a `.slp`'s playback) runs none of it, the allocator model only with Samus in it (her grapple swing reads an address only the model gives, as Slippi Dolphin has it), and a tripwire stops any other path that reaches the model. What Vanilla's exactness still costs is now Vanilla's alone, and the menus' under either ruleset (they run Vanilla's): the model's 40 KB in a Vanilla match's snapshot, the heap's image in a session's, the 41 on/off tests (which a Slippi match's loan answers false) and the model's calls at every allocation, which in a Slippi match are a thread-local test each. The code paid for it with a third kind of model call: `heap::with` (reads, the tripwire's), `heap::mirror` (the original's allocations, silent without the model) and `heap::image` (the image's bookkeeping, silent likewise), so a new port picks the right one.
@@ -484,6 +485,266 @@ target/release/examples/perfsplit data/bench/fox-fox-fd.slp --rules slippi --hea
 
 The round's structural work is mostly done: the registries, the ruleset, the callback table, the pools, the boundaries' rule and the dedup's large families. What's left is in three places. **Names**, where the generated structs' 3,976 fields are 93% of what a reader still meets (wave 6, the largest task left, in steps of a struct or two). **Lists and boundaries** the first round didn't reach: Kirby's copies, the game modes, the computer players' kinds, and collision behind its own line. **Speed**, now that the dispatch chains are gone: the build players run against the one the bench measures, the joints' matrices and the swing chains (a third of the thread between them), and Pokémon Stadium's allocations. Task 6 and the branches above merge first. The proposed tasks are 14 to 25 [below](#the-refactor), numbered in the order recommended, with the design calls they need ([10 to 13](#design-calls)).
 
+## The third survey
+
+**Surveyed on 2026-11-23 from batch 14 at `bfcd8f5c`** (in its merge check, to land on main next): the second survey's round merged but for the branches below, with tasks 14 to 22, 24, 25's first part (the held items, PK Flash and Din's Fire) and the fast renderer's F5 in it. Read beside it with `git diff`, not merged, and counted apart where they change a number: `refactor/wave6-rest` (`d5d52e32`, task 23: every generated field and 27 types named), `refactor/own-structs` (`7800bf9d`, [design call 3's second half](#design-calls): `#[derive(Mirror)]` and `CollData`, `Camera` and `StageInfo` owned), `refactor/dedup-tethers` (`f6b26d5c`, task 25's tethers), `perf/ics-chains` (`8f097ccd`, `PSMTXConcat`'s wide lanes), `perf/vanilla-speed` (`2342eaa8`, Vanilla's heap image and song lookup, in progress), `fix/music-switchover` and `refactor/own-fighter-item` (in progress; the second is still `own-structs`' tip), and `feat/fast-f6` (parked by Sarah, 2026-11-22; renderer only). The three refactor branches are based on older commits (`0449dc76`, `71653b16`), so their figures are each branch against its own base, added to the base's; the two speed branches were merged onto `bfcd8f5c` for the worker's builds only (`git merge-tree`, no conflict). **Base** below is `bfcd8f5c`; **branch** names the branch.
+
+The method is the second survey's: its scratch scripts unchanged for the near-copy scan, the name scan and the list scan, and five scratch counts of this survey's own (kinds by number or constant, offset names anywhere in an identifier, `Running`'s methods and the functions handed the whole state, who names each subsystem's fields of `Game`, the generated structs and their readers). **The speed figures are the worker's** ([machine](performance.md#machine)), in one exclusive reservation of its runner (the processor 1 to 2% busy before and after every round), unlike the second survey's.
+
+### What changed
+
+| | First survey (`f0fa4c81`) | Second (`7871ac5b`) | Now (`bfcd8f5c`) | With the branches |
+| --- | --- | --- | --- | --- |
+| Lines in a 100-token near-copy (`game`, generated files left out) | 79,483 of 303,254 (26%) | 70,123 of 301,137 (23%) | 68,824 of 301,831 (23%) | `dedup-tethers` −428; `own-structs` +198 (the owned structs are hand-written code now, 1,445 lines); `wave6-rest` +27 |
+| Lines in a 200-token near-copy | 40,446 (13%) | 33,706 (11%) | 33,491 (11%) | `dedup-tethers` −69 |
+| The largest family of logic | Kirby's copies and Rollout, 2,581 | the tethers, 878 | the tethers, 783 | the hookshot and the grapple beam, 284 |
+| Kinds by number | 162, 70, 174 and 121 constants | 44 comparisons, 127 arms, Multi-Man's stage, the modes' 69 `GM_*` | fighters, characters, stages, items and modes none; the player kinds (25 constants of 7 names in 14 files, 36 bare comparisons) and the computer players' behaviours (a 20-arm `match`, 14 comparisons) | |
+| Items named by address | 504 | 332 | 21 | 3 (`wave6-rest`) |
+| Fields and items named by offset | 9,567 | 9,400 | 2,964 | 63 (`wave6-rest`; 20 of them the decomp's paddings) |
+| Uses of offset names | 40,868 | 39,686 | 13,083 | 2,435 (`wave6-rest`) |
+| Structs taken over by hand | none | none | none | 14 (`own-structs`); `Fighter` and `Item` in progress |
+| `Running`'s methods, and the functions handed the whole state | 8,437 methods (39%) | 7,822 and 5,286 (62%; 5,454 by this survey's count) | 7,821 and 5,274 (62% of 21,044) | |
+| Match speed (the worker, `fox-fox-fd`, `melee-bench native`) | 2,202 frames/s | not measured (2,519 at task 1's branch) | 2,787 | 2,978 (`ics-chains`, +6.9%) |
+
+### Duplicated code, a third time
+
+The same scan (comments, strings and attributes stripped, identifiers and numbers anonymized, a line counted when it lies in a window of N tokens found twice or more; the seven generated files, 73,653 lines, left out):
+
+| Area | Code lines, second / now | 100 tokens, first | second | now | 200 tokens, second | now |
+| --- | --- | --- | --- | --- | --- | --- |
+| Fighters (`ft`) | 89,534 / 89,932 | 32% (30,480) | 25% (22,321) | 25% (22,461) | 12% (10,596) | 12% (10,755) |
+| Items (`it`) | 59,523 / 58,352 | 33% (19,399) | 34% (20,262) | **31% (18,371)** | 16% (9,596) | 15% (8,773) |
+| Stages (`gr`) | 47,574 / 48,143 | 23% (10,976) | 22% (10,545) | 22% (10,640) | 10% (4,933) | 10% (4,915) |
+| Modes (`gm`) | 37,384 / 37,966 | 15% (5,794) | 15% (5,568) | 16% (5,979) | 8% (2,879) | 9% (3,317) |
+| Menus (`mn`) | 19,991 / 20,016 | 16% (3,125) | 15% (3,054) | 15% (3,031) | 4% (843) | 5% (905) |
+| The HUD (`hud`) | 10,677 / 10,673 | 42% (4,759) | 37% (3,945) | 37% (3,944) | 32% (3,392) | 32% (3,392) |
+| `game`'s own files | 20,920 / 21,196 | 17% (3,302) | 13% (2,781) | 13% (2,752) | 6% (1,199) | 6% (1,166) |
+| `ty`, `pl`, `ef`, `vi`, `code` | 15,534 / 15,553 | 11% (1,648) | 11% (1,647) | 11% (1,646) | 2% (268) | 2% (268) |
+| **Whole** | 301,137 / 301,831 | **26% (79,483)** | **23% (70,123)** | **23% (68,824)** | **11% (33,706)** | **11% (33,491)** |
+
+Little moved, as the second survey expected: the item families merged since (the hookshot and the grapple beam, the item pairs, the stage enemies, the held items' callbacks, PK Flash and Din's Fire) took the items from 34% to 31%; the modes rose by the mode registry (`gm/registry.rs`, 1,423 of its 1,800 lines in near-copies). **About a quarter of what's left is data and boilerplate**: the four registries 5,844 lines (without them the whole is 62,980 of 294,762, 21%), the debug menus' tables 3,552, the stages' variables and data 3,539, the characters' `mod.rs` files 2,768, Target Test's data 1,065, the audits' lists 1,001, the common states' numbers 623.
+
+The families left (files joined where a pair shares 60 or more near-copied lines both ways; the family's lines in a near-copy with another of its files):
+
+| Family | Files | Lines | Near-copied | Notes |
+| --- | --- | --- | --- | --- |
+| The tethers: Sheik's chain, the Ice Climbers' string, Ness's yo-yo, Link's hookshot, Samus's grapple beam | 5 | 3,988 | 783 | `refactor/dedup-tethers` folds the chain, the string and the yo-yo into one strand (`it::kinds::strand`): 284 left, the hookshot and the grapple beam's own pair |
+| The stages' skeletons: Fourside, Great Bay, Icicle Mountain, Mushroom Kingdom I and II, Mute City, Rainbow Cruise | 7 | 6,319 | 590 | each stage module's `run`, `create`, callbacks and map ids, as before: what a stage's registry entry could hold |
+| The Poké Ball Pokémon: Chikorita, Cyndaquil, Staryu, Blastoise, Charizard | 5 | 1,570 | 535 | release, fall, attack loop, leaving |
+| The enemies (task 11's six) | 5 | 2,208 | 531 | done; each one's walk, stand and attack |
+| The containers: the Capsule, the Crate, the Party Ball, the Barrel | 4 | 1,694 | 394 | |
+| **Kirby's copies' setup**: `ft::kirby::init` with Marth's, Jigglypuff's and Samus's `init` | 4 | 861 | 388 | new to the list: each copy's attributes and articles set up as its owner's are |
+| Mr. Game & Watch's items and Kirby's chef's pan | 5 | 398 | 363 | near-identical 75-line files |
+| The power-ups: the Metal Box, the Bunny Hood, the Cloaking Device, the Warp Star | 4 | 572 | 326 | |
+| Big Blue, Corneria and Venom | 3 | 5,501 | 309 | |
+| Donkey Kong's cargo carry and the common one | 2 | 895 | 271 | |
+| Kongo Jungle and its past version | 2 | 1,552 | 248 | |
+| Mr. Game & Watch's air attacks and specials (`attack_air`, `special_lw`, `special_s`) | 3 | 995 | 237 | |
+| The stage enemies left: Birdo, her egg, the Klap Trap | 3 | 1,064 | 219 | |
+| The computer players' `cpu_decide` and `cpu_vs` | 2 | 1,804 | 208 | |
+
+No family of logic is above 800 near-copied lines, and after the tethers none is above 600. What the second survey concluded holds more so: a dedup is worth doing where a family will be read and changed together, not for the count.
+
+### Hardcoded lists, a third time
+
+Task 16 (Kirby's copies and the kind numbers) and task 24 (the mode registry) took what the second survey listed: no `match` on Kirby's copy by fighter-kind number is left, no `GM_*` constant (one `GM_PKIND_CPU`, below), and no fighter, character, stage or item kind is compared with a bare number but these:
+
+- **The player kinds** (human, computer, demo, none, boss: the slot's `pkind`): 25 definitions of 7 constants in 14 files (`PKIND_HUMAN` 7 times, `PKIND_CPU` 8, `PKIND_NA` and `PKIND_NONE` both 3, `GM_PKIND_CPU`, `PKIND_DEMO`, `PKIND_BOSS`), 225 uses in 48 files and 36 comparisons with a bare number (`pkind != 3` in the results). The largest list left, and an enum's work as `CpuKind` was.
+- **The computer players' behaviours** (`cpu.behavior`, wave 6's name for `x18`): a 20-arm `match` in `ft::cpu_ai`, 14 comparisons with a number in `cpu_ai`, `cpu_decide` and `ft::commands`.
+- A few single sites: the 1P modes' stage numbers (`stage != 0x148` in Multi-Man and the 1P mode, Classic's `e.stage == 0xD`, Corneria's `matches!(stage, 0xE9 | 0x47)`), the tournament's icon (`ckind >= 0x13`), the items' hold kinds (two `match`es of 13 and 10 arms), the intros' kinds (`d.kind == 4`).
+- **The callbacks' addresses** are what task 1 left them, each module's own: 10,127 `CodeRef(0x80…)` literals (as constants of type `CodeRef` now, where they were `u32`).
+- Effects and sounds stay numbers ([design call 13](#design-calls)): `ef::dispatch`, `ef::sync` and `ef::alt` keep their 133, 82 and 63 arms on the effect's number.
+
+### Naming, after wave 6
+
+The first survey's name scan over melee-sim, at the base and at `refactor/wave6-rest` (task 23, from `0449dc76`):
+
+| Module | Items named by address: base / `wave6-rest` | Fields and items named by offset | Uses of offset names |
+| --- | --- | --- | --- |
+| `game::structs` (generated) | 18 / 3 | 1,883 / 1 | 1,888 / 4 |
+| `game::mirror_gen` (generated) | 2 / 0 | 931 / 0 | 3,026 / 4 |
+| `game::ft` | 0 / 0 | 14 / 6 | 2,056 / 919 |
+| `game::gm` | 0 / 0 | 34 / 4 | 1,840 / 260 |
+| `game::it` | 0 / 0 | 29 / 3 | 1,296 / 556 |
+| `game::gr` | 0 / 0 | 20 / 15 | 674 / 163 |
+| `mp`, `lb`, `audio`, `hsd` | 0 / 0 | 28 / 27 | 662 / 323 |
+| the rest | 1 / 0 | 25 / 7 | 1,641 / 206 |
+| **Whole crate** | **21 / 3** | **2,964 / 63** | **13,083 / 2,435** |
+
+**What's left after wave 6 is the port's own**, none of it a generated struct's field (the second survey's split: 0 of the 2,435 uses name one). A scan for an offset anywhere in an identifier (`x` and one to four hex digits, or `unk`, as a part between underscores) at `wave6-rest`:
+
+- **Helpers named after a field**: 26 functions (`set_xd09`, `set_x39a_b0` and `x39a_b0`, `set_x39a_b1`, `x2040_list`, `x594_bit` and `x594_word`, `cmd_x221e_b1`, `cmd_x221c_flags`, `cmd_x2225_b2`, `init_x1930`, `init_x2034`, `guard_set_x20`, `guard_set_x24`, `clear_x1c`, `ys_attr_x120`, the motion tables' `gk_unk_motion_states3` ...), most in `ft` (15), `camera` (4) and `it` (5).
+- **Types named after an offset or an address**: 21 (`Fighter_x1614_t`, `Fighter_x1670_t`, `Fighter_x8B0_t`, `Fighter_x5F4_arr`, `Fighter_x1A88_xFC_t`, `Fighter_x20B0_t`, `Fighter_x221B`, `xB6C_t`, `CameraBoxFlags_x0`, `Ground_x10_flags`, `StageInfo_unk8C`, `Camera_x2D0`, the player's `pl_x5EC_t`, `pl_x8C0_t`, `pl_x8D8_t` and their parts, `ft_800898B4_t`, `lb_80014638_arg0_t` and `arg1_t`); `own-structs` renames three of them as it takes them over (`StageInfo_unk8C` is `StageBits`, `Camera_x2D0` `OrbitLimits`, `Ground_x10_flags` `GroundFlags`).
+- **Locals and parameters named after the offset they hold**: 405 `let` bindings of 109 names (`x4`, `x8`, `x0`, `x1c`, `x68`) and 89 parameters (`x1`, `x0`, `x2070`, `x186c`), in `ft` (221), `it` (115), `gm` (59), `mp` (35, parameters), `gr` (25). With the helpers and types they are the 2,516 uses left, `ft` 925, `it` 538, `mp` 255, `gm` 242, `gr` 162.
+- Fields of the port's own: 9 (`x8`, `pad_x4`, `x2a`, `demo_x14`, `x10`, `x18`, `x0`, `x1`), in `ft`, `gr`, `ef` and `hsd`.
+
+That is a wave of a few hundred definitions in five modules, mechanical, and the last of the naming work: task 29.
+
+### Ownership: design call 3's second half
+
+**Owned on `refactor/own-structs`**: 14 structs, `CollData` with `Ecb` and `Surface` (`mp::coll`), `Camera` with three parts (`game::camera::types`), `StageInfo` with six (`game::gr::types`), behind `#[derive(Mirror)]` and a layout check against the decomp's types ([its section](#design-call-3s-second-half-the-owned-structs) on the branch). `game::structs` goes from 229 generated structs to 215 (14,115 lines to 12,913), `mirror_gen.rs` from 31,300 lines to 28,994. **In progress** (`refactor/own-fighter-item`, Sarah's "Yes, both"): `Fighter` (425 fields, read in 274 files) and `Item` (180 fields, 61 files), with their nested structs.
+
+What `wave6-rest` leaves in `game::structs`, by who reads it (a struct's type named outside `game::structs` and the mirror):
+
+| Group | Structs | Fields | Readers | Would it pay to own? |
+| --- | --- | --- | --- | --- |
+| `Fighter` and its parts (`CpuFighter`, `dmg`, `ftCo_DatAttrs`, `ColorOverlay`, `Fighter_x*`, the reflect and absorb attributes) | 22 | 804 | `ft` 246 files, `it` 8 | yes: in progress |
+| `Item` and its parts (`ItemLink`, `SpawnItem`, `ItemCounts`, `Item_FtTrack`, the hitbox) | 9 | 264 | `it` | yes: in progress |
+| **The items' variables**: 71 `it*_ItemVars` structs (the green shell's 44 fields, the arrow's 37, the hookshot's 25, ...) | 71 | 523 | one item module each | **no** (below) |
+| The modes' and the save's (`StartMeleeRules`, `MatchPlayerData`, `GmSaveData`, `EventData`, `PlayerInitData`, `VsSceneState`, `GameRules`, `MatchEnd`, `GmStats`, `FighterRecords`, ...) | 22 | 358 | `gm` 1 to 7 files each; `EventData` and `VsSceneState` only the mirror | after the mode registry: each mode's scratch read in one module |
+| The player's (`_StaticPlayer` and its flags, `StaleMoveTable`, `plActionStats`, `pl_x*`) | 14 | 160 | `pl`, `gm`'s results | with the results' stat getters |
+| The HUD's (`Announcement`, `HudStocks`, `OffscreenArrows`, `CoinCounter`, `ifMagnify`, `IfDamageState`, `HudLayout`, ...) | 16 | 131 | `hud` alone, one file each | cheaply, beside the HUD's boundary (task 32) |
+| The engine's and the rest (`HitCapsule`, `HurtCapsule`, `SwingLink`, `LbShadow`, `BgFlashData`, `HSD_ObjAllocUnk`, `ControllerMap`, ...) | 75 | about 720 | each its library's module | one at a time, when its module is next changed |
+
+**What blocks the rest is the unions, not the names.** The fighters' character and state variables (`Fighter::u`, `Fighter::mv`: `ft::vars::Vars<0xF8>` and `<0xAC>`) are byte unions read at named offsets (286 offset constants in 28 `u`/`mv` modules, 1,621 reads), and the items' (`Item::vars`, `union Item_ItemVars`) are 71 typed members over one block of bytes. In both, which member a fighter's state or an item holds follows its kind, and **a new state or item reads what the last one left in the bytes** (the leftovers [what must be exact](porting.md#what-must-be-exact) keeps compared: an item's variables over its block's last item, `ItemVars::left`; a state's `mv` words over the last state's). An owned struct per kind would still need the byte union under it, so owning them gains the names they already have and costs a second layout per kind. That is [design call 14](#design-calls): leave them as the unions they are.
+
+### Boundaries
+
+**`Running`'s methods by module** (the second survey's count; its own script being an agent's scratch file, this survey's recounts the second survey's commit with the same rules, 7,822 methods there and 5,454 functions handed `Running`, where the second survey's free-function count was 5,286):
+
+| Module | `impl` blocks | Methods | Files | Functions handed `Running` first | Handed `Game` first |
+| --- | --- | --- | --- | --- | --- |
+| `game::ft` | 297 | 5,112 (the common states 1,194; Kirby 352) | 267 | 296 | 2 |
+| `game::gm` | 75 | 1,043 | 55 | 36 | 8 |
+| `game::mn` | 35 | 743 | 30 | 25 | 2 |
+| `game::hud`, `ty` | 23 | 419 | 22 | 0 | 1 |
+| `lb`, `pl`, `vi`, `db` | 34 | 343 | 32 | 8 | 7 |
+| `game::it` | 9 | 13 | 9 | 3,735 | 351 |
+| `game::gr` | 6 | 25 | 4 | 1,065 | 478 |
+| `game::camera` | 1 | 0 | 1 | 25 | 47 |
+| the rest | 18 | 123 | 15 | 84 | 89 |
+| **Whole crate** | **498** | **7,821** | **435** | **5,274** | **985** |
+
+13,095 of the crate's 21,044 functions (62%) are still handed the whole game; the camera and collision boundaries (tasks 13 and 21) moved few of them, since they made the subsystems' state private (`CameraState`'s 6 fields, `mp::Geometry`'s 16 and `CollStatics`' 14 are their modules' alone) and left the callers handing `Running` to the subsystem's functions. That is the rule working as written: what a boundary changes is who reaches the state, not how many functions take the state.
+
+**The next boundary.** The candidates' state, how much of it is public, and what outside code reads (lines outside the subsystem's own paths naming `game.FIELD`, which counts method calls as well as field reads; making the fields private would give the compiler's exact list):
+
+| Subsystem | Its state | Public fields | Named outside | What outside code reads | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| **Stages** (`game.stage_info`, `game.gr`, `game.grounds`) | `StageInfo` (owned on `own-structs`), `gr::Globals`, the grounds' pool | `gr::Globals` 76 | 165 lines in 64 files (fighters 59, camera 25, modes 20, items 18, `export` 16) | the stage's kind (`stage_info.grkind` 24, `ground_kind` 13), the winds (`gr.winds` 18, fighters and items), the camera's settings (`cam_info` 7), Stadium's and the devices' state (12), the start points (3) | **the next boundary**: its state is the port's own once `own-structs` merges, and what crosses the line is a dozen accessors' worth. M |
+| The HUD (`game.hud`) | `hud::Hud` | 23 | 34 lines in 8 files (the toys 15, `db` 13) | the developer text (`hud.devtext` 30), the name tags (2) | nearly behind its line already: S, with its 16 structs owned beside it |
+| Items (`game.items`, `game.it`) | `Item` (in progress), `it::Globals` | `it::Globals` 30 | 69 lines in 15 files (fighters 31, `db` 16, `export` 16) | the debug menu's (`it.db_menu` 12), the links, the bone tables | after `own-fighter-item` |
+| Effects (`game.ef`) | `ef::Globals` | 9 | 17 lines in 4 files (`db`, `export`) | | little to win |
+| Audio (`game.audio`) | `audio::Audio` (also the clock, disc, card writer, movie player) | 20 | 278 lines in 70 files | | the platform's state under the audio's name: split first, as the second survey said |
+| Text (`game.sis`) | `SisLib` | 19 | 417 lines in 53 files | method calls | an engine library already reached through its methods |
+
+### Where a tick's time goes now
+
+**The worker, deciding** (Intel Core i9-7900X, the Performance profile; one exclusive reservation, 2026-11-22 23:21 to 23:53, the processor 1 to 2% busy before and after each round). Release builds of `melee-bench` and the second survey's `perfsplit` with line tables (`CARGO_PROFILE_RELEASE_DEBUG=line-tables-only`, `-j 3`): the base `bfcd8f5c`, and the base with `perf/ics-chains` merged (scratch commit `b5facf8a`). The profiles' builds add frame pointers (`-C force-frame-pointers=yes`); the tick and pass timings and the bench are the builds without. Each build of melee-sim took 3 min 45 s to 4 min at `-j 3` on the idle worker, peaking at 9.7 GB.
+
+**Speed** (`perfsplit`, the match to its end, three rounds alternating the builds; ticks a second, median and range; the tick and the display pass in µs, medians; the pass's share of the two):
+
+| Match | Base `bfcd8f5c` | Base with `ics-chains` | Change | First survey's worker numbers at `c6e274d5` |
+| --- | --- | --- | --- | --- |
+| Vanilla `fox-fox-fd` | 2,848 (2,840 to 2,895); 264 + 86; 24.6% | 3,014 (2,999 to 3,054); 249 + 82 | +5.8% | 2,235; 342 + 104 |
+| Vanilla `fox-marth-ps` | 2,316 (2,301 to 2,363); 317 + 113; 26.5% | 2,490 (2,487 to 2,491); 292 + 110 | +7.5% | 1,912; 390 + 131 |
+| Vanilla `ics-peach-ps` | 1,861 (1,856 to 1,864); 417 + 119; 22.1% | 1,976 (1,965 to 1,978); 390 + 116 | +6.2% | 1,563; 499 + 139 |
+| Slippi `fox-fox-fd` | 3,005 (3,004 to 3,016); 250 + 81; 24.5% | 3,091 (3,033 to 3,133); 244 + 79 | +2.9% | 2,351; 326 + 97 |
+| Slippi `fox-marth-ps` | 2,629 (2,619 to 2,671); 277 + 102; 26.8% | 2,774 (2,746 to 2,780); 261 + 99 | +5.5% | 2,150; 344 + 119 |
+| Slippi `ics-peach-ps` | 2,154 (2,137 to 2,156); 358 + 105; 22.7% | 2,180 (2,180 to 2,230); 351 + 107 | +1.2% | 1,625; 483 + 130 |
+| Sarah's 3.19 replay | 3,331 (3,268 to 3,368); 226 + 73; 24.5% | 3,460 (3,439 to 3,468); 216 + 72 | +3.9% | 2,346; 334 + 91 |
+
+`melee-bench native --runs 3` (the six benchmark matches, the state-only display pass; Sarah's replay with `MELEE_BENCH_FP=slippi`), three rounds alternating, median frames/s of the nine runs and their range; every run in sync:
+
+| Match | Base | Base with `ics-chains` | Change | Dolphin on the worker ([performance](performance.md#dolphin-on-the-worker-2026-11-19)), the ratio base / branch |
+| --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 2,787 (2,745 to 2,805) | 2,978 (2,872 to 3,026) | +6.9% | 285: 9.8× / 10.4× |
+| `fox-marth-bf` | 2,643 (2,629 to 2,668) | 2,813 (2,799 to 2,874) | +6.4% | 267: 9.9× / 10.5× |
+| `fox-marth-fd` | 2,501 (2,489 to 2,522) | 2,679 (2,663 to 2,745) | +7.1% | 278: 9.0× / 9.6× |
+| `fox-marth-ps` | 2,304 (2,292 to 2,316) | 2,426 (2,415 to 2,493) | +5.3% | 232: 9.9× / 10.5× |
+| `ics-peach-ps` | 1,797 (1,776 to 1,808) | 1,918 (1,909 to 1,956) | +6.7% | 228: 7.9× / 8.4× |
+| `ganon-captain-fd` | 2,540 (2,531 to 2,569) | 2,721 (2,700 to 2,776) | +7.1% | 270: 9.4× / 10.1× |
+| Sarah's 3.19 replay | 3,306 (3,259 to 3,346) | 3,422 (3,386 to 3,515) | +3.5% | |
+
+**The simulation is 19 to 42% faster than at the refactor's start** (`perfsplit` against the first survey's worker numbers at `c6e274d5`, the same tool and build settings), most of it the callback table (task 1, 13 to 15%), the joints' matrices (task 19, 3.6 to 6.6%) and the Ice Climbers' rollback round (1.8 to 5.5%, Sarah's replay 18.7%); `ics-chains` adds 1 to 8%. **The headless target is still far:** [the target](performance.md#targets) is 20 times Dolphin on one core (aim 30), and the base runs the Dolphin matches 7.9 to 9.9 times as fast (8.4 to 10.5 with `ics-chains`), on the deciding build ([design call 10](#design-calls)); `bench-dist` was 8 to 13% faster than `release` and PGO 20 to 29% ([task 17](#task-17-the-players-build)). [Design call 15](#design-calls) asks what to do about it.
+
+**The display pass is 22 to 27% of a tick plus its pass**, as in both surveys before.
+
+**Self time by the first survey's buckets** (`perf record -g -F 2000`, the timed loop only through perf's control fifo; each sample's leaf on the simulation's thread; 3,598 to 15,896 samples a profile, the two short Slippi-ruleset runs the fewest):
+
+| Self time in | Vanilla `fox-fox-fd` | Vanilla `fox-marth-ps` | Vanilla `ics-peach-ps` | Slippi `fox-fox-fd` | Slippi `fox-marth-ps` | Slippi `ics-peach-ps` | Sarah's 3.19 replay |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Address dispatch | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | 0.1% | 0.1% |
+| Joint and matrix math | 16.5% | 14.8% | 15.7% | 14.9% | 14.7% | 14.6% | 14.9% |
+| Bit-exact float ops and the game's math | 17.4% | 19.7% | 21.9% | 18.5% | 19.6% | 21.9% | 16.7% |
+| Animation interpretation | 14.1% | 10.9% | 11.5% | 14.5% | 11.5% | 13.3% | 15.8% |
+| The display pass's walk and draws | 9.3% | 10.0% | 7.5% | 10.3% | 10.5% | 8.0% | 10.6% |
+| Collision | 6.6% | 5.7% | 6.4% | 6.4% | 5.7% | 4.8% | 3.5% |
+| Particles and effects | 1.4% | 2.1% | 1.5% | 1.1% | 1.1% | 0.6% | 0.9% |
+| Pools and the allocator model | 1.2% | 1.4% | 1.2% | 0.5% | 0.5% | 0.5% | 0.8% |
+| Bone dynamics (`swing_chain` itself) | 0.6% | 0.7% | 0.8% | 0.7% | 0.8% | 0.8% | 0.6% |
+| Archive lookups | 1.4% | 1.2% | 1.2% | 1.2% | 1.6% | 1.3% | 1.6% |
+| Everything else (game logic, audio, copies) | 31.4% | 33.6% | 32.4% | 31.8% | 34.0% | 34.0% | 34.4% |
+
+The hottest leaves are the same everywhere: `ps_madds0` (5.9% of the Fox ditto), `Mtx34::concat` 3.6, `Mtx34::srt` 3.3, `pobj_disp` 3.0, the FObj interpreter 2.6 and 2.2 (`interpret_with`, `interpret`), `jobj::make_matrix` 2.5, the range reduction 1.9, `mp::probe::remap` 1.8, the AObj interpreter 1.7, **the audio DSP's voices** 1.7 (`audio::dsp::voice_ms`), the spline's `hermite` 1.5, `memcmp` 1.1 to 1.5 (its callers lost: libc has no frame pointers; the memos' keys, up to 104 bytes, are the likeliest).
+
+**Inclusive shares** (a stack counted once if any frame matches; inlined frames left out, so a share is a function's own frame and what it calls):
+
+| Inclusive share | Vanilla `fox-fox-fd` | `fox-marth-ps` | `ics-peach-ps` | Slippi `fox-fox-fd` | `fox-marth-ps` | `ics-peach-ps` | Sarah's replay |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| The display pass (`Match::render`) | 24.0% | 27.2% | 21.6% | 24.0% | 26.4% | 22.0% | 24.6% |
+| The swing chains (`Running::swing_chains`) | 19.7% | 26.6% | 28.2% | 19.9% | 25.5% | 26.5% | 17.7% |
+| A joint's matrix made when asked (`jobj::setup_matrix_sub`) | 21.1% | 18.0% | 18.9% | 20.8% | 18.2% | 18.6% | 21.0% |
+| of which a joint's world position (`lb::joint::world_position`) | 8.1% | 6.4% | 8.3% | 7.7% | 7.1% | 8.5% | 8.9% |
+| `jobj::make_matrix` | 20.0% | 17.1% | 18.2% | 19.7% | 17.5% | 18.0% | 20.1% |
+| `PSMTXConcat` (`Mtx34::concat`) | 9.5% | 9.2% | 9.7% | 8.8% | 8.7% | 9.5% | 8.1% |
+| Animation (`fobj::interpret`, `aobj::interpret`) | 12.9% | 9.0% | 10.1% | 13.0% | 9.9% | 12.1% | 13.9% |
+| Collision (`mp`) | 11.9% | 10.3% | 11.9% | 11.8% | 10.6% | 10.9% | 9.8% |
+| of which the ECB's load | 5.2% | 4.2% | 5.3% | 5.2% | 4.8% | 6.0% | 6.4% |
+| Audio | 3.3% | 2.4% | 2.3% | 3.7% | 2.5% | 3.1% | 4.6% |
+| The camera | 2.8% | 2.5% | 2.3% | 2.9% | 2.6% | 2.3% | 3.2% |
+| The computer players | 2.7% | 2.0% | 3.8% | 2.2% | 2.2% | 3.5% | 2.4% |
+
+Within the swing chains on `ics-peach-ps` (28.2% of the thread): the chains' own physics 19.6% (`Game::swing_chain`: the matrix products 6.3, `Mtx34::srt` 5.1, sine and cosine 4.9, `acos` 2.1, the square roots 3.2, `atan` 1.6, the Euler matrices and quaternions 3.2, the floor search 0.7) and the skeleton's dirty matrices they make first 8.4% (`setup_dirty_matrices`). **With `ics-chains`, `PSMTXConcat` falls from 9.2 to 9.7% of the thread to 5.0 to 5.9%** on the three Stadium profiles, the swing chains from 26.5 to 28.2% to 23.8 to 27.2% and `setup_matrix_sub` by 1.5 to 3 points; nothing else moves.
+
+So the profile is the second survey's with the dispatch long gone and the joints' matrix work a little smaller: **the costs left are the original's own work done bit for bit**, a third of the thread in the joints' matrices and the swing chains (which overlap: the chains ask for matrices), a quarter in the display pass, a tenth each in animation and collision. Task 19 and `ics-chains` each found single-digit wins in the first; the next leads are **animation** (9 to 14% inclusive, the FObj and AObj interpreters decoding each track's compressed stream every frame, which a decoded form could skip without changing the arithmetic; task 30 profiles that split first), the **display pass's walk** (7.5 to 10.6% self, which [design call 5](#design-calls)'s follow-on would shorten only by changing compared state in re-simulated ticks), and the **audio DSP** (2 to 5% inclusive, its voices mixed every 5 ms of game time, also under the state-only pass).
+
+**A Vanilla match from power-on, in the player** (the vanilla-speed agent's script: `melee-hd --power-on --ruleset vanilla` from no card, through the menus into a two-minute VS match, Fox against a level 9 computer Yoshi on Fountain of Dreams, and out to the character select, 8,760 ticks, `--bench` paced, Extrapolate at two frames a tick, 1280×960; frame-pointer builds, one unprofiled run and one under `perf record -g -F 1000` each, the base against the base with `perf/vanilla-speed` merged, scratch commit `633a173a`):
+
+| | Base | Base with `vanilla-speed` |
+| --- | --- | --- |
+| Simulation a tick (the player's own figure) | 4.97 ms (4.98 profiled) | 1.39 ms (1.42) |
+| Predicting the next tick: restoring the copy, the tick | 2.38 + 3.67 ms | 0.66 + 0.85 ms |
+| A tick with its prediction, p50 / p99 / max | 11.9 / 17.1 / 120 ms | 2.9 / 5.1 / 88 ms |
+| The frame's renderer time, presenting with the GPU's wait | 3.58, 2.03 ms | 2.53, 0.50 ms |
+
+**Before `vanilla-speed`, a Vanilla session's tick cost about ten times a bench match's, and the player's p99 tick with its prediction was over a 60 Hz frame.** The game thread's profile at the base (143,784 samples): the song's lookup on the disc every tick 24.1% (`session::read_song` through `nod`'s partition metadata), the heap image's snapshots about 20% (`hsd::image::Image::clone_from` 10.3%, its spans' `BTreeMap`s dropped 10.2%), the image's writes 10.9%, `memmove` 20.9% self. With `vanilla-speed` (67,224 samples) the frame's GX build is the game thread's largest part (46%, melee-render's `Ctx::draw`, which [F5](fast-renderer.md)'s records from the `Draw` list would take off it), the session's tick 14% and its prediction 22%; what's left of the image is 7% (`image::write` 4.3%, `image::cut` 2.8%), and the disc's metadata 3.7%. That is a cost of Vanilla's exactness the [list](#what-vanillas-exactness-cost) didn't have: with the song's lookup, the heap's image made a Vanilla session's simulation 3.6 times as long a tick (the Slippi ruleset's from power-on 1.41 against 1.04 ms, in `vanilla-speed`'s own runs), until `vanilla-speed`.
+
+The `ics-peach-ps` rollback windows weren't measured again: `ics-chains` measured them on the worker ([performance](performance.md)'s section on the branch), 5,000 at 4.39 to 4.46 ms and 12,500 at 4.73 to 4.82, both still over 4 ms, accepted by Sarah after one time-boxed round.
+
+**For the worker** (the scripts are this survey's scratch files: the builds, `w-meas.sh`'s four parts and the reports):
+
+```sh
+CARGO_PROFILE_RELEASE_DEBUG=line-tables-only cargo build --locked --release -j 3 -p melee-bench --bin melee-bench --example perfsplit
+RUSTFLAGS="-C force-frame-pointers=yes" CARGO_PROFILE_RELEASE_DEBUG=line-tables-only cargo build --locked --release -j 3 -p melee-player
+perfsplit data/bench/fox-fox-fd.slp [--rules slippi --heap off --fp slippi] --runs 1
+melee-bench native --runs 3; MELEE_BENCH_FP=slippi melee-bench native --runs 3 --dir "$SLIPPI_REPLAYS/2026-01" Game_20260129T130802
+perf record -g -F 2000 -D -1 --control fifo:CTL,ACK -- perfsplit ...      # PERF_CTL_FIFO, PERF_ACK_FIFO set
+melee-hd --power-on --ruleset vanilla --saves DIR --holds HOLDS --bench 8760 --high-refresh extrapolate --frames-per-tick 2
+```
+
+### What checking costs
+
+**A merge check today** (batch 14, `bfcd8f5c`, 2026-11-22). On this PC with the other agents winding down (`merge108b`): fmt and the ledger 12 minutes (the ledger's build), clippy 6, melee-sim's unit tests 6 (195 tests in 5 s: the rest is the `cfg(test)` build), the bench's allocation and ruleset tests 11, the sync tests 8, record 1, the player's 20, the renderers' unit tests 5, **the ruleset sessions at one thread 41** (12 tests, 2,426 s), **a 65-diff sample of the replay diffs 48**, the fast harness 33, **the frames tests about 50** (535 frames at three threads; 2,884 s on 2026-11-17) and **the leaf checks about three hours** (`merge108d`, beside the frames: 26 test binaries, then the items' three shards of 12 minutes each and the stages', each built and run in turn; 1 h 54 min in when this survey ended): about seven hours. On the worker at once (`checks53`): the oracle's and the tests' build 18 minutes, 12 replay diffs 31, **the sessions 3 h 7 min** at three threads (128 tests in five chunks; the `a` to `c`, `p` to `s` and `t` to `z` chunks 52 to 62 minutes each), **the single-player suite 1 h 35 min**, and the ruleset and leaf steps, which **ran nothing**: the worker has neither ssbm-rs's captures (`local/calls`, 16 GB) nor the Slippi ruleset's traces (`traces/m6s-*`), and those tests skip without their data (`ruleset`'s 12 "passed" in 0.00 s, each leaf binary in 0.01 s), so both ran again on this PC.
+
+**The full verify** (verify-par's timings, `verify-logs/durations.tsv`, the milestone verify of 2026-11-17): 256 hours of jobs over its slots. **The sessions' rollback runs are 134 hours of it (52%)** (`session-sync --rollback 7` re-simulates seven ticks for every tick of every session), the sessions' diffs 49 (19%), the replays' diffs 36 and their sync tests 12, the leaf checks 15.5, the crates' test suites 8, the frames 1.7. Today's verify ran out at 7 hours, 4 h 17 min of it building under the other agents' load.
+
+**What the building is.** melee-sim, 455,000 lines in one crate, takes 3 min 45 s to 4 min at `-j 3` on the idle worker and 9.7 GB, and a merge check builds it about five times: with no features (the bench, the player, the renderers), with `stubs` (leaf-check), with `stubs` and `oracle-hooks` (the oracle), with `cfg(test)` (its unit tests), and clippy's check; then 98 leaf-check test binaries of about 70 MB each and 8 of the oracle's, each linked apart. Under load each full build stretches to 20 to 40 minutes.
+
+**Cheaper without weakening it** (task 26; the checks run stay the same, and each item is measured on the worker before and after):
+
+1. **One melee-sim per check run.** `stubs` and `oracle-hooks` as switches set at run time (per melee-sim's `Cargo.toml`, both only add stand-ins and entry points the simulation never takes on its own; to be confirmed function by function), so the bench, the player, leaf-check and the oracle link one build: two of the five full builds gone.
+2. **leaf-check as one test binary** (its 98 files as modules of one `tests/leaf/main.rs`, sharded by `LEAF_CHECK_SHARD` as now): one link where there are 98, and one `cargo test -p leaf-check` where the merge scripts run 26.
+3. **A session's diff and its rollback in one run.** `session-sync` plays each session straight, from power-on with no trace, and rolls each tick of its matches back against that run; comparing the same straight run with the trace (as `session` does) plays every session once where the verify plays it twice: the diffs' simulation, part of their 49 job-hours, saved, their comparison kept.
+4. **The ruleset sessions as processes** (three shards at a thread each) where they run at one thread now: 41 minutes to about 15.
+5. **No step that passes by running nothing.** Copy the captures (16 GB) and the `m6s-*` traces to the worker (it has 507 GB free), so leaf-check and the ruleset sessions run there and leave this PC; and a variable (`MELEE_CHECKS_REQUIRE_DATA=1`, set by the merge scripts) that turns a test's "skipping: no trace" into a failure.
+
+The rollback runs (item 3 leaves them whole) are the one large cost no change above touches; sampling them would weaken the check, so it isn't proposed.
+
+### What the survey proposes
+
+The structure the refactor set out to make is mostly there: the registries, the ruleset, the callback table, the pools, two boundaries, the dedup's large families, and, with `wave6-rest` and `own-structs` merged, every generated field named and the first structs owned. What's left is in four places. **Checking**, which now costs more than most changes: task 26 first, before the next round's merges. **The last names and lists**: the offset-named helpers, types and locals (task 29), the player kinds and the computer players' behaviours (task 28). **Ownership and boundaries**: `Fighter` and `Item` (in progress), then the stages' boundary on the owned `StageInfo` (task 27), the HUD's with its structs (task 32), the modes' and the player's structs (task 31), the per-kind unions left as they are (design call 14). **Speed**: the simulation is about half the headless target, its costs the original's own math, and animation the one large lead not yet tried (task 30); the target itself is design call 15. The branches above merge first. The proposed tasks are 26 to 33 [below](#the-refactor), with design calls 14 to 16.
+
 ## Proposed tasks
 
 Sizes: S a few days of one agent's work, M a subsystem, L more. Every refactor task keeps the oracle identical: the golden diffs and sessions it reaches (`melee-oracle` with `--write-golden` where states change shape), `sync-test --rollback 7` on the bench, `melee-bench native` before and after on the worker or a quiet machine, the ledger's `--check`, and the frames tests where the display pass is touched. A new check is mutation-tested; a defect found goes in [Melee's bugs](melee-bugs.md). The fast renderer's tasks are checked against the exact renderer (geometry within a tolerance and perceptual image comparisons, [above](#the-fast-renderer)), not the oracle.
@@ -520,10 +781,20 @@ Sizes: S a few days of one agent's work, M a subsystem, L more. Every refactor t
 | 23 | **Proposed (second survey).** **Wave 6, step 3: the other generated structs**: `StageInfo` and `GroundParam`, `Camera`, `dmg`, `StartMeleeRules`, `MatchPlayerData`, `_StaticPlayer`, `HitCapsule`, `CollData`, `EventData` and the rest, about 2,700 fields in 158 structs, one commit a struct or two | M to L | 22 | `tools/structgen` and each struct's readers | no offset-named field in `game::structs`; as 18; then [design call 3](#design-calls)'s second half (taking the structs over by hand) can be decided |
 | 24 | **Done (2026-11-21, `refactor/mode-registry` from `c130a46b`, [below](#task-24-the-game-modes-registry)).** **The game modes' registry.** A `GameMode` enum with the game's numbers and an entry per mode (its scene states, its hooks, its files) in place of 69 definitions of 42 `GM_*` constants in 20 files and `gm::machine`'s `states` and `mode_hooks` | M | wave 5 merged | `game::gm`, `ty`, `vi`, `mn`, `game::session` | a mode's port is its module and one entry; the session and single-player suites unchanged |
 | 25 | **The held items' callbacks and PK Flash with Din's Fire done (2026-11-21, `refactor/dedup-held-items` from `7e7ac110`, [below](#task-25-the-held-items-and-the-steered-shots)); the tethers left proposed (second survey).** **The dedup's tail**, one family a task where it's wanted ([above](#duplicated-code-again)): the tethers left (Sheik's chain, the Ice Climbers' string, Ness's yo-yo, over `refactor/dedup-grapple`'s tether), the held items' callbacks, PK Flash and Din's Fire | S each | the item branches merged | the family's modules | lines removed per family; per-tick hashes on the replays that reach it, a mutation per user |
+| 26 | **Proposed (third survey).** **What checking costs** ([the third survey](#what-checking-costs)): one melee-sim build per check run (`stubs` and `oracle-hooks` set at run time, not as features), leaf-check's 98 test files as one binary, a session's diff and its rollback in one run, the ruleset sessions as three processes, the worker given ssbm-rs's captures and the `m6s-*` traces, and a test's missing data a failure under `MELEE_CHECKS_REQUIRE_DATA=1` | S | nothing; before the next batch's merge check | melee-sim's `Cargo.toml` features and their `cfg`s, `tools/leaf-check`'s layout, `tools/oracle`'s `session_sync`, the coordinator's merge scripts and `verify-par.sh` | a merge check builds melee-sim at most twice in release; leaf-check one binary; every merge step either runs its tests or fails; the merge check's build and the verify's job-hours measured before and after on the worker; the same tests pass and the existing mutations still fail |
+| 27 | **Proposed (third survey).** **The stage boundary** (task 13's rule, [above](#boundaries-1)): `StageInfo` (owned on `refactor/own-structs`) and `gr::Globals`' 76 public fields private to `game::gr`, with accessors for what crosses the line (the stage's kind, the winds, the camera's settings, Stadium's and the devices' state, the start points) | M | `refactor/own-structs` merged | `game::gr` and its readers in `ft`, `camera`, `gm`, `it`, `export` | the stages' state reached only through `gr`, held by a source audit as task 21's is; per-tick hashes on the bench and the stage replays; speed unchanged on the worker |
+| 28 | **Proposed (third survey).** **The player kinds and the computer players' behaviours as enums**: a `PlayerKind` for the 25 `PKIND_*` constants of 7 names in 14 files and their 36 bare comparisons, a `CpuBehavior` for `cpu.behavior`'s 20-arm `match` and 14 comparisons, and the single sites named (the 1P modes' stage numbers, the tournament's icon, the items' hold kinds, the intros' kinds) | S | `refactor/wave6-rest` merged (it names `behavior`) | `pl`, `gm`, `mn::charsel`, `ft::cpu_*`, `ft::commands`, `game::record`, `vs_match`, `it::item` | no player kind or behaviour compared with or matched on a bare number; per-tick hashes on the bench, the computer players' replays and the sessions |
+| 29 | **Proposed (third survey).** **The last offset names** ([naming](#naming-after-wave-6)): the 26 helpers named after a field (`set_xd09`, `set_x39a_b0`, `cmd_x221e_b1`), the 21 types named after an offset or an address (`Fighter_x1614_t`, `pl_x5EC_t`, `ft_800898B4_t`), the 405 locals and 89 parameters named after the offset they hold, the 9 fields of the port's own | S | `refactor/wave6-rest` and `refactor/own-fighter-item` merged | `ft`, `it`, `gm`, `mp`, `gr`; `tools/structgen`'s type renames | no identifier with an offset part but the aliases and the decomp's paddings (the survey's scan finds none); the ledger and the sorted alias list unchanged; per-tick hashes on the bench |
+| 30 | **Proposed (third survey).** **Speed: animation** (9 to 14% of the simulation's thread, inclusive): profile the FObj and AObj interpreters' split between decoding a track's stream and its arithmetic; if decoding is a third of it or more, each track decoded once per archive into the keys it holds and interpreted from them, the same arithmetic in the same order. One round, time-boxed as task 19's second round was | M | `perf/ics-chains` merged (the build to measure) | `hsd::fobj`, `hsd::aobj`, `hsd::spline` | match speed +5% on the bench's matches on the worker (`release`), or the round stops; per-tick hashes on the verify list's 330 replays; `sync-test --rollback 7` on the bench; snapshots no larger (the decoded form isn't state) |
+| 31 | **Proposed (third survey).** **Own the modes', the save's and the player's structs** ([ownership](#ownership-design-call-3s-second-half)): 22 structs and 358 fields (`StartMeleeRules`, `MatchPlayerData`, `GmSaveData`, `EventData`, `PlayerInitData`, ...), each mode's beside its registry entry; the player's 14 and 160 (`_StaticPlayer`, `StaleMoveTable`, `plActionStats`, `pl_x*`) with the results' stat getters | M | `refactor/own-fighter-item` merged | `gm`, `pl`, `mn`, `tools/structgen`'s `OWNED` | those structs out of `game::structs`, each under the layout check; per-tick hashes on the replay diffs and the sessions |
+| 32 | **Proposed (third survey).** **The HUD's boundary and its structs**: `hud::Hud`'s 23 public fields private to `game::hud` (outside, only the developer text and the name tags are read, by `db` and the toys) and its 16 generated structs owned | S | `refactor/own-structs` merged | `game::hud`, `db`, `ty` | the HUD's state reached only through `hud`, held by a source audit; per-tick hashes and the HUD's sessions |
+| 33 | **Proposed (third survey).** **The dedup's tail, where wanted** ([duplicated code](#duplicated-code-a-third-time)): the stages' skeletons into their registry entries (7 stages, 590 near-copied lines), Kirby's copies' setup (388), the Poké Ball Pokémon (535) | S each | the branches above merged | each family's modules | lines removed per family; per-tick hashes on the replays and sessions that reach it, a mutation per user |
 
 **Start at once** (six agents): 1, 7's audit, 8, 10, and the fast renderer's F1 and F2 below. Then 2, 3 and 4 after 1 (in parallel: they touch different modules); 13 after 1; 5 and 6 after the Slippi ruleset's tasks 5b and 6 merge; 11 after 10; the rename waves between merges, wave 4 after 2. Task 9 only if design call 5 takes it.
 
 **The second survey's round** (proposed 2026-11-20, [the second survey](#the-second-survey)): first the branches in flight merge (task 6, the hookshot and grapple beam, the item pairs, the stage enemies, waves 2 and 5, F5). Then at once, in parallel (they touch different modules): 14 (wave 4), 15 (wave 1), 16 (the kinds left) and 17 (the player's build, on the worker). Then 18 (wave 6's `Fighter`) after 14, alone in `ft` while it runs; 19 after 17; 20 any time; 21 after task 6; 22 and 23 after 18, one generator round at a time; 24 after wave 5; 25 only for a family someone will read and change. The fast renderer's own tasks go on beside them ([F5](fast-renderer.md) and F6).
+
+**The third survey's round** (proposed 2026-11-23, [the third survey](#the-third-survey)): first the branches in flight merge (`refactor/wave6-rest`, `refactor/own-structs`, `refactor/dedup-tethers`, `perf/ics-chains`, `perf/vanilla-speed`, `fix/music-switchover`; `refactor/own-fighter-item` when done). Task 26 first, alone in the merge scripts, since it changes how the next merges are checked. Then in parallel (different modules): 27 and 32 after `own-structs`, 28 after `wave6-rest`, 29 and 31 after `own-fighter-item`, 30 on the worker any time; 33 only for a family someone will change. Design calls [14 to 16](#design-calls) first.
 
 ### Task 1, the callback table
 
@@ -1604,7 +1875,7 @@ Two places need an address the per-address slots kept and free reuse loses, and 
 
 ## Design calls
 
-Sarah's to answer; each with a recommendation. Calls 1 to 9 took their recommendations (Sarah, 2026-11-18); 10 to 13 are the second survey's: 10 was answered against its recommendation (Sarah, 2026-11-21), 11 to 13 took theirs (Sarah, 2026-11-21, "sounds good").
+Sarah's to answer; each with a recommendation. Calls 1 to 9 took their recommendations (Sarah, 2026-11-18); 10 to 13 are the second survey's: 10 was answered against its recommendation (Sarah, 2026-11-21), 11 to 13 took theirs (Sarah, 2026-11-21, "sounds good"). 14 to 16 are the third survey's (2026-11-23), open.
 
 | # | Call | Recommendation | What it changes |
 | --- | --- | --- | --- |
@@ -1621,3 +1892,6 @@ Sarah's to answer; each with a recommendation. Calls 1 to 9 took their recommend
 | 11 | **The comparer's names in wave 6** (tasks 18, 22 and 23) | **Accepted (Sarah, 2026-11-21, "sounds good").** The comparer's mirror is generated from the same map, so its output takes the new names, with the original's offset beside each (`fighter.hitlag_frames (x2114)`): ssbm-rs's traces, the engine notes and Melee's bugs cite offsets, and a reader of a diff needs both | how oracle diffs read |
 | 12 | **Vanilla's future** (design call 8 said to revisit after task 7) | **Accepted (Sarah, 2026-11-21, "sounds good").** Keep Vanilla in the tree. Task 7 dropped the slots no gameplay needed, task 6 put the rest of its memory modelling behind one ruleset test (a Slippi match runs none of it but Samus's address), and nothing in this round was blocked or slowed by it; [what Vanilla's exactness cost](#what-vanillas-exactness-cost) didn't grow. Revisit at the end of the next round | whether Vanilla is frozen or moved out |
 | 13 | **Effects and sounds by number** | **Accepted (Sarah, 2026-11-21, "sounds good").** Leave them the game's numbers: they index the effect and sound files, which are the list (no registry would replace one), as animation numbers do. Name only the numbers the code branches on, as constants beside the code, in task 16 | what modders see when they add an effect: a number in the data, as today |
+| 14 | **The per-kind variables** (the third survey: the fighters' `u` and `mv`, the items' `ItemVars`) | Leave them as the unions they are, not owned structs: the fighters' are bytes read at named offsets (286 of them, 1,621 reads), the items' 71 typed members over one block. A new state or item reads what the last one left in those bytes, which is compared state, so an owned struct per kind would still sit on the byte union, adding a second layout per kind for names they already have. Own everything else as tasks 31 and 32 propose | whether "own the code" stops at the unions; nothing players see |
+| 15 | **The headless speed target** (at least 20 times Dolphin on one core, aim 30) | Keep it as the aim and keep `release` as the build it's measured on ([design call 10](#design-calls)), and say plainly that no proposed task reaches it: the base runs the Dolphin matches 7.9 to 9.9 times as fast (8.4 to 10.5 with `perf/ics-chains`), its costs the original's own math done bit for bit. Take task 30's one round; if it and the next survey find no lead worth 5%, revisit design call 10 as Sarah said she would (PGO's 20 to 29% would put the four target matches at about 10 to 13 times) and set the target the remaining work can reach | which speed work is worth an agent; nothing players see now |
+| 16 | **Vanilla's future** (design call 12: revisit at the end of this round) | Keep Vanilla in the tree. The round's one new cost was the heap image's in a Vanilla session (with the song's lookup, a tick 3.6 times as long from power-on), which `perf/vanilla-speed` brings to 1.4 ms a tick without changing what's compared; nothing in the refactor was blocked by Vanilla. Added to [what Vanilla's exactness cost](#what-vanillas-exactness-cost); revisit at the next survey | whether Vanilla is frozen or moved out |
