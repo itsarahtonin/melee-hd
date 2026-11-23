@@ -756,6 +756,32 @@ melee-bench native --runs 5 fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ic
   - melee-player's `predict_tests`, which find each prediction equal to the tick it predicted, in a session too.
 - **The new unit tests** (`a_song_had_skips_the_disc_only_while_its_entry_is_there`, `chunked_pages_hold_what_one_map_holds`, `a_word_written_reads_and_hashes_as_its_four_bytes`) each fail when their piece is broken: the song's entry check dropped; a chunk range's last chunk or the run before misfound; a lookup in the wrong chunk; a run cut but not shortened; an unsorted insert; a restore that skips a page it shares no longer or keeps pages past the state's; a chunk or page whose version isn't renewed on a write; the word hashed apart from its bytes.
 
+## Animation's decoding (2026-11-23, the worker)
+
+[The refactor's](refactor.md#proposed-tasks) task 30, `perf/anim-decode` from `perf/ics-chains` at `8f097ccd`: one time-boxed round. The plan was to decode each track's keyframe stream once per archive into the keys it holds and interpret those, the same arithmetic in the same order, but only if decoding was a third or more of the FObj and AObj interpreters' time. It isn't, so the round stopped there and nothing changed.
+
+**How it was measured.** Call-graph profiles on the worker in one exclusive reservation: frame pointers, 2 kHz, the timed loop only through perf's control fifo, `perfsplit --runs 3` (the third survey's scratch tool) on its seven configurations. There were two builds. One was `8f097ccd` itself. The other was `8f097ccd` with a scratch patch, never committed, that marks the interpreter's steps `#[inline(never)]` so each shows as its own frame: the decoding (`load_data`, `load_wait`, `parse_float`, `parse_pack_info`, `parse_wait`), the value's arithmetic (`anim_value`, `spline::hermite`), the seek memo's key and `interpret_with`. The patched build ran 2 to 3% slower than the base. Each sample on a stack through `fobj::interpret*`, `aobj::interpret` or `fobj::stop_anim*` is the interpreters' inclusive time. Below the outermost interpreter frame, each sample goes to the update function the value is handed to (joints, materials, textures, lights), to decoding, to arithmetic, or to the interpreters' own frames. Shares are of the simulation's thread, and the last two columns are of the interpreting time (inclusive, less the update functions):
+
+| Configuration | Interpreters, inclusive | Update functions | Interpreting | Decoding | Arithmetic | Decoding's share | Upper bound |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Vanilla `fox-fox-fd` | 13.6% | 2.6% | 11.0% | 0.8% | 2.9% | 6.9% | 26.6% |
+| Vanilla `fox-marth-ps` | 10.0% | 1.8% | 8.3% | 0.7% | 2.3% | 8.7% | 25.5% |
+| Vanilla `ics-peach-ps` | 10.1% | 1.6% | 8.6% | 0.7% | 2.5% | 8.4% | 25.3% |
+| Slippi `fox-fox-fd` | 14.1% | 2.9% | 11.2% | 0.8% | 3.3% | 7.4% | 25.1% |
+| Slippi `fox-marth-ps` | 10.8% | 1.8% | 9.0% | 0.8% | 2.3% | 8.9% | 26.8% |
+| Slippi `ics-peach-ps` | 11.1% | 2.1% | 9.0% | 0.8% | 3.1% | 9.1% | 24.9% |
+| Sarah's 3.19 replay | 15.3% | 2.6% | 12.7% | 1.2% | 3.5% | 9.6% | 25.9% |
+
+**Decoding is 7 to 10% of the interpreting time** and 0.7 to 1.2% of the thread. The upper bound counts all of `interpret_with`'s own frame (the state machine the decoding steps run in) as decoding too, and that is still 25 to 27%. The unpatched build has the decoding inlined into `interpret_with`, and the same bound there is 26 to 29%. Its interpreters take 10.0 to 14.7% inclusive, as the [third survey](refactor.md#the-third-survey) found (9 to 14%).
+
+The decoding is this small because a channel only decodes when its time crosses a key: one wait, an opcode now and then, and one or two numbers of one to four bytes. On every other frame it hands over a value from the fields it already holds. The interpreters' time goes elsewhere: their own frames (the clocks, the state machine, the seek memo's key and lookup, the AObjs' end and loop checks), the Hermite arithmetic in exact single-precision operations, and the update functions. Removing all the decoding would gain at most about 1% of the thread, short of the round's 5% bar.
+
+```sh
+# a build with RUSTFLAGS="-C force-frame-pointers=yes" CARGO_PROFILE_RELEASE_DEBUG=line-tables-only, then per configuration
+PERF_CTL_FIFO=ctl PERF_ACK_FIFO=ack perf record -g -F 2000 -D -1 --control fifo:ctl,ack -- perfsplit data/bench/fox-fox-fd.slp [--rules slippi --heap off --fp slippi] --runs 3
+perf script --no-inline -F ip,sym   # folded, then split by the frames named above
+```
+
 ## Benchmark matches
 
 | Match | Stage | Fighters (costume) | Seed | Frames | Length | Ends |
