@@ -659,7 +659,7 @@ pub struct DisplayPhase {
     /// The views a display pass would give the game camera after each of the last two ticks,
     /// the last first (on the stages that read them, [`Game::keeps_display_views`]; none in a
     /// camera mode that leaves the CObj alone), and the engine tick count
-    /// (`gm_80479D58.unk_0`) after the last.
+    /// (`gm_80479D58.ticks`, the C `unk_0`) after the last.
     pub views: [Option<super::camera::View>; 2],
     pub view_tick: u32,
     /// The same of playback's followed camera, after each of the last two ticks it took (the
