@@ -470,6 +470,28 @@ OWNED = {
     "gm_80479D58_t": ("SceneLoop", "crate::game::gm::types::SceneLoop"),
     "gm_controller_map": ("GmControllerMap", "crate::game::gm::types::GmControllerMap"),
     "controller_map": ("ControllerMap", "crate::game::gm::types::ControllerMap"),
+    # The modes' saved choices, the game's data and the card's (task 31).
+    "gmm_x0_584_t": ("TargetTestChoice", "crate::game::gm::event::TargetTestChoice"),
+    "EventData": ("EventData", "crate::game::gm::event::EventData"),
+    "gmm_x0_528_t": ("OnePlayerChoice", "crate::game::gm::one_player::OnePlayerChoice"),
+    "gmm_x0_44_t": ("TrophyNotices", "crate::game::gm::main_lib::TrophyNotices"),
+    "gmm_x0_vsdata": ("OnePlayerModes", "crate::game::gm::main_lib::OnePlayerModes"),
+    "VsModeData": ("VsModeData", "crate::game::gm::main_lib::VsModeData"),
+    "gmm_x0_vsmodes": ("VsModes", "crate::game::gm::main_lib::VsModes"),
+    "GameRules": ("GameRules", "crate::game::gm::main_lib::GameRules"),
+    "gmm_x0": ("GameData", "crate::game::gm::main_lib::GameData"),
+    "gmm_retval_ED98": ("ChallengerRecords", "crate::lb::save::ChallengerRecords"),
+    "gmm_retval_EDB0": ("StageUnlockRecords", "crate::lb::save::StageUnlockRecords"),
+    "gmm_retval_EDBC": ("TrophyRecords", "crate::lb::save::TrophyRecords"),
+    "gmm_x1868_1A8_t": ("MessageRecords", "crate::lb::save::MessageRecords"),
+    "GamePrefs": ("GamePrefs", "crate::lb::save::GamePrefs"),
+    "GmStats": ("GmStats", "crate::lb::save::GmStats"),
+    "FighterData_x7C": ("FighterRecords", "crate::lb::save::FighterRecords"),
+    "FighterData": ("FighterData", "crate::lb::save::FighterData"),
+    "GmSaveData": ("GmSaveData", "crate::lb::save::GmSaveData"),
+    "NameTagData": ("NameTagData", "crate::lb::save::NameTagData"),
+    "NameTagDataBank": ("NameTagDataBank", "crate::lb::save::NameTagDataBank"),
+    "GmCardData": ("GmCardData", "crate::lb::save::GmCardData"),
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.

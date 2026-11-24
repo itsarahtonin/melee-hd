@@ -78,48 +78,6 @@ CM_SUBJECT = {"x54": "unread_54", "x60": "unread_60"}
 
 CAMERA_DEBUG_MODE = {"_58": "unused_58"}
 
-# The fighter's data structs (the continuation's second group): a character's save records
-# (`FighterData`, its 1P records `FighterData_x7C`), a smash attack's charge (`_SmashAttr`), the
-# common attributes (`ftCo_DatAttrs`, Yoshi's egg `ftCo_DatAttrs_xBC_t`), a part's bone
-# (`FighterBone`), the step-on boxes (`lb_80014638_arg0_t`, `arg1_t`), the attack record
-# (`Struct2074`) and a hit's record (`ft_800898B4_t`).
-FIGHTER_DATA_X7C = {
-    # Target Test: cleared, then the best time; before it, the most targets broken.
-    "b0": "target_cleared",
-    "b1": "ten_man_cleared",
-    "b2": "hundred_man_cleared",
-    "b3": "fifteen_min_cleared",
-    "b4": "classic_cleared",
-    "b5": "adventure_cleared",
-    "b6": "all_star_cleared",
-    # Training's best combo.
-    "x7E": "training_combo",
-    # The highest level each 1P mode was cleared on.
-    "x80": "classic_level",
-    "x81": "adventure_level",
-    "x82": "all_star_level",
-    "x83": "unused_83",
-    "x84": "home_run_distance",
-    "x88": "classic_score",
-    "x8C": "adventure_score",
-    "x90": "all_star_score",
-    "x94": "target_record",
-    "x98": "ten_man_time",
-    "x9C": "hundred_man_time",
-    "xA0": "three_min_kos",
-    "xA2": "fifteen_min_kos",
-    "xA4": "endless_kos",
-    "xA8": "cruel_kos",
-}
-FIGHTER_DATA = {
-    # The times played, a big-endian half in two bytes.
-    "x78": "play_count_hi",
-    "x79": "play_count_lo",
-    # `x0.b0`: the character was played.
-    "x7A": "played_flags",
-    "x7B": "unused_7b",
-    "x7C": "records",
-}
 FIGHTER_BONE = {
     # The joint an animation is read into before it's blended onto `joint`.
     "x4_jobj2": "interp_joint",
@@ -153,170 +111,6 @@ FT_800898B4 = {
     "x11_b4": "forward_attack",
 }
 
-# The save and the event mode (the continuation's fourth group): the save's records
-# (`GmSaveData`), its unlocks' counters (`gmm_retval_ED98`, `EDB0`, `EDBC`, `gmm_x1868_1A8_t`),
-# the event mode's run (`EventData`) and Target Test's choice (`gmm_x0_584_t`). Their
-# address-named types are named too (`config.RENAME_TYPES`).
-GM_SAVE_DATA = {
-    "x186A": "unlocked_stages",
-    "x186C": "unlocked_features",
-    "unk_8": "challenger_records",
-    "unk_28": "stage_unlock_records",
-    "unk_30": "trophy_records",
-    "unk_1A8": "message_records",
-    "x1A30": "vs_contestants",
-    "x1A34": "vs_play_time",
-    "x1A38": "combined_vs_play_time",
-    "x1A3C": "one_player_time",
-    "x1A40": "unused_1a40",
-    # The tournament's sudden deaths' seconds.
-    "x1A44": "tournament_time",
-    "x1A48": "coins",
-    "x1A4C": "most_coins",
-    "x1A50": "power_count",
-    "x1A54": "power_time",
-    "x1A58": "total_damage",
-    "x1A5C": "total_kos",
-    "x1A60": "total_self_destructs",
-    "x1A64": "unused_1a64",
-    # A bit per event cleared, and each event's best (the C splits the array).
-    "x1A68": "events_cleared",
-    "x1A70": "event_scores",
-    "padding_x1A70": "event_scores_rest",
-    # Event 51 ended with all three stocks left.
-    "x1B3C": "final_event_all_stocks",
-    # The messages pending and noted (a bit each), the trophies (a bit each), and each
-    # message's time.
-    "x1B40": "messages_pending",
-    "x1B4C": "messages_noted",
-    "x1B58": "trophies",
-    "x1B80": "message_times",
-    # The bonuses seen (a bit each; the C splits the array).
-    "x1C88": "bonuses_seen",
-    "padding_x1C88": "bonuses_seen_rest",
-    "x1CB0": "prefs",
-    "x1F2C": "fighters",
-}
-# The challengers' conditions.
-CHALLENGER_RECORDS = {
-    "x0": "vs_matches",
-    "x4": "combined_vs_play_time",
-    # Bits by character: played; Classic, Adventure, All-Star and Target Test cleared.
-    "xC": "played",
-    "x10": "classic_cleared",
-    "x14": "adventure_cleared",
-    "x18": "all_star_cleared",
-    "x1C": "target_cleared",
-}
-# The stages' unlock conditions.
-STAGE_UNLOCK_RECORDS = {"x0": "vs_matches", "x4": "target_cleared"}
-# The trophies' unlock conditions.
-TROPHY_RECORDS = {
-    "x0": "vs_matches",
-    "x4": "coin_matches",
-    "x8": "target_cleared",
-    "xC": "kos",
-    # The VS distance walked (`fn_80161C90`).
-    "x10": "walk_distance",
-    "x14": "most_coins",
-    "x18": "plays",
-    # Each character's best Target Test time (the C splits the array).
-    "x4C": "target_best",
-    "padding_x4C": "target_best_rest",
-    "xB0": "home_run_best",
-    "x114": "training_combo_best",
-}
-# The messages' conditions: the KOs, and three messages shown (every character, the first six
-# stages, everything).
-MESSAGE_RECORDS = {"x0": "kos", "x4": "all_characters_shown", "x5": "stages_shown", "x6": "everything_shown"}
-EVENT_DATA = {
-    # The first player's character and costume, as played.
-    "x0": "char_kind",
-    "x1": "char_color",
-    # The select's choice.
-    "x2": "chosen_char",
-    "x3": "chosen_color",
-    "unk_535": "event",
-    "x6": "port",
-    "x7": "team",
-    # The random opponents kept for the event's retries (players 2 to 4).
-    "x8": "random_char_1",
-    "x9": "random_char_2",
-    "xA": "random_char_3",
-    "xB_0": "timer_counts_up",
-    "xB_1": "cleared",
-    "xB_2": "round_won",
-    "xB_3": "crowd",
-    "xB_4": "series",
-    "xB_5": "voices_loaded",
-    "xB_6": "timed",
-    "xB_7": "unused_b7",
-    "xC": "score",
-    # The event's process's counter (the egg dropped, a round's wait, the joiner joined) and
-    # state (the egg broke, Event 36's round).
-    "x10": "proc_counter",
-    "x14": "unread_14",
-    "x18": "proc_state",
-    "x1C": "quake_scale",
-    # A series: the round, the first player's stocks and damage carried over, the time left,
-    # the series' frames, the character kept (Sheik, 0x21 none).
-    "x20": "round",
-    "x24": "round_stocks",
-    "x28": "round_damage",
-    "x2C": "round_seconds",
-    "x30": "round_frames",
-    "x34": "series_frames",
-    "x38": "kept_char",
-    "x3C": "coins",
-    "x40": "play_frames",
-    # How the files load (`gm_801BBB64`: 0 the first player's character set, 1 to choose, 2 to
-    # 4 a series' rounds), whether a Kirby crowd copies, the stage, the players' characters and
-    # costumes.
-    "x44": "load_kind",
-    "x45": "crowd_kirby_copies",
-    "x48": "stage",
-    "x4C": "chars",
-    "x50": "colors",
-    "unk_584": "target_test",
-}
-TARGET_TEST_CHOICE = {"unk_584": "ckind", "unk_585": "color", "unk_586": "nametag", "unk_587": "unused_587"}
-
-GAME_DATA = {
-    # The attract loop's and the how-to's rounds.
-    "unk_1": "demo_count",
-    # The attract loop's history (`gm_random_history`): how often each character (from here)
-    # and each stage (from byte 0x1C) has played; the C splits the array.
-    "unk_2": "attract_history",
-    "pad_3": "attract_history_rest",
-    # Matches lost to each challenger since power-on (`gmMainLib_8015DB6C`).
-    "x39": "challenger_losses",
-    "unk_44": "trophy_notices",
-    "x1850": "rules",
-}
-GAME_RULES = {
-    "unk_xc": "sd_penalty",
-    # The diagrams' names mode and cursors, saved for the screens' next entry.
-    "xD": "diagram_name_mode",
-    "xE": "fighter_cursor_hi",
-    "xF": "fighter_cursor_lo",
-    "unk_x10": "name_cursor_hi",
-    "x11": "name_cursor_lo",
-    "x12": "diagram2_fighter",
-    "x13": "diagram2_name",
-    # The sound test's song, the gallery's music.
-    "unk_14": "gallery_song",
-}
-ONE_PLAYER_MODES = {"unk_51C": "classic", "unk_522": "adventure", "unk_528": "all_star", "unk_530": "event"}
-# The run's round to resume.
-ONE_PLAYER_CHOICE = {"x5": "round"}
-VS_MODE_DATA = {f"unk_0x{i}": f"unused_{i}" for i in range(3, 8)}
-NAME_TAG_DATA = {
-    # The byte a four-letter name ends at; the handicap; a name read past its end reaches the
-    # padding.
-    "x1A0": "name_end",
-    "x1A2": "handicap",
-    "padding_x1A2": "pad_1a3",
-}
 # The HUD (the continuation's sixth group): the announcements (`Element_803F9628`), the layout
 # (`ifAll_804A0FD8_t`), the stock icons and the single-player tallies (`ifStock_*`), the
 # damage displays' flags, the magnifier's colors, the coin counter, the off-screen arrows and
@@ -523,29 +317,12 @@ GROUPS = [
     {},
     {},
     {
-        "FighterData_x7C": FIGHTER_DATA_X7C,
-        "FighterData": FIGHTER_DATA,
         "FighterBone": FIGHTER_BONE,
         "ft_800898B4_t": FT_800898B4,
     },
     {},
-    {
-        "GmSaveData": GM_SAVE_DATA,
-        "gmm_retval_ED98": CHALLENGER_RECORDS,
-        "gmm_retval_EDB0": STAGE_UNLOCK_RECORDS,
-        "gmm_retval_EDBC": TROPHY_RECORDS,
-        "gmm_x1868_1A8_t": MESSAGE_RECORDS,
-        "EventData": EVENT_DATA,
-        "gmm_x0_584_t": TARGET_TEST_CHOICE,
-    },
-    {
-        "gmm_x0": GAME_DATA,
-        "GameRules": GAME_RULES,
-        "gmm_x0_vsdata": ONE_PLAYER_MODES,
-        "gmm_x0_528_t": ONE_PLAYER_CHOICE,
-        "VsModeData": VS_MODE_DATA,
-        "NameTagData": NAME_TAG_DATA,
-        },
+    {},
+    {},
     {
         "Element_803F9628": ANNOUNCEMENT,
         "Element_803F9628_x12": ANNOUNCEMENT_FLAGS,

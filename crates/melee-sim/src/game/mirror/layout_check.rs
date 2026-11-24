@@ -36,6 +36,11 @@ fn owned() -> Vec<Layout> {
         FtPartsVis, HitResult, IntVec2, ItemPickup, LedgePoint, ModelVariant, PartAnim,
         PartnerInput, ReflectAttrs, SmashAttrs, StaminaMarker, StepFeet, U8Vec2,
     };
+    use crate::game::gm::event::{EventData, TargetTestChoice};
+    use crate::game::gm::main_lib::{
+        GameData, GameRules, OnePlayerModes, TrophyNotices, VsModeData, VsModes,
+    };
+    use crate::game::gm::one_player::OnePlayerChoice;
     use crate::game::gm::types::{
         ControllerMap, DebugPause, DebugPauseInput, GmControllerMap, MatchEnd, MatchPlayerData,
         MatchTeamData, PlayerDecisions, PlayerInitData, SceneLoop, StartMeleeData, StartMeleeRules,
@@ -54,6 +59,10 @@ fn owned() -> Vec<Layout> {
         StaticPlayer,
     };
     use crate::lb::colanim::ColorOverlay;
+    use crate::lb::save::{
+        ChallengerRecords, FighterData, FighterRecords, GamePrefs, GmCardData, GmSaveData, GmStats,
+        MessageRecords, NameTagData, NameTagDataBank, StageUnlockRecords, TrophyRecords,
+    };
     use crate::lb::shadow::LbShadow;
     use crate::mp::coll::{CollData, Ecb, Surface};
     [
@@ -138,6 +147,27 @@ fn owned() -> Vec<Layout> {
         SceneLoop::layout(),
         GmControllerMap::layout(),
         ControllerMap::layout(),
+        TargetTestChoice::layout(),
+        EventData::layout(),
+        OnePlayerChoice::layout(),
+        TrophyNotices::layout(),
+        OnePlayerModes::layout(),
+        VsModeData::layout(),
+        VsModes::layout(),
+        GameRules::layout(),
+        GameData::layout(),
+        ChallengerRecords::layout(),
+        StageUnlockRecords::layout(),
+        TrophyRecords::layout(),
+        MessageRecords::layout(),
+        GamePrefs::layout(),
+        GmStats::layout(),
+        FighterRecords::layout(),
+        FighterData::layout(),
+        GmSaveData::layout(),
+        NameTagData::layout(),
+        NameTagDataBank::layout(),
+        GmCardData::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))

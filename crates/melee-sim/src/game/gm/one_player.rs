@@ -8,6 +8,10 @@
 // indexed alongside.
 #![allow(clippy::needless_range_loop)]
 
+mod types;
+
+pub use types::OnePlayerChoice;
+
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::super::structs::{StartMeleeData, VsModeData};

@@ -2,6 +2,10 @@
 //! `sqEventInitDataLevelTbl`, indexed by the event's place in the list), the list's order of
 //! names (`gm_803DF918`), and the event mode's getters.
 
+mod types;
+
+pub use types::{EventData, TargetTestChoice};
+
 use melee_data::archive::DataRef;
 
 use super::super::state::Running;

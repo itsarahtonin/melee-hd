@@ -3,11 +3,13 @@
 //! the name tags), which the boot resets and the memory card scene loads; and the power-on
 //! state (`gmMainLib_8046B0F0`).
 
+mod types;
+
+pub use types::{GameData, GameRules, OnePlayerModes, TrophyNotices, VsModeData, VsModes};
+
 use super::super::state::{Game, Running};
-use super::super::structs::{
-    FighterData, GameData, GamePrefs, GameRules, GmSaveData, GmStats, NameTagData,
-};
 use crate::game::gm::GameMode;
+use crate::lb::save::{FighterData, GamePrefs, GmSaveData, GmStats, NameTagData};
 
 /// `LANG_JP`, `LANG_US`.
 pub const LANG_JP: u8 = 0;

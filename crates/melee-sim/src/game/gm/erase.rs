@@ -261,7 +261,7 @@ impl Running<'_> {
         s.event_scores = z.event_scores;
         s.event_scores_rest = z.event_scores_rest;
         s.final_event_all_stocks = z.final_event_all_stocks;
-        s.pad_2D5 = z.pad_2D5;
+        s.pad_2d5 = z.pad_2d5;
         self.relock_messages();
         self.card_game_mark_changes();
     }

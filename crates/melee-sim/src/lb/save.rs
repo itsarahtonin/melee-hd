@@ -21,7 +21,13 @@ use melee_save::{Card, Clock, Console};
 use super::super::game::code::unported_call;
 use super::super::game::mirror::{Export, Mem, MemMut, Mirror};
 use super::super::game::state::Running;
-use super::super::game::structs::GmCardData;
+
+mod types;
+
+pub use types::{
+    ChallengerRecords, FighterData, FighterRecords, GamePrefs, GmCardData, GmSaveData, GmStats,
+    MessageRecords, NameTagData, NameTagDataBank, StageUnlockRecords, TrophyRecords,
+};
 
 /// `lbCardResult`s the game tests.
 pub mod result {
