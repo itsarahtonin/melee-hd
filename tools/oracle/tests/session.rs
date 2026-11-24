@@ -496,7 +496,7 @@ fn taken_up_match_catches_a_changed_tick_count() {
         return;
     };
     assert!(
-        out.contains("1 ticks compared; tick 3301 differs in 1 places, first: gm_80479D58.unk_0: ours 58, theirs 57"),
+        out.contains("1 ticks compared; tick 3301 differs in 1 places, first: gm_80479D58.ticks (unk_0): ours 58, theirs 57"),
         "{out}"
     );
 }
