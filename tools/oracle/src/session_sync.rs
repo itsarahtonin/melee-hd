@@ -15,6 +15,10 @@
 //! scene, since a scene's entry reads files into the archives (`Session::data`), which a
 //! tick otherwise only reads; the files the frontend reads between a match's ticks for its
 //! joining opponents (`Session::joiner_files`) the rollbacks' session takes along.
+//!
+//! The check is [`Rollbacks`], which `melee-oracle session TRACE INPUTS ... --rollback N
+//! --shortcut` also runs on its own straight play, beside its comparison with the trace (the
+//! refactor's task 26): one run where the verify ran `session` and `session-sync` apart.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
@@ -243,33 +247,9 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
         println!("0 ticks checked; stopped in the boot: {}", panic_text(&p));
         return ExitCode::FAILURE;
     }
-    let len = rollback + 1;
-    let mut ring: Vec<Saved> = (0..len)
-        .map(|_| Saved {
-            game: s.game.clone(),
-            card: s.card.clone(),
-            next: 0,
-        })
-        .collect();
-    let mut outputs: Vec<Frame> = (0..len).map(|_| Frame::default()).collect();
-    // The session the rollbacks play: the archives are the straight run's, which a match's
-    // ticks only read (taken again at each scene's entry).
-    let mut work = Session::new(setup);
-    work.follow_playback_camera = follow;
-    let mut work_console = Console {
-        reads: &rec.reads,
-        next: 0,
-        disc: &disc,
-        mutate: None,
-    };
-    let started = Instant::now();
-    let (mut tick, mut checked, mut matches) = (0u64, 0u64, 0u32);
-    // The ticks played since the running scene began, and whether it's a match's.
-    let mut in_scene = 0u64;
-    let mut was_match = false;
-    // Whether the rollbacks' session has taken the running scene's archives yet.
-    let mut work_taken = false;
-    let mut match_ticks: Vec<(u64, u64)> = Vec::new();
+    let mut rb = Rollbacks::new(setup, &s, rollback, shortcut);
+    rb.perturb = perturb;
+    let mut tick = 0u64;
     let failure = loop {
         if tick >= limit {
             break None;
@@ -278,31 +258,30 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             println!("the recording's last read was taken before tick {tick}");
             break None;
         }
-        if s.game.scene.unk_C != 0 {
-            // This tick changes scenes: no rollback reaches back across it.
-            in_scene = 0;
-            work_taken = false;
-        }
         if time_ticks.contains(&tick) {
-            time_restore(tick, &s, &console, &mut work, &mut work_console);
+            let mut work_console = Console {
+                reads: &rec.reads,
+                next: 0,
+                disc: &disc,
+                mutate: None,
+            };
+            time_restore(tick, &s, &console, &mut rb.work, &mut work_console);
         }
-        let slot = (tick % len as u64) as usize;
-        ring[slot].game.clone_from(&s.game);
-        ring[slot].card.clone_from(&s.card);
-        ring[slot].next = console.next;
+        rb.before(&s, console.next);
         let stepped = catch_unwind(AssertUnwindSafe(|| step(&mut s, &mut console)));
         let out = match stepped {
             Ok(f) => f,
             Err(p) => {
                 println!(
-                    "{checked} ticks checked in {matches} matches, no difference; the session stopped in tick {tick}: {}",
+                    "{} ticks checked in {} matches, no difference; the session stopped in tick {tick}: {}",
+                    rb.checked,
+                    rb.matches,
                     panic_text(&p)
                 );
-                report_matches(&match_ticks);
+                report_matches(&rb.match_ticks);
                 return ExitCode::FAILURE;
             }
         };
-        let ended = out.ended;
         if probe {
             probe_line(tick, console.next, &s.game);
             if out.pads.motors.iter().any(Option::is_some) {
@@ -314,98 +293,12 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
                 }
             }
         }
-        outputs[slot].clone_from(&out);
         tick += 1;
-        in_scene += 1;
-        let now_match = in_match(&s.game);
-        if now_match && (!was_match || in_scene == 1) {
-            matches += 1;
-            match_ticks.push((tick - 1, tick - 1));
+        if let Err(why) = rb.after(&s, console.next, out, &rec.reads, &disc) {
+            break Some(why);
         }
-        if shortcut
-            && now_match
-            && in_scene == 1
-            && s.game.machine.routing.curr_mode == GameMode::Vs
-            // The VS scene's match, not Sudden Death's or the results screen's fighters.
-            && melee_sim::game::gm::machine::scene_kind(s.game.machine.scene_info)
-                == Some(GameScene::Vs)
-            && !check_shortcut(tick - 1, &s, ring[slot].game.objs.rng.seed, &disc)
-        {
-            shortcut_failed = true;
-        }
-        was_match = now_match;
-        if now_match && let Some(m) = match_ticks.last_mut() {
-            m.1 = tick - 1;
-        }
-        // A rollback restores a state from within the scene, the scene's first tick's after.
-        if rollback > 0 && now_match && in_scene > rollback as u64 {
-            // At the scene's first rollback, which comes later than its tick `rollback + 1`
-            // where its fighters come later (a cutscene's demo fighter); the files read for
-            // opponents joining mid-match come along too.
-            if !work_taken || work.joiner_files.files.len() != s.joiner_files.files.len() {
-                work_taken = true;
-                work.data = s.data.clone();
-                work.joiner_files = s.joiner_files.clone();
-                // A live match's menus' session, set aside across its scene (`game::live`).
-                work.aside.clone_from(&s.aside);
-            }
-            let from = tick - rollback as u64;
-            let saved = &ring[(from % len as u64) as usize];
-            work.game.clone_from(&saved.game);
-            work.card.clone_from(&saved.card);
-            work_console.next = saved.next;
-            if perturb == Some(tick - 1) {
-                let x = &mut work.game.fighters[0].cur_pos.x;
-                *x = f32::from_bits(x.to_bits() ^ 1);
-            }
-            let replayed = catch_unwind(AssertUnwindSafe(|| {
-                for k in from..tick {
-                    let out = step(&mut work, &mut work_console);
-                    let want = &outputs[(k % len as u64) as usize];
-                    if let Some(d) = out.state_diff(want) {
-                        return Some(format!(
-                            "tick {k}'s output played again differs from the straight run's at frame{d}"
-                        ));
-                    }
-                }
-                None
-            }));
-            let replayed = match replayed {
-                Ok(r) => r,
-                Err(p) => Some(format!(
-                    "playing ticks {from} to {} again stopped: {}",
-                    tick - 1,
-                    panic_text(&p)
-                )),
-            };
-            if let Some(why) = replayed {
-                break Some(why);
-            }
-            if let Some(d) = work.game.state_diff(&s.game) {
-                break Some(format!(
-                    "the state after tick {}, restored from before tick {from} and played again, differs from the straight run's at game{d}",
-                    tick - 1
-                ));
-            }
-            if work.card != s.card {
-                break Some(format!(
-                    "the memory card's device after tick {}, restored from before tick {from} and played again, differs from the straight run's",
-                    tick - 1
-                ));
-            }
-            if work_console.next != console.next {
-                break Some(format!(
-                    "the ticks {from} to {} played again took reads to {}, the straight run's to {}",
-                    tick - 1,
-                    work_console.next,
-                    console.next
-                ));
-            }
-            checked += 1;
-        }
-        let _ = ended;
     };
-    report_matches(&match_ticks);
+    report_matches(&rb.match_ticks);
     for (chan, out) in [card_out, card_b_out].into_iter().enumerate() {
         let Some(p) = out else { continue };
         match s.card.as_ref().and_then(|d| d.slots[chan].card.as_ref()) {
@@ -416,22 +309,234 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             None => println!("no memory card to write"),
         }
     }
-    if shortcut_failed {
+    if rb.shortcut_failed() {
         return ExitCode::FAILURE;
     }
-    match failure {
-        None => {
-            println!(
-                "{checked} ticks checked in {matches} matches, rolled back {rollback} each, no difference ({tick} ticks played, in {:.1} s)",
-                started.elapsed().as_secs_f64()
-            );
-            ExitCode::SUCCESS
+    let (line, ok) = rb.summary(failure.as_deref(), tick);
+    println!("{line}");
+    if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+}
+
+/// The rollback check of a session's straight run, tick by tick: what `session-sync` runs, and
+/// `session --rollback N` beside its comparison with the trace (the refactor's task 26: the
+/// verify played each session twice for the two). Before each tick [`Rollbacks::before`] keeps the
+/// console's state in a ring: the game's state (`clone_from`), the memory card's device and which
+/// read the console hands out next, the three things a tick reads that a rollback restores. After
+/// each tick and its frame's display pass, [`Rollbacks::after`] counts the matches and, from the
+/// N-th tick of a match's scene on (a scene with fighters: the VS matches, sudden death, the
+/// attract matches), restores a second session from N ticks before and plays those ticks again
+/// with the same reads, display passes included: its game must then equal the straight run's bit
+/// for bit, its card device too, and each replayed tick's output (sounds, rumble, draws) the
+/// straight run's. Menu ticks play once: a rollback reaches back only within one match's scene,
+/// since a scene's entry reads files into the archives (`Session::data`), which a tick otherwise
+/// only reads; the files the frontend reads between a match's ticks for its joining opponents
+/// (`Session::joiner_files`) the rollbacks' session takes along.
+pub(crate) struct Rollbacks {
+    n: usize,
+    ring: Vec<Saved>,
+    outputs: Vec<Frame>,
+    /// The session the rollbacks play on, its console's next read beside it.
+    pub(crate) work: Session,
+    work_next: usize,
+    /// The straight run's ticks so far, and the ticks of the current scene.
+    tick: u64,
+    in_scene: u64,
+    was_match: bool,
+    work_taken: bool,
+    pub(crate) match_ticks: Vec<(u64, u64)>,
+    pub(crate) checked: u64,
+    pub(crate) matches: u32,
+    /// `--shortcut`: the launcher's shortcut checked at each VS match's first tick.
+    shortcut: bool,
+    shortcut_failed: bool,
+    /// `--perturb TICK`: the rollback after tick TICK starts from a state off by a bit.
+    pub(crate) perturb: Option<u64>,
+    started: Instant,
+}
+
+impl Rollbacks {
+    /// Rolling back `n` ticks on a session set up as `s` (the work session made from `setup`,
+    /// with `s`'s camera follower and live-match model).
+    pub(crate) fn new(setup: Setup, s: &Session, n: usize, shortcut: bool) -> Self {
+        let len = n + 1;
+        let mut work = Session::new(setup);
+        work.follow_playback_camera = s.follow_playback_camera;
+        work.live_model = s.live_model;
+        Rollbacks {
+            n,
+            ring: (0..len)
+                .map(|_| Saved {
+                    game: s.game.clone(),
+                    card: s.card.clone(),
+                    next: 0,
+                })
+                .collect(),
+            outputs: (0..len).map(|_| Frame::default()).collect(),
+            work,
+            work_next: 0,
+            tick: 0,
+            in_scene: 0,
+            was_match: false,
+            work_taken: false,
+            match_ticks: Vec::new(),
+            checked: 0,
+            matches: 0,
+            shortcut,
+            shortcut_failed: false,
+            perturb: None,
+            started: Instant::now(),
         }
-        Some(why) => {
-            println!(
-                "{checked} ticks checked in {matches} matches, rolled back {rollback} each: {why}"
-            );
-            ExitCode::FAILURE
+    }
+
+    /// Before the straight run's next tick: its state into the ring (`next`, the console's next
+    /// read).
+    pub(crate) fn before(&mut self, s: &Session, next: usize) {
+        if s.game.scene.unk_C != 0 {
+            self.in_scene = 0;
+            self.work_taken = false;
+        }
+        let slot = (self.tick % self.ring.len() as u64) as usize;
+        let saved = &mut self.ring[slot];
+        saved.game.clone_from(&s.game);
+        saved.card.clone_from(&s.card);
+        saved.next = next;
+    }
+
+    /// After the straight run's tick and its display pass (`out`, the tick's output with the
+    /// pass's draws): the match's ticks counted, the shortcut checked, and the rollback from `n`
+    /// ticks before played again and compared. `Err` names the first difference.
+    pub(crate) fn after(
+        &mut self,
+        s: &Session,
+        next: usize,
+        out: Frame,
+        reads: &[melee_sim::input::controller::PadData],
+        disc: &Disc,
+    ) -> Result<(), String> {
+        let len = self.ring.len() as u64;
+        let slot = (self.tick % len) as usize;
+        self.outputs[slot] = out;
+        self.tick += 1;
+        self.in_scene += 1;
+        let tick = self.tick;
+        let now_match = in_match(&s.game);
+        if now_match && (!self.was_match || self.in_scene == 1) {
+            self.matches += 1;
+            self.match_ticks.push((tick - 1, tick - 1));
+        }
+        if self.shortcut
+            && now_match
+            && self.in_scene == 1
+            && s.game.machine.routing.curr_mode == GameMode::Vs
+            && melee_sim::game::gm::machine::scene_kind(s.game.machine.scene_info)
+                == Some(GameScene::Vs)
+            && !check_shortcut(tick - 1, s, self.ring[slot].game.objs.rng.seed, disc)
+        {
+            self.shortcut_failed = true;
+        }
+        self.was_match = now_match;
+        if now_match && let Some(m) = self.match_ticks.last_mut() {
+            m.1 = tick - 1;
+        }
+        if self.n == 0 || !now_match || self.in_scene <= self.n as u64 {
+            return Ok(());
+        }
+        let work = &mut self.work;
+        if !self.work_taken || work.joiner_files.files.len() != s.joiner_files.files.len() {
+            self.work_taken = true;
+            work.data = s.data.clone();
+            work.joiner_files = s.joiner_files.clone();
+            work.aside.clone_from(&s.aside);
+        }
+        let from = tick - self.n as u64;
+        let saved = &self.ring[(from % len) as usize];
+        work.game.clone_from(&saved.game);
+        work.card.clone_from(&saved.card);
+        self.work_next = saved.next;
+        if self.perturb == Some(tick - 1) {
+            let x = &mut work.game.fighters[0].cur_pos.x;
+            *x = f32::from_bits(x.to_bits() ^ 1);
+        }
+        let mut work_console = Console {
+            reads,
+            next: self.work_next,
+            disc,
+            mutate: None,
+        };
+        let outputs = &self.outputs;
+        let replayed = catch_unwind(AssertUnwindSafe(|| {
+            for k in from..tick {
+                let out = step(work, &mut work_console);
+                let want = &outputs[(k % len) as usize];
+                if let Some(d) = out.state_diff(want) {
+                    return Some(format!(
+                        "tick {k}'s output played again differs from the straight run's at frame{d}"
+                    ));
+                }
+            }
+            None
+        }));
+        self.work_next = work_console.next;
+        let replayed = match replayed {
+            Ok(r) => r,
+            Err(p) => Some(format!(
+                "playing ticks {from} to {} again stopped: {}",
+                tick - 1,
+                panic_text(&p)
+            )),
+        };
+        if let Some(why) = replayed {
+            return Err(why);
+        }
+        if let Some(d) = self.work.game.state_diff(&s.game) {
+            return Err(format!(
+                "the state after tick {}, restored from before tick {from} and played again, differs from the straight run's at game{d}",
+                tick - 1
+            ));
+        }
+        if self.work.card != s.card {
+            return Err(format!(
+                "the memory card's device after tick {}, restored from before tick {from} and played again, differs from the straight run's",
+                tick - 1
+            ));
+        }
+        if self.work_next != next {
+            return Err(format!(
+                "the ticks {from} to {} played again took reads to {}, the straight run's to {next}",
+                tick - 1,
+                self.work_next
+            ));
+        }
+        self.checked += 1;
+        Ok(())
+    }
+
+    /// The straight run's ticks the check has seen.
+    pub(crate) fn played(&self) -> u64 {
+        self.tick
+    }
+
+    /// Whether a VS match's shortcut check failed (it printed why).
+    pub(crate) fn shortcut_failed(&self) -> bool {
+        self.shortcut_failed
+    }
+
+    /// The summary line (`session-sync`'s last), with `failure` (the first difference, or why
+    /// the run stopped) and `played`, the straight run's ticks; and whether the check passed.
+    pub(crate) fn summary(&self, failure: Option<&str>, played: u64) -> (String, bool) {
+        let (checked, matches, n) = (self.checked, self.matches, self.n);
+        match failure {
+            None => (
+                format!(
+                    "{checked} ticks checked in {matches} matches, rolled back {n} each, no difference ({played} ticks played, in {:.1} s)",
+                    self.started.elapsed().as_secs_f64()
+                ),
+                true,
+            ),
+            Some(why) => (
+                format!("{checked} ticks checked in {matches} matches, rolled back {n} each: {why}"),
+                false,
+            ),
         }
     }
 }
@@ -687,7 +792,7 @@ fn probe_line(tick: u64, next: usize, game: &Game) {
     println!("{line}");
 }
 
-fn report_matches(m: &[(u64, u64)]) {
+pub(crate) fn report_matches(m: &[(u64, u64)]) {
     for (a, b) in m {
         println!("a match's scene from tick {a} to {b}");
     }
