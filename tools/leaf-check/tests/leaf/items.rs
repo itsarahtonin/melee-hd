@@ -316,7 +316,8 @@ fn check_on(source: &str, target: &str, prep: &Prep<'_>, ours: &Ours) {
 fn check_calls(source: &str, func: &str, prep: &Prep<'_>, ours: &Ours) {
     let files = captures(source);
     if files.is_empty() {
-        melee_local_data::skip!(
+        // Four functions have never had captures in the full set (2026-11-23): not missing data.
+        eprintln!(
             "no captures of {source} in {}: skipping (see this file's docs to make them)",
             calls_dir().display()
         );
