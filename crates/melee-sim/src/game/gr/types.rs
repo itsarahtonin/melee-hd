@@ -253,7 +253,6 @@ impl StageInfo {
 
     /// Whether a bonus stage has ended (`Ground_801C1D84`): its goal reached, its targets
     /// broken, its race run (`flags` 0x330).
-    #[doc(alias = "Ground_801C1D84")]
     #[inline]
     pub fn bonus_stage_ended(&self) -> bool {
         self.flags & 0x330 != 0
