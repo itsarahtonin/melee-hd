@@ -40,6 +40,8 @@ mod tev_tests;
 mod texture_cache_tests;
 mod thread;
 #[cfg(test)]
+mod thread_tests;
+#[cfg(test)]
 mod vertex_tests;
 #[cfg(test)]
 mod written_over_tests;

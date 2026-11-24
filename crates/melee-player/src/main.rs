@@ -2298,6 +2298,12 @@ impl App {
         }
     }
 
+    /// Saves the pipelines of the menus' renderer set aside while a live match draws, if one
+    /// is, and lets it go (its threads joined, `melee_gpu::Threaded`'s drop).
+    fn drop_handoff(&mut self) {
+        save_menus(std::mem::take(&mut self.handoff));
+    }
+
     /// The window's new size: the surface follows it at once, and the internal resolution at
     /// the next frame.
     fn resized(&mut self, w: u32, h: u32) {
@@ -2392,7 +2398,7 @@ impl App {
         }
         self.frames = Frames::new();
         self.frames.space.load_dol(&session.dol);
-        self.handoff = handoff::Handoff::default();
+        self.drop_handoff();
         self.session = Some(session);
         let aspect = self.aspect;
         self.set_aspect(aspect);
@@ -2415,7 +2421,7 @@ impl App {
         self.hold = jit::Hold::default();
         self.session = None;
         self.drop_renderer();
-        self.handoff = handoff::Handoff::default();
+        self.drop_handoff();
         self.console_view = None;
         self.last_image = None;
     }
@@ -2757,12 +2763,16 @@ impl App {
     fn drop_aside(&mut self) {
         if let Some(a) = self.aside.take() {
             let Aside {
-                session, renderer, ..
+                session,
+                renderer,
+                handoff,
+                ..
             } = *a;
             drop(session);
             if let Some(g) = renderer {
                 self.specialized = pipelines::save(&g.into_renderer());
             }
+            save_menus(handoff);
         }
     }
 
@@ -3099,6 +3109,14 @@ impl ApplicationHandler for App {
 
 /// The GPU's side of the frames: the renderer on threads of its own (each frame done before
 /// it's presented), or on this one with `--one-thread`.
+/// Saves the pipelines of the menus' renderer `handoff` set aside, if a live match drew, and
+/// lets it go: quitting during a Slippi live match saves the menus' pipelines as the match's.
+fn save_menus(handoff: handoff::Handoff<Option<Gpu>>) {
+    if let Some(Some(g)) = handoff.into_menus() {
+        pipelines::save(&g.into_renderer());
+    }
+}
+
 fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool, fast: bool) -> Gpu {
     if fast {
         Gpu::fast(renderer, !one_thread)
@@ -3857,6 +3875,7 @@ fn run(args: Args) -> ExitCode {
     }
     app.session = None;
     app.drop_renderer();
+    app.drop_handoff();
     app.drop_aside();
     // The rows still waiting for their frames' GPU times.
     app.collect_done();
