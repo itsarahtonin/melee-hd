@@ -39,12 +39,12 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
-use melee_sim::game::ft::gamewatch::addr;
 use melee_sim::game::ft::gamewatch::special_n::GAME_WATCH;
+use melee_sim::game::ft::gamewatch::{addr, attack_air, special_lw, special_s};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{
-    gamewatchbreath, gamewatchchef, gamewatchfire, gamewatchgreenhouse, gamewatchjudge,
+    gamewatch, gamewatchbreath, gamewatchchef, gamewatchfire, gamewatchgreenhouse, gamewatchjudge,
     gamewatchmanhole, gamewatchpanic, gamewatchparachute, gamewatchrescue, gamewatchturtle,
 };
 use melee_sim::game::state::Running;
@@ -261,11 +261,21 @@ fn run_gw(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftGw_Attack11_ItemGreenhouse_CheckAttack11" => return b(g.gw_not_attack11(gobj)),
         "ftGw_AttackS4_ItemCheckTorchRemove" => return b(g.gw_torch_should_go(gobj)),
         "ftGw_AttackLw3_ItemCheckManholeRemove" => return b(g.gw_manhole_should_go(gobj)),
-        "ftGw_AttackAirN_ItemCheckParachuteRemove" => return b(g.gw_parachute_should_go(gobj)),
-        "ftGw_AttackAirN_ItemCheckTurtleRemove" => return b(g.gw_turtle_should_go(gobj)),
-        "ftGw_AttackAirN_ItemCheckSparkyRemove" => return b(g.gw_sparky_should_go(gobj)),
-        "ftGw_SpecialS_ItemCheckJudgementRemove" => return b(g.gw_judgement_should_go(gobj)),
-        "ftGw_SpecialLw_ItemCheckPanicRemove" => return b(g.gw_panic_should_go(gobj)),
+        "ftGw_AttackAirN_ItemCheckParachuteRemove" => {
+            return b(g.gw_held_should_go(gobj, &attack_air::PARACHUTE));
+        }
+        "ftGw_AttackAirN_ItemCheckTurtleRemove" => {
+            return b(g.gw_held_should_go(gobj, &attack_air::TURTLE));
+        }
+        "ftGw_AttackAirN_ItemCheckSparkyRemove" => {
+            return b(g.gw_held_should_go(gobj, &attack_air::SPARKY));
+        }
+        "ftGw_SpecialS_ItemCheckJudgementRemove" => {
+            return b(g.gw_held_should_go(gobj, &special_s::JUDGEMENT));
+        }
+        "ftGw_SpecialLw_ItemCheckPanicRemove" => {
+            return b(g.gw_held_should_go(gobj, &special_lw::PANIC));
+        }
         "ftGw_SpecialHi_ItemCheckRescueRemove" => return b(g.gw_rescue_should_go(gobj)),
         "ftGw_SpecialS_GetRandomInt" => return Ret::Int(g.gw_judge_roll(gobj) as u32),
         "ftGw_SpecialLw_UpdateAction" => g.gw_special_lw_update_action(gobj, f1),
@@ -285,25 +295,25 @@ fn run_gw(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "itGamewatchFire_802C6A2C" => gamewatchfire::remove(g, gobj),
         "itGamewatchFire_802C6A78" => gamewatchfire::hitlag_start(g, gobj),
         "itGamewatchFire_802C6A98" => gamewatchfire::hitlag_end(g, gobj),
-        "it_802C6D6C" => gamewatchparachute::remove(g, gobj),
-        "it_802C6DB8" => gamewatchparachute::hitlag_start(g, gobj),
-        "it_802C6DD8" => gamewatchparachute::hitlag_end(g, gobj),
-        "it_802C6E50" => gamewatchparachute::land(g, gobj),
-        "it_802C7074" => gamewatchturtle::remove(g, gobj),
-        "it_802C70C0" => gamewatchturtle::hitlag_start(g, gobj),
-        "it_802C70E0" => gamewatchturtle::hitlag_end(g, gobj),
-        "it_802C7158" => gamewatchturtle::land(g, gobj),
-        "it_802C7340" => gamewatchbreath::remove(g, gobj),
-        "it_802C738C" => gamewatchbreath::hitlag_start(g, gobj),
-        "it_802C73AC" => gamewatchbreath::hitlag_end(g, gobj),
-        "it_802C7424" => gamewatchbreath::land(g, gobj),
+        "it_802C6D6C" => gamewatch::held_remove(g, gobj, &gamewatchparachute::HELD),
+        "it_802C6DB8" => gamewatch::held_hitlag_start(g, gobj),
+        "it_802C6DD8" => gamewatch::held_hitlag_end(g, gobj),
+        "it_802C6E50" => gamewatch::held_land(g, gobj, &gamewatchparachute::HELD),
+        "it_802C7074" => gamewatch::held_remove(g, gobj, &gamewatchturtle::HELD),
+        "it_802C70C0" => gamewatch::held_hitlag_start(g, gobj),
+        "it_802C70E0" => gamewatch::held_hitlag_end(g, gobj),
+        "it_802C7158" => gamewatch::held_land(g, gobj, &gamewatchturtle::HELD),
+        "it_802C7340" => gamewatch::held_remove(g, gobj, &gamewatchbreath::HELD),
+        "it_802C738C" => gamewatch::held_hitlag_start(g, gobj),
+        "it_802C73AC" => gamewatch::held_hitlag_end(g, gobj),
+        "it_802C7424" => gamewatch::held_land(g, gobj, &gamewatchbreath::HELD),
         "it_802C78B8" => gamewatchjudge::face_away(g, gobj),
         "it_802C7A84" => gamewatchjudge::remove(g, gobj),
         "it_802C7AD0" => gamewatchjudge::hitlag_start(g, gobj),
         "it_802C7AF0" => gamewatchjudge::hitlag_end(g, gobj),
-        "it_802C7E94" => gamewatchpanic::remove(g, gobj),
-        "it_802C7EE0" => gamewatchpanic::hitlag_start(g, gobj),
-        "it_802C7F00" => gamewatchpanic::hitlag_end(g, gobj),
+        "it_802C7E94" => gamewatch::held_remove(g, gobj, &gamewatchpanic::HELD),
+        "it_802C7EE0" => gamewatch::held_hitlag_start(g, gobj),
+        "it_802C7F00" => gamewatch::held_hitlag_end(g, gobj),
         "it_802C8158" => gamewatchrescue::remove(g, gobj),
         "it_802C81C8" => gamewatchrescue::hitlag_start(g, gobj),
         "it_802C81E8" => gamewatchrescue::hitlag_end(g, gobj),

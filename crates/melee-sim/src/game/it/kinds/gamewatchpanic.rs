@@ -1,14 +1,12 @@
 //! Mr. Game & Watch's oil, `melee/it/kinds/itgamewatchpanic.c`: thrown from the full bucket
-//! through Oil Panic's throw, on the ground or in the air.
+//! through Oil Panic's throw, on the ground or in the air. Its hooks are his held items'
+//! ([`gamewatch::Held`]).
 
-use super::super::item::{animate, change, change_state, destroy};
-use super::super::{item, item_mut, lib26b1};
-use super::gamewatch;
-use crate::game::ft::common::GA_GROUND;
+use super::gamewatch::{self, Clears, Held};
+use crate::game::ft::gamewatch::special_lw::PANIC;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
-use crate::vec::Vec3;
 
 pub const DESTROYED: u32 = 0x802C_7E64;
 pub const PICKED_UP: u32 = 0x802C_7F20;
@@ -16,11 +14,22 @@ pub const ANIM: u32 = 0x802C_7FAC;
 #[doc(alias("EVT_UNK"))]
 pub const FORGET: u32 = 0x802C_8018;
 
+/// The oil's settings: Oil Panic's throw's, both script variables cleared as it's taken, on the ground or in the air as he is.
+pub const HELD: Held = Held {
+    kind: ItKind::GameAndWatchOil,
+    forget: |r, f| r.gw_held_set_flag(f, &PANIC),
+    owner_done: |r, f| r.gw_held_should_go(f, &PANIC),
+    clears: Clears::Both,
+    owner_air: true,
+    hides_on_land: false,
+    gone_at: None,
+};
+
 /// Runs one of the oil's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM => anim(r, gobj),
+        ANIM => gamewatch::held_anim(r, gobj, &HELD),
         _ => return None,
     })
 }
@@ -29,90 +38,9 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        DESTROYED => destroyed(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
+        DESTROYED => gamewatch::held_destroyed(r, gobj, &HELD),
+        PICKED_UP => gamewatch::held_picked_up(r, gobj, &HELD),
         _ => return false,
     }
     true
-}
-
-/// The oil at `parent`'s part `part`, `it_802C7D60`.
-#[doc(alias = "it_802C7D60")]
-pub fn spawn(
-    r: &mut Running,
-    parent: GObjId,
-    pos: Vec3,
-    part: i32,
-    facing_dir: f32,
-) -> Option<GObjId> {
-    gamewatch::spawn_held(
-        r,
-        ItKind::GameAndWatchOil.id(),
-        parent,
-        pos,
-        part,
-        facing_dir,
-    )
-}
-
-/// Gone, `itGameWatchPanic_Logic78_Destroyed`: its owner forgets it.
-#[doc(alias = "itGameWatchPanic_Logic78_Destroyed")]
-pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if let Some(owner) = item(r.game, gobj).owner {
-        r.gw_panic_set_flag(owner);
-    }
-}
-
-/// Taken away, `it_802C7E94`.
-#[doc(alias = "it_802C7E94")]
-pub fn remove(r: &mut Running, gobj: GObjId) {
-    destroyed(r, gobj);
-    destroy(r, gobj);
-}
-
-/// Paused, `it_802C7EE0`.
-#[doc(alias = "it_802C7EE0")]
-pub fn hitlag_start(r: &mut Running, gobj: GObjId) {
-    gamewatch::hitlag_start(r, gobj);
-}
-
-/// Running again, `it_802C7F00`.
-#[doc(alias = "it_802C7F00")]
-pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
-    gamewatch::hitlag_end(r, gobj);
-}
-
-/// Taken in hand, `itGameWatchPanic_Logic78_PickedUp`: on the ground or in the air as its
-/// owner is, animating.
-#[doc(alias = "itGameWatchPanic_Logic78_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    let ip = item_mut(r.game, gobj);
-    ip.cmd_var1 = 0;
-    ip.cmd_var0 = 0;
-    let Some(owner) = ip.owner else { return };
-    let ga = r.game.ft_ground_air(owner);
-    item_mut(r.game, gobj).ground_or_air = ga;
-    let state = if ga == GA_GROUND { 0 } else { 1 };
-    change_state(r, gobj, state, change::ANIM_UPDATE);
-    animate(r, gobj);
-}
-
-/// `itGamewatchpanic_UnkMotion1_Anim`: gone once its owner leaves the throw.
-#[doc(alias = "itGamewatchpanic_UnkMotion1_Anim")]
-pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
-    let go = match item(r.game, gobj).owner {
-        Some(owner) => r.gw_panic_should_go(owner),
-        None => true,
-    };
-    if go {
-        destroyed(r, gobj);
-    }
-    go
-}
-
-/// Forgets a GObj, `itGameWatchPanic_Logic78_EvtUnk`.
-// Ports `itGameWatchPanic_Logic78_EvtUnk`; aliased once a check reaches it.
-#[doc(alias("evt_unk"))]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
 }

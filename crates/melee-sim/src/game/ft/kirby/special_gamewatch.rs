@@ -8,6 +8,7 @@
 //! (`ftKb_Init_800EEB00`, `_800EEB1C`).
 
 use super::super::super::handles::CodeRef;
+use super::super::super::it::kinds::gamewatch as items;
 use super::super::super::it::kinds::kirbygamewatchchefpan as pan;
 use super::super::super::state::Running;
 use super::super::super::structs::_GXColor;
@@ -81,7 +82,7 @@ impl Running<'_> {
         let bone = self.bone_index(self.game.fighter(gobj), part::L_THUMB_NB);
         let pos = self.gw_part_pos(gobj, bone, None);
         let facing = self.game.fighter(gobj).facing_dir;
-        let p = pan::spawn(self, gobj, pos, bone, facing);
+        let p = items::held_spawn(self, &pan::HELD, gobj, pos, bone, facing);
         let fp = self.game.fighter_mut(gobj);
         fp.u.set_gobj_at(PAN, p);
         if p.is_some() {
@@ -104,7 +105,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialNGw_8010D0A8")]
     pub fn kb_gw_cleanup(&mut self, gobj: GObjId) {
         if let Some(p) = self.game.fighter(gobj).u.gobj_at(PAN) {
-            pan::remove(self, p);
+            items::held_remove(self, p, &pan::HELD);
             self.kb_gw_pan_gone(gobj);
         }
     }
@@ -113,7 +114,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8010D100")]
     pub fn kb_gw_enter_hitlag(&mut self, gobj: GObjId) {
         if let Some(p) = self.game.fighter(gobj).u.gobj_at(PAN) {
-            pan::hitlag_start(self, p);
+            items::held_hitlag_start(self, p);
         }
     }
 
@@ -121,7 +122,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialNGw_8010D130")]
     pub fn kb_gw_exit_hitlag(&mut self, gobj: GObjId) {
         if let Some(p) = self.game.fighter(gobj).u.gobj_at(PAN) {
-            pan::hitlag_end(self, p);
+            items::held_hitlag_end(self, p);
         }
     }
 
