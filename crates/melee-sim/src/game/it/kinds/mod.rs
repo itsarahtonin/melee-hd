@@ -148,6 +148,7 @@ pub mod seakneedleheld;
 pub mod seakneedlethrown;
 pub mod seakvanish;
 pub mod shell;
+pub mod shooter;
 #[doc(alias("heiho"))]
 pub mod shy_guy;
 pub mod sonans;

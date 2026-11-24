@@ -5,7 +5,6 @@ use gekko_fp as fp;
 
 use super::super::super::code::Val;
 use super::super::super::state::Running;
-use super::super::fox::ext;
 use super::{ITEMS, PART_THROW_N, addr, attr, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -28,14 +27,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].can_walljump = true;
         self.push_attrs(f, attr::SIZE);
-        let d = self.game.fighters[f.0]
-            .ft_data
-            .expect("a fighter without data");
-        let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
-        for (i, kind) in ITEMS.into_iter().enumerate() {
-            let article = self.data.ptr(items.at(4 * i as u32));
-            super::super::super::it::item::set_char_article(self.game, article, kind);
-        }
+        self.register_items(f, &ITEMS);
     }
 
     /// Samus's spawn, `ftSs_Init_OnDeath`: her first model variant, no charge, missiles,
@@ -94,77 +86,27 @@ impl Running<'_> {
     /// 0)`): the hand's hold pose for the item, unless it is heavy.
     #[doc(alias = "ftSs_Init_OnItemPickup")]
     pub fn samus_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
-        let item = self
-            .game
-            .fighter(gobj)
-            .item_gobj
-            .expect("picking up no item");
-        if super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            return;
-        }
-        let kind = self
-            .ext(ext::IT_GET_HOLD_KIND, &[Val::GObj(Some(item))])
-            .int();
-        let pose = match kind {
-            1 => Some(1),
-            2 => Some(0),
-            3 => Some(2),
-            4 => Some(3),
-            _ => None,
-        };
-        if let Some(p) = pose {
-            self.ext(
-                ext::FTANIM_SET_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(0), Val::Int(p)],
-            );
-        }
-        if flag {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.item_pickup_hand(gobj, flag, 0);
     }
 
     /// Hiding the held item, `ftSs_Init_OnItemInvisible` (`Fighter_OnItemInvisible(gobj,
     /// 0)`).
     #[doc(alias = "ftSs_Init_OnItemInvisible")]
     pub fn samus_on_item_invisible(&mut self, gobj: GObjId) {
-        let item = self.game.fighter(gobj).item_gobj.expect("hiding no item");
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.item_invisible_hand(gobj, 0);
     }
 
     /// Showing the held item again, `ftSs_Init_OnItemVisible` (`Fighter_OnItemVisible(gobj,
     /// 0)`).
     #[doc(alias = "ftSs_Init_OnItemVisible")]
     pub fn samus_on_item_visible(&mut self, gobj: GObjId) {
-        let item = self.game.fighter(gobj).item_gobj.expect("showing no item");
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.item_visible_hand(gobj, 0);
     }
 
     /// Dropping the item, `ftSs_Init_OnItemDrop` (`Fighter_OnItemDrop(gobj, flag, 0, 0)`).
     #[doc(alias = "ftSs_Init_OnItemDrop")]
     pub fn samus_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
-        self.ext(
-            ext::FTANIM_SET_PART_ANIM_POSE,
-            &[Val::GObj(Some(gobj)), Val::Int(0), Val::Int(-1)],
-        );
-        if flag {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.item_drop_hand(gobj, flag, 0);
     }
 
     /// The fully charged glow, `ftSs_Init_UnkMotionStates4` (the color animations' hook).

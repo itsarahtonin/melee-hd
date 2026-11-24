@@ -1,7 +1,8 @@
 //! Charizard (`It_PKind_Lizardon`), `melee/it/kinds/itlizardon.c`: out of the ball it lands
 //! and breathes fire a number of rounds, turning when its script says; while its script says
 //! it's breathing, a flame item every few frames from its mouth at a random angle, with smoke
-//! and four flame effects on their own timers, then it leaves.
+//! and four flame effects on their own timers, then it leaves. The way out and the rounds are
+//! [`shooter`]'s, over [`CHARIZARD`].
 //!
 //! The unit also holds the flames' code (`It_Kind_Lizardon_Flame1` to `_Flame4`): each starts
 //! its effect, flies with its speed shrinking by its attribute every frame, and is gone when
@@ -9,13 +10,12 @@
 
 use gekko_fp as fp;
 
-use super::super::ground::{air_touched_any, fall, ground_or_fall};
 use super::super::item::{attr_of, change, change_state, play_sfx, spawn_air};
 use super::super::pokemon::{self, attr_f32, attr_i32, effect_hitlag, table_bone};
 use super::super::{data, item, item_mut, jobj_of, lib26b1, lib2725};
+use super::shooter::{self, ROUNDS, Release, Rounds};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
-use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
@@ -58,11 +58,10 @@ pub const FLAME_ANIM: u32 = 0x802C_C650;
 pub const FLAME_PHYS: u32 = 0x802C_C684;
 pub const FLAME_COLL: u32 = 0x802C_C6C4;
 
-/// Its variables past the release's (`itLizardon_ItemVars`): the rounds left (`x60`, -1
-/// until the first), which way it breathes (`x64`, 1 for its back), the frames to its next
-/// flame (`x68`, a float), every other flame's sound (`x6C`), the frames to its next smoke
-/// (`x70`) and to each of its four flame effects (`x74`).
-const ROUNDS: usize = 0x60;
+/// Its variables past the rounds left (`itLizardon_ItemVars`, [`ROUNDS`]): which way it
+/// breathes (`x64`, 1 for its back), the frames to its next flame (`x68`, a float), every other
+/// flame's sound (`x6C`), the frames to its next smoke (`x70`) and to each of its four flame
+/// effects (`x74`).
 const BACK: usize = 0x64;
 const FLAME_FRAMES: usize = 0x68;
 const SOUND: usize = 0x6C;
@@ -73,24 +72,40 @@ const EFFECT_FRAMES: usize = 0x74;
 const MOUTH: usize = 0x32;
 const THROAT: usize = 0x31;
 
-/// `GA_Air`.
-const GA_AIR: i32 = 1;
+/// Charizard's way out (state 0, posed), its stand (1), its rounds of breath (2) and leaving
+/// (3).
+pub const CHARIZARD: Rounds = Rounds {
+    release: Release {
+        out: 0,
+        hitlag: true,
+        posed: true,
+        landed,
+        fallen: None,
+    },
+    stand: Some(1),
+    fire: 2,
+    leave: 3,
+    accessory: ACCESSORY,
+    first_round: shooter::rounds_from_attrs,
+    on_round: Some(breath_timers),
+    each_frame: None,
+    stops: false,
+};
 
 /// Runs one of Charizard's (or its flames') predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM1 => anim1(r, gobj),
-        COLL1 | COLL2 | COLL3 => coll1(r, gobj),
-        ANIM2 => anim2(r, gobj),
-        ANIM3 => anim3(r, gobj),
-        ANIM0 => anim0(r, gobj),
-        COLL0 => coll0(r, gobj),
-        FLAME_REFLECTED => flame_reflected(r, gobj),
-        FLAME_HIT_SHIELD => flame_hit_shield(r, gobj),
-        FLAME_ABSORBED => flame_absorbed(r, gobj),
-        FLAME_ANIM => flame_anim(r, gobj),
-        FLAME_COLL => flame_coll(r, gobj),
+        ANIM1 => shooter::standing(r, gobj, &CHARIZARD),
+        COLL1 | COLL2 | COLL3 => shooter::stays(r, gobj),
+        ANIM2 => shooter::rounds(r, gobj, &CHARIZARD),
+        ANIM3 => shooter::leaving(r, gobj, &CHARIZARD),
+        ANIM0 => shooter::growing(r, gobj),
+        COLL0 => shooter::landing(r, gobj, &CHARIZARD.release),
+        FLAME_REFLECTED => shooter::reflected(r, gobj),
+        FLAME_HIT_SHIELD | FLAME_ABSORBED => shooter::gone(r, gobj),
+        FLAME_ANIM => shooter::life_ticks(r, gobj),
+        FLAME_COLL => shooter::gone_on_touch(r, gobj),
         _ => return None,
     })
 }
@@ -100,15 +115,15 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
-        LANDED_NOTHING => landed_nothing(r, gobj),
-        LANDED => landed(r, gobj),
-        STAND => stand(r, gobj),
-        PHYS1 | PHYS2 | PHYS3 => phys1(r, gobj),
-        BREATHE => breathe(r, gobj),
+        LANDED_NOTHING => shooter::nothing(r, gobj),
+        LANDED => shooter::landed(r, gobj, &CHARIZARD),
+        STAND => shooter::stand(r, gobj, &CHARIZARD),
+        PHYS1 | PHYS2 | PHYS3 => shooter::gravity_in_air(r, gobj),
+        BREATHE => shooter::fire(r, gobj, &CHARIZARD),
         ACCESSORY => accessory(r, gobj),
-        LEAVE => leave(r, gobj),
-        ENTER_AIR => enter_air(r, gobj),
-        PHYS0 => phys0(r, gobj),
+        LEAVE => shooter::leave(r, gobj, &CHARIZARD),
+        ENTER_AIR => shooter::enter_air(r, gobj, &CHARIZARD.release),
+        PHYS0 => shooter::falling(r, gobj, &CHARIZARD.release),
         FLAME1_SPAWNED => flame1_spawned(r, gobj),
         FLAME2_SPAWNED => flame2_spawned(r, gobj),
         FLAME3_SPAWNED => flame3_spawned(r, gobj),
@@ -133,15 +148,11 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     v.set_i32(BACK, 0);
     v.set_f32(FLAME_FRAMES, 0.0);
     v.set_i32(SOUND, 0);
-    enter_air(r, gobj);
+    shooter::enter_air(r, gobj, &CHARIZARD.release);
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     play_sfx(r, gobj, 0x2719, 0x7F, 0x40);
 }
-
-/// Lands (or leaves the floor) and nothing happens, `it_802CB93C`.
-#[doc(alias = "it_802CB93C")]
-pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `it_802CB940` and the flames' `itLizardon_Logic37_EvtUnk`
 /// (`it_8026B894`).
@@ -152,53 +163,6 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
-/// Lands out of the ball, `it_802CB960`: still, standing.
-#[doc(alias = "it_802CB960")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib2725::clear_velocity(r.game, gobj);
-    stand(r, gobj);
-}
-
-/// Stands, `it_802CB994`.
-#[doc(alias = "it_802CB994")]
-pub fn stand(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-    effect_hitlag(r.game, gobj);
-}
-
-/// `itLizardon_UnkMotion1_Anim`: breathes fire when its standing animation ends.
-#[doc(alias = "itLizardon_UnkMotion1_Anim")]
-pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        breathe(r, gobj);
-    }
-    false
-}
-
-/// `itLizardon_UnkMotion1_Phys` (and its copies in states 2 and 3): its gravity in the air.
-#[doc(alias = "itLizardon_UnkMotion1_Phys")]
-#[doc(alias = "itLizardon_UnkMotion2_Phys")]
-#[doc(alias = "itLizardon_UnkMotion3_Phys")]
-pub fn phys1(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
-        super::gravity(r, gobj);
-    }
-}
-
-/// `itLizardon_UnkMotion1_Coll` (and its copies in states 2 and 3): lands in the air, falls
-/// off the floor on it, doing nothing either way.
-#[doc(alias = "itLizardon_UnkMotion1_Coll")]
-#[doc(alias = "itLizardon_UnkMotion2_Coll")]
-#[doc(alias = "itLizardon_UnkMotion3_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
-        fall(r, gobj, landed_nothing);
-    } else {
-        ground_or_fall(r, gobj, landed_nothing);
-    }
-    false
-}
-
 /// The frames to its next smoke, from its attributes' range.
 fn next_smoke(r: &mut Running, gobj: GObjId) {
     let (lo, hi) = (attr_i32(r, gobj, 0x28), attr_i32(r, gobj, 0x2C));
@@ -206,40 +170,19 @@ fn next_smoke(r: &mut Running, gobj: GObjId) {
     pokemon::vars(r.game, gobj).set_i32(SMOKE_FRAMES, lo.wrapping_add(d));
 }
 
-/// Breathes a round of fire, `it_802CBAA8` (and its inline copy in
-/// `itLizardon_UnkMotion2_Anim`): the first time, its rounds from its attributes (the float's
-/// bits as a count); its smoke's and flame effects' timers, and breathing as its script says.
-#[doc(alias = "it_802CBAA8")]
-pub fn breathe(r: &mut Running, gobj: GObjId) {
-    if pokemon::vars(r.game, gobj).i32(ROUNDS) == -1 {
-        let rounds = attr_i32(r, gobj, 4);
-        pokemon::vars(r.game, gobj).set_i32(ROUNDS, rounds);
-    }
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
+/// Lands out of the ball ([`shooter::landed`]).
+fn landed(r: &mut Running, gobj: GObjId) {
+    shooter::landed(r, gobj, &CHARIZARD);
+}
+
+/// A round's start (`it_802CBAA8`'s, [`shooter::fire`]; its rounds' count is the float's bits):
+/// its smoke's and flame effects' timers.
+fn breath_timers(r: &mut Running, gobj: GObjId) {
     next_smoke(r, gobj);
     for i in 0..4 {
         let n = attr_i32(r, gobj, 0x18 + 4 * i as u32);
         pokemon::vars(r.game, gobj).set_i32(EFFECT_FRAMES + 4 * i, n);
     }
-    effect_hitlag(r.game, gobj);
-    item_mut(r.game, gobj).on_accessory = Some(CodeRef(ACCESSORY));
-}
-
-/// `itLizardon_UnkMotion2_Anim`: at each round's end, another, or with none left it leaves.
-#[doc(alias = "itLizardon_UnkMotion2_Anim")]
-pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        let v = pokemon::vars(r.game, gobj);
-        let rounds = v.i32(ROUNDS);
-        if rounds <= 0 {
-            v.set_i32(ROUNDS, 0);
-            leave(r, gobj);
-        } else {
-            v.set_i32(ROUNDS, rounds.wrapping_sub(1));
-            breathe(r, gobj);
-        }
-    }
-    false
 }
 
 /// Its `on_accessory`, `it_802CBD24`: turns when its script says (its flame timer reset);
@@ -307,44 +250,6 @@ pub fn accessory(r: &mut Running, gobj: GObjId) {
             pokemon::vars(r.game, gobj).set_i32(EFFECT_FRAMES + 4 * i, n);
         }
     }
-}
-
-/// Leaves, `it_802CBFE4`.
-#[doc(alias = "it_802CBFE4")]
-pub fn leave(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 3, change::ANIM_UPDATE);
-    effect_hitlag(r.game, gobj);
-}
-
-/// `itLizardon_UnkMotion3_Anim`: gone when its animation ends.
-#[doc(alias = "itLizardon_UnkMotion3_Anim")]
-pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
-    !lib2725::is_animating(r.game, gobj)
-}
-
-/// Into the air out of the ball, `it_802CC0EC` (`Item_EnterAirStateWithHitlagAndStateDesc`).
-#[doc(alias = "it_802CC0EC")]
-pub fn enter_air(r: &mut Running, gobj: GObjId) {
-    pokemon::enter_first_state(r, gobj);
-}
-
-/// `it_802CC160`: growing out of the ball.
-#[doc(alias = "it_802CC160")]
-pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::grow(r, gobj);
-    false
-}
-
-/// `it_802CC184`: falling out of the ball.
-#[doc(alias = "it_802CC184")]
-pub fn phys0(r: &mut Running, gobj: GObjId) {
-    pokemon::fall(r, gobj);
-}
-
-/// `it_802CC1A4`: lands out of the ball.
-#[doc(alias = "it_802CC1A4")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::land(r, gobj, landed)
 }
 
 /// Breathes a flame of `kind`, `it_802CC1CC`: from its mouth, at a random angle in its
@@ -446,24 +351,6 @@ pub fn flame4_spawned(r: &mut Running, gobj: GObjId) {
     flame_spawned(r, gobj, 0x451);
 }
 
-/// A flame reflected, `itLizardon_Logic37_Reflected` (`it_80273030`).
-#[doc(alias = "itLizardon_Logic37_Reflected")]
-pub fn flame_reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::reflected_back(r.game, gobj)
-}
-
-/// A flame hitting a shield, `itLizardon_Logic37_HitShield`: gone.
-#[doc(alias = "itLizardon_Logic37_HitShield")]
-pub fn flame_hit_shield(_: &mut Running, _: GObjId) -> bool {
-    true
-}
-
-/// A flame absorbed, `itLizardon_Logic37_Absorbed`: gone.
-#[doc(alias = "itLizardon_Logic37_Absorbed")]
-pub fn flame_absorbed(_: &mut Running, _: GObjId) -> bool {
-    true
-}
-
 /// A flame flies, `it_802CC5D4`: its life from its attributes, not spinning, not pickable.
 #[doc(alias = "it_802CC5D4")]
 pub fn flame_fly(r: &mut Running, gobj: GObjId) {
@@ -473,17 +360,6 @@ pub fn flame_fly(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-}
-
-/// A flame's `it_802CC650`: gone once its life is out, else one less (`Item_TickLifetime`).
-#[doc(alias = "it_802CC650")]
-pub fn flame_anim(r: &mut Running, gobj: GObjId) -> bool {
-    let ip = item_mut(r.game, gobj);
-    if reg(ip.life_timer) <= 0.0 {
-        return true;
-    }
-    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
-    false
 }
 
 /// A flame's `it_802CC684`: its speed shrinks by its attribute.
@@ -497,10 +373,4 @@ pub fn flame_phys(r: &mut Running, gobj: GObjId) {
         mem(fp::fmuls(reg(v.y), k)),
         mem(fp::fmuls(reg(v.z), k)),
     );
-}
-
-/// A flame's `it_802CC6C4`: gone when it touches the stage.
-#[doc(alias = "it_802CC6C4")]
-pub fn flame_coll(r: &mut Running, gobj: GObjId) -> bool {
-    air_touched_any(r, gobj)
 }

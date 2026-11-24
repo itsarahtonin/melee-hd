@@ -1,24 +1,22 @@
 //! Blastoise (`It_PKind_Kamex`), `melee/it/kinds/itkamex.c`: out of the ball it lands facing
 //! its owner's nearest opponent and fires Hydro Pump a number of times, each shot (its script
-//! says when) a water item from alternating cannons and a push back, then leaves.
+//! says when) a water item from alternating cannons and a push back, then leaves. The way out,
+//! the rounds and the water's launch are [`shooter`]'s, over [`BLASTOISE`] and [`WATER`].
 //!
 //! The unit also holds the water's code (`It_Kind_Kamex_HydroPump`): it grows from a fifth of
 //! its size, flying straight until its life runs out or it touches the stage.
 
 use gekko_fp as fp;
 
-use super::super::ground::{air_touched_any, fall, ground_or_fall};
-use super::super::item::{change, change_state, play_sfx, spawn_air};
+use super::super::item::{change, change_state};
 use super::super::pokemon::{self, attr_f32, attr_i32, effect_hitlag};
-use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib};
+use super::super::{item, item_mut, jobj_of, lib26b1};
+use super::shooter::{self, ROUNDS, Release, Rounds, Shot, ShotSound};
 use crate::fpu::{mem, reg};
-use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
-use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::sound_obj::SoundParams;
 use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_A49C;
@@ -47,28 +45,61 @@ pub const WATER_ANIM: u32 = 0x802C_AE60;
 pub const WATER_PHYS: u32 = 0x802C_AE94;
 pub const WATER_COLL: u32 = 0x802C_AFB4;
 
-/// Its variables past the release's (`itPokemon_ItemVars`): the shots left (`timer`, -1 until
-/// the first), which cannon fires next (`x64`), the push back's speed (`x68`) and its slowing
-/// (`x6C`).
-const SHOTS: usize = 0x60;
+/// Its variables past the shots left (`itPokemon_ItemVars`' `timer`, [`ROUNDS`]): which cannon
+/// fires next (`x64`), the push back's speed (`x68`) and its slowing (`x6C`).
 const CANNON: usize = 0x64;
 const PUSH: usize = 0x68;
 const SLOWING: usize = 0x6C;
+
+/// Blastoise's way out (state 3), its stand (0), its rounds (1) and leaving (2), stopping
+/// after the last round.
+pub const BLASTOISE: Rounds = Rounds {
+    release: Release {
+        out: 3,
+        hitlag: true,
+        posed: false,
+        landed,
+        fallen: None,
+    },
+    stand: Some(0),
+    fire: 1,
+    leave: 2,
+    accessory: FIRE_ACCESSORY,
+    first_round,
+    on_round: None,
+    each_frame: None,
+    stops: true,
+};
+
+/// Its water: `x8` ahead, `xC` up, from the cannon whose turn it is (`x10` aside), at `x14`,
+/// with a sound panned its way.
+pub const WATER: Shot = Shot {
+    kind: ItKind::BlastoiseHydroPump,
+    ahead: 8,
+    up: 0xC,
+    speed: 0x14,
+    flagged: true,
+    depth: Some(cannon),
+    sound: ShotSound::Panned {
+        right: 0x271D,
+        left: 0x271C,
+    },
+};
 
 /// Runs one of Blastoise's (or its water's) predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 => anim0(r, gobj),
-        COLL0 | COLL1 | COLL2 => coll(r, gobj),
-        ANIM1 => anim1(r, gobj),
-        ANIM2 => anim2(r, gobj),
-        ANIM3 => anim3(r, gobj),
-        COLL3 => coll3(r, gobj),
-        WATER_HIT_SHIELD => true,
-        WATER_DMG_DEALT => false,
-        WATER_ANIM => water_anim(r, gobj),
-        WATER_COLL => water_coll(r, gobj),
+        ANIM0 => shooter::standing(r, gobj, &BLASTOISE),
+        COLL0 | COLL1 | COLL2 => shooter::stays(r, gobj),
+        ANIM1 => shooter::rounds(r, gobj, &BLASTOISE),
+        ANIM2 => shooter::leaving(r, gobj, &BLASTOISE),
+        ANIM3 => shooter::growing(r, gobj),
+        COLL3 => shooter::landing(r, gobj, &BLASTOISE.release),
+        WATER_HIT_SHIELD => shooter::gone(r, gobj),
+        WATER_DMG_DEALT => shooter::kept(r, gobj),
+        WATER_ANIM => shooter::life_spent(r, gobj),
+        WATER_COLL => shooter::gone_on_touch(r, gobj),
         _ => return None,
     })
 }
@@ -78,12 +109,12 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
-        LANDED_NOTHING => {}
-        PHYS0 | PHYS2 => phys0(r, gobj),
+        LANDED_NOTHING => shooter::nothing(r, gobj),
+        PHYS0 | PHYS2 => shooter::gravity_in_air(r, gobj),
         PHYS1 => phys1(r, gobj),
-        FIRE_ACCESSORY => fire_when_told(r, gobj),
-        PHYS3 => phys3(r, gobj),
-        WATER_SPAWNED => water_spawned(r, gobj),
+        FIRE_ACCESSORY => shooter::fire_when_told(r, gobj, shoot, Some(push_back)),
+        PHYS3 => shooter::falling(r, gobj, &BLASTOISE.release),
+        WATER_SPAWNED => shooter::shot_out(r, gobj, water_fly, small),
         WATER_PHYS => water_phys(r, gobj),
         _ => return false,
     }
@@ -95,7 +126,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802CA49C")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     pokemon::face_nearest_opponent(r, gobj);
-    pokemon::vars(r.game, gobj).set_i32(SHOTS, -1);
+    pokemon::vars(r.game, gobj).set_i32(ROUNDS, -1);
     item_mut(r.game, gobj).cmd_flags[0] &= !0x80;
     let v = pokemon::vars(r.game, gobj);
     v.set_i32(CANNON, 0);
@@ -103,13 +134,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     v.set_f32(SLOWING, 0.0);
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
-    enter_air(r, gobj);
-    play_sfx(r, gobj, 0x271E, 0x7F, 0x40);
+    shooter::enter_air(r, gobj, &BLASTOISE.release);
+    super::super::item::play_sfx(r, gobj, 0x271E, 0x7F, 0x40);
 }
-
-/// Landing in its states, `it_802CA534`: nothing.
-#[doc(alias = "it_802CA534")]
-pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `it_802CA538` and the water's `itKamex_Logic31_EvtUnk`
 /// (`it_8026B894`).
@@ -120,89 +147,49 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
-/// Lands out of the ball, `it_802CA558`: still.
-#[doc(alias = "it_802CA558")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib2725::clear_velocity(r.game, gobj);
-    ready(r, gobj);
+/// Lands out of the ball ([`shooter::landed`]).
+fn landed(r: &mut Running, gobj: GObjId) {
+    shooter::landed(r, gobj, &BLASTOISE);
 }
 
-/// Gets ready to fire, `it_802CA58C`.
-#[doc(alias = "it_802CA58C")]
-pub fn ready(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-    effect_hitlag(r.game, gobj);
+/// Shoots water ([`shooter::shoot`]).
+fn shoot(r: &mut Running, gobj: GObjId) {
+    shooter::shoot(r, gobj, &WATER);
 }
 
-/// `it_802CA5D8`: fires when its animation ends.
-#[doc(alias = "it_802CA5D8")]
-pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        fire(r, gobj);
-    }
-    false
+/// The first round's settings (`it_802CA6A0`'s): its shots (`x4`), its push back (`x18`) and
+/// the push's slowing (`x1C`).
+fn first_round(r: &mut Running, gobj: GObjId) {
+    let (shots, push, slowing) = (
+        attr_i32(r, gobj, 4),
+        attr_f32(r, gobj, 0x18),
+        attr_f32(r, gobj, 0x1C),
+    );
+    let v = pokemon::vars(r.game, gobj);
+    v.set_i32(ROUNDS, shots);
+    v.set_f32(PUSH, push);
+    v.set_f32(SLOWING, slowing);
 }
 
-/// Falls by its gravity in the air (`it_802CA618`, `itKamex_UnkMotion2_Phys`).
-#[doc(alias = "it_802CA618")]
-#[doc(alias = "itKamex_UnkMotion2_Phys")]
-pub fn phys0(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == 1 {
-        super::gravity(r, gobj);
-    }
-}
-
-/// Lands in the air, falls off the floor on it, doing nothing either way (`it_802CA654`,
-/// `itKamex_UnkMotion1_Coll`, `itKamex_UnkMotion2_Coll`).
-#[doc(alias = "it_802CA654")]
-#[doc(alias = "itKamex_UnkMotion1_Coll")]
-#[doc(alias = "itKamex_UnkMotion2_Coll")]
-pub fn coll(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == 1 {
-        fall(r, gobj, landed_nothing);
+/// The water's depth from the cannon whose turn it is (`x10` aside, behind for the second),
+/// the other cannon's turn next (`it_802CAB10`'s).
+fn cannon(r: &mut Running, gobj: GObjId, facing: f64, z: f32) -> f32 {
+    let side = attr_f32(r, gobj, 0x10);
+    let v = pokemon::vars(r.game, gobj);
+    let c = v.i32(CANNON);
+    v.set_i32(CANNON, c ^ 1);
+    if c != 0 {
+        mem(fp::fmadds(-1.0, fp::fmuls(reg(side), facing), reg(z)))
     } else {
-        ground_or_fall(r, gobj, landed_nothing);
+        mem(fp::fmadds(reg(side), facing, reg(z)))
     }
-    false
 }
 
-/// Fires, `it_802CA6A0` (and its inline copy in `itKamex_UnkMotion1_Anim`): the first time,
-/// its shots and push back from its attributes; firing when its script says.
-#[doc(alias = "it_802CA6A0")]
-pub fn fire(r: &mut Running, gobj: GObjId) {
-    if pokemon::vars(r.game, gobj).i32(SHOTS) == -1 {
-        let (shots, push, slowing) = (
-            attr_i32(r, gobj, 4),
-            attr_f32(r, gobj, 0x18),
-            attr_f32(r, gobj, 0x1C),
-        );
-        let v = pokemon::vars(r.game, gobj);
-        v.set_i32(SHOTS, shots);
-        v.set_f32(PUSH, push);
-        v.set_f32(SLOWING, slowing);
-    }
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-    effect_hitlag(r.game, gobj);
-    item_mut(r.game, gobj).on_accessory = Some(CodeRef(FIRE_ACCESSORY));
-}
-
-/// `itKamex_UnkMotion1_Anim`: at each shot's end, fires again, or with none left stops and
-/// leaves.
-#[doc(alias = "itKamex_UnkMotion1_Anim")]
-pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        let v = pokemon::vars(r.game, gobj);
-        let shots = v.i32(SHOTS);
-        if shots <= 0 {
-            v.set_i32(SHOTS, 0);
-            item_mut(r.game, gobj).vel.x = 0.0;
-            leave(r, gobj);
-        } else {
-            v.set_i32(SHOTS, shots.wrapping_sub(1));
-            fire(r, gobj);
-        }
-    }
-    false
+/// Pushed back by its shot, against its facing (`it_802CA8DC`'s).
+fn push_back(r: &mut Running, gobj: GObjId) {
+    let push = pokemon::vars(r.game, gobj).f32(PUSH);
+    let ip = item_mut(r.game, gobj);
+    ip.vel.x = mem(fp::fmuls(reg(push), fp::fneg(reg(ip.facing_dir))));
 }
 
 /// `itKamex_UnkMotion1_Phys`: the push back slows against its facing, and it falls by its
@@ -216,139 +203,14 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
         let ip = item_mut(r.game, gobj);
         ip.vel.x = mem(fp::fmadds(reg(slowing), facing, reg(ip.vel.x)));
     }
-    phys0(r, gobj);
+    shooter::gravity_in_air(r, gobj);
 }
 
-/// Its `on_accessory`, `it_802CA8DC`: fires a shot when its script says, pushed back.
-#[doc(alias = "it_802CA8DC")]
-pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).cmd_flags[0] & 0x80 != 0 {
-        shoot(r, gobj);
-        let push = pokemon::vars(r.game, gobj).f32(PUSH);
-        let ip = item_mut(r.game, gobj);
-        ip.vel.x = mem(fp::fmuls(reg(push), fp::fneg(reg(ip.facing_dir))));
-        ip.cmd_flags[0] &= !0x80;
-    }
-}
-
-/// Leaves, `it_802CA938`.
-#[doc(alias = "it_802CA938")]
-pub fn leave(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-    effect_hitlag(r.game, gobj);
-}
-
-/// `itKamex_UnkMotion2_Anim`: gone when its animation ends.
-#[doc(alias = "itKamex_UnkMotion2_Anim")]
-pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
-    !lib2725::is_animating(r.game, gobj)
-}
-
-/// Into the air out of the ball, `it_802CAA40` (`Item_EnterAirStateWithHitlag`, state 3).
-#[doc(alias = "it_802CAA40")]
-pub fn enter_air(r: &mut Running, gobj: GObjId) {
-    maplib::enter_air(item_mut(r.game, gobj));
-    change_state(r, gobj, 3, change::ANIM_UPDATE);
-    effect_hitlag(r.game, gobj);
-}
-
-/// `itKamex_UnkMotion3_Anim`: growing out of the ball.
-#[doc(alias = "itKamex_UnkMotion3_Anim")]
-pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::grow(r, gobj);
-    false
-}
-
-/// `itKamex_UnkMotion3_Phys`: falling out of the ball.
-#[doc(alias = "itKamex_UnkMotion3_Phys")]
-pub fn phys3(r: &mut Running, gobj: GObjId) {
-    pokemon::fall(r, gobj);
-}
-
-/// `itKamex_UnkMotion3_Coll`: lands out of the ball.
-#[doc(alias = "itKamex_UnkMotion3_Coll")]
-pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::land(r, gobj, landed)
-}
-
-/// Shoots water, `it_802CAB10`: ahead of and above it, from the cannon whose turn it is (the
-/// other next), flying its way, with a sound panned its way.
-#[doc(alias = "it_802CAB10")]
-pub fn shoot(r: &mut Running, gobj: GObjId) {
-    let (ahead, up, side, speed) = (
-        attr_f32(r, gobj, 8),
-        attr_f32(r, gobj, 0xC),
-        attr_f32(r, gobj, 0x10),
-        attr_f32(r, gobj, 0x14),
-    );
-    let ip = item(r.game, gobj);
-    let (pos, facing, owner) = (ip.pos, reg(ip.facing_dir), ip.owner);
-    let mut prev = pos;
-    prev.x = mem(fp::fmadds(reg(ahead), facing, reg(prev.x)));
-    prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
-    prev.z = if pokemon::vars(r.game, gobj).i32(CANNON) != 0 {
-        mem(fp::fmadds(-1.0, fp::fmuls(reg(side), facing), reg(prev.z)))
-    } else {
-        mem(fp::fmadds(reg(side), facing, reg(prev.z)))
-    };
-    let mut spawn = SpawnItem {
-        kind: ItKind::BlastoiseHydroPump.id(),
-        ..Default::default()
-    };
-    spawn.prev_pos = prev;
-    spawn.pos = lib26b1::ecb_center(r.game, gobj);
-    spawn.facing_dir = mem(facing);
-    spawn.damage = 0;
-    spawn.vel = Vec3::new(mem(fp::fmuls(reg(speed), facing)), 0.0, 0.0);
-    let v = pokemon::vars(r.game, gobj);
-    let cannon = v.i32(CANNON);
-    v.set_i32(CANNON, cannon ^ 1);
-    spawn.owner = owner;
-    spawn.maker = Some(gobj);
-    spawn.flags[0] |= 0x80;
-    spawn.ignore_id = 0;
-    if spawn_air(r, &mut spawn).is_some() {
-        let sfx = if facing == 1.0 { 0x271D } else { 0x271C };
-        r.lb_create_sound_object(&SoundParams {
-            owner: gobj,
-            behavior: 1,
-            sfx_id: sfx,
-            start_vol: 0x7F,
-            end_vol: 0x7F,
-            pan_left: 0,
-            pan_right: 0x7F,
-            end_frame: 0x3C,
-            direction: 3.0,
-            track: 0,
-            voice: -1,
-        });
-    }
-}
-
-/// The water's `it_2725_Logic31_Spawned`: its life, not spinning, flying, not pickable, at a
-/// fifth of its size.
-#[doc(alias = "it_2725_Logic31_Spawned")]
-pub fn water_spawned(r: &mut Running, gobj: GObjId) {
+/// The water at a fifth of its size as it comes out.
+fn small(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("the water without a model");
-    let life = attr_f32(r, gobj, 0);
-    item_mut(r.game, gobj).life_timer = life;
-    lib2725::stop_spin(r.game, r.data, gobj);
-    water_fly(r, gobj);
-    lib26b1::disable_pickup(r.game, gobj);
     let s = 0.2f32;
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
-}
-
-/// The water's `itKamex_Logic31_HitShield`: gone.
-#[doc(alias = "itKamex_Logic31_HitShield")]
-pub fn water_hit_shield(_: &mut Running, _: GObjId) -> bool {
-    true
-}
-
-/// The water's `itKamex_Logic31_DmgDealt`: kept.
-#[doc(alias = "itKamex_Logic31_DmgDealt")]
-pub fn water_dmg_dealt(_: &mut Running, _: GObjId) -> bool {
-    false
 }
 
 /// The water flies, `it_802CADF0`: its splash effect at its size.
@@ -358,14 +220,6 @@ pub fn water_fly(r: &mut Running, gobj: GObjId) {
     pokemon::effect_scaled(r, 0x46A, gobj, j, 1.2);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
-}
-
-/// The water's `it_802CAE60`: gone when its life runs out.
-#[doc(alias = "it_802CAE60")]
-pub fn water_anim(r: &mut Running, gobj: GObjId) -> bool {
-    let ip = item_mut(r.game, gobj);
-    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
-    reg(ip.life_timer) <= 0.0
 }
 
 /// The water's `it_802CAE94`: growing to full size, by 0.06 a frame in double precision.
@@ -378,10 +232,4 @@ pub fn water_phys(r: &mut Running, gobj: GObjId) {
         s = Vec3::new(grow(s.x), grow(s.y), grow(s.z));
         jobj::set_scale(&mut r.game.objs.jobjs, j, s);
     }
-}
-
-/// The water's `it_802CAFB4`: gone when it touches the stage.
-#[doc(alias = "it_802CAFB4")]
-pub fn water_coll(r: &mut Running, gobj: GObjId) -> bool {
-    air_touched_any(r, gobj)
 }

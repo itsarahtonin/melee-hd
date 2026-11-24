@@ -47,6 +47,7 @@ pub mod fox;
 pub mod ftlib;
 pub mod gamewatch;
 pub mod gkoopa;
+pub mod hooks;
 pub mod ik;
 pub mod input;
 mod kind_tables;
