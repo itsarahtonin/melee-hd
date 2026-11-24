@@ -4,9 +4,12 @@
 use super::super::super::code::Val;
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::state::Running;
-use super::super::fox::ext;
+use super::super::hooks::{HoldPoses, NoItem};
 use super::{PART_WAIST_N, addr, attr};
 use crate::hsd::gobj::GObjId;
+
+/// Her left hand's hold poses: the one-handed and two-handed swing items' (kinds 3 and 4).
+const HOLD_POSES: HoldPoses = [None, None, None, Some(0), Some(1)];
 
 impl Running<'_> {
     /// Jigglypuff's creation, `ftPr_Init_OnLoad`: her attributes, which are also her
@@ -15,9 +18,7 @@ impl Running<'_> {
     pub fn purin_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.push_attrs(f, attr::SIZE);
-        let fp = &mut self.game.fighters[f.0];
-        fp.can_multijump = true;
-        fp.multi_jump_attrs = fp.dat_attrs;
+        self.multi_jump_from_attrs(f);
         self.purin_load_hat(gobj);
     }
 
@@ -38,94 +39,40 @@ impl Running<'_> {
     /// one-handed and the two-handed swing items, unless the item is heavy.
     #[doc(alias = "ftPr_Init_OnItemPickup")]
     pub fn purin_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
-        let item = self
-            .game
-            .fighter(gobj)
-            .item_gobj
-            .expect("picking up no item");
-        if super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            return;
-        }
-        let kind = self
-            .ext(ext::IT_GET_HOLD_KIND, &[Val::GObj(Some(item))])
-            .int();
-        let pose = match kind {
-            3 => Some(0),
-            4 => Some(1),
-            _ => None,
-        };
-        if let Some(p) = pose {
-            self.ext(
-                ext::FTANIM_SET_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(0), Val::Int(p)],
-            );
-        }
-        if flag {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.item_pickup(gobj, flag, &HOLD_POSES, 0, 0);
     }
 
     /// Hiding the held item, `ftPr_Init_OnItemInvisible`: the hand lets go of its pose,
     /// unless the item is heavy.
     #[doc(alias = "ftPr_Init_OnItemInvisible")]
     pub fn purin_on_item_invisible(&mut self, gobj: GObjId) {
-        let Some(item) = self.game.fighter(gobj).item_gobj else {
-            return;
-        };
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.hide_held_item(gobj, 0, NoItem::Nothing);
     }
 
     /// Showing the held item again, `ftPr_Init_OnItemVisible`.
     #[doc(alias = "ftPr_Init_OnItemVisible")]
     pub fn purin_on_item_visible(&mut self, gobj: GObjId) {
-        let Some(item) = self.game.fighter(gobj).item_gobj else {
-            return;
-        };
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.show_held_item(gobj, 0, NoItem::Nothing);
     }
 
     /// Dropping the item, `ftPr_Init_OnItemDrop`: no hold pose, and the hand lets go of it
     /// when `flag` says so.
     #[doc(alias = "ftPr_Init_OnItemDrop")]
     pub fn purin_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
-        self.ext(
-            ext::FTANIM_SET_PART_ANIM_POSE,
-            &[Val::GObj(Some(gobj)), Val::Int(0), Val::Int(-1)],
-        );
-        if flag {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.item_drop(gobj, flag, 0, 0);
     }
 
     /// Entering knockback, `ftPr_Init_OnKnockbackEnter` (`Fighter_OnKnockbackEnter(gobj,
     /// 1)`): the hurt textures.
     #[doc(alias = "ftPr_Init_OnKnockbackEnter")]
     pub fn purin_on_knockback_enter(&mut self, gobj: GObjId) {
-        self.texture_anim(gobj, 1, 3.0);
-        self.texture_anim(gobj, 0, 3.0);
+        self.knockback_textures(gobj, 1, 3.0);
     }
 
     /// Leaving knockback, `ftPr_Init_OnKnockbackExit` (`Fighter_OnKnockbackExit(gobj, 1)`).
     #[doc(alias = "ftPr_Init_OnKnockbackExit")]
     pub fn purin_on_knockback_exit(&mut self, gobj: GObjId) {
-        self.texture_anim(gobj, 1, 0.0);
-        self.texture_anim(gobj, 0, 0.0);
+        self.knockback_textures(gobj, 1, 0.0);
     }
 
     /// Sing's notes, `ftPr_Init_8013C94C` (accessory 4): effect 1238 on the waist once

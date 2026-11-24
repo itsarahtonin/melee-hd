@@ -5,7 +5,8 @@
 
 use super::super::super::code::Val;
 use super::super::super::state::Running;
-use super::{addr, ext};
+use super::super::hooks::{HOLD_POSES, NoItem};
+use super::addr;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -13,92 +14,40 @@ impl Running<'_> {
     /// 1)`): the hand's hold pose for the item, unless it is heavy.
     #[doc(alias = "ftMs_Init_OnItemPickup")]
     pub fn mars_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
-        let item = self
-            .game
-            .fighter(gobj)
-            .item_gobj
-            .expect("picking up no item");
-        if super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            return;
-        }
-        let kind = self
-            .ext(ext::IT_GET_HOLD_KIND, &[Val::GObj(Some(item))])
-            .int();
-        let pose = match kind {
-            1 => Some(1),
-            2 => Some(0),
-            3 => Some(2),
-            4 => Some(3),
-            _ => None,
-        };
-        if let Some(p) = pose {
-            self.ext(
-                ext::FTANIM_SET_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(0), Val::Int(p)],
-            );
-        }
-        if flag {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(1)],
-            );
-        }
+        self.item_pickup(gobj, flag, &HOLD_POSES, 0, 1);
     }
 
     /// Hiding the held item, `ftMs_Init_OnItemInvisible` (`Fighter_OnItemInvisible(gobj,
     /// 0)`).
     #[doc(alias = "ftMs_Init_OnItemInvisible")]
     pub fn mars_on_item_invisible(&mut self, gobj: GObjId) {
-        let item = self.game.fighter(gobj).item_gobj.expect("hiding no item");
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.hide_held_item(gobj, 0, NoItem::Stops);
     }
 
     /// Showing the held item again, `ftMs_Init_OnItemVisible` (`Fighter_OnItemVisible(gobj,
     /// 0)`).
     #[doc(alias = "ftMs_Init_OnItemVisible")]
     pub fn mars_on_item_visible(&mut self, gobj: GObjId) {
-        let item = self.game.fighter(gobj).item_gobj.expect("showing no item");
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
-        }
+        self.show_held_item(gobj, 0, NoItem::Stops);
     }
 
     /// Dropping the item, `ftMs_Init_OnItemDrop` (`Fighter_OnItemDrop(gobj, flag, 0, 1)`).
     #[doc(alias = "ftMs_Init_OnItemDrop")]
     pub fn mars_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
-        self.ext(
-            ext::FTANIM_SET_PART_ANIM_POSE,
-            &[Val::GObj(Some(gobj)), Val::Int(0), Val::Int(-1)],
-        );
-        if flag {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(1)],
-            );
-        }
+        self.item_drop(gobj, flag, 0, 1);
     }
 
     /// Entering knockback, `ftMs_Init_OnKnockbackEnter` (`Fighter_OnKnockbackEnter(gobj,
     /// 1)`): the hurt textures.
     #[doc(alias = "ftMs_Init_OnKnockbackEnter")]
     pub fn mars_on_knockback_enter(&mut self, gobj: GObjId) {
-        self.texture_anim(gobj, 1, 3.0);
-        self.texture_anim(gobj, 0, 3.0);
+        self.knockback_textures(gobj, 1, 3.0);
     }
 
     /// Leaving knockback, `ftMs_Init_OnKnockbackExit`.
     #[doc(alias = "ftMs_Init_OnKnockbackExit")]
     pub fn mars_on_knockback_exit(&mut self, gobj: GObjId) {
-        self.texture_anim(gobj, 1, 0.0);
-        self.texture_anim(gobj, 0, 0.0);
+        self.knockback_textures(gobj, 1, 0.0);
     }
 }
 

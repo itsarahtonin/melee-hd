@@ -9,7 +9,7 @@ use super::super::super::ef::{Arg, SpawnKind};
 use super::super::super::state::Running;
 use super::super::KIRBY_COSTUME_KINDS;
 use super::super::data::MAIN_MEMORY;
-use super::super::fox::ext;
+use super::super::hooks::{HoldPoses, NoItem};
 use super::{ITEMS, addr, attr, u};
 use crate::fpu::reg;
 use crate::game::ft::FighterKind;
@@ -17,6 +17,9 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::mtx::Mtx34;
 use crate::vec::Vec3;
+
+/// His second model's hand's hold poses: kinds 1, 3 and 4 take poses 0, 1 and 2.
+const HOLD_POSES: HoldPoses = [None, Some(0), None, Some(1), Some(2)];
 
 /// The bone his copies' hats sit on (`fp->parts[6]`).
 const PART_HAT_BONE: i32 = 6;
@@ -94,21 +97,13 @@ impl Running<'_> {
     #[doc(alias = "ftKb_Init_OnLoad")]
     pub fn kb_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let d = self.game.fighters[f.0]
-            .ft_data
-            .expect("a fighter without data");
-        let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         self.push_attrs(f, attr::SIZE);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
         let flag = self.game.player_flags_ae_bit1(slot);
+        self.multi_jump_from_attrs(f);
         let fp = &mut self.game.fighters[f.0];
-        fp.can_multijump = true;
-        fp.multi_jump_attrs = fp.dat_attrs;
         fp.u[u::HAT_FLAGS] = (fp.u[u::HAT_FLAGS] & 0x7F) | (u8::from(flag) << 7);
-        for (i, kind) in ITEMS.into_iter().enumerate() {
-            let article = self.data.ptr(items.at(4 * i as u32));
-            super::super::super::it::item::set_char_article(self.game, article, kind);
-        }
+        self.register_items(f, &ITEMS);
     }
 
     /// Kirby's spawn, `ftKb_Init_OnDeath`: his first model variants, no hat or copy (the
@@ -232,77 +227,26 @@ impl Running<'_> {
     /// pose of the item's kind, unless the item is heavy.
     #[doc(alias = "ftKb_Init_OnItemPickup")]
     pub fn kb_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
-        let item = self
-            .game
-            .fighter(gobj)
-            .item_gobj
-            .expect("picking up no item");
-        if super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            return;
-        }
-        let kind = self
-            .ext(ext::IT_GET_HOLD_KIND, &[Val::GObj(Some(item))])
-            .int();
-        let pose = match kind {
-            1 => Some(0),
-            3 => Some(1),
-            4 => Some(2),
-            _ => None,
-        };
-        if let Some(p) = pose {
-            self.ext(
-                ext::FTANIM_SET_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(1), Val::Int(p)],
-            );
-        }
-        if flag {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(1)],
-            );
-        }
+        self.item_pickup(gobj, flag, &HOLD_POSES, 1, 1);
     }
 
     /// Hiding the held item, `ftKb_Init_OnItemInvisible`, unless it's heavy.
     #[doc(alias = "ftKb_Init_OnItemInvisible")]
     pub fn kb_on_item_invisible(&mut self, gobj: GObjId) {
-        let item = self.game.fighter(gobj).item_gobj.expect("no item held");
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(1)],
-            );
-        }
+        self.hide_held_item(gobj, 1, NoItem::Stops);
     }
 
     /// Showing the held item again, `ftKb_Init_OnItemVisible` (`Fighter_OnItemVisible(gobj,
     /// 1)`).
     #[doc(alias = "ftKb_Init_OnItemVisible")]
     pub fn kb_on_item_visible(&mut self, gobj: GObjId) {
-        let Some(item) = self.game.fighter(gobj).item_gobj else {
-            return;
-        };
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(1)],
-            );
-        }
+        self.show_held_item(gobj, 1, NoItem::Nothing);
     }
 
     /// Dropping the item, `ftKb_Init_OnItemDrop` (`Fighter_OnItemDrop(gobj, flag, 1, 1)`).
     #[doc(alias = "ftKb_Init_OnItemDrop")]
     pub fn kb_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
-        self.ext(
-            ext::FTANIM_SET_PART_ANIM_POSE,
-            &[Val::GObj(Some(gobj)), Val::Int(1), Val::Int(-1)],
-        );
-        if flag {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(1)],
-            );
-        }
+        self.item_drop(gobj, flag, 1, 1);
     }
 
     /// A charged copy's glow (the color animations' hook), `ftKb_Init_UnkMotionStates4`:
@@ -446,15 +390,13 @@ impl Running<'_> {
     /// 1)`): the hurt textures.
     #[doc(alias = "ftKb_Init_OnKnockbackEnter")]
     pub fn kb_on_knockback_enter(&mut self, gobj: GObjId) {
-        self.texture_anim(gobj, 1, 3.0);
-        self.texture_anim(gobj, 0, 3.0);
+        self.knockback_textures(gobj, 1, 3.0);
     }
 
     /// Leaving knockback, `ftKb_Init_OnKnockbackExit`.
     #[doc(alias = "ftKb_Init_OnKnockbackExit")]
     pub fn kb_on_knockback_exit(&mut self, gobj: GObjId) {
-        self.texture_anim(gobj, 1, 0.0);
-        self.texture_anim(gobj, 0, 0.0);
+        self.knockback_textures(gobj, 1, 0.0);
     }
 }
 
