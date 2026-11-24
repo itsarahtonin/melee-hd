@@ -7,7 +7,7 @@ use gekko_fp as fp;
 
 use super::super::gm::decisions::{DEC_FLAG, decision_type};
 use super::super::state::{Game, Running};
-use super::super::structs::plActionStats;
+use super::types::ActionStats;
 use crate::fpu::reg;
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
@@ -69,19 +69,19 @@ fn bit(b: u8, n: u8) -> bool {
 
 /// A word of the `x358_hits` statistics, which the mirror keeps as bytes.
 #[doc(alias("x358_word"))]
-fn hits_word(s: &plActionStats, off: usize) -> u32 {
+fn hits_word(s: &ActionStats, off: usize) -> u32 {
     u32::from_be_bytes(s.landed[off..off + 4].try_into().unwrap())
 }
 
 /// `x358_hits.by_attack_counts[i]`.
 #[doc(alias("x358_count"))]
-fn hits_count(s: &plActionStats, i: usize) -> u32 {
+fn hits_count(s: &ActionStats, i: usize) -> u32 {
     hits_word(s, 4 + 4 * i)
 }
 
 /// A count of attacks by id from 100 on, as `pl_800386D8` reads it (see
 /// [`super::super::ft::fox::appeal::by_attack_hi`]).
-fn by_attack_hi(s: &plActionStats, id: i32) -> u32 {
+fn by_attack_hi(s: &ActionStats, id: i32) -> u32 {
     super::super::ft::fox::appeal::by_attack_hi(s, id)
 }
 
@@ -116,11 +116,11 @@ impl Game {
             "the original's assertion failed: 0 <= h_player && h_player < 8"
         );
         assert!(idx < 0x64, "pl_80037B2C past its table");
-        let s = &self.player(player).stale_moves.total_attack_count_struct;
+        let s = &self.player(player).stale_moves.actions;
         s.victims[idx as usize] & (1u8 << (h_player as u8)) != 0
     }
 
-    /// The sum of attack counts `from` to `to` in statistics laid out as `plAttackStats`,
+    /// The sum of attack counts `from` to `to` in statistics laid out as `AttackStats`,
     /// `fn_80038700` (`by_attack_counts[i]`, the words from `x4`).
     #[doc(alias = "fn_80038700")]
     fn attack_count_sum(counts: &dyn Fn(usize) -> u32, from: usize, to: usize) -> u32 {
@@ -242,7 +242,7 @@ impl Running<'_> {
         let gobj = g.player_entity(player).expect("the player's fighter");
         let p = g.player(player);
         let t = &p.stale_moves;
-        let stats = &t.total_attack_count_struct;
+        let stats = &t.actions;
         let aerials = stats.hits.aerials_count;
         let atk_thrown = stats.attacks.thrown_item_count;
         let atk_x1a8 = stats.attacks.spikes_count;
@@ -525,7 +525,7 @@ impl Running<'_> {
         let g = &*self.game;
         let p = g.player(player);
         let t = &p.stale_moves;
-        let s = &t.total_attack_count_struct;
+        let s = &t.actions;
         let (b0, b2, b3) = (s.has_turned, s.has_jumped, s.has_air_jumped);
         let hi = |id| by_attack_hi(s, id);
         let (h65, h67, h68, h6c, h6d, h6e) =
@@ -637,7 +637,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8003B9A4")]
     fn tally_grabs(&mut self, player: i32) {
         let t = &self.game.player(player).stale_moves;
-        let s = &t.total_attack_count_struct;
+        let s = &t.actions;
         let attack = s.attacks.by_attack_counts;
         let hit = s.hits.by_attack_counts;
         let (xc6c, xc70) = (t.damage_dealt, t.pummel_damage);
@@ -898,8 +898,8 @@ impl Running<'_> {
     #[doc(alias = "fn_8003D2EC")]
     fn tally_variety(&mut self, player: i32) {
         let t = &self.game.player(player).stale_moves;
-        let counts = t.total_attack_count_struct.attacks.by_attack_counts;
-        let total = t.total_attack_count_struct.attacks.total;
+        let counts = t.actions.attacks.by_attack_counts;
+        let total = t.actions.attacks.total;
         if self.game.vs_single_button()
             || [0, 5, 0x15, 0x17, 0x18, 0x21, 0x22, 0x24, 0x96, 0x95, 0x94]
                 .iter()

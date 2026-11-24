@@ -214,65 +214,6 @@ MATCH_PLAYER_DATA = {
     "xA4": "teammate_hits",
 }
 
-# A player's static block (`_StaticPlayer`, `game.players`), with its flag bytes: the names
-# of the getters and setters wave 5 ported (`player_entry_delay`, `player_coins_knocked`).
-STATIC_PLAYER = {
-    "unk0E": "unused_0e",
-    "unk45": "effect_color",
-    "unk4C": "entry_delay",
-    "unk4D": "kirby_copy_kind",
-    "unk4E": "spawn_point",
-    "unk4F": "unused_4f",
-    # Master Hand's defense ratio (`Player_GetUnk50`, which no setter sets).
-    "unk50": "unset_ratio",
-    "unk8F": "unused_8f",
-    "unk98": "coins_knocked",
-    "unk9C": "coins_lost",
-    "unkAF": "unused_af",
-    # The player's stats past the stale moves (`pl::ext_u32` and the rest).
-    "xDB0": "stats_ext",
-}
-STATIC_PLAYER_FLAGS = {
-    "b0": "rumbles",
-    # A joiner of a setup that has several (drawn as a wireframe), `Player_SetFlagsBit1`.
-    "b1": "joiner",
-    # The player has a second fighter (the Ice Climbers' Nana).
-    "b2": "two_fighters",
-    # Its fighter comes in through the entry state.
-    "b3": "enters",
-    # The entry waits `ftCommonData` x6C8 frames more.
-    "b4": "entry_waits",
-    # The fighter's `takes_damage_cloaked` and `no_color_anims`.
-    "b6": "damage_cloaked",
-    "b7": "no_color_anims",
-}
-STATIC_PLAYER_MORE_FLAGS = {
-    # The fighter's `x2034` setup runs its rule set (`ftCo_800C8FC4`).
-    "b0": "init_rule_set",
-    # The fighter's `rules_voice_muted`, `is_stamina` and `sfx_size`.
-    "b1": "voice_muted",
-    "b2": "stamina",
-    # Offscreen damage applies to it (`Fighter_procAnim`).
-    "b3": "offscreen_damage",
-    # No magnifier bubble shows it.
-    "b4": "no_magnifier",
-    # It's KO'd upward (`enter_dead_up`).
-    "b5": "dies_up",
-    "b6": "sfx_size",
-}
-STATIC_PLAYER_FLAGS_AE = {
-    # The fighter's `attrs_scaled`.
-    "b0": "attrs_scaled",
-    # Read by Kirby's setup (`ftKb_Init`), set by nothing a match reaches.
-    "b1": "kirby_init_flag",
-    "b2": "unused_b2",
-    "b3": "unused_b3",
-    "b4": "unused_b4",
-    "b5": "unused_b5",
-    "b6": "unused_b6",
-    "b7": "unused_b7",
-}
-
 # The fighter's data structs (the continuation's second group): a character's save records
 # (`FighterData`, its 1P records `FighterData_x7C`), a smash attack's charge (`_SmashAttr`), the
 # common attributes (`ftCo_DatAttrs`, Yoshi's egg `ftCo_DatAttrs_xBC_t`), a part's bone
@@ -347,134 +288,6 @@ FT_800898B4 = {
     # A forward tilt or smash from an attacker not holding the victim (`ft_80089914`).
     "x11_b4": "forward_attack",
 }
-
-# The player's stats (the continuation's third group): the stale-move table's records past the
-# stale moves (`StaleMoveTable`), the action stats (`plActionStats`, `plAttackStats`), the
-# combo counters (`pl_x5EC_t`), the KO ring (`pl_x8C0_t`) and the Bob-omb ring (`pl_x8D8_t`).
-STALE_MOVE_TABLE = {
-    "x5EC": "combos",
-    # By the item log's kind: items taken in hand that had been thrown, and of those, ones no
-    # player had touched (`pl_8003E17C`).
-    "x674": "items_picked_up",
-    "x710": "fresh_items_picked_up",
-    # Each kind's run of containers giving it (`pl_8003E4A4`).
-    "x7AC": "container_runs",
-    # Each Pokémon's count out of the player's Poké Balls.
-    "x848": "pokemon_released",
-    "x8C0": "ko_ring",
-    "x8D8": "bombhei_ring",
-    # The bonuses, by kind: a flag or a count.
-    "x904": "bonuses",
-    "xC60": "damage_taken",
-    "xC64": "peak_damage",
-    "xC68": "damage_recovered",
-    "xC6C": "damage_dealt",
-    # The damage dealt by pummels, and by the Super Scope's shots.
-    "xC70": "pummel_damage",
-    "xC74": "scope_damage",
-    # The damage dealt to each player.
-    "xC78": "damage_to",
-    # The combo order bonus's step (`pl_8003FC88`).
-    "xC90": "combo_step",
-    # Falls as a star KO.
-    "xC94": "star_falls",
-    # The damage taken from the stage's devices.
-    "xC98": "stage_damage",
-    # The match's running average of the percent.
-    "xC9C": "average_percent",
-    # The victims' percents at the hits, and their count (`pl_8003ED0C`).
-    "xCA0": "victim_percent_sum",
-    "xCA4": "victim_percent_count",
-    # The Ray Gun's hits in a row.
-    "xCA8": "ray_gun_hits",
-    # The player whose Lip's Stick flowered this one (6 none).
-    "xCAC": "flowered_by",
-    # Hits on teammates under friendly fire (`pl_80040D8C`).
-    "xCB0": "teammate_hits",
-    # KOs off the top.
-    "xCB4": "up_kos",
-    # The last KO's: who scored it, the attack's flags, its hit's record and attack instance.
-    "xCB8": "last_ko_by",
-    "xCBC": "last_ko_attack",
-    "xCC0": "last_ko_hit",
-    "xCD4": "last_ko_instance",
-    "xCD8": "powershields",
-    # The SDI's distance in x and y (`pl_800401F0`).
-    "xCDC": "sdi_distance_x",
-    "xCE0": "sdi_distance_y",
-    # Hits taken with knockback past `pl_804D6470` x98.
-    "xCE4": "strong_hits_taken",
-    "xCE8": "ledge_catches",
-    # The frames spent mashing out of a grab or a flower, and the mashes.
-    "xCEC": "mash_frames",
-    "xCF0": "mashes",
-}
-PL_ACTION_STATS = {
-    # A third `plAttackStats` the mirror keeps as bytes: the attacks that landed (an attack
-    # record's first hit), by id.
-    "x358": "landed",
-    # By attack id, the players it hit (a bit each).
-    "x504": "victims",
-    "x568": "front_hits",
-    "x56C": "back_hits",
-    "x570": "other_hits",
-    # Down tilts' and down smashes' hits.
-    "x574": "down_hits",
-    # The actions counted past the attacks' ids (`pl_800386D8`'s ids from 100): turns, squats,
-    # walks, dashes, runs, jumps, air jumps, wall bounces.
-    "x578": "turns",
-    "x57C": "squats",
-    "x580": "walks",
-    "x584": "dashes",
-    "x588": "runs",
-    "x58C": "jumps",
-    "x590": "air_jumps",
-    "x594": "wall_bounces",
-    # Ids 108 to 115: the downs (two), techs, platform drops, ledge catches, taunts, Fox's
-    # taunt, powershields.
-    "x598": "more_actions",
-    "x5B8": "unused_5b8",
-    # The player turned, walked, jumped, jumped in the air (the attack flags' bits).
-    "x5BC_b0": "has_turned",
-    "x5BC_b1": "has_walked",
-    "x5BC_b2": "has_jumped",
-    "x5BC_b3": "has_air_jumped",
-}
-PL_ATTACK_STATS = {
-    # The attacks but grabs, pummels and throws (the attack flags' `count_x1A0`).
-    "x1A0_count": "strikes_count",
-    # The reflectors' (the attack flags' `count_x1A4`: the cape, the shine, the bat, ...).
-    "x1A4_count": "reflectors_count",
-    # Hitboxes angled in the common data's spike range (`pl_80037ECC`).
-    "x1A8": "spikes_count",
-}
-PL_COMBOS = {
-    "x0": "last_victim",
-    "x4": "last_damage",
-    # The hits in combos, and the combos (`pl_800414C0`'s average).
-    "x8": "combo_hits",
-    "xC": "combo_count",
-    # By attacker, its combo on this player.
-    "x10": "by_attacker",
-}
-PL_COMBO = {
-    "x0": "damage",
-    "x4": "hits",
-    "x6": "unused_6",
-    # The same attack's hits in a row, and that attack.
-    "x8": "repeats",
-    "xC": "attack",
-    # Hits while this player's in the air (cleared when it lands).
-    "x10": "air_hits",
-    # A jab hit it while it shielded.
-    "x12_b0": "shield_jabbed",
-}
-# A ring of the player's last five attack instances that KOed (`fn_800415B0`).
-PL_KO_RING = {"x0": "next", "x4": "entries"}
-PL_KO_RING_ENTRY = {"x0": "instance", "x2": "kos", "x3_b0": "self_ko"}
-# A ring of the player's last five Bob-ombs thrown (`pl_800419AC`).
-PL_BOMBHEI_RING = {"x0": "next", "x4": "entries"}
-PL_BOMBHEI_RING_ENTRY = {"x0": "spawn", "x4_b0": "hit", "x4_b1": "used"}
 
 # The save and the event mode (the continuation's fourth group): the save's records
 # (`GmSaveData`), its unlocks' counters (`gmm_retval_ED98`, `EDB0`, `EDBC`, `gmm_x1868_1A8_t`),
@@ -969,12 +782,7 @@ GROUPS = [
     },
     {},
     {"StartMeleeRules": START_MELEE_RULES, "MatchPlayerData": MATCH_PLAYER_DATA},
-    {
-        "_StaticPlayer": STATIC_PLAYER,
-        "_StaticPlayer_flags": STATIC_PLAYER_FLAGS,
-        "_StaticPlayer_more_flags": STATIC_PLAYER_MORE_FLAGS,
-        "_StaticPlayer_flagsAE": STATIC_PLAYER_FLAGS_AE,
-    },
+    {},
     {},
     {
         "FighterData_x7C": FIGHTER_DATA_X7C,
@@ -982,17 +790,7 @@ GROUPS = [
         "FighterBone": FIGHTER_BONE,
         "ft_800898B4_t": FT_800898B4,
     },
-    {
-        "StaleMoveTable": STALE_MOVE_TABLE,
-        "plActionStats": PL_ACTION_STATS,
-        "plAttackStats": PL_ATTACK_STATS,
-        "pl_x5EC_t": PL_COMBOS,
-        "pl_x5EC_t_x10": PL_COMBO,
-        "pl_x8C0_t": PL_KO_RING,
-        "pl_x8C0_t_x4": PL_KO_RING_ENTRY,
-        "pl_x8D8_t": PL_BOMBHEI_RING,
-        "pl_x8D8_t_x4": PL_BOMBHEI_RING_ENTRY,
-    },
+    {},
     {
         "GmSaveData": GM_SAVE_DATA,
         "gmm_retval_ED98": CHALLENGER_RECORDS,

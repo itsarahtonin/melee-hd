@@ -17,7 +17,8 @@
 //!
 //! - `#[mirror(..)]` on the struct: `c` the decomp's name of the struct it mirrors (none for a
 //!   group of fields that has no C struct of its own), `size` its bytes, `lay` to lay it out for
-//!   the heap's image too (`LayOut`), and a `pad(OFFSET, BYTES)` for each run of bytes no field
+//!   the heap's image too (`LayOut`), `export` to write it back to memory's bytes too (`Export`:
+//!   the card's data, which a save writes to the card), and a `pad(OFFSET, BYTES)` for each run of bytes no field
 //!   holds (the compiler's padding), which nothing compares; `pad(OFFSET, bits(FIRST, COUNT))`
 //!   for the bits a bitfield's byte leaves over.
 //! - `#[at(OFFSET)]` on each field, in increasing order: a value of a `Mirror` type at that
@@ -26,7 +27,7 @@
 //!   a C union kept as its bytes (`[u8; N]`), compared and laid out whole.
 //!
 //! It implements `Mirror` (import, compare, and the layout the layout check reads) and, with
-//! `lay`, `LayOut`. The comparer labels a field `path.name`, with the decomp's name beside it
+//! `lay`, `LayOut`; with `export`, `Export`. The comparer labels a field `path.name`, with the decomp's name beside it
 //! where the field's `#[doc(alias(..))]` gives one (`path.weight (x50)`), as the generated
 //! mirrors do. A const check fails the build when a field runs past the struct or into the
 //! next one.
@@ -39,6 +40,7 @@ struct StructOpts {
     c: Option<String>,
     size: u32,
     lay: bool,
+    export: bool,
     pads: Vec<(u32, u32)>,
 }
 
@@ -65,6 +67,7 @@ fn struct_opts(input: &DeriveInput) -> syn::Result<StructOpts> {
         c: None,
         size: 0,
         lay: false,
+        export: false,
         pads: Vec::new(),
     };
     let mut sized = false;
@@ -77,6 +80,8 @@ fn struct_opts(input: &DeriveInput) -> syn::Result<StructOpts> {
                 sized = true;
             } else if meta.path.is_ident("lay") {
                 o.lay = true;
+            } else if meta.path.is_ident("export") {
+                o.export = true;
             } else if meta.path.is_ident("pad") {
                 // `pad(AT, BYTES)`, or `pad(AT, bits(FIRST, COUNT))` for the bits a bitfield's
                 // byte leaves over: kept as a run of bits.
@@ -103,7 +108,7 @@ fn struct_opts(input: &DeriveInput) -> syn::Result<StructOpts> {
                     o.pads.push((at * 8, n * 8));
                 }
             } else {
-                return Err(meta.error("expected `c`, `size`, `lay` or `pad`"));
+                return Err(meta.error("expected `c`, `size`, `lay`, `export` or `pad`"));
             }
             Ok(())
         })?;
@@ -210,6 +215,7 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
     let mut imports = Vec::new();
     let mut compares = Vec::new();
     let mut lays = Vec::new();
+    let mut exports = Vec::new();
     let mut layouts = Vec::new();
     // Each field's first bit and its end, as const expressions, for the build's check.
     let mut spans = Vec::new();
@@ -222,6 +228,7 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
                 imports.push(quote!(#ident: <#ty as #m::Mirror>::import(m, at + #at, cx)));
                 compares.push(quote!(#m::Mirror::compare(&self.#ident, m, at + #at, #path, cx);));
                 lays.push(quote!(#m::LayOut::lay(&self.#ident, l, at + #at, cx);));
+                exports.push(quote!(#m::Export::export(&self.#ident, m, at + #at);));
                 layouts.push(quote!(#m::FieldLayout {
                     name: #fname,
                     at: #at,
@@ -252,6 +259,9 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
                 lays.push(
                     quote!(l.put_bits(at + #at, #first, #count, #m::BitField::bits(&self.#ident));),
                 );
+                exports.push(
+                    quote!(m.put_bits(at + #at, #first, #count, #m::BitField::bits(&self.#ident));),
+                );
                 layouts.push(quote!(#m::FieldLayout {
                     name: #fname,
                     at: #at,
@@ -269,6 +279,7 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
                 imports.push(quote!(#ident: m.bytes(at + #at)));
                 compares.push(quote!(#m::compare_union(&self.#ident, m, at + #at, #path, cx);));
                 lays.push(quote!(l.put_bytes(at + #at, &self.#ident);));
+                exports.push(quote!(m.put_bytes(at + #at, &self.#ident);));
                 layouts.push(quote!(#m::FieldLayout {
                     name: #fname,
                     at: #at,
@@ -315,6 +326,16 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
             }
         }
     });
+    let export = opts.export.then(|| {
+        quote! {
+            impl #m::Export for #name {
+                fn export(&self, m: &mut #m::MemMut, at: u32) {
+                    let _ = (&m, at);
+                    #(#exports)*
+                }
+            }
+        }
+    });
     Ok(quote! {
         impl #m::Mirror for #name {
             const SIZE: u32 = #size;
@@ -340,6 +361,8 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
         }
 
         #lay
+
+        #export
 
         #[allow(clippy::int_plus_one)]
         const _: () = {

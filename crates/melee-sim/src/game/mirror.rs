@@ -174,7 +174,7 @@ macro_rules! raw_int {
     )*};
 }
 
-raw_int!(u8 => u8, i8 => u8, u16 => u16, i16 => u16, u32 => u32, i32 => u32);
+raw_int!(u8 => u8, i8 => u8, u16 => u16, i16 => u16, u32 => u32, i32 => u32, u64 => u64, i64 => u64);
 
 impl RawBits for f32 {
     type Bits = u32;
@@ -186,7 +186,8 @@ impl RawBits for f32 {
     }
 }
 
-/// The C integer and float types, as the generated mirrors read, compare and lay them out.
+/// The C integer and float types, as the generated mirrors read, compare, lay them out and
+/// write them back.
 macro_rules! scalar {
     ($($t:ty: $size:literal, $read:ident, $put:ident;)*) => {$(
         impl Mirror for $t {
@@ -209,6 +210,12 @@ macro_rules! scalar {
                 l.$put(at, self.raw());
             }
         }
+
+        impl Export for $t {
+            fn export(&self, m: &mut MemMut, at: u32) {
+                m.$put(at, self.raw());
+            }
+        }
     )*};
 }
 
@@ -220,6 +227,8 @@ scalar! {
     u32: 4, u32, put_u32;
     i32: 4, u32, put_u32;
     f32: 4, u32, put_u32;
+    u64: 8, u64, put_u64;
+    i64: 8, u64, put_u64;
 }
 
 impl<T: Mirror, const N: usize> Mirror for [T; N] {
@@ -232,6 +241,14 @@ impl<T: Mirror, const N: usize> Mirror for [T; N] {
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         for (i, v) in self.iter().enumerate() {
             v.compare(m, at + i as u32 * T::SIZE, &format!("{path}[{i}]"), cx);
+        }
+    }
+}
+
+impl<T: Export + Mirror, const N: usize> Export for [T; N] {
+    fn export(&self, m: &mut MemMut, at: u32) {
+        for (i, v) in self.iter().enumerate() {
+            v.export(m, at + i as u32 * T::SIZE);
         }
     }
 }
@@ -739,9 +756,9 @@ mod label_tests {
     #[test]
     fn step_3s_renamed_fields_label_gives_the_originals_name() {
         use crate::game::structs::{
-            _StaticPlayer, Announcement, Camera, ControllerMap, EventData, GameData, GmSaveData,
-            Ground, GroundParam, ItemCounts, JoinerTally, LbShadow, MatchPlayerData,
-            OffscreenArrows, PlayerInitData, SceneLoop, StageInfo, StaleMoveTable, StartMeleeRules,
+            Announcement, Camera, ControllerMap, EventData, GameData, GmSaveData, Ground,
+            GroundParam, ItemCounts, JoinerTally, LbShadow, MatchPlayerData, OffscreenArrows,
+            PlayerInitData, SceneLoop, StageInfo, StaleMoveTable, StartMeleeRules, StaticPlayer,
             SwingLink, VsSceneState,
         };
         assert_eq!(
@@ -823,7 +840,7 @@ mod label_tests {
             ["standing.kos (x20)"]
         );
         assert_eq!(
-            labels_after::<_StaticPlayer>("player", |p| {
+            labels_after::<StaticPlayer>("player", |p| {
                 p.coins_lost = 1;
                 p.flags.rumbles = true;
             }),
@@ -831,12 +848,12 @@ mod label_tests {
         );
         assert_eq!(
             labels_after::<StaleMoveTable>("stale_moves", |t| {
-                t.total_attack_count_struct.walks = 1;
+                t.actions.walks = 1;
                 t.combos.by_attacker[1].air_hits = 1;
                 t.ledge_catches = 1;
             }),
             [
-                "stale_moves.total_attack_count_struct.walks (x580)",
+                "stale_moves.actions (total_attack_count_struct).walks (x580)",
                 "stale_moves.combos (x5EC).by_attacker (x10)[1].air_hits (x10)",
                 "stale_moves.ledge_catches (xCE8)",
             ]

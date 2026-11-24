@@ -4,13 +4,13 @@
 //! `pl_StaleMoveTableExt_t`, which the original reaches by casting the table.
 
 use super::super::state::Game;
-use super::super::structs::{_StaticPlayer, plAttackStats};
+use super::types::{AttackStats, StaticPlayer};
 
 /// Where `pl_StaleMoveTableExt_t`'s fields past the stale-move table start, in its own
 /// offsets: the block's `xDB0`.
 const EXT: usize = 0xCF4;
 
-impl _StaticPlayer {
+impl StaticPlayer {
     /// A word of `pl_StaleMoveTableExt_t` past the stale-move table, by its offset there.
     pub fn ext_u32(&self, off: usize) -> u32 {
         let i = off - EXT;
@@ -98,7 +98,7 @@ impl Game {
     pub fn reset_stale_moves(&mut self, slot: i32) {
         let t = self.player_stale_moves(slot);
         t.current_index = 0;
-        for m in &mut t.StaleMoves {
+        for m in &mut t.queue {
             m.move_id = 0;
             m.attack_instance = 0;
         }
@@ -112,15 +112,15 @@ impl Game {
             return;
         }
         let t = self.player_stale_moves(slot);
-        if t.StaleMoves
+        if t.queue
             .iter()
             .any(|m| id == i32::from(m.move_id) && instance == m.attack_instance)
         {
             return;
         }
         let i = t.current_index as usize;
-        t.StaleMoves[i].move_id = id as u16;
-        t.StaleMoves[i].attack_instance = instance;
+        t.queue[i].move_id = id as u16;
+        t.queue[i].attack_instance = instance;
         t.current_index = if t.current_index == 9 {
             0
         } else {
@@ -151,7 +151,7 @@ impl Game {
         let s = self.player_action_stats(slot);
         clear_attack_stats(&mut s.attacks);
         clear_attack_stats(&mut s.hits);
-        // `x358.x358_hits`, a third `plAttackStats` the mirror keeps as bytes; its first
+        // `x358.x358_hits`, a third `AttackStats` the mirror keeps as bytes; its first
         // 0x194 bytes are the total and counts, then five counts and `x1A8`.
         s.landed.fill(0);
         s.victims.fill(0);
@@ -363,7 +363,7 @@ impl Game {
 }
 
 /// `clearAttackStats`.
-fn clear_attack_stats(s: &mut plAttackStats) {
+fn clear_attack_stats(s: &mut AttackStats) {
     s.by_attack_counts = [0; 100];
     s.total = 0;
     s.thrown_item_count = 0;

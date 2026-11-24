@@ -90,7 +90,7 @@ pub struct StageMaps<'a> {
     /// parameters), which the collision joints' callbacks read.
     pub gr: &'a super::super::gr::Globals,
     /// The players' blocks (`Player_GetEntity`), for the Home-Run Contest's field.
-    players: &'a [super::super::structs::_StaticPlayer; 6],
+    players: &'a [super::super::structs::StaticPlayer; 6],
 }
 
 impl<'a> StageMaps<'a> {
@@ -98,7 +98,7 @@ impl<'a> StageMaps<'a> {
         world: &'a crate::hsd::gobj::World<super::super::state::GameKinds>,
         info: &'a super::super::structs::StageInfo,
         gr: &'a super::super::gr::Globals,
-        players: &'a [super::super::structs::_StaticPlayer; 6],
+        players: &'a [super::super::structs::StaticPlayer; 6],
     ) -> Self {
         StageMaps {
             world,

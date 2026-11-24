@@ -439,6 +439,21 @@ OWNED = {
     "xB6C_t": ("DynamicsPoint", "crate::game::it::types::DynamicsPoint"),
     "lb_80014638_arg1_t": ("StepBox", "crate::game::it::types::StepBox"),
     "Item": ("Item", "crate::game::it::types::Item"),
+    # The player blocks and their statistics (task 31).
+    "_StaticPlayer_flags": ("PlayerFlags", "crate::game::pl::types::PlayerFlags"),
+    "_StaticPlayer_more_flags": ("PlayerRuleFlags", "crate::game::pl::types::PlayerRuleFlags"),
+    "_StaticPlayer_flagsAE": ("PlayerInitFlags", "crate::game::pl::types::PlayerInitFlags"),
+    "StaleMoveTable_StaleMoves": ("StaleMove", "crate::game::pl::types::StaleMove"),
+    "plAttackStats": ("AttackStats", "crate::game::pl::types::AttackStats"),
+    "plActionStats": ("ActionStats", "crate::game::pl::types::ActionStats"),
+    "pl_x5EC_t_x10": ("AttackerCombo", "crate::game::pl::types::AttackerCombo"),
+    "pl_x5EC_t": ("ComboStats", "crate::game::pl::types::ComboStats"),
+    "pl_x8C0_t_x4": ("KoRingEntry", "crate::game::pl::types::KoRingEntry"),
+    "pl_x8C0_t": ("KoRing", "crate::game::pl::types::KoRing"),
+    "pl_x8D8_t_x4": ("BobOmbRingEntry", "crate::game::pl::types::BobOmbRingEntry"),
+    "pl_x8D8_t": ("BobOmbRing", "crate::game::pl::types::BobOmbRing"),
+    "StaleMoveTable": ("StaleMoveTable", "crate::game::pl::types::StaleMoveTable"),
+    "_StaticPlayer": ("StaticPlayer", "crate::game::pl::types::StaticPlayer"),
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.

@@ -43,6 +43,11 @@ fn owned() -> Vec<Layout> {
         DynamicsPoint, Item, ItemFlagBits, ItemFlags, ItemHitBits, ItemHitFlags, ItemHitbox,
         ItemOutline, ItemStateFlags, StepBox,
     };
+    use crate::game::pl::types::{
+        ActionStats, AttackStats, AttackerCombo, BobOmbRing, BobOmbRingEntry, ComboStats, KoRing,
+        KoRingEntry, PlayerFlags, PlayerInitFlags, PlayerRuleFlags, StaleMove, StaleMoveTable,
+        StaticPlayer,
+    };
     use crate::lb::colanim::ColorOverlay;
     use crate::lb::shadow::LbShadow;
     use crate::mp::coll::{CollData, Ecb, Surface};
@@ -99,6 +104,20 @@ fn owned() -> Vec<Layout> {
         DynamicsPoint::layout(),
         StepBox::layout(),
         Item::layout(),
+        PlayerFlags::layout(),
+        PlayerRuleFlags::layout(),
+        PlayerInitFlags::layout(),
+        StaleMove::layout(),
+        AttackStats::layout(),
+        ActionStats::layout(),
+        AttackerCombo::layout(),
+        ComboStats::layout(),
+        KoRingEntry::layout(),
+        KoRing::layout(),
+        BobOmbRingEntry::layout(),
+        BobOmbRing::layout(),
+        StaleMoveTable::layout(),
+        StaticPlayer::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))

@@ -16,8 +16,8 @@ use melee_sim::game::handles::{
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::{
-    _StaticPlayer, BgFlashUserData, Camera, CameraDebugMode, CmSubject, ControllerMap,
-    DynamicsData, Fighter, FighterBone, SceneLoop, VsSceneController, ifMagnify,
+    BgFlashUserData, Camera, CameraDebugMode, CmSubject, ControllerMap, DynamicsData, Fighter,
+    FighterBone, SceneLoop, StaticPlayer, VsSceneController, ifMagnify,
 };
 use melee_sim::hsd::aobj::{AObj, AObjId};
 use melee_sim::hsd::cobj::{CObj, CObjId};
@@ -855,7 +855,7 @@ impl Importer<'_> {
         let players = sym("player_slots");
         for i in 0..self.game.players.len() as u32 {
             self.game.players[i as usize] =
-                _StaticPlayer::import(&mem, players + i * _StaticPlayer::SIZE, self);
+                StaticPlayer::import(&mem, players + i * StaticPlayer::SIZE, self);
         }
         self.game.game_mode = self.u8(sym("state_machine"));
         let pads = sym("HSD_PadCopyStatus");

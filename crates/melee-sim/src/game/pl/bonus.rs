@@ -6,7 +6,7 @@
 use gekko_fp as fp;
 
 use super::super::state::{Game, Running};
-use super::super::structs::_StaticPlayer;
+use super::types::StaticPlayer;
 use crate::fpu::{mem, reg};
 use crate::game::it::ItKind;
 use crate::vec::Vec3;
@@ -51,22 +51,22 @@ fn match_item_kind(kind: i32) -> i32 {
     }
 }
 
-fn inc(p: &mut _StaticPlayer, off: usize) {
+fn inc(p: &mut StaticPlayer, off: usize) {
     p.set_ext_u32(off, p.ext_u32(off).wrapping_add(1));
 }
 
-fn dec_to_zero(p: &mut _StaticPlayer, off: usize) {
+fn dec_to_zero(p: &mut StaticPlayer, off: usize) {
     if p.ext_u32(off) != 0 {
         p.set_ext_u32(off, p.ext_u32(off).wrapping_sub(1));
     }
 }
 
-fn set_bit(p: &mut _StaticPlayer, off: usize, n: u8, on: bool) {
+fn set_bit(p: &mut StaticPlayer, off: usize, n: u8, on: bool) {
     let b = p.ext_u8(off);
     p.set_ext_u8(off, if on { b | bit(n) } else { b & !bit(n) });
 }
 
-fn add_f32(p: &mut _StaticPlayer, off: usize, v: f64) {
+fn add_f32(p: &mut StaticPlayer, off: usize, v: f64) {
     p.set_ext_f32(off, mem(fp::fadds(reg(p.ext_f32(off)), v)));
 }
 
@@ -501,7 +501,7 @@ impl Running<'_> {
         if index == 1 {
             return;
         }
-        let s = &self.game.player_stale_moves(slot).total_attack_count_struct;
+        let s = &self.game.player_stale_moves(slot).actions;
         // `pl_800386D8`: `x358`'s `by_attack_hi`, at `0x3E8 + 4 * attack`, which runs past it
         // into the words that follow.
         let (hi_107, hi_112, hi_111) = (s.wall_bounces, s.more_actions[4], s.more_actions[3]);

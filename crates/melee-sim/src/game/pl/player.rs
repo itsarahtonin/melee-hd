@@ -9,7 +9,7 @@
 use super::super::code::{self, Val};
 use super::super::ft::create::AllocInfo;
 use super::super::state::{Game, Running};
-use super::super::structs::{_StaticPlayer, StaleMoveTable, pl_x5EC_t, plActionStats};
+use super::types::{ActionStats, ComboStats, StaleMoveTable, StaticPlayer};
 use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -67,7 +67,7 @@ fn check_slot(slot: i32) -> usize {
     slot as usize
 }
 
-impl _StaticPlayer {
+impl StaticPlayer {
     /// `player_poses.byIndex[i]`: the nametag, transformed, spawn platform and other
     /// positions.
     pub fn pose(&self, i: usize) -> Vec3 {
@@ -112,11 +112,11 @@ impl _StaticPlayer {
 impl Game {
     /// A slot's block, `Player_GetPtrForSlot`.
     #[doc(alias = "Player_GetPtrForSlot")]
-    pub fn player(&self, slot: i32) -> &_StaticPlayer {
+    pub fn player(&self, slot: i32) -> &StaticPlayer {
         &self.players[check_slot(slot)]
     }
 
-    pub fn player_mut(&mut self, slot: i32) -> &mut _StaticPlayer {
+    pub fn player_mut(&mut self, slot: i32) -> &mut StaticPlayer {
         &mut self.players[check_slot(slot)]
     }
 
@@ -566,22 +566,22 @@ impl Game {
 
     #[doc(alias = "Player_GetFlagsAEBit0")]
     pub fn player_flags_ae_bit0(&self, slot: i32) -> bool {
-        self.player(slot).flagsAE.attrs_scaled
+        self.player(slot).init_flags.attrs_scaled
     }
 
     #[doc(alias = "Player_SetFlagsAEBit0")]
     pub fn set_player_flags_ae_bit0(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).flagsAE.attrs_scaled = v & 1 != 0;
+        self.player_mut(slot).init_flags.attrs_scaled = v & 1 != 0;
     }
 
     #[doc(alias = "Player_GetFlagsAEBit1")]
     pub fn player_flags_ae_bit1(&self, slot: i32) -> bool {
-        self.player(slot).flagsAE.kirby_init_flag
+        self.player(slot).init_flags.kirby_init_flag
     }
 
     #[doc(alias = "Player_SetFlagsAEBit1")]
     pub fn set_player_flags_ae_bit1(&mut self, slot: i32, v: u8) {
-        self.player_mut(slot).flagsAE.kirby_init_flag = v & 1 != 0;
+        self.player_mut(slot).init_flags.kirby_init_flag = v & 1 != 0;
     }
 
     /// The slot's falls: both entities' for a character that transforms, `Player_GetFalls`.
@@ -776,8 +776,8 @@ impl Game {
 
     /// The slot's attack statistics, `Player_GetActionStats`.
     #[doc(alias = "Player_GetActionStats")]
-    pub fn player_action_stats(&mut self, slot: i32) -> &mut plActionStats {
-        &mut self.player_mut(slot).stale_moves.total_attack_count_struct
+    pub fn player_action_stats(&mut self, slot: i32) -> &mut ActionStats {
+        &mut self.player_mut(slot).stale_moves.actions
     }
 
     /// The slot's stale-move table, `Player_GetStaleMoveTableIndexPtr`; the original also
@@ -793,7 +793,7 @@ impl Game {
     /// damage on each other slot.
     #[doc(alias("player_unk6a8"))]
     #[doc(alias = "Player_GetUnk6A8Ptr")]
-    pub fn player_combos(&mut self, slot: i32) -> &mut pl_x5EC_t {
+    pub fn player_combos(&mut self, slot: i32) -> &mut ComboStats {
         &mut self.player_mut(slot).stale_moves.combos
     }
 
@@ -930,8 +930,8 @@ impl Game {
         p.more_flags.no_magnifier = false;
         p.more_flags.dies_up = false;
         p.more_flags.sfx_size = 0;
-        p.flagsAE.attrs_scaled = false;
-        p.flagsAE.kirby_init_flag = false;
+        p.init_flags.attrs_scaled = false;
+        p.init_flags.kirby_init_flag = false;
         p.player_entity = [None, None];
         p.struct_func = None;
     }

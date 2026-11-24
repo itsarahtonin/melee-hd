@@ -7,7 +7,7 @@ use super::super::super::state::Running;
 use super::{PAD_DPAD_DOWN, addr, ext, ms, mv};
 use crate::game::ft::FighterKind;
 use crate::game::gr::corneria::{falco_talk, fox_talk, talking, taunt_interrupted};
-use crate::game::structs::plActionStats;
+use crate::game::pl::types::ActionStats;
 use crate::hsd::gobj::GObjId;
 
 /// The attack id the taunt counts under (`FTFOX_APPEALS_ATTACKID`).
@@ -23,7 +23,7 @@ const STATES: [[i32; 3]; 2] = [
 /// id indexes from the array's start (0x3E8 into the stats): the taunt's (0x72) and the other
 /// ids the game asks for lie past the array, in the words after it.
 #[doc(alias = "pl_800386D8")]
-pub fn by_attack_hi(s: &plActionStats, id: i32) -> u32 {
+pub fn by_attack_hi(s: &ActionStats, id: i32) -> u32 {
     match id {
         100 => s.turns,
         101 => s.squats,

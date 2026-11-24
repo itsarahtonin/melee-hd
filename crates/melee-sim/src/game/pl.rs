@@ -8,12 +8,13 @@ pub mod player;
 pub mod stats;
 pub mod tally;
 pub mod trick;
+pub mod types;
 
 use melee_data::archive::DataRef;
 
 use super::state::Running;
-use super::structs::plActionStats;
 use gekko_fp as fp;
+use types::ActionStats;
 
 /// The player library's globals.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
@@ -132,10 +133,7 @@ impl Running<'_> {
     pub fn count_item_attack(&mut self, gobj: crate::hsd::gobj::GObjId, ev: [u8; 4]) {
         let slot = self.game.fighter(gobj).player_idx as usize;
         assert!(slot < 6, "player slot {slot}");
-        let a = &mut self.game.players[slot]
-            .stale_moves
-            .total_attack_count_struct
-            .attacks;
+        let a = &mut self.game.players[slot].stale_moves.actions.attacks;
         a.total = a.total.wrapping_add(1);
         let id = ev[3] as usize;
         assert!(
@@ -164,9 +162,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let (slot, sub, cur) = (fp.player_idx as usize, fp.is_sub_fighter, fp.attack_flags);
         assert!(slot < 6, "player slot {slot}");
-        let acp = &mut self.game.players[slot]
-            .stale_moves
-            .total_attack_count_struct;
+        let acp = &mut self.game.players[slot].stale_moves.actions;
         if cur[2] & 0x20 != 0 {
             acp.has_turned = true;
         }
@@ -210,7 +206,7 @@ impl Running<'_> {
 }
 
 /// Adds one to the word at `off` in a player's action statistics.
-fn add_action_stat(s: &mut plActionStats, off: u32) {
+fn add_action_stat(s: &mut ActionStats, off: u32) {
     let inc = |b: &mut [u8]| {
         let v = u32::from_be_bytes(b[..4].try_into().unwrap()).wrapping_add(1);
         b[..4].copy_from_slice(&v.to_be_bytes());

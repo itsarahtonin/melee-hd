@@ -15,7 +15,7 @@ use melee_data::archive::{Archives, DataRef};
 use melee_data::disc::Disc;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Running};
-use melee_sim::game::structs::_StaticPlayer;
+use melee_sim::game::structs::StaticPlayer;
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::{Ctx, Handle};
@@ -746,7 +746,7 @@ fn player_accessors() {
             };
             cap.call.load(&ctx);
             let players = sym("player_slots");
-            let mut block = vec![0u8; 6 * _StaticPlayer::SIZE as usize];
+            let mut block = vec![0u8; 6 * StaticPlayer::SIZE as usize];
             for n in 0..2000 {
                 let mut r = Running {
                     game: &mut game,
@@ -766,7 +766,7 @@ fn player_accessors() {
                 for (k, p) in game.players.iter().enumerate() {
                     p.compare(
                         &mem,
-                        players + k as u32 * _StaticPlayer::SIZE,
+                        players + k as u32 * StaticPlayer::SIZE,
                         &format!("player {k}"),
                         &mut cx,
                     );

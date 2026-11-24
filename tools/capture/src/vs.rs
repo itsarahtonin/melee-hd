@@ -7,7 +7,7 @@ use melee_sim::game::gm::pause::PauseScreen;
 use melee_sim::game::gm::vs::Ranks;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
-use melee_sim::game::structs::{_StaticPlayer, SceneLoop};
+use melee_sim::game::structs::{SceneLoop, StaticPlayer};
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::input::controller::{PadData, PadLib, Status};
 use melee_sim::input::pad::PadStatus;
@@ -468,7 +468,7 @@ impl<'a> Comparer<'a> {
         for (i, p) in game.players.iter().enumerate() {
             p.compare(
                 &mem,
-                players + i as u32 * _StaticPlayer::SIZE,
+                players + i as u32 * StaticPlayer::SIZE,
                 &format!("player {i}"),
                 self,
             );

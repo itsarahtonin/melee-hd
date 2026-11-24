@@ -5,8 +5,9 @@
 use gekko_fp as fp;
 
 use super::super::state::Running;
-use super::super::structs::{ft_800898B4_t, plAttackStats};
+use super::super::structs::ft_800898B4_t;
 use super::bonus::Flag;
+use super::types::AttackStats;
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
@@ -34,7 +35,7 @@ fn flag_bits(b: u8) -> [bool; 8] {
 
 /// Counts a hit or an attack in a set of attack statistics, `pl_80037BC0`.
 #[doc(alias = "pl_80037BC0")]
-fn count_stats(s: &mut plAttackStats, ev: [u8; 4]) {
+fn count_stats(s: &mut AttackStats, ev: [u8; 4]) {
     s.total = s.total.wrapping_add(1);
     let id = usize::from(ev[3]);
     s.by_attack_counts[id] = s.by_attack_counts[id].wrapping_add(1);
@@ -278,7 +279,7 @@ impl Running<'_> {
             let fp = self.game.fighter(gobj);
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             let rec = self.attack_record(record);
-            let s = &mut self.game.player_stale_moves(slot).total_attack_count_struct;
+            let s = &mut self.game.player_stale_moves(slot).actions;
             count_stats(&mut s.hits, ev);
             if rec.spike {
                 s.hits.spikes_count = s.hits.spikes_count.wrapping_add(1);
@@ -287,7 +288,7 @@ impl Running<'_> {
                 // `pl_8003FE40`.
                 self.count_bonus(slot, 75);
             }
-            let s = &mut self.game.player_stale_moves(slot).total_attack_count_struct;
+            let s = &mut self.game.player_stale_moves(slot).actions;
             let best = s.attacks.by_attack_counts[usize::from(id)];
             if !rec.landed && best > word_at(&s.landed, 4 + 4 * usize::from(id)) {
                 count_stats_bytes(&mut s.landed, ev, rec.spike);
@@ -313,10 +314,7 @@ impl Running<'_> {
         behind: bool,
     ) {
         let id = ev[3];
-        let s = &mut self
-            .game
-            .player_stale_moves(aslot)
-            .total_attack_count_struct;
+        let s = &mut self.game.player_stale_moves(aslot).actions;
         count_stats(&mut s.hits, ev);
         if rec.spike {
             s.hits.spikes_count = s.hits.spikes_count.wrapping_add(1);
@@ -325,19 +323,13 @@ impl Running<'_> {
             // `pl_8003FE40`.
             self.count_bonus(aslot, 75);
         }
-        let s = &mut self
-            .game
-            .player_stale_moves(aslot)
-            .total_attack_count_struct;
+        let s = &mut self.game.player_stale_moves(aslot).actions;
         let best = s.attacks.by_attack_counts[usize::from(id)];
         if !rec.landed && best > word_at(&s.landed, 4 + 4 * usize::from(id)) {
             count_stats_bytes(&mut s.landed, ev, rec.spike);
             self.count_best_hit(aslot, asub, i32::from(id));
         }
-        let s = &mut self
-            .game
-            .player_stale_moves(aslot)
-            .total_attack_count_struct;
+        let s = &mut self.game.player_stale_moves(aslot).actions;
         if behind {
             s.back_hits = s.back_hits.wrapping_add(1);
         } else {
@@ -349,10 +341,7 @@ impl Running<'_> {
             s.other_hits = s.other_hits.wrapping_add(1);
         }
         assert!((0..8).contains(&vslot), "0 <= h_player && h_player < 8");
-        let s = &mut self
-            .game
-            .player_stale_moves(aslot)
-            .total_attack_count_struct;
+        let s = &mut self.game.player_stale_moves(aslot).actions;
         s.victims[usize::from(id)] |= 1 << (vslot as u8);
         self.first_hit_bonus(aslot);
         self.average_victim_percent(aslot, vslot, percent);

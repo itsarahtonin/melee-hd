@@ -313,10 +313,7 @@ pub fn count_attack(r: &mut Running, gobj: GObjId) {
         return;
     }
     let slot = r.game.fighter(owner.expect("an owner")).player_idx as usize;
-    let a = &mut r.game.players[slot]
-        .stale_moves
-        .total_attack_count_struct
-        .attacks;
+    let a = &mut r.game.players[slot].stale_moves.actions.attacks;
     a.total = a.total.wrapping_add(1);
     let id = ev[3] as usize;
     a.by_attack_counts[id] = a.by_attack_counts[id].wrapping_add(1);

@@ -9177,9 +9177,9 @@ fn corneria_side_taunt() {
     // The count, by the player whose stats r3 points into.
     let by_hi = |r: &mut Running, _: &Maps, call: &Call| {
         use melee_sim::game::mirror::Mirror;
-        use melee_sim::game::structs::_StaticPlayer;
+        use melee_sim::game::structs::StaticPlayer;
         let off = call.regs.gpr[3] - leaf_check::sym("player_slots");
-        let slot = (off / _StaticPlayer::SIZE) as i32;
+        let slot = (off / StaticPlayer::SIZE) as i32;
         let stats = r.game.player_action_stats(slot);
         let n = melee_sim::game::ft::fox::appeal::by_attack_hi(stats, call.regs.gpr[4] as i32);
         Ret::Int(n)

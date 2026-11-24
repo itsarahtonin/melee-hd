@@ -192,7 +192,7 @@ impl Game {
             p.coins = (v as f32).clamp(0.0, 65535.0) as u16;
             let ratio = self.hit_ratio(s);
             p.hit_percent = fp::fctiwz(fp::fmuls(100.0, ratio)) as i8 as u8;
-            let st = self.player(s).stale_moves.total_attack_count_struct.clone();
+            let st = self.player(s).stale_moves.actions.clone();
             p.attacks_hit = u32::from_be_bytes(st.landed[0..4].try_into().unwrap());
             p.attacks_total = st.attacks.total;
             let t = &self.player(s).stale_moves;
@@ -311,7 +311,7 @@ impl Game {
     /// The share of a player's attacks that hit, `pl_80040948`.
     #[doc(alias = "pl_80040948")]
     fn hit_ratio(&self, slot: i32) -> f64 {
-        let st = &self.player(slot).stale_moves.total_attack_count_struct;
+        let st = &self.player(slot).stale_moves.actions;
         let total = st.attacks.total;
         let hits = u32::from_be_bytes(st.landed[0..4].try_into().unwrap());
         if total == 0 {

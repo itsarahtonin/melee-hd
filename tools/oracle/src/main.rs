@@ -578,7 +578,7 @@ fn mirror_check(trace_path: &str) -> ExitCode {
                     round_trip::<melee_sim::game::structs::Camera>(r, "camera", &mut ids)
                 }
                 Kind::Players => {
-                    round_trip::<melee_sim::game::structs::_StaticPlayer>(r, "player", &mut ids)
+                    round_trip::<melee_sim::game::structs::StaticPlayer>(r, "player", &mut ids)
                 }
                 _ => continue,
             }

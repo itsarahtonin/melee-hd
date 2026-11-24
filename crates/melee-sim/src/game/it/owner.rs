@@ -102,7 +102,7 @@ pub fn stale_mul(game: &Game, data: &Archives, slot: u8, move_id: i32) -> f64 {
     let weights = crate::game::ft::common_ptr(game, data, crate::game::ft::STALE_WEIGHTS)
         .expect("no stale-move weights");
     for i in 0..9 {
-        let m = i32::from(table.StaleMoves[k as usize].move_id);
+        let m = i32::from(table.queue[k as usize].move_id);
         if m == 0 {
             return mul;
         }

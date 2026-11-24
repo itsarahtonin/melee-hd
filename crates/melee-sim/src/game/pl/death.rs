@@ -3,7 +3,7 @@
 //! player who KOed it.
 
 use super::super::state::Running;
-use super::super::structs::_StaticPlayer;
+use super::types::StaticPlayer;
 use crate::fpu::reg;
 use gekko_fp as fp;
 
@@ -21,11 +21,11 @@ const DEAD_UP_FALL: i32 = 6;
 const DEAD_UP_FALL_HIT_CAMERA_ICE: i32 = 10;
 
 /// `xDD1`'s bits, `bit0` the top one.
-fn set_dd1(p: &mut _StaticPlayer, n: u8) {
+fn set_dd1(p: &mut StaticPlayer, n: u8) {
     p.set_ext_u8(0xDD1, p.ext_u8(0xDD1) | (0x80 >> n));
 }
 
-fn inc(p: &mut _StaticPlayer, off: usize) {
+fn inc(p: &mut StaticPlayer, off: usize) {
     p.set_ext_u32(off, p.ext_u32(off).wrapping_add(1));
 }
 

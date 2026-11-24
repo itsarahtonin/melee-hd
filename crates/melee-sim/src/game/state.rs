@@ -10,8 +10,8 @@ use super::camera::CameraState;
 use super::gr;
 use super::handles::{CodeRef, FighterId, GroundId, ItemId};
 use super::structs::{
-    _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, SceneLoop,
-    StageInfo, VsSceneController, ifMagnify,
+    ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, SceneLoop, StageInfo,
+    StaticPlayer, VsSceneController, ifMagnify,
 };
 use super::{ft, gm, pl};
 use crate::hsd::Objects;
@@ -314,7 +314,7 @@ pub struct Game {
     /// The game camera (`game_camera`), its camera boxes and the rest of its state.
     pub camera: CameraState,
     /// The player slots (`player_slots`).
-    pub players: [_StaticPlayer; 6],
+    pub players: [StaticPlayer; 6],
     /// The current game mode (`state_machine.routing.curr_mode`, a `GameModeKind`).
     pub game_mode: u8,
     /// The pad library: the poll queue, rumble and the master, copy and game statuses

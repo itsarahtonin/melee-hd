@@ -1022,15 +1022,15 @@ impl Running<'_> {
         }
         let table = &mut self.game.player_mut(slot).stale_moves;
         if table
-            .StaleMoves
+            .queue
             .iter()
             .any(|m| attack_id == i32::from(m.move_id) && instance == m.attack_instance)
         {
             return;
         }
         let at = table.current_index as usize;
-        table.StaleMoves[at].move_id = attack_id as u16;
-        table.StaleMoves[at].attack_instance = instance;
+        table.queue[at].move_id = attack_id as u16;
+        table.queue[at].attack_instance = instance;
         table.current_index = if table.current_index == 9 {
             0
         } else {
