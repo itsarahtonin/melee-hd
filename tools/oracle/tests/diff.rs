@@ -57,7 +57,7 @@ fn import_compares_back_clean() {
     // Taken up from an import, play runs to the trace's end: a new item's unused hitboxes'
     // joints, which it keeps from the item its block held, import as the live joints they
     // point to (docs/oracle.md).
-    assert!(out.contains("11728 ticks compared, no difference"), "{out}");
+    assert!(out.contains("11752 ticks compared, no difference"), "{out}");
 }
 
 #[test]
@@ -91,8 +91,8 @@ fn start_reaches_the_end() {
     // field.
     assert!(!out.contains(" differs in "), "{out}");
     assert!(!out.contains("isn't ported"), "{out}");
-    assert!(out.contains("the trace ends after tick 11928"), "{out}");
-    assert!(out.contains("11928 ticks compared, no difference"), "{out}");
+    assert!(out.contains("the trace ends after tick 11952"), "{out}");
+    assert!(out.contains("11952 ticks compared, no difference"), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
 

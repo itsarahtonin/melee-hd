@@ -310,7 +310,7 @@ fn the_live_matches_play_back_as_ssbm_rs_does() {
         ("matches-a-3", 1030, 5),
         ("matches-a-4", 1829, 0),
         ("matches-a-5", 7428, 0),
-        ("matches-b-1", 1531, 7),
+        ("matches-b-1", 1531, 6),
         ("matches-b-2", 2732, 0),
         ("matches-b-3", 1530, 2),
         ("matches-b-4", 1531, 4),
@@ -352,14 +352,8 @@ fn the_live_matches_play_back_as_ssbm_rs_does() {
             let mark = line
                 .contains("state flags (+0x29) original [C0, 00, 00, 00], ours [40, 00, 00, 00]")
                 && (-122..=-119).contains(&frame);
-            // The live match ran at the flat model, its playback at Dolphin's disc speed: the
-            // sound handle Peach's port keeps in its state's misc word in frame 387 comes from
-            // another voice (docs/oracle.md, "The replay traces at Dolphin's disc speed").
-            let handle = name == "matches-b-1"
-                && frame == 387
-                && line.contains(": post-frame port 2: hitstun (+0x2c)");
             assert!(
-                (height && line.contains(": position y (+0x")) || mark || handle,
+                (height && line.contains(": position y (+0x")) || mark,
                 "{name}: {line}"
             );
         }
