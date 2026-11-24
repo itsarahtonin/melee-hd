@@ -1577,7 +1577,7 @@ impl Running<'_> {
                 .gallery
                 .debug_text
                 .expect("the Z view's text");
-            self.game.hud.devtext.pool[usize::from(t)].set_xy(0x21C, 0x82);
+            self.game.hud.devtext_mut().pool[usize::from(t)].set_xy(0x21C, 0x82);
             super::debug_view::PROC_Z_VIEW
         } else if g.debug_l != 0 {
             super::debug_view::PROC_L_VIEW

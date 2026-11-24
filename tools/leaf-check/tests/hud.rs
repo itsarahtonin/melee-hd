@@ -126,7 +126,7 @@ fn ops(seed: u32) -> Vec<Op> {
 
 /// Ours: the screens made, in creation order (a failed creation's slot holds none).
 fn run_ours(r: &mut Running, ops: &[Op]) -> Vec<Logged> {
-    let d = &mut r.game.hud.devtext;
+    let d = r.game.hud.devtext_mut();
     let mut made: Vec<Option<u8>> = Vec::new();
     let mut drawn = Vec::new();
     for &op in ops {
@@ -538,7 +538,7 @@ fn devtext_strings() {
 #[test]
 fn devtext_get_gobj() {
     Check::new("fn_8016C7D0", &|r, _| {
-        let g = r.game.hud.devtext.get_gobj();
+        let g = r.game.hud.devtext().get_gobj();
         vec![Out::Gobj(g)]
     })
     .with_theirs(&|ctx, _| (ssbm_rt::Handle::addr(fns::DevText_GetGObj(ctx)), 0))
@@ -594,7 +594,7 @@ fn devtext_create_cobj() {
 #[test]
 fn devtext_init_pool() {
     Check::new("DevText_InitPool", &|r, _| {
-        r.game.hud.devtext.init_pool();
+        r.game.hud.devtext_mut().init_pool();
         vec![]
     })
     .with_theirs(&|ctx, _| {
@@ -812,7 +812,7 @@ fn place_player_displays() {
             let mut words = Vec::new();
             for count in 0..8 {
                 r.place_player_displays(count);
-                for p in r.game.hud.all.player_pos {
+                for p in r.game.hud.raw_parts().all.player_pos {
                     words.extend(calls::vec_words(p));
                 }
             }
@@ -1454,7 +1454,7 @@ fn ko_mark_run() {
             for _ in 0..50 {
                 for slot in 0..6 {
                     for second in [false, true] {
-                        let s = &r.game.hud.ko_marks.slots[slot];
+                        let s = &r.game.hud.raw_parts().ko_marks.slots[slot];
                         let Some(g) = (if second { s.gobj2 } else { s.gobj }) else {
                             continue;
                         };
@@ -1758,7 +1758,7 @@ fn anim_helpers() {
                 Some(melee_sim::game::state::Obj::JObj(j)) => j,
                 _ => unreachable!(),
             };
-            let m = r.game.hud.timer_models;
+            let m = r.game.hud.raw_parts().timer_models;
             match a.r(20) {
                 0 => vec![Out::R3(u32::from(melee_sim::lb::anim::any_animated(
                     &r.game.objs,
@@ -1777,7 +1777,7 @@ fn anim_helpers() {
                     vec![]
                 }
                 _ => {
-                    let models = r.game.hud.time.countdown_timer_models.unwrap();
+                    let models = r.game.hud.raw_parts().time.countdown_timer_models.unwrap();
                     let model = r.data.ptr(models).unwrap();
                     melee_sim::lb::anim::add_model_anim(
                         &mut r.game.objs,
@@ -1871,15 +1871,15 @@ fn announcement_run() {
             r.announce(k as i32, a.i(21), a.i(22), a.i(23), None, None);
             let mut flags = Vec::new();
             for _ in 0..90 {
-                let Some(g) = r.game.hud.announcements[k].gobj else {
+                let Some(g) = r.game.hud.raw_parts().announcements[k].gobj else {
                     break;
                 };
-                if r.game.hud.announcements[k].proc == Some(CodeRef(0x802F_73C4)) {
+                if r.game.hud.raw_parts().announcements[k].proc == Some(CodeRef(0x802F_73C4)) {
                     r.announcement_once(g);
                 } else {
                     r.announcement_wait(g);
                 }
-                let x = &r.game.hud.announcements[k].flags;
+                let x = &r.game.hud.raw_parts().announcements[k].flags;
                 flags.push(
                     u32::from(x.started)
                         | u32::from(x.sfx_2_played) << 1
@@ -2037,8 +2037,12 @@ fn steal_stock() {
         stubs: &stubs,
         ..Check::new("fn_8016C7D0", &|r, a| {
             let (t, d) = (a.i(20), a.i(21));
-            if r.game.hud.stock.player[t as usize].gobj.is_none()
-                || r.game.hud.stock.player[d as usize].gobj.is_none()
+            if r.game.hud.raw_parts().stock.player[t as usize]
+                .gobj
+                .is_none()
+                || r.game.hud.raw_parts().stock.player[d as usize]
+                    .gobj
+                    .is_none()
             {
                 return vec![Out::R3(9)];
             }
@@ -2075,7 +2079,10 @@ fn stock_misc() {
                 1 => r.free_stock_bonus_icons(),
                 2 => r.free_stock_tally_2(),
                 3 => {
-                    if r.game.hud.stock.player[p as usize].gobj.is_some() {
+                    if r.game.hud.raw_parts().stock.player[p as usize]
+                        .gobj
+                        .is_some()
+                    {
                         let c = a.r(22).to_be_bytes();
                         r.game.color_stock_icons(p, [c[1], c[2], c[3]]);
                     }
@@ -2306,14 +2313,20 @@ fn hazard() {
             f.regs.gpr[22] = f.below(2);
         },
         ..Check::new("fn_8016C7D0", &|r, a| {
-            let models = r.game.hud.stock.models.expect("the icons' models");
+            let models = r
+                .game
+                .hud
+                .raw_parts()
+                .stock
+                .models
+                .expect("the icons' models");
             let desc = r.data.ptr(models).unwrap();
             r.create_hazard(desc, a.i(20));
             r.game.show_hazard(r.data, a.i(21));
             if a.r(22) == 1 {
                 r.game.pause_hazard();
             }
-            let g = r.game.hud.hazard.gobj.unwrap();
+            let g = r.game.hud.raw_parts().hazard.gobj.unwrap();
             let mut drawn = Vec::new();
             for _ in 0..40 {
                 r.hazard_proc(g);
@@ -2544,7 +2557,9 @@ fn scores() {
             let slot = a.i(20);
             r.init_scores();
             r.create_score(slot);
-            let g = r.game.hud.scores.entries[slot as usize].gobj.unwrap();
+            let g = r.game.hud.raw_parts().scores.entries[slot as usize]
+                .gobj
+                .unwrap();
             r.score_proc(g);
             r.game.hide_scores();
             r.score_proc(g);

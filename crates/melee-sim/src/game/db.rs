@@ -229,7 +229,7 @@ impl Game {
     }
 
     fn text(&mut self, t: Option<u8>) -> &mut DevText {
-        &mut self.hud.devtext.pool[usize::from(t.expect("a debug text screen"))]
+        &mut self.hud.devtext_mut().pool[usize::from(t.expect("a debug text screen"))]
     }
 
     /// A screen made for a tool: shown, its cursor hidden, its colours and scale.
@@ -241,9 +241,9 @@ impl Game {
         fg: [u8; 4],
         scale: (f32, f32),
     ) -> Option<u8> {
-        let t = self.hud.devtext.create(id, x, y, w, h)?;
-        self.hud.devtext.show(t);
-        let s = &mut self.hud.devtext.pool[usize::from(t)];
+        let t = self.hud.devtext_mut().create(id, x, y, w, h)?;
+        self.hud.devtext_mut().show(t);
+        let s = &mut self.hud.devtext_mut().pool[usize::from(t)];
         s.hide_cursor();
         s.set_bg_color(bg);
         s.set_text_color(fg);
@@ -429,7 +429,7 @@ impl Running<'_> {
     /// `fn_SetupCpuHandicapInfo`: its screen (id 6), hidden behind nothing shown.
     #[doc(alias = "fn_SetupCpuHandicapInfo")]
     fn db_setup_cpu(&mut self) {
-        let _ = self.game.hud.devtext.get_gobj();
+        let _ = self.game.hud.devtext().get_gobj();
         self.game.db.cpu_shown = false;
         self.game.db.cpu_text =
             self.game
@@ -491,7 +491,7 @@ impl Running<'_> {
     /// `fn_SetupAnimationInfo`: its screen (id 7), the fighters' bubbles at 1.
     #[doc(alias = "fn_SetupAnimationInfo")]
     fn db_setup_anim(&mut self) {
-        let _ = self.game.hud.devtext.get_gobj();
+        let _ = self.game.hud.devtext().get_gobj();
         let db = &mut self.game.db;
         db.fighter_bubbles = 1;
         db.anim_shown = false;
@@ -784,7 +784,7 @@ impl Running<'_> {
     /// `fn_CheckCameraInfo_helper`: the camera's readout's screen (id 12), hidden, made once
     /// the debug text has its GObj.
     fn db_camera_screen(&mut self) {
-        if self.game.db.camera_text.is_some() || self.game.hud.devtext.get_gobj().is_none() {
+        if self.game.db.camera_text.is_some() || self.game.hud.devtext().get_gobj().is_none() {
             return;
         }
         self.game.db.camera_text = self.game.db_screen(
@@ -795,7 +795,7 @@ impl Running<'_> {
             (12.0, 16.0),
         );
         if let Some(t) = self.game.db.camera_text {
-            let s = &mut self.game.hud.devtext.pool[usize::from(t)];
+            let s = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
             s.hide_background();
             s.hide_text();
         }
@@ -864,7 +864,7 @@ impl Running<'_> {
         };
         let gobj = self.game.camera.gobj();
         if gobj.is_none() || self.game.db.camera_shown == 0 {
-            let s = &mut self.game.hud.devtext.pool[usize::from(t)];
+            let s = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
             s.hide_background();
             s.hide_text();
             return;
@@ -887,7 +887,7 @@ impl Running<'_> {
             };
             let (ex, ey, ez) = (coord(eye.x), coord(eye.y), coord(eye.z));
             let (ix, iy, iz) = (coord(int.x), coord(int.y), coord(int.z));
-            let s = &mut self.game.hud.devtext.pool[usize::from(t)];
+            let s = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
             s.erase();
             s.set_cursor_xy(0, 0);
             s.printf(b"EYE %d,%d,%d", &[Arg::Int(ex), Arg::Int(ey), Arg::Int(ez)]);
@@ -901,7 +901,7 @@ impl Running<'_> {
             s.show_background();
             s.show_text();
         } else if self.game.db.camera_timer == 1 {
-            let s = &mut self.game.hud.devtext.pool[usize::from(t)];
+            let s = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
             s.hide_background();
             s.hide_text();
         } else {
@@ -1117,7 +1117,7 @@ impl Running<'_> {
     /// `fn_SetupSoundInfo`: its screen (id 9), hidden.
     #[doc(alias = "fn_SetupSoundInfo")]
     fn db_setup_sound(&mut self) {
-        let gobj = self.game.hud.devtext.get_gobj();
+        let gobj = self.game.hud.devtext().get_gobj();
         let db = &mut self.game.db;
         db.sound_gobj = gobj;
         db.sound_toggles = 0;
@@ -1127,7 +1127,7 @@ impl Running<'_> {
             self.game
                 .db_screen(9, (420, 60, 18, 3), [0x80; 4], [0xFF; 4], (12.0, 16.0));
         if let Some(t) = self.game.db.sound_text {
-            let s = &mut self.game.hud.devtext.pool[usize::from(t)];
+            let s = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
             s.hide_background();
             s.hide_text();
         }
@@ -1188,7 +1188,7 @@ impl Running<'_> {
             return;
         };
         if shown <= 3 {
-            let s = &mut self.game.hud.devtext.pool[usize::from(t)];
+            let s = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
             s.hide_background();
             s.hide_text();
             return;
@@ -1216,7 +1216,7 @@ impl Running<'_> {
         }
         let peaks = *p;
         let mix = SOUND_TOGGLE_ORDER[self.game.db.sound_toggles as usize] & 3;
-        let s = &mut self.game.hud.devtext.pool[usize::from(t)];
+        let s = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
         s.erase();
         s.set_cursor_xy(1, 0);
         s.printf(
@@ -1366,7 +1366,7 @@ impl Running<'_> {
     /// `fn_ShowOrCreateItemAndPokemonMenu`: the menu's screen shown again, or made (id 8).
     #[doc(alias = "fn_ShowOrCreateItemAndPokemonMenu")]
     fn db_show_item_menu(&mut self) {
-        let _ = self.game.hud.devtext.get_gobj();
+        let _ = self.game.hud.devtext().get_gobj();
         if self.game.it.db_menu.DisplayStatus == 2 {
             let t = self.game.db.item_text;
             let s = self.game.text(t);
@@ -1601,7 +1601,7 @@ impl Running<'_> {
     fn db_setup_bonus(&mut self) {
         self.game.db.bonus_port = 0xFF;
         self.game.db.bonus_colors = false;
-        let _ = self.game.hud.devtext.get_gobj();
+        let _ = self.game.hud.devtext().get_gobj();
         self.game.db.bonus_block =
             crate::hsd::heap::with(|h| h.mem_alloc(BONUS_BLOCK)).unwrap_or(0);
         let (bg, fg) = BONUS_COLORS[usize::from(self.game.db.bonus_colors)];

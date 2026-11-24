@@ -10,8 +10,8 @@ use super::camera::CameraState;
 use super::gr;
 use super::handles::{CodeRef, FighterId, GroundId, ItemId};
 use super::structs::{
-    _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, SceneLoop,
-    StageInfo, VsSceneController, ifMagnify,
+    _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, Magnifier,
+    SceneLoop, StageInfo, VsSceneController,
 };
 use super::{ft, gm, pl};
 use crate::hsd::Objects;
@@ -349,7 +349,7 @@ pub struct Game {
     pub pl: pl::Globals,
     /// The off-screen magnifier (`ifMagnify_804A1DE0`): which players are off screen, which
     /// deals them damage over time.
-    pub magnify: ifMagnify,
+    pub magnify: Magnifier,
     /// Where the magnifier's bubbles but the first copy their pixels (`image_descs`'
     /// buffers), where the allocator model gives them: the heap's image takes them as a render
     /// target once a bubble is copied ([`crate::hsd::image::Src::RenderTarget`]).
@@ -599,7 +599,7 @@ impl Host<GameKinds> for Running<'_> {
             UserData::SisCamera(g) => self.game.sis.forget_camera(g),
             // `mn_8022EB04`: the heap byte goes back.
             UserData::NameTagSlot(slot) => {
-                let addr = self.game.hud.nametags.user_data_addrs[usize::from(slot)];
+                let addr = self.game.hud.nametag_user_data_addr(slot);
                 crate::hsd::heap::mem_free(addr);
             }
             UserData::BgFlash => self.game.bg_flash_free(),

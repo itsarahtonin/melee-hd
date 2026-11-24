@@ -39,6 +39,12 @@ fn owned() -> Vec<Layout> {
     use crate::game::gr::types::{
         Ground, GroundFlags, GroundParam, StageBits, StageBlastZone, StageCameraInfo, StageInfo,
     };
+    use crate::game::hud::types::{
+        Announcement, AnnouncementFlags, BubbleState, CharsLeftTally, CoinCounter, DamageDisplay,
+        DamageDisplayFlags, DamageDisplays, HudLayout, HudStocks, HudTimer, JoinerTally,
+        KoMarkSlot, KoMarks, Magnifier, MagnifierBubble, OffscreenArrows, PlayerStocks,
+        ScoreDisplay, ScoreDisplays, StockSteal, StockUserData,
+    };
     use crate::game::it::types::{
         DynamicsPoint, Item, ItemFlagBits, ItemFlags, ItemHitBits, ItemHitFlags, ItemHitbox,
         ItemOutline, ItemStateFlags, StepBox,
@@ -99,6 +105,28 @@ fn owned() -> Vec<Layout> {
         DynamicsPoint::layout(),
         StepBox::layout(),
         Item::layout(),
+        BubbleState::layout(),
+        MagnifierBubble::layout(),
+        Magnifier::layout(),
+        DamageDisplayFlags::layout(),
+        DamageDisplay::layout(),
+        DamageDisplays::layout(),
+        AnnouncementFlags::layout(),
+        Announcement::layout(),
+        KoMarkSlot::layout(),
+        KoMarks::layout(),
+        HudTimer::layout(),
+        HudLayout::layout(),
+        PlayerStocks::layout(),
+        HudStocks::layout(),
+        StockSteal::layout(),
+        StockUserData::layout(),
+        JoinerTally::layout(),
+        CharsLeftTally::layout(),
+        OffscreenArrows::layout(),
+        CoinCounter::layout(),
+        ScoreDisplay::layout(),
+        ScoreDisplays::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))

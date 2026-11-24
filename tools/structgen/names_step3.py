@@ -753,108 +753,6 @@ DEBUG_PAUSE = {
     "unk_38_1": "unused_38_1",
 }
 
-# The HUD (the continuation's sixth group): the announcements (`Element_803F9628`), the layout
-# (`ifAll_804A0FD8_t`), the stock icons and the single-player tallies (`ifStock_*`), the
-# damage displays' flags, the magnifier's colors, the coin counter, the off-screen arrows and
-# the scores (`un_*`). Their address-named types are named too.
-ANNOUNCEMENT = {
-    "x0": "gobj",
-    "x4": "unread_4",
-    "x8": "proc",
-    # The announcement's own first line (the table's), played at `sfx_frame` unless a caller
-    # gave one; the caller's second line at `sfx_2_frame`.
-    "xC": "default_sfx",
-    "x10": "sfx_frame",
-    "x11": "sfx_2_frame",
-    "x12": "flags",
-    "x13": "unused_13",
-    "x14": "model",
-    "x18": "on_start",
-    "x1C": "on_end",
-    "x20": "sfx_1",
-    "x24": "sfx_2",
-}
-ANNOUNCEMENT_FLAGS = {
-    "x0": "sfx_1_played",
-    "x1": "sfx_2_played",
-    # The start callback ran.
-    "x2": "started",
-    **{f"x{i}": f"unused_{i}" for i in range(3, 8)},
-}
-# Anim 1 (the damage going the good way: down, or up in stamina) plays.
-IF_DAMAGE_FLAGS = {"unk10": "heal_anim", "unk1": "unused_b7"}
-# Frames since the display blew apart (to 0xC8, when it's freed).
-IF_DAMAGE_STATE = {"unk9": "fade_frames"}
-# The players the steal slots' stocks went to (slots 5 and 6).
-IF_STOCK_USER_DATA = {"x3": "steal_takers"}
-HUD_LAYOUT = {
-    "x8": "root",
-    "xC": "timer_pos",
-    # Each player's display's place, and the places for three and for two players.
-    "x18": "player_pos",
-    "x60": "player_pos_3",
-    "x84": "player_pos_2",
-}
-# The stage's bubble colors (`GroundParam`'s), for the magnifier.
-IF_MAGNIFY = {
-    "x4": "bubble_color_0",
-    "x8": "bubble_color_2",
-    "xC": "bubble_color_6",
-    "x10": "bubble_color_8",
-    "pad": "pad_ec",
-}
-HUD_STOCKS = {"x0": "models", "x4": "counter_model"}
-# A player's stock icons' model and its joints by index: 0 to 7 the icons; past them, by
-# mode, the coin counter's digits (9 to 13, 13 also its 0), the stock count's group (14), its
-# ones (15) and tens or only digit (16).
-PLAYER_STOCKS = {
-    "x0": "gobj",
-    "x4": "joints",
-    **{f"x{0x24 + 4 * i:X}": f"joint_{8 + i}" for i in range(9)},
-}
-# The joiners' tally: 0 to make, 1 made; the joiners' costumes and characters (-1 beaten, -2
-# the end), the crowd's count shown, the icons.
-JOINER_TALLY = {"x0": "state", "x1": "costumes", "x83": "chars", "x108": "crowd_count", "x10C": "icons"}
-# The characters-left tally (All-Star's rest area).
-CHARS_LEFT_TALLY = {"x0": "state", "x1": "chars", "x83": "costumes", "x108": "unread_108", "x10C": "icons"}
-COIN_COUNTER = {
-    "x0_b0": "unread_b0",
-    "x0_b1": "counting",
-    # A coin every `step` frames.
-    "x0_b234": "step",
-    "x0_b567": "step_timer",
-    "x1": "count",
-    "x2": "target",
-    "x3": "unused_3",
-    "x4": "pos_x",
-    "x8": "pos_y",
-    "xC": "gobj",
-}
-OFFSCREEN_ARROWS = {
-    "x0": "models",
-    "x4": "gobjs",
-    "x14": "colors",
-    # By slot: the player's arrow is out.
-    "x24": "shown",
-    # By arrow: its side (0 none, 1 left, 2 right) and its player.
-    "x28": "sides",
-    "x2C": "players",
-    # The rules' `arrows_flag`: no sound.
-    "x30": "silent",
-    # The arrow whose turn it is to sound, and the sound's timer (to 51).
-    "x31": "sounding",
-    "x32": "sound_timer",
-}
-SCORE_DISPLAYS = {"x0": "canvas", "x8": "entries"}
-SCORE_DISPLAY = {
-    "x0": "gobj",
-    "x4": "text",
-    "x8": "string",
-    "xC": "score",
-    # "-" shown in place of the score.
-    "x10": "hidden",
-}
-
 # The rest (the continuation's seventh group): the items' counts and limits by hold kind
 # (`HSD_ObjAllocUnk`), the screen flash (`BgFlashData`, `BgFlashUserData`), a swing chain's
 # link (`lb_00F9_UnkDesc0`, `DynamicsData`), an item's spawn (`SpawnItem`), a fighter's
@@ -1018,23 +916,6 @@ GROUPS = [
         "gm_801677C0_s": DEBUG_PAUSE,
     },
     {
-        "Element_803F9628": ANNOUNCEMENT,
-        "Element_803F9628_x12": ANNOUNCEMENT_FLAGS,
-        "IfDamageFlags": IF_DAMAGE_FLAGS,
-        "IfDamageState": IF_DAMAGE_STATE,
-        "IfStockUserData": IF_STOCK_USER_DATA,
-        "ifAll_804A0FD8_t": HUD_LAYOUT,
-        "ifMagnify": IF_MAGNIFY,
-        "ifStock_804A1378": HUD_STOCKS,
-        "ifStock_804A1378_per_player": PLAYER_STOCKS,
-        "ifStock_804A1774": JOINER_TALLY,
-        "ifStock_804A1ACC": CHARS_LEFT_TALLY,
-        "un_803F9E08_t": COIN_COUNTER,
-        "un_804A1F10_t": OFFSCREEN_ARROWS,
-        "un_804A1F58_t": SCORE_DISPLAYS,
-        "un_804A1F58_x8_t": SCORE_DISPLAY,
-    },
-    {
         "HSD_ObjAllocUnk": ITEM_COUNTS,
         "BgFlashData": BG_FLASH_DATA,
         "BgFlashUserData": BG_FLASH_USER_DATA,
@@ -1063,17 +944,6 @@ TYPE_NAMES = {
     "UnkResultPlayerData": "PlayerDecisions",
     "gm_80479D58_t": "SceneLoop",
     "gm_801677C0_s": "DebugPause",
-    "Element_803F9628": "Announcement",
-    "Element_803F9628_x12": "AnnouncementFlags",
-    "ifAll_804A0FD8_t": "HudLayout",
-    "ifStock_804A1378": "HudStocks",
-    "ifStock_804A1378_per_player": "PlayerStocks",
-    "ifStock_804A1774": "JoinerTally",
-    "ifStock_804A1ACC": "CharsLeftTally",
-    "un_803F9E08_t": "CoinCounter",
-    "un_804A1F10_t": "OffscreenArrows",
-    "un_804A1F58_t": "ScoreDisplays",
-    "un_804A1F58_x8_t": "ScoreDisplay",
     "HSD_ObjAllocUnk": "ItemCounts",
     "lb_00F9_UnkDesc0": "SwingLink",
 }

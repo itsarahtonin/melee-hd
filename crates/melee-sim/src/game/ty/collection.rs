@@ -1239,7 +1239,7 @@ impl Running<'_> {
             b"X  %3.2f\nZ  %3.2f",
             &[Arg::Float(f64::from(x)), Arg::Float(f64::from(z))],
         );
-        let text = &mut self.game.hud.devtext.pool[usize::from(t)];
+        let text = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
         text.erase();
         text.set_cursor_xy(0, 0);
         text.print(&s);
@@ -1251,13 +1251,13 @@ impl Running<'_> {
     #[doc(alias = "_tyDisplay_8031C1D0")]
     fn coll_debug_text(&mut self) {
         use crate::msl::Arg;
-        let t = self.game.hud.devtext.create(1, 40, 40, 9, 3);
+        let t = self.game.hud.devtext_mut().create(1, 40, 40, 9, 3);
         self.coll().text = t;
         let Some(t) = t else {
             return;
         };
-        self.game.hud.devtext.show(t);
-        let text = &mut self.game.hud.devtext.pool[usize::from(t)];
+        self.game.hud.devtext_mut().show(t);
+        let text = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
         text.hide_cursor();
         text.no_wrap();
         text.set_bg_color([0x40, 0x80, 0xD0, 0x60]);
@@ -1473,7 +1473,7 @@ impl Running<'_> {
         }
         if let Some(t) = self.coll().text.take() {
             use crate::game::hud::devtext::Link;
-            self.game.hud.devtext.remove(Link::Held(t));
+            self.game.hud.devtext_mut().remove(Link::Held(t));
         }
         self.game.end_scene();
     }
