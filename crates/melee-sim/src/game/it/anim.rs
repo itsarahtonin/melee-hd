@@ -397,11 +397,7 @@ pub fn state_script(
     desc: DataRef,
 ) -> Option<DataRef> {
     if kind == ItKind::StageHurtbox
-        && let Some(&(_, s)) = game
-            .gr
-            .yaku_scripts
-            .iter()
-            .find(|&&(i, _)| i32::from(i) == index)
+        && let Some(s) = game.gr.yaku_script(index)
     {
         return Some(s);
     }

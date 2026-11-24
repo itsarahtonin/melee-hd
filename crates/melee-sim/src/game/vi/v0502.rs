@@ -75,7 +75,8 @@ impl Running<'_> {
         jobj::req_anim_all(&mut self.game.objs, Some(j), 120.0);
         self.anim_all(j);
         super::super::gr::grlib::measure_start_points(self.game, self.data);
-        self.game.gr.start_points[1] = self.game.objs.jobjs[j].translate;
+        let at = self.game.objs.jobjs[j].translate;
+        self.game.gr.set_start_point(1, at);
         jobj::req_anim_all(&mut self.game.objs, Some(j), 0.0);
         let a = &mut self.game.audio;
         a.lb.unwant_banks(0x1C);

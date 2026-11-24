@@ -225,6 +225,53 @@ pub fn set_trophy_slot(game: &mut Game, trophy: i32, point: i32) {
     }
 }
 
+/// The spawner's half of a trophy's coin leaving (`grZakoGenerator_801CAC14` and
+/// `grZakoGenerator_801CACB8`, from the item's destroy and KO callbacks): the trophy point's
+/// slot (the last) forgets the coin, and frees its point too when `free_point` (a KO).
+pub fn trophy_coin_left(game: &mut Game, coin: GObjId, free_point: bool) {
+    let slots = game
+        .gr
+        .zako
+        .slots
+        .as_mut()
+        .expect("grzakogenerator.c: slots");
+    for slot in &mut slots[80..81] {
+        if slot.item == Some(coin) {
+            if free_point {
+                slot.point = -1;
+            }
+            slot.item = None;
+        }
+    }
+}
+
+/// The spawner's half of an enemy's destroy callback (`grZakoGenerator_801CAC14`): its slot
+/// `idx` forgets it and spawns again in 2 ticks.
+pub fn enemy_destroyed(game: &mut Game, idx: i32) {
+    let slot = &mut game
+        .gr
+        .zako
+        .slots
+        .as_mut()
+        .expect("grzakogenerator.c: slots")[idx as usize];
+    slot.item = None;
+    slot.timer = 2;
+}
+
+/// The spawner's half of an enemy's KO (`grZakoGenerator_801CACB8`): its slot `idx` forgets
+/// it, and spawns again in 0x708 ticks if the stage's enemy table says it respawns, else
+/// never.
+pub fn enemy_kod(game: &mut Game, data: &DataArchives, idx: i32) {
+    let z = &mut game.gr.zako;
+    let slots = z.slots.as_mut().expect("grzakogenerator.c: slots");
+    let off = u32::from((slots[idx as usize].point - 0x20) as u16);
+    slots[idx as usize].item = None;
+    let spawns = z.spawns.expect("grzakogenerator.c: an enemy table");
+    let respawn = data.u8(spawns.at(4 * off + 3));
+    game.gr.zako.slots.as_mut().unwrap()[idx as usize].timer =
+        if respawn == 1 { 0x708 } else { -1 };
+}
+
 /// Stops the spawner and clears its enemies, `grZakoGenerator_801CAF08`: scanning off, every
 /// containers' monster and adventure enemy no one holds or grabbed destroyed (kinds 0x2B to
 /// 0x2F and 0xD0 to 0xE7), and every coin.

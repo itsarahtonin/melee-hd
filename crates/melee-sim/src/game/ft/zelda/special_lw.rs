@@ -123,7 +123,7 @@ impl Running<'_> {
         let j = self.bone_joint(gobj, PART_TOP_N);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         let third = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0)));
-        crate::lb::wind::blast(&mut self.game.gr.winds, pos, 0x78, 0.4, 0.003, third);
+        crate::lb::wind::blast(&mut self.game.gr.winds_mut(), pos, 0x78, 0.4, 0.003, third);
         self.game.fighters[f.0].accessory4_cb = Some(CodeRef(t.start_cb));
     }
 

@@ -388,7 +388,7 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
             }
         }
         if std::env::var_os("STAGE_TRACE").is_some() {
-            let g = game.stage_info.map_gobjs[3].unwrap();
+            let g = game.stage_info.raw_parts().map_gobjs[3].unwrap();
             let gp = melee_sim::game::gr::ground::ground_of(&game, g);
             if let melee_sim::game::gr::GroundVars::Map(v) = &game.grounds[gp.0].u.vars {
                 eprintln!(
@@ -417,7 +417,7 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
         }
     }
     set_fp_mode(FpMode::Hardware);
-    let main = game.stage_info.map_gobjs[3].map(|g| {
+    let main = game.stage_info.raw_parts().map_gobjs[3].map(|g| {
         let gp = melee_sim::game::gr::ground::ground_of(&game, g);
         game.grounds[gp.0].u.clone()
     });
@@ -760,7 +760,7 @@ fn piece(ctx: &Ctx, id: u32) -> HSD_GObj<'_> {
 
 /// Our stage object for map `id`.
 fn our_map(r: &Running, id: u32) -> GObjId {
-    r.game.stage_info.map_gobjs[id as usize].expect("a map object")
+    r.game.stage_info.raw_parts().map_gobjs[id as usize].expect("a map object")
 }
 
 thread_local! {
@@ -982,7 +982,7 @@ fn stage_queries() {
         let info = leaf_check::sym("stage_info");
         let mut game = Game::default();
         let vals: Vec<f32> = (0..15).map(|_| floats.next()).collect();
-        let c = &mut game.stage_info.cam_info;
+        let c = game.stage_info.raw_parts_mut().cam_info;
         c.cam_bounds.left = vals[0];
         c.cam_bounds.right = vals[1];
         c.cam_bounds.top = vals[2];
@@ -994,7 +994,7 @@ fn stage_queries() {
         c.cam_angle_down = vals[8];
         c.cam_angle_left = vals[9];
         c.cam_angle_right = vals[10];
-        let b = &mut game.stage_info.blast_zone;
+        let b = game.stage_info.raw_parts_mut().blast_zone;
         b.left = vals[11];
         b.right = vals[12];
         b.top = vals[13];
@@ -1305,7 +1305,12 @@ fn stage_color_scripts() {
                 fns::grMaterial_801C9604(ctx, piece(ctx, 0), handle(ctx, s), 0);
             };
             let start_ours = move |r: &mut Running, _: &Maps| {
-                let yaku = r.game.stage_info.yakumono_param.expect("yakumono_param");
+                let yaku = r
+                    .game
+                    .stage_info
+                    .raw_parts()
+                    .yakumono_param
+                    .expect("yakumono_param");
                 let s = r.data.ptr(yaku.at(4 * script));
                 material::start_script(r.game, r.data, our_map(r, 0), s, 0);
             };

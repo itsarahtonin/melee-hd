@@ -1022,8 +1022,8 @@ impl Running<'_> {
         let frames = self.game.one_player.match_exit.match_end.frame_count;
         // `Ground_801C1DE4`: the targets left and the stage's targets.
         let (left, total) = (
-            i32::from(self.game.stage_info.targets_left),
-            i32::from(self.game.stage_info.target_count),
+            i32::from(self.game.stage_info.targets_left()),
+            i32::from(self.game.stage_info.target_count()),
         );
         if left == 0 {
             super::one_player::record_target_clear(self.game, sel, frames);

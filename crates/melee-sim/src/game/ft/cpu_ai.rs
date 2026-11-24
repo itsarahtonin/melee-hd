@@ -359,7 +359,7 @@ impl Running<'_> {
     #[doc(alias = "grCorneria_801E2E50")]
     pub(super) fn corneria_ceiling_floor(&self, line: i32) -> bool {
         // Gr_Kind_Corneria.
-        self.game.stage_info.grkind == GrKind::Corneria
+        self.game.stage_info.ground_kind_id() == GrKind::Corneria
             && line != -1
             && self
                 .game

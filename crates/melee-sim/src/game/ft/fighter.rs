@@ -544,9 +544,9 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
     g.blast_zone_check(gobj);
     let si = &g.game.stage_info;
     let (bottom, y_off, blast_bottom) = (
-        reg(si.cam_info.cam_bounds.bottom),
-        reg(si.cam_info.cam_y_offset),
-        reg(si.blast_zone.bottom),
+        reg(si.camera_settings().cam_bounds.bottom),
+        reg(si.camera_settings().cam_y_offset),
+        reg(si.blast_zone().bottom),
     );
     let fp = &mut g.game.fighters[f.0];
     if fp.map_coll_done {
@@ -760,8 +760,8 @@ pub fn catch_devices(g: &mut Running, gobj: GObjId) {
         return;
     }
     let mut i = 0;
-    while i < g.game.gr.devices.bury_count {
-        let d = &g.game.gr.devices;
+    while i < g.game.gr.devices().bury_count {
+        let d = &g.game.gr.devices();
         let slot = i as usize;
         i += 1;
         let Some(ground) = d.bury[slot] else {
@@ -832,7 +832,7 @@ pub fn proc_coll_pos(g: &mut Running, gobj: GObjId) {
             Some(acc),
         );
     }
-    let ci = &g.game.stage_info.cam_info;
+    let ci = &g.game.stage_info.camera_settings();
     let (x_off, y_off) = (ci.cam_x_offset, ci.cam_y_offset);
     // `Stage_GetCamBoundsBottomOffset`, inline.
     let bottom = fp::fadds(reg(ci.cam_bounds.bottom), reg(y_off));

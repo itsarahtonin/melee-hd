@@ -1493,7 +1493,7 @@ fn a_ruleset_match_ignores_the_disc_pace() {
                     m.recycle(f);
                 }
                 // A transformation file registered from its buffer (`kind` 1).
-                transformed |= (runs[0].game.gr.archives.iter())
+                transformed |= (runs[0].game.gr.raw_parts().archives.iter())
                     .any(|a| a.as_ref().is_some_and(|a| a.kind == 1));
                 if gameplay(&runs[0].game) != gameplay(&runs[1].game) {
                     return Some(tick);
@@ -1665,8 +1665,8 @@ fn a_live_match_on_the_consoles_counters_plays_back_the_same() {
 /// the joints' stamp and each joint's, the family ids, the particles' display frames and the
 /// frame each app-SRT last set its matrix up in.
 fn playback_counters(g: &mut melee_sim::game::state::Game, play: &melee_sim::game::state::Game) {
-    g.gr.coll_stamp = play.gr.coll_stamp;
-    g.gr.coll_generation = play.gr.coll_generation;
+    g.gr.set_coll_stamp(play.gr.coll_stamp());
+    *g.gr.raw_parts_mut().coll_generation = *play.gr.raw_parts().coll_generation;
     if let (Some(a), Some(b)) = (g.geometry.as_mut(), play.geometry.as_ref()) {
         let (a, b) = (a.raw_parts_mut(), b.raw_parts());
         *a.generation = b.generation;

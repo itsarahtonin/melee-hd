@@ -1238,7 +1238,7 @@ fn greatbay_platform() {
             &mut r.game.objs,
             r.data,
             &mut r.game.grounds,
-            r.game.gr.greatbay_yakumono,
+            *r.game.gr.raw_parts().greatbay_yakumono,
             g,
             &cd,
             call.regs.gpr[6] as i32,
@@ -3646,7 +3646,7 @@ fn garden_river() {
             .expect("the fighter's GObj");
         let pull = jungle_japes::river(r, ground, fighter);
         if let Some(v) = pull {
-            r.game.stage_info.barrel_pos = v;
+            *r.game.stage_info.raw_parts_mut().barrel_pos = v;
         }
         Ret::Int(u32::from(pull.is_some()))
     };
@@ -4301,9 +4301,9 @@ fn kongo_path() {
         let (at, rot) =
             melee_sim::game::gr::ground::spline_pose(r.data, spline, call.regs.fpr[1].ps0 as f32);
         if let Some(at) = at {
-            r.game.stage_info.guides.front_near = at;
+            r.game.stage_info.raw_parts_mut().guides.front_near = at;
         }
-        r.game.stage_info.guides.front_far = rot;
+        r.game.stage_info.raw_parts_mut().guides.front_far = rot;
         Ret::Nothing
     };
     let si = leaf_check::sym("stage_info");
@@ -4322,7 +4322,7 @@ fn kongo_path() {
         if let Some(v) =
             melee_sim::hsd::spline::tangent(r.data, spline, call.regs.fpr[1].ps0 as f32)
         {
-            r.game.stage_info.guides.front_near = v;
+            r.game.stage_info.raw_parts_mut().guides.front_near = v;
         }
         Ret::Nothing
     };
@@ -4880,7 +4880,7 @@ fn greens_wind() {
             .get(&call.regs.gpr[4])
             .expect("the fighter's GObj");
         let push = green_greens::wind_push(r, ground, fighter);
-        r.game.stage_info.barrel_pos = push.unwrap_or(Vec3::ZERO);
+        *r.game.stage_info.raw_parts_mut().barrel_pos = push.unwrap_or(Vec3::ZERO);
         Ret::Int(u32::from(push.is_some()))
     };
     let out = |c: &mut Call| c.regs.gpr[5] = leaf_check::sym("stage_info") + 0x730;
@@ -5596,10 +5596,15 @@ fn zebes_lava() {
         // The hit it hands back is the parameters' (their word at 0x2C), which the original
         // stores through r5.
         if let Some(h) = hit {
-            let param = r.game.gr.zebes_yakumono.expect("yakumono_param");
+            let param = r
+                .game
+                .gr
+                .raw_parts()
+                .zebes_yakumono
+                .expect("yakumono_param");
             assert_eq!(Some(h), r.data.ptr(param.at(0x2C)));
             let word = peek_u32(call, peek_u32(call, ZEBES_PARAM) + 0x2C);
-            r.game.stage_info.barrel_pos.x = f32::from_bits(word);
+            r.game.stage_info.raw_parts_mut().barrel_pos.x = f32::from_bits(word);
         }
         Ret::Int(u32::from(hit.is_some()))
     };
@@ -6185,7 +6190,7 @@ fn onett_roof() {
     let f = "grOnett_801E40E4";
     let roof = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = onett_ground(maps, call.regs.gpr[3]);
-        let param = r.game.gr.onett_yakumono;
+        let param = *r.game.gr.raw_parts().onett_yakumono;
         melee_sim::game::gr::onett::roof_landed(
             &mut r.game.grounds[g.0],
             param,
@@ -6284,7 +6289,7 @@ fn onett_awnings() {
     }
     let landed = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = onett_ground(maps, call.regs.gpr[3]);
-        let param = r.game.gr.onett_yakumono;
+        let param = *r.game.gr.raw_parts().onett_yakumono;
         let coll_kind = coll_kind(call);
         onett::awning_landed(
             &mut r.game.grounds[g.0],
@@ -7326,7 +7331,7 @@ fn inishie1_lifts() {
             .grounds
             .get(&call.regs.gpr[3])
             .expect("the stage's object");
-        let param = r.game.gr.inishie1_yakumono;
+        let param = *r.game.gr.raw_parts().inishie1_yakumono;
         let a = &call.regs.gpr;
         let (joint, x50, kind) = (a[4] as i32, a[6] as i32, a[7] as i32);
         mushroom_kingdom::lift_touched(&mut r.game.grounds, param, r.data, g, joint, x50, kind);
@@ -9244,7 +9249,7 @@ fn starfox_lasers() {
         let target = vec_arg(call, 5);
         let scale = call.regs.fpr[1].ps0 as f32;
         // The shot's sound, which its caller played just before (Corneria's or Venom's).
-        let sfx = if r.game.stage_info.grkind == melee_sim::game::gr::GrKind::Venom {
+        let sfx = if *r.game.stage_info.raw_parts().grkind == melee_sim::game::gr::GrKind::Venom {
             0x6B6C9
         } else {
             0x55734
@@ -10188,7 +10193,7 @@ fn castle_bills() {
     let at = |r: &mut Running, _: &Maps, _: &Call| {
         let found = peachs_castle::bill_position(r.game, r.data);
         if let Some(v) = found {
-            r.game.stage_info.barrel_pos = v;
+            *r.game.stage_info.raw_parts_mut().barrel_pos = v;
         }
         Ret::Int(u32::from(found.is_some()))
     };
@@ -10476,7 +10481,7 @@ fn castle_moat() {
                 .expect("the fighter's GObj");
             let push = peachs_castle::moat(r, ground, fighter);
             if let Some(v) = push {
-                r.game.stage_info.barrel_pos = v;
+                *r.game.stage_info.raw_parts_mut().barrel_pos = v;
             }
             Ret::Int(u32::from(push.is_some()))
         };
@@ -11023,7 +11028,7 @@ fn mutecity_callbacks() {
     use melee_sim::game::gr::mute_city;
     let d = dir(MC);
     let touched = |r: &mut Running, maps: &Maps, call: &Call| {
-        let live = r.game.gr.mutecity.track_live;
+        let live = r.game.gr.raw_parts().mutecity.track_live;
         let kind = call.regs.gpr[7] as i32;
         let owner = mc_coll_mut(r, maps, call).gobj;
         let item = owner.is_some_and(|o| r.game.world.gobjs[o.0].p_link == 9);
@@ -11061,7 +11066,12 @@ fn mutecity_callbacks() {
     let hazard = |r: &mut Running, _: &Maps, call: &Call| {
         let desc = mute_city::line_hazard(r.game, r.data, call.regs.gpr[3] as i32);
         // Its address from the parameters' (both in the stage's archive).
-        let p = r.game.gr.mutecity_yakumono.expect("the parameters");
+        let p = r
+            .game
+            .gr
+            .raw_parts()
+            .mutecity_yakumono
+            .expect("the parameters");
         let base = peek_u32(call, MC_PARAM);
         Ret::Int(desc.map_or(0, |d| base.wrapping_add(d.offset.wrapping_sub(p.offset))))
     };
@@ -12094,7 +12104,7 @@ fn bigblue_callbacks() {
     let touched = |r: &mut Running, maps: &Maps, call: &Call| {
         let coll = coll_arg(r, maps, call);
         let g = bb_cars_ground(maps, call);
-        let param = r.game.gr.bigblue_yakumono;
+        let param = *r.game.gr.raw_parts().bigblue_yakumono;
         big_blue::car_touched(
             &mut r.game.grounds[g.0],
             param,

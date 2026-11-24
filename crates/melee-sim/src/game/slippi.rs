@@ -869,7 +869,7 @@ impl super::state::Running<'_> {
     }
 
     fn neutral_spawn_at(&mut self, slot: i32, place: i32, teams: bool) {
-        let stage = self.game.gr.stkind;
+        let stage = self.game.gr.stage_kind();
         let pos = match NEUTRAL_SPAWNS.iter().find(|(s, _)| *s == stage) {
             Some((_, points)) => {
                 let [x, y] = points[4 * usize::from(teams) + place as usize];

@@ -147,8 +147,7 @@ impl Running<'_> {
             let intensity = self
                 .game
                 .gr
-                .param
-                .as_ref()
+                .ground_param()
                 .map_or(128, |p| i32::from(p.shadow_intensity)) as u8;
             self.game.objs.shadows[s.0].intensity = intensity;
             let b = self.game.camera.subject(cm);

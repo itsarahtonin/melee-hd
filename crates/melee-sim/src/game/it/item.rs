@@ -261,7 +261,9 @@ pub fn article_of(game: &Game, data: &Archives, kind: i32) -> Option<DataRef> {
                 .at(4 * (kind - ItKind::FIRST_POKEMON.id()) as u32),
         )
     } else {
-        let a = game.gr.stage_articles[(kind - ItKind::OldGoomba.id()) as usize];
+        let a = game
+            .gr
+            .stage_article((kind - ItKind::OldGoomba.id()) as usize);
         assert!(
             a.is_some(),
             "not found zako model data! check ground dat file!"

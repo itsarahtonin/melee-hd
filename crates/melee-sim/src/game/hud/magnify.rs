@@ -125,8 +125,7 @@ impl Running<'_> {
         let p = self
             .game
             .gr
-            .param
-            .as_ref()
+            .ground_param()
             .expect("stage_info.param is null");
         let colors = (
             p.bubble_color_0.clone(),

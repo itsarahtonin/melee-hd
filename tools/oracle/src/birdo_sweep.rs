@@ -203,7 +203,7 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
         step(&mut s, &mut reads, &disc, &mut next, p);
         let g = &s.game;
         if g.fighters.used() > 0
-            && g.stage_info.grkind == GrKind::Inishie2
+            && g.stage_info.ground_kind_id() == GrKind::Inishie2
             && g.player_entity(0).is_some()
         {
             break;

@@ -202,7 +202,7 @@ fn reset_timer(game: &mut Game, data: &Archives) {
     let diff = fp::frsp(f64::from(hi.wrapping_sub(lo)));
     let t = fp::fctiwz(fp::fmadds(diff, f, fp::frsp(f64::from(lo))));
     game.it.spawn.spawner.timer = t;
-    let scale = crate::game::gr::ground::item_freq_scale(game, data, game.gr.stkind);
+    let scale = crate::game::gr::ground::item_freq_scale(game, data, game.gr.stage_kind());
     let t = fp::fmuls(fp::frsp(f64::from(t)), scale);
     game.it.spawn.spawner.timer = fp::fctiwz(t);
 }
@@ -318,19 +318,6 @@ pub fn build_monsters(game: &mut Game, data: &Archives) {
     t.weights = Some(weights);
 }
 
-/// The stage's item counts by kind (`Ground_801C2AD8`, `stage_info.xA0` on).
-#[doc(alias = "Ground_801C2AD8")]
-pub fn stage_counts(game: &Game) -> [i32; 35] {
-    let si = &game.stage_info;
-    std::array::from_fn(|i| match i {
-        0 => si.item_frequencies,
-        _ => {
-            let at = 4 * (i - 1);
-            i32::from_be_bytes(si.item_frequencies_rest[at..at + 4].try_into().unwrap())
-        }
-    })
-}
-
 /// Sets up the match's random items, `it_8026D018`: the tables, and the process with its
 /// first countdown, unless the rules have none (or rain bob-ombs).
 #[doc(alias = "gm_8016AEA4")]
@@ -342,7 +329,7 @@ pub fn setup(r: &mut Running) {
     }
     let mask = game.vs.start.item_switch;
     game.it.spawn.spawner.mask = mask;
-    let counts = stage_counts(game);
+    let counts = game.stage_info.item_counts();
     let weight = game.vs_item_weight();
     if mask == 0 || game.vs_item_freq() == -1 {
         return;

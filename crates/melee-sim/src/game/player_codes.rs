@@ -606,17 +606,8 @@ impl Game {
         if !self.rules.player_camera() {
             return;
         }
-        let c = &mut self.stage_info.cam_info;
-        let [tilt, pan, x20, x24, ratio, zoom, smooth, rate, depth] = CAMERA.map(f32::from_bits);
-        c.cam_vertical_tilt = tilt;
-        c.cam_pan_degrees = pan;
-        c.cam_pan_rate = x20;
-        c.cam_tilt_rate = x24;
-        c.cam_track_ratio = ratio;
-        c.cam_fixed_zoom = zoom;
-        c.cam_track_smooth = smooth;
-        c.cam_zoom_rate = rate;
-        c.cam_max_depth = depth;
+        self.stage_info
+            .set_camera_motion(CAMERA.map(f32::from_bits));
     }
 
     /// Whether the invisible techs code hides the fighter now.

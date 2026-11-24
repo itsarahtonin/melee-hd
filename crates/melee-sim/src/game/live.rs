@@ -191,7 +191,7 @@ impl Counters {
     pub fn of(g: &Game) -> Self {
         let d = &g.objs.psdisp;
         Counters {
-            coll_stamp: g.gr.coll_stamp,
+            coll_stamp: g.gr.coll_stamp(),
             coll_generation: super::gr::ground::generation(g),
             idnum: g.objs.generators.idnum,
             ps_frame: d.frame,
@@ -203,11 +203,8 @@ impl Counters {
     /// Puts the counters in `g`: a link's cached particle is the other game's, freed memory to
     /// this one, which reading stops (`psdisp::sort`) until the link is sorted again.
     pub fn put(&self, g: &mut Game) {
-        g.gr.coll_stamp = self.coll_stamp;
-        match &mut g.geometry {
-            Some(geo) => geo.set_generation(self.coll_generation),
-            None => g.gr.coll_generation = self.coll_generation,
-        }
+        g.gr.set_coll_stamp(self.coll_stamp);
+        super::gr::ground::set_generation(g, self.coll_generation);
         g.objs.generators.idnum = self.idnum;
         let d = &mut g.objs.psdisp;
         d.frame = self.ps_frame;
@@ -258,7 +255,7 @@ impl Carried {
         Carried {
             arrows: (g.hud.arrows.colors.clone(), g.hud.arrows.players),
             ef_ids: g.ef.params.map(|p| p.gfx_id),
-            start_points: g.gr.start_points,
+            start_points: g.gr.start_points(),
             ft_track: g.it.ft_track.clone(),
             coll: g.coll.clone(),
         }
@@ -269,7 +266,9 @@ impl Carried {
         for (p, &id) in g.ef.params.iter_mut().zip(&self.ef_ids) {
             p.gfx_id = id;
         }
-        g.gr.start_points = self.start_points;
+        for (slot, &at) in self.start_points.iter().enumerate() {
+            g.gr.set_start_point(slot, at);
+        }
         g.it.ft_track.clone_from(&self.ft_track);
         g.coll.carry_from(&self.coll);
     }
@@ -377,7 +376,7 @@ impl Game {
         self.ef.count = live.ef.count;
         self.ef.load_kind = live.ef.load_kind;
         Carried::of(live).put(self);
-        self.stage_info.bits.clone_from(&live.stage_info.bits);
+        self.stage_info.carry_bits_from(&live.stage_info);
         Counters::of(live).put(self);
     }
 

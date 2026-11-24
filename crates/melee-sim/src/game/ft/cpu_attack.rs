@@ -567,7 +567,7 @@ impl Running<'_> {
     fn cpu_air_attack_ok(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         // Gr_Kind_Kongo.
-        if self.game.stage_info.grkind == GrKind::Kongo
+        if self.game.stage_info.ground_kind_id() == GrKind::Kongo
             && (fpp.cur_pos.x > 25.0 || fpp.cur_pos.x < -25.0)
         {
             return false;

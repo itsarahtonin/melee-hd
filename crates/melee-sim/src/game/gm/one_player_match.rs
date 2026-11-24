@@ -639,7 +639,7 @@ impl Running<'_> {
         if g.vs.start.run_kind == 2 && super::super::gr::ground::flags(g, 0x20) != 0 {
             run.counters[3] = 1;
         }
-        if g.vs_target_test() && g.stage_info.targets_left == 0 {
+        if g.vs_target_test() && g.stage_info.targets_left() == 0 {
             run.counters[2] = 1;
         }
         let o = end.outcome;

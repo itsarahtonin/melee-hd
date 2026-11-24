@@ -89,7 +89,8 @@ pub(crate) fn import_screen(imp: &mut Importer, which: u8, ud: u32) -> UserData 
             ..Default::default()
         }
     };
-    imp.game.gr.stadium.screens[which as usize] = Some(Screen { addr: ud, ..screen });
+    imp.game.gr.raw_parts_mut().stadium.screens[which as usize] =
+        Some(Screen { addr: ud, ..screen });
     UserData::StadiumScreen(which)
 }
 
@@ -105,7 +106,7 @@ pub(crate) fn compare_screen(cmp: &mut Comparer, path: &str, which: u8, t: u32) 
         (Some(which), HSD_FREE),
         (screen_of_render(render), release),
     );
-    let Some(s) = cmp.game.gr.stadium.screens[which as usize].as_ref() else {
+    let Some(s) = cmp.game.gr.raw_parts().stadium.screens[which as usize].as_ref() else {
         cmp.diff(path, "screen user data", "none", format!("{ud:#x}"));
         return;
     };
@@ -144,17 +145,17 @@ pub(crate) fn compare_screen(cmp: &mut Comparer, path: &str, which: u8, t: u32) 
 /// The stage's statics: its parameters' pointer and the transformation files memory holds.
 pub(crate) fn import_statics(imp: &mut Importer) {
     let yaku = imp.cap.u32(YAKUMONO);
-    imp.game.gr.stadium.yakumono = imp.data_or_unhandled(yaku);
+    imp.game.gr.raw_parts_mut().stadium.yakumono = imp.data_or_unhandled(yaku);
     for (i, name) in melee_sim::game::gr::pokemon_stadium::FILES
         .iter()
         .enumerate()
     {
-        imp.game.gr.stadium.files[i] = imp.data.archive_named(name);
+        imp.game.gr.raw_parts_mut().stadium.files[i] = imp.data.archive_named(name);
     }
     // The transformation buffer's address, as map 2 holds it.
     let info = sym("stage_info");
     let map2 = imp.cap.u32(info + 0x180 + 8);
-    imp.game.gr.stadium.buffer_address =
+    imp.game.gr.raw_parts_mut().stadium.buffer_address =
         if imp.cap.u32(info + 0x88) as i32 == melee_sim::game::gr::GrKind::PStadium && map2 != 0 {
             imp.cap.u32(imp.cap.u32(map2 + 0x2C) + 0xC4 + 8)
         } else {
@@ -167,7 +168,7 @@ pub(crate) fn compare_statics(cmp: &mut Comparer) {
     let yaku = cmp.u32(YAKUMONO);
     cmp.compare_data(
         "grpstadium yakumono_param",
-        cmp.game.gr.stadium.yakumono,
+        cmp.game.gr.raw_parts().stadium.yakumono,
         yaku,
     );
 }

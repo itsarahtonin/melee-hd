@@ -121,7 +121,7 @@ impl Running<'_> {
         let s = reg(fp.scale.y);
         let v = |o: u32| mem(fp::fmuls(reg(self.data.f32(x3c.at(o))), s));
         let (x0, y0, z0) = (v(0), v(4), v(8));
-        let zoom = reg(self.game.stage_info.cam_info.cam_fixed_zoom);
+        let zoom = reg(self.game.stage_info.camera_settings().cam_fixed_zoom);
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
         let (h, facing) = if reg(facing) == 1.0 {
             ([z0, mem(fp::fmuls(reg(y0), zoom))], 1.0)

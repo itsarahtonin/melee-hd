@@ -501,7 +501,7 @@ impl Session {
         // What the executable's data holds that the comparison reads: the stage selected
         // (`selected_stage`, Fountain of Dreams) and the camera's default field of view
         // (`cm_803BCCA0`'s, 38 degrees).
-        game.gr.stkind = 2;
+        game.gr.set_stage_kind(2);
         game.camera.set_default_fov(38.0);
         game.audio.disc = setup.disc;
         game.audio.dsp = setup.dsp;
@@ -565,7 +565,7 @@ impl Session {
             archive: self.data.add(Archive::raw(&file.bytes)),
         };
         // The executable's data the dummy stage points into (the results screen's).
-        self.game.gr.defaults = Some(
+        self.game.gr.set_defaults(
             self.data
                 .add(Archive::parse(&super::gr::exe_data::FILE).expect("the executable's data")),
         );
@@ -943,7 +943,8 @@ impl Session {
         }
         if grkind == super::gr::GrKind::PStadium {
             for (i, name) in super::gr::pokemon_stadium::FILES.iter().enumerate() {
-                self.game.gr.stadium.files[i] = Some(self.game.ft.data.files.archive(name));
+                let file = self.game.ft.data.files.archive(name);
+                self.game.gr.set_stadium_file(i, file);
             }
         }
         // Training's entry loads its menu's files after the stage's song starts, so the

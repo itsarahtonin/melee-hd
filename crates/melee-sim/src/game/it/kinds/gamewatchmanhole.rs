@@ -104,7 +104,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
         let lid = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
         let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, lid, None);
         crate::lb::wind::blast(
-            &mut r.game.gr.winds,
+            &mut r.game.gr.winds_mut(),
             pos,
             120,
             3.0,

@@ -941,7 +941,7 @@ impl Running<'_> {
             self.ro_f(f, r, attr::N_SLOPE),
             self.ro_f(f, r, attr::N_TURN_DONE),
         );
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         let fp = &mut self.game.fighters[f.0];
         let floor = crate::mp::friction(grkind, fp.coll_data.floor.flags);
         let scale = fp::fmuls(accel, reg(floor));

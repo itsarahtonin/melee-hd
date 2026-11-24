@@ -460,7 +460,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     change_keeping_bone(r, gobj, 5, 0);
     let pos = item(r.game, gobj).pos;
     crate::lb::wind::blast(
-        &mut r.game.gr.winds,
+        &mut r.game.gr.winds_mut(),
         pos,
         0x78,
         1.0,

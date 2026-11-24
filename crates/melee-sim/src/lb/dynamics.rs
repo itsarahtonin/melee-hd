@@ -123,7 +123,7 @@ impl Game {
             let id = self.fighter_dynamics.alloc(left.unwrap_or_default());
             assert_eq!(id, k, "a fresh pool's slots in order");
         }
-        self.gr.winds = crate::lb::wind::Winds::default();
+        *self.gr.winds_mut() = crate::lb::wind::Winds::default();
         self.reset_dynamics();
     }
 
@@ -137,15 +137,15 @@ impl Game {
             d.next = (k + 1 < LINKS).then_some(DynamicsId(k + 1));
         }
         self.ft.dynamics_free = Some(DynamicsId(0));
-        crate::lb::wind::reset(&mut self.gr.winds);
-        self.gr.wind_level = 0;
+        crate::lb::wind::reset(self.gr.winds_mut());
+        self.gr.set_wind_level(0);
     }
 
     /// Whether a box's wind blows, `lb_80011ABC`: 1 as it starts, 2 while it lasts, -1 as it
     /// stops, else 0.
     #[doc(alias = "lb_80011ABC")]
     pub fn wind_level(&self) -> i32 {
-        self.gr.wind_level
+        self.gr.wind_level()
     }
 
     /// Gives a chain's links back to the free list, last first, `lb_8000FD18`.
@@ -274,8 +274,8 @@ impl Game {
             }
             // The wind.
             let mut force = 0.0;
-            if self.gr.winds.active.is_some() && first_wind <= index {
-                let (wind, strength) = crate::lb::wind::force_at(&self.gr.winds, next_pos);
+            if self.gr.winds().active.is_some() && first_wind <= index {
+                let (wind, strength) = crate::lb::wind::force_at(self.gr.winds(), next_pos);
                 force = reg(strength);
                 let a = dir.angle(wind);
                 if 0.0 != reg(a) {

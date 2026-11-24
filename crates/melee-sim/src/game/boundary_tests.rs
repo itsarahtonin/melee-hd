@@ -14,7 +14,7 @@ struct Boundary {
     readers: &'static [&'static str],
 }
 
-const BOUNDARIES: [Boundary; 2] = [
+const BOUNDARIES: [Boundary; 3] = [
     Boundary {
         name: "the camera (task 13)",
         own: &["melee-sim/src/game/camera.rs"],
@@ -31,6 +31,17 @@ const BOUNDARIES: [Boundary; 2] = [
         ],
         // The heap's image of the vertices, lines, islands and joints.
         readers: &["melee-sim/src/game/export.rs"],
+    },
+    Boundary {
+        name: "the stage (task 27)",
+        own: &["melee-sim/src/game/gr/"],
+        states: &[
+            ("melee-sim/src/game/gr/types.rs", "StageInfo"),
+            ("melee-sim/src/game/gr/mod.rs", "Globals"),
+        ],
+        // The heap's image of the start hooks, the spawner's slots, the stage's leftovers and
+        // its collision data, and the disc's check of whose heap holds the spawner's slots.
+        readers: &["melee-sim/src/game/export.rs", "melee-sim/src/game/disc.rs"],
     },
 ];
 

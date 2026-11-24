@@ -736,11 +736,11 @@ impl Host<GameKinds> for Running<'_> {
                 crate::hsd::export::with_image(|img| {
                     super::export::stadium_screen(game, data, img, which)
                 });
-                let s = self.game.gr.stadium.screens[usize::from(which)].as_ref();
+                let s = self.game.gr.stadium_screen(usize::from(which));
                 crate::hsd::heap::mem_free(s.map_or(0, |s| s.addr));
             }
             UserData::IzumiReflection => {
-                let r = self.game.gr.izumi.reflection.as_ref();
+                let r = self.game.gr.izumi_reflection();
                 crate::hsd::heap::mem_free(r.map_or(0, |r| r.addr));
             }
             // `fn_800138AC`: `HSD_Free`.
