@@ -54,7 +54,7 @@ impl Running<'_> {
             .gallery
             .editor_text
             .expect("the editor's text");
-        &mut self.game.hud.devtext.pool[usize::from(t)]
+        &mut self.game.hud.devtext_mut().pool[usize::from(t)]
     }
 
     /// `_Toy_803114E8`: the unlock editor: its block, its text (id 1, at 40, 40, 14 by 9
@@ -63,7 +63,7 @@ impl Running<'_> {
     #[doc(alias = "_Toy_803114E8")]
     pub(super) fn toy_editor(&mut self) {
         let block = crate::hsd::heap::mem_alloc(0x18);
-        let t = self.game.hud.devtext.create(1, 0x28, 0x28, 0xE, 9);
+        let t = self.game.hud.devtext_mut().create(1, 0x28, 0x28, 0xE, 9);
         self.game.toys.gallery.editor_text = t;
         self.game.toys.gallery.editor = Some(Editor {
             block,
@@ -74,7 +74,7 @@ impl Running<'_> {
             // left, which nothing reads.
             return;
         };
-        self.game.hud.devtext.show(t);
+        self.game.hud.devtext_mut().show(t);
         let text = self.editor_text();
         text.hide_cursor();
         text.no_wrap();
@@ -324,10 +324,10 @@ impl Running<'_> {
         if self.game.toys.gallery.debug_z != 0
             && let Some(t) = self.game.toys.gallery.debug_text.take()
         {
-            self.game.hud.devtext.remove(Link::Held(t));
+            self.game.hud.devtext_mut().remove(Link::Held(t));
         }
         if let Some(t) = self.game.toys.gallery.editor_text.take() {
-            self.game.hud.devtext.remove(Link::Held(t));
+            self.game.hud.devtext_mut().remove(Link::Held(t));
         }
         if let Some(e) = self.game.toys.gallery.editor.take() {
             crate::hsd::heap::mem_free(e.block);

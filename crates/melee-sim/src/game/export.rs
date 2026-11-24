@@ -67,7 +67,7 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         // `&un_804DDBA8[slot]`, a byte each (`un_802FE260`).
         UserData::ArrowSlot(slot) => Some(0x804D_DBA8 + u32::from(slot)),
         // `NameTag_Create`'s heap byte.
-        UserData::NameTagSlot(slot) => known(game.hud.nametags.user_data_addrs[usize::from(slot)]),
+        UserData::NameTagSlot(slot) => known(game.hud.nametag_user_data_addr(slot)),
         UserData::Raw(p) => Some(p.0),
         UserData::Toy(a) => known(a),
         // The select screen's blocks, while their GObjs have them.
@@ -499,7 +499,7 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
         }
     }
     let kind = std::any::type_name::<crate::game::hud::debug_menu::DebugMenu>();
-    if let Some(menus) = &game.hud.devtext.menus {
+    if let Some(menus) = &game.hud.devtext().menus {
         for (slot, m) in menus.iter() {
             if img.in_scene(kind, slot) {
                 debug_menu(game, data, img, slot, m.text);
@@ -555,7 +555,7 @@ const DEVTEXT_SIZE: u32 = 0x34;
 /// `DevText_Remove(&menu->x4)` writes the list's link through it, leaving the next screen (or
 /// null) where the screen was first in its list.
 pub fn debug_menu(game: &Game, data: &Archives, img: &mut Image, slot: u32, text: Option<u8>) {
-    let Some(pool) = &game.hud.devtext.menus else {
+    let Some(pool) = &game.hud.devtext().menus else {
         return;
     };
     let at = pool.addr(slot);

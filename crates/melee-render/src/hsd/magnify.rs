@@ -1,6 +1,6 @@
 //! The magnifier's bubbles: each player off screen is drawn into its bubble's texture with
 //! an EFB copy (`lb_800122C8`, `HSD_ImageDescCopyFromEFB`). The first bubble copies into its
-//! model's own image; the others into the copies' buffers (`ifMagnify::image_descs`), which
+//! model's own image; the others into the copies' buffers (`Magnifier::image_descs`), which
 //! only the presentation reads.
 
 use gekko_fp as fp;

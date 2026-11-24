@@ -67,7 +67,7 @@ fn set_diffuse(objs: &mut Objects, j: JObjId, c: [u8; 3]) {
 impl Game {
     /// The display whose digits' GObj is `gobj`.
     fn display_of(&self, gobj: GObjId) -> Option<usize> {
-        (0..6).find(|&i| self.hud.status.players[i].HUD_parent_entity == Some(gobj))
+        (0..6).find(|&i| self.hud.status.players[i].parent == Some(gobj))
     }
 
     /// Hides every display's digits, `ifStatus_802F6898`.
@@ -455,7 +455,7 @@ impl Running<'_> {
     pub fn create_damage_digits(&mut self, i: usize, place: i32) -> Option<GObjId> {
         let data = self.data;
         let g = &mut *self.game;
-        let root = match g.hud.status.players[i].HUD_parent_entity {
+        let root = match g.hud.status.players[i].parent {
             None => {
                 let o = g.world.create(0xE, 0xF, 0);
                 let j = jobj::load_joint(&mut g.objs, data, g.hud.status.damage_num_joint)
@@ -464,7 +464,7 @@ impl Running<'_> {
                 g.world.setup_gx_link(o, CodeRef(RENDER_DIGITS), 0xB, 0);
                 g.world.setup_proc(o, CodeRef(PROC_DAMAGE), 0x11);
                 g.world.setup_proc(o, CodeRef(PROC_DIGITS), 0x11);
-                g.hud.status.players[i].HUD_parent_entity = Some(o);
+                g.hud.status.players[i].parent = Some(o);
                 j
             }
             Some(o) => match g.world.gobj(o).obj {
@@ -499,14 +499,12 @@ impl Running<'_> {
             p.translation_y[k] = t.y;
         }
         self.init_percent_sign(i);
-        let o = self.game.hud.status.players[i]
-            .HUD_parent_entity
-            .expect("the digits");
+        let o = self.game.hud.status.players[i].parent.expect("the digits");
         self.damage_proc(o);
         let p = &mut self.game.hud.status.players[i];
         p.old_damage = i16::from(p.damage_percent == 0);
         self.damage_digits_proc(o);
-        self.game.hud.status.players[i].HUD_parent_entity
+        self.game.hud.status.players[i].parent
     }
 
     /// The display's character mark, made the first time, posed on the character's icon,
@@ -654,7 +652,7 @@ impl Running<'_> {
     #[doc(alias = "ifStatus_802F6788")]
     pub fn free_damage_display(&mut self, slot: u8) {
         let i = usize::from(slot);
-        if let Some(o) = self.game.hud.status.players[i].HUD_parent_entity.take() {
+        if let Some(o) = self.game.hud.status.players[i].parent.take() {
             gobj::free(self, o);
         }
         if let Some(o) = self.game.hud.status.players[i].next.take() {
@@ -730,7 +728,7 @@ impl Running<'_> {
     #[doc(alias = "ifStatus_802F6E3C")]
     pub fn pause_damage_display(&mut self, slot: i32) {
         let p = &self.game.hud.status.players[slot as usize];
-        let (a, b) = (p.HUD_parent_entity, p.next);
+        let (a, b) = (p.parent, p.next);
         for o in [a, b].into_iter().flatten() {
             self.game.world.clear_flags_2(o);
         }

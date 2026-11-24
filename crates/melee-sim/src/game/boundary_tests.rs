@@ -14,7 +14,7 @@ struct Boundary {
     readers: &'static [&'static str],
 }
 
-const BOUNDARIES: [Boundary; 2] = [
+const BOUNDARIES: [Boundary; 3] = [
     Boundary {
         name: "the camera (task 13)",
         own: &["melee-sim/src/game/camera.rs"],
@@ -31,6 +31,14 @@ const BOUNDARIES: [Boundary; 2] = [
         ],
         // The heap's image of the vertices, lines, islands and joints.
         readers: &["melee-sim/src/game/export.rs"],
+    },
+    Boundary {
+        name: "the HUD (task 32)",
+        own: &["melee-sim/src/game/hud/"],
+        states: &[("melee-sim/src/game/hud/mod.rs", "Hud")],
+        // None: outside it, game code reads only the debug text and the name tags' addresses,
+        // through their accessors.
+        readers: &[],
     },
 ];
 

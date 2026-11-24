@@ -8,8 +8,8 @@ use melee_sim::game::hud::small::{Coins, Hazard};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::UserData;
 use melee_sim::game::structs::{
-    Announcement, CharsLeftTally, CoinCounter, HudIndex, HudLayout, HudStocks, IfStockUserData,
-    JoinerTally, OffscreenArrows, ScInfStcModels, ScoreDisplays, StaticModelDesc, ifTime_data,
+    Announcement, CharsLeftTally, CoinCounter, DamageDisplays, HudLayout, HudStocks, HudTimer,
+    JoinerTally, KoMarks, OffscreenArrows, ScoreDisplays, StaticModelDesc, StockUserData,
 };
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::hsd::sis::TextId;
@@ -161,12 +161,12 @@ impl Importer<'_> {
         };
         let m: &[u8] = &cap.call.mem1;
         let all = HudLayout::import(&mem, IFALL, self);
-        let status = HudIndex::import(&mem, STATUS, self);
+        let status = DamageDisplays::import(&mem, STATUS, self);
         let announcements = core::array::from_fn(|i| {
             Announcement::import(&mem, ANNOUNCEMENTS + i as u32 * Announcement::SIZE, self)
         });
-        let ko_marks = ScInfStcModels::import(&mem, KO_MARKS, self);
-        let time = ifTime_data::import(&mem, TIME, self);
+        let ko_marks = KoMarks::import(&mem, KO_MARKS, self);
+        let time = HudTimer::import(&mem, TIME, self);
         let tm = |s: &mut Self, o: u32| s.import_data(m.w(TIMER_MODELS + o));
         let timer_models = ModelDesc {
             joint: tm(self, 0),
@@ -180,7 +180,7 @@ impl Importer<'_> {
             .flatten();
         let stock = HudStocks::import(&mem, STOCK, self);
         let stock_users = core::array::from_fn(|i| {
-            IfStockUserData::import(&mem, STOCK_USERS + i as u32 * IfStockUserData::SIZE, self)
+            StockUserData::import(&mem, STOCK_USERS + i as u32 * StockUserData::SIZE, self)
         });
         let stock_1774 = JoinerTally::import(&mem, STOCK_1774, self);
         let stock_1a8c = core::array::from_fn(|i| self.gobj_at(m.w(STOCK_1A8C + 4 * i as u32)));
@@ -215,28 +215,28 @@ impl Importer<'_> {
         };
         let arrows = OffscreenArrows::import(&mem, ARROWS, self);
         let scores = ScoreDisplays::import(&mem, SCORES, self);
-        let h = &mut self.game.hud;
-        h.stock = stock;
-        h.stock_users = stock_users;
-        h.stock_1774 = stock_1774;
-        h.stock_1a8c = stock_1a8c;
-        h.stock_1acc = stock_1acc;
-        h.nametags = nametags;
-        h.hazard = hazard;
-        h.coins = coins;
-        h.arrows = arrows;
-        h.arrows_hidden = m.w(ARROWS_HIDDEN) as i32;
-        h.scores = scores;
-        h.all = all;
-        h.hidden = m.b(HIDDEN_FLAG) != 0;
-        h.archive = archive;
-        h.status = status;
-        h.status_count = m.b(STATUS_COUNT);
-        h.status_flip = m.b(STATUS_COUNT + 1) as i8;
-        h.announcements = announcements;
-        h.ko_marks = ko_marks;
-        h.time = time;
-        h.timer_models = timer_models;
+        let h = self.game.hud.raw_parts_mut();
+        *h.stock = stock;
+        *h.stock_users = stock_users;
+        *h.stock_1774 = stock_1774;
+        *h.stock_1a8c = stock_1a8c;
+        *h.stock_1acc = stock_1acc;
+        *h.nametags = nametags;
+        *h.hazard = hazard;
+        *h.coins = coins;
+        *h.arrows = arrows;
+        *h.arrows_hidden = m.w(ARROWS_HIDDEN) as i32;
+        *h.scores = scores;
+        *h.all = all;
+        *h.hidden = m.b(HIDDEN_FLAG) != 0;
+        *h.archive = archive;
+        *h.status = status;
+        *h.status_count = m.b(STATUS_COUNT);
+        *h.status_flip = m.b(STATUS_COUNT + 1) as i8;
+        *h.announcements = announcements;
+        *h.ko_marks = ko_marks;
+        *h.time = time;
+        *h.timer_models = timer_models;
     }
 
     /// A GObj a global points to.
@@ -274,7 +274,7 @@ impl Importer<'_> {
             .get(&gobj)
             .copied()
             .or_else(|| (gobj != 0).then(|| panic!("devtext_gobj {gobj:#x} isn't linked")));
-        self.game.hud.devtext = d;
+        *self.game.hud.devtext_mut() = d;
     }
 }
 
@@ -297,7 +297,7 @@ impl Comparer<'_> {
             base: MEM1,
         };
         let game = self.game;
-        let h = &game.hud;
+        let h = game.hud.raw_parts();
         h.all.compare(&mem, IFALL, "hud all", self);
         h.status.compare(&mem, STATUS, "hud status", self);
         for (i, e) in h.announcements.iter().enumerate() {
@@ -319,7 +319,7 @@ impl Comparer<'_> {
         }
         h.stock.compare(&mem, STOCK, "hud stock", self);
         for (i, u) in h.stock_users.iter().enumerate() {
-            let at = STOCK_USERS + i as u32 * IfStockUserData::SIZE;
+            let at = STOCK_USERS + i as u32 * StockUserData::SIZE;
             u.compare(&mem, at, &format!("hud stock user {i}"), self);
         }
         h.stock_1774
@@ -333,7 +333,7 @@ impl Comparer<'_> {
         }
         h.stock_1acc
             .compare(&mem, STOCK_1ACC, "hud stock 1acc", self);
-        let n = &h.nametags;
+        let n = h.nametags;
         n.model
             .compare(&mem, NAMETAG_MODEL, "hud nametag model", self);
         for (i, g) in n.gobjs.iter().enumerate() {
@@ -361,7 +361,7 @@ impl Comparer<'_> {
                 m.w(NAMETAG_CANVAS) as i32,
             ),
         );
-        let z = &h.hazard;
+        let z = h.hazard;
         self.compare_gobj("hud hazard", z.gobj, m.w(HAZARD));
         self.check(
             "hud hazard",
@@ -392,7 +392,7 @@ impl Comparer<'_> {
         self.check(
             "hud arrows",
             "hidden",
-            h.arrows_hidden,
+            *h.arrows_hidden,
             m.w(ARROWS_HIDDEN) as i32,
         );
         h.scores.compare(&mem, SCORES, "hud scores", self);
@@ -405,7 +405,7 @@ impl Comparer<'_> {
             .archive
             .is_some_and(|a| !self.data.loaded.iter().any(|l| l.id == a));
         let theirs = if gone && archive != 0 {
-            h.archive
+            *h.archive
         } else {
             (archive != 0)
                 .then(|| self.data.get(m.w(archive + 0x20)).map(|d| d.archive))
@@ -414,7 +414,7 @@ impl Comparer<'_> {
         self.check(
             "hud all",
             "hidden, archive, display count and flip",
-            (h.hidden, h.archive, h.status_count, h.status_flip),
+            (*h.hidden, *h.archive, *h.status_count, *h.status_flip),
             (
                 m.b(HIDDEN_FLAG) != 0,
                 theirs,
@@ -427,7 +427,7 @@ impl Comparer<'_> {
     fn devtext(&mut self) {
         let mem = self.mem;
         let game = self.game;
-        let d = &game.hud.devtext;
+        let d = game.hud.devtext();
         let pool = sym("devtext_pool");
         // A screen on the free list keeps the glyph buffer its creator gave it (a debug menu's,
         // in a heap a later scene makes anew), which `DevText_Create` replaces before anything
@@ -726,7 +726,7 @@ impl Comparer<'_> {
         use melee_sim::game::hud::debug_tables::WORDS;
         let mem = self.mem;
         let game = self.game;
-        let d = &game.hud.devtext;
+        let d = game.hud.devtext();
         let pool = sym("devtext_pool");
         let addr = |slot: Option<u32>| {
             slot.map_or(0, |s| d.menus.as_ref().expect("the menus' pool").addr(s))
@@ -793,7 +793,7 @@ impl Comparer<'_> {
                 mem.b(sym("un_804D6E4C")),
             ),
         );
-        let v = &game.hud.debug;
+        let v = game.hud.raw_parts().debug;
         if let Some(at) = (0..0x190).find(|&i| v.settings[i] != mem.b(SETTINGS + i as u32)) {
             self.diff(
                 "un_803FA258",
@@ -918,7 +918,7 @@ pub(crate) fn user_data(imp: &mut Importer, release: u32, ud: u32) -> Option<Use
 /// The HUD's user data set without a kind (the stock icons' and the arrows'), by where it
 /// points.
 pub(crate) fn kindless_user_data(ud: u32) -> Option<UserData> {
-    let size = IfStockUserData::SIZE;
+    let size = StockUserData::SIZE;
     if (STOCK_USERS..STOCK_USERS + 6 * size).contains(&ud)
         && (ud - STOCK_USERS).is_multiple_of(size)
     {

@@ -246,7 +246,7 @@ pub struct ConsoleAt {
 /// console's and stay its playback's in play.
 #[derive(Clone, Debug)]
 pub struct Carried {
-    pub arrows: ([super::structs::_GXColor; 4], [u8; 4]),
+    pub hud: super::hud::Carried,
     pub ef_ids: [u16; 8],
     pub start_points: [crate::vec::Vec3; 4],
     pub ft_track: super::structs::Item_FtTrack,
@@ -256,7 +256,7 @@ pub struct Carried {
 impl Carried {
     fn of(g: &Game) -> Self {
         Carried {
-            arrows: (g.hud.arrows.colors.clone(), g.hud.arrows.players),
+            hud: g.hud.carried(),
             ef_ids: g.ef.params.map(|p| p.gfx_id),
             start_points: g.gr.start_points,
             ft_track: g.it.ft_track.clone(),
@@ -265,7 +265,7 @@ impl Carried {
     }
 
     fn put(&self, g: &mut Game) {
-        (g.hud.arrows.colors, g.hud.arrows.players) = (self.arrows.0.clone(), self.arrows.1);
+        g.hud.take_carried(&self.hud);
         for (p, &id) in g.ef.params.iter_mut().zip(&self.ef_ids) {
             p.gfx_id = id;
         }
@@ -356,22 +356,7 @@ impl Game {
                 p.idesc = q.idesc;
             }
         }
-        // The HUD's values the next match's setup leaves: the off-screen arrows' colors and
-        // slots (`un_802FE260` resets which are shown), the announcements' callbacks, lines
-        // and marks; their models and GObjs stay the menus'.
-        let (a, b) = (&mut self.hud.arrows, &live.hud.arrows);
-        (a.shown, a.sides, a.silent, a.sounding, a.sound_timer) =
-            (b.shown, b.sides, b.silent, b.sounding, b.sound_timer);
-        for (e, l) in self
-            .hud
-            .announcements
-            .iter_mut()
-            .zip(&live.hud.announcements)
-        {
-            let (gobj, model) = (e.gobj, e.model);
-            e.clone_from(l);
-            (e.gobj, e.model) = (gobj, model);
-        }
+        self.hud.take_match(&live.hud);
         self.bgflash.scale = live.bgflash.scale;
         self.gm.pause.slot = live.gm.pause.slot;
         self.ef.count = live.ef.count;
