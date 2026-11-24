@@ -1289,7 +1289,7 @@ impl Running<'_> {
                 }
             }
             if level == 0x1F {
-                let falls = self.game.player(0).ext_u32(0xCFC);
+                let falls = self.game.player(0).ext.kind_ea_kos;
                 kos = self.game.player_kos(0, 1).wrapping_sub(falls);
             }
             // `if (var_r27 > -1)`: an unsigned compare with 0xFFFFFFFF, never true.
@@ -1589,9 +1589,9 @@ impl Running<'_> {
         if !self.event_time_up() {
             return;
         }
-        let theirs = self.game.player(1).ext_u32(0xD00) as i32;
+        let theirs = self.game.player(1).ext.kind_ea_falls as i32;
         let kos = self.game.player_kos(0, 1) as i32;
-        let falls = self.game.player(0).ext_u32(0xCFC) as i32;
+        let falls = self.game.player(0).ext.kind_ea_kos as i32;
         if kos.wrapping_sub(falls) > theirs {
             self.event_success(gobj);
             return;

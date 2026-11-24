@@ -111,8 +111,8 @@ impl Running<'_> {
         self.count_bonus(slot, 10);
     }
 
-    /// Keeps the lowest of a value per player (`pl_StaleMoveTableExt_t::xCF8`, the word after
-    /// the stale-move table), `pl_80040330`; Nana's don't count.
+    /// Keeps the lowest of a value per player (`StatsExt::lowest_value`), `pl_80040330`;
+    /// Nana's don't count.
     #[doc(alias("lower_xcf8"))]
     #[doc(alias = "pl_80040330")]
     pub fn keep_lowest_dip(&mut self, slot: i32, sub: i32, v: f32) {
@@ -120,10 +120,9 @@ impl Running<'_> {
             return;
         }
         assert!((0..6).contains(&slot), "player slot {slot}");
-        let bytes = &mut self.game.players[slot as usize].stats_ext[4..8];
-        let cur = f32::from_be_bytes(bytes.try_into().unwrap());
-        if v < cur {
-            bytes.copy_from_slice(&v.to_be_bytes());
+        let lowest = &mut self.game.players[slot as usize].ext.lowest_value;
+        if v < *lowest {
+            *lowest = v;
         }
     }
 

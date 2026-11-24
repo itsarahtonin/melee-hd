@@ -16,7 +16,10 @@
 //! ```
 //!
 //! - `#[mirror(..)]` on the struct: `c` the decomp's name of the struct it mirrors (none for a
-//!   group of fields that has no C struct of its own), `size` its bytes, `lay` to lay it out for
+//!   group of fields that has no C struct of its own), `from` the offset in that C struct where
+//!   it starts when it mirrors only its tail (bytes the decomp leaves untyped in the struct
+//!   around it, which the original reads through a cast: its fields' `#[at]`s are then the C
+//!   struct's offsets), `size` its bytes, `lay` to lay it out for
 //!   the heap's image too (`LayOut`), `export` to write it back to memory's bytes too (`Export`:
 //!   the card's data, which a save writes to the card), and a `pad(OFFSET, BYTES)` for each run of bytes no field
 //!   holds (the compiler's padding), which nothing compares; `pad(OFFSET, bits(FIRST, COUNT))`
@@ -38,6 +41,7 @@ use syn::{Data, DeriveInput, Fields, LitInt, LitStr, Token, parse::ParseStream};
 
 struct StructOpts {
     c: Option<String>,
+    from: u32,
     size: u32,
     lay: bool,
     export: bool,
@@ -65,6 +69,7 @@ fn int(input: ParseStream) -> syn::Result<u32> {
 fn struct_opts(input: &DeriveInput) -> syn::Result<StructOpts> {
     let mut o = StructOpts {
         c: None,
+        from: 0,
         size: 0,
         lay: false,
         export: false,
@@ -75,6 +80,8 @@ fn struct_opts(input: &DeriveInput) -> syn::Result<StructOpts> {
         a.parse_nested_meta(|meta| {
             if meta.path.is_ident("c") {
                 o.c = Some(meta.value()?.parse::<LitStr>()?.value());
+            } else if meta.path.is_ident("from") {
+                o.from = int(meta.value()?)?;
             } else if meta.path.is_ident("size") {
                 o.size = int(meta.value()?)?;
                 sized = true;
@@ -108,7 +115,7 @@ fn struct_opts(input: &DeriveInput) -> syn::Result<StructOpts> {
                     o.pads.push((at * 8, n * 8));
                 }
             } else {
-                return Err(meta.error("expected `c`, `size`, `lay`, `export` or `pad`"));
+                return Err(meta.error("expected `c`, `from`, `size`, `lay`, `export` or `pad`"));
             }
             Ok(())
         })?;
@@ -204,11 +211,19 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
     let Fields::Named(named) = &s.fields else {
         return Err(syn::Error::new_spanned(name, "Mirror needs named fields"));
     };
-    let fields = named
+    let mut fields = named
         .named
         .iter()
         .map(field_opts)
         .collect::<syn::Result<Vec<_>>>()?;
+    // A tail's fields give the C struct's offsets: placed from the tail's start.
+    for f in &mut fields {
+        f.at = f
+            .at
+            .checked_sub(opts.from)
+            .ok_or_else(|| syn::Error::new_spanned(&f.ident, "a field before the tail's `from`"))?;
+    }
+    let from = opts.from;
     let m = quote!(::melee_sim::game::mirror);
     let size = opts.size;
 
@@ -299,7 +314,11 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
         Some(c) => quote!(Some(#c)),
         None => quote!(None),
     };
-    let pads = opts.pads.iter().map(|(a, n)| quote!((#a, #n)));
+    // A tail's pads, like its fields, give the C struct's offsets.
+    let pads = opts.pads.iter().map(|(a, n)| {
+        let a = a - opts.from * 8;
+        quote!((#a, #n))
+    });
     let checks = spans.iter().enumerate().map(|(i, (start, end, fname))| {
         let past = format!("{name}.{fname} runs past the struct's size");
         let into = format!(
@@ -353,6 +372,7 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
             fn layout() -> Option<#m::Layout> {
                 Some(#m::Layout {
                     c_name: #c,
+                    from: #from,
                     size: #size,
                     pads: ::std::vec![#(#pads),*],
                     fields: ::std::vec![#(#layouts),*],

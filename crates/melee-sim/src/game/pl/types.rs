@@ -10,8 +10,10 @@
 //! holds too, stays generated in `game::structs`.
 
 use crate::game::handles::CodeRef;
+use crate::game::mirror::{Export, MemMut};
 use crate::game::structs::ft_800898B4_t;
 use crate::hsd::gobj::GObjId;
+use crate::state_eq::{Diff, StateEq, StateHasher};
 
 /// The decomp's `_StaticPlayer_flags`.
 #[doc(alias("_StaticPlayer_flags"))]
@@ -722,10 +724,10 @@ pub struct StaticPlayer {
     pub struct_func: Option<CodeRef>,
     #[at(0xBC)]
     pub stale_moves: StaleMoveTable,
-    /// The player's stats past the stale moves (`pl::ext_u32` and the rest).
+    /// The player's records past the stale moves: the rest of `pl_StaleMoveTableExt_t`.
     #[at(0xDB0)]
     #[doc(alias("xDB0"))]
-    pub stats_ext: [u8; 224],
+    pub ext: StatsExt,
 }
 
 impl Default for StaticPlayer {
@@ -774,7 +776,280 @@ impl Default for StaticPlayer {
             player_entity: [None; 2],
             struct_func: None,
             stale_moves: Default::default(),
-            stats_ext: [0; 224],
+            ext: Default::default(),
         }
+    }
+}
+
+/// The rest of `pl_StaleMoveTableExt_t` past the stale-move table: the per-frame records the
+/// bonuses and the results read, which the original reaches by casting the stale-move table
+/// (`_StaticPlayer::xDB0`, 224 bytes the decomp leaves untyped). Each field's `#[at]` is its
+/// offset in `pl_StaleMoveTableExt_t`, which the layout check holds it to; its alias the
+/// decomp's name. The frame counters and windows are the original's words, read and written
+/// as its code does (`pl_8003E17C` to `pl_80040FBC` and the bonuses' `fn_8003F294` and kin).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::Mirror)]
+#[mirror(
+    c = "pl_StaleMoveTableExt_t",
+    from = 0xCF4,
+    size = 0xE0,
+    export,
+    pad(0xDD2, 2)
+)]
+pub struct StatsExt {
+    /// A or B presses (`fn_8003F53C`).
+    #[at(0xCF4)]
+    #[doc(alias("xCF4"))]
+    pub presses: u32,
+    /// The lowest of a value the fighters report (`pl_80040330`; `pl_80040870` reads it).
+    #[at(0xCF8)]
+    #[doc(alias("xCF8"))]
+    pub lowest_value: f32,
+    /// KOs it made with a kind 0xEA source (`pl_8003FBFC` reads it; event 32 counts them
+    /// against the first player's KOs).
+    #[at(0xCFC)]
+    #[doc(alias("xCFC"))]
+    pub kind_ea_kos: u32,
+    /// Its falls to a kind 0xEA source (`pl_8003FC20` reads it).
+    #[at(0xD00)]
+    #[doc(alias("xD00"))]
+    pub kind_ea_falls: u32,
+    /// The most frames it went without dealing damage (the results' `timed_stat_3`).
+    #[at(0xD04)]
+    #[doc(alias("xD04"))]
+    pub longest_without_dealing: u32,
+    /// Frames since it last dealt damage (cleared as `pl_80037DF4` counts it).
+    #[at(0xD08)]
+    #[doc(alias("xD08"))]
+    pub since_dealing: u32,
+    /// The most frames it went without taking damage.
+    #[at(0xD0C)]
+    #[doc(alias("xD0C"))]
+    pub longest_without_taking: u32,
+    /// Frames since it last took damage (cleared by `pl_8003EC9C`'s caller).
+    #[at(0xD10)]
+    #[doc(alias("xD10"))]
+    pub since_taking: u32,
+    /// Frames of a run of its attack flags' `x2072_b1` longer than the bonus data's streak.
+    #[at(0xD14)]
+    #[doc(alias("xD14"))]
+    pub long_streak_frames: u32,
+    /// The current run of `x2072_b1`.
+    #[at(0xD18)]
+    #[doc(alias("xD18"))]
+    pub streak: u32,
+    /// Frames whose attack flags' `x2073` was 0x68.
+    #[at(0xD1C)]
+    #[doc(alias("xD1C"))]
+    pub attack_0x68_frames: u32,
+    /// Frames airborne (what the results keep as `ground_time`, `x70`).
+    #[at(0xD20)]
+    #[doc(alias("xD20"))]
+    pub air_frames: u32,
+    /// Frames on the ground (what the results keep as `air_time`, `x6C`).
+    #[at(0xD24)]
+    #[doc(alias("xD24"))]
+    pub ground_frames: u32,
+    /// Frames on a slope at least the bonus data's steepness.
+    #[at(0xD28)]
+    #[doc(alias("xD28"))]
+    pub steep_frames: u32,
+    /// Frames being nudged by another fighter.
+    #[at(0xD2C)]
+    #[doc(alias("xD2C"))]
+    pub nudged_frames: u32,
+    /// Frames at the screen's edge (the magnifier's).
+    #[at(0xD30)]
+    #[doc(alias("xD30"))]
+    pub edge_frames: u32,
+    /// Frames holding a heavy item.
+    #[at(0xD34)]
+    #[doc(alias("xD34"))]
+    pub heavy_frames: u32,
+    /// Frames holding a Screw Attack.
+    #[at(0xD38)]
+    #[doc(alias("xD38"))]
+    pub screw_attack_frames: u32,
+    /// Frames holding Mr. Saturn.
+    #[at(0xD3C)]
+    #[doc(alias("xD3C"))]
+    pub saturn_frames: u32,
+    /// The longest it held a logged item.
+    #[at(0xD40)]
+    #[doc(alias("xD40"))]
+    pub longest_hold: u32,
+    /// Frames it has held its logged item.
+    #[at(0xD44)]
+    #[doc(alias("xD44"))]
+    pub hold_frames: u32,
+    /// The shortest it held a logged item.
+    #[at(0xD48)]
+    #[doc(alias("xD48"))]
+    pub shortest_hold: u32,
+    /// Frames left of another player's taunt's window (`pl_80040120`).
+    #[at(0xD4C)]
+    #[doc(alias("xD4C"))]
+    pub their_taunt_window: u32,
+    /// Frames left of its own taunt's window.
+    #[at(0xD50)]
+    #[doc(alias("xD50"))]
+    pub own_taunt_window: u32,
+    /// Frames left of the window after it made a KO.
+    #[at(0xD54)]
+    #[doc(alias("xD54"))]
+    pub ko_window: u32,
+    /// Frames since its last A or B press.
+    #[at(0xD58)]
+    #[doc(alias("xD58"))]
+    pub since_press: u32,
+    /// The fewest frames between two presses in the presses' window (`u32::MAX` for none).
+    #[at(0xD5C)]
+    #[doc(alias("xD5C"))]
+    pub quickest_press: u32,
+    /// Frames left of the window after it respawned.
+    #[at(0xD60)]
+    #[doc(alias("xD60"))]
+    pub respawn_window: u32,
+    /// The slot that last KO'd it (6 for none).
+    #[at(0xD64)]
+    #[doc(alias("xD64"))]
+    pub last_ko_by: u32,
+    /// Frames its fighter was altered (`ft_is_altered`: the results' `timed_stat_4`).
+    #[at(0xD68)]
+    #[doc(alias("xD68"))]
+    pub altered_frames: u32,
+    /// The slot of the player whose thrown item it last caught or was hit by (6 for none).
+    #[at(0xD6C)]
+    #[doc(alias("xD6C"))]
+    pub item_thrower: u32,
+    /// The crowd's reactions to it (`pl_8003FDC8`).
+    #[at(0xD70)]
+    #[doc(alias("xD70"))]
+    pub crowd_reactions: u32,
+    /// How far it moved along the ground under its own power (the results' `walk_distance`).
+    #[at(0xD74)]
+    #[doc(alias("xD74"))]
+    pub walked: f32,
+    /// How far it rose in the air under its own power (what the results keep as
+    /// `run_distance`, the decomp's name).
+    #[at(0xD78)]
+    #[doc(alias("xD78"))]
+    pub rose: f32,
+    /// How far it fell under its own power (the results' `fall_distance`).
+    #[at(0xD7C)]
+    #[doc(alias("xD7C"))]
+    pub fell: f32,
+    /// How far knockback carried it (what the results keep as `peak_height`).
+    #[at(0xD80)]
+    #[doc(alias("xD80"))]
+    pub knocked: f32,
+    /// The farthest one frame's knockback carried it.
+    #[at(0xD84)]
+    #[doc(alias("xD84"))]
+    pub farthest_knocked: f32,
+    /// The farthest one frame's knockback it dealt carried a victim.
+    #[at(0xD88)]
+    #[doc(alias("xD88"))]
+    pub farthest_knocked_away: f32,
+    /// Its average distance from its opponents.
+    #[at(0xD8C)]
+    #[doc(alias("xD8C"))]
+    pub opponent_distance: f32,
+    /// The frames that average counts.
+    #[at(0xD90)]
+    #[doc(alias("xD90"))]
+    pub opponent_distance_frames: u32,
+    /// Its average distance from the camera's center.
+    #[at(0xD94)]
+    #[doc(alias("xD94"))]
+    pub center_distance: f32,
+    /// The frames that average counts.
+    #[at(0xD98)]
+    #[doc(alias("xD98"))]
+    pub center_distance_frames: u32,
+    /// Each frame window's value at its last end (`pl_8003906C`): wall bounces (bonus 0x3B),
+    /// the actions past attack 112 (0x45), 99 and 105 to 106 (0x49), 111 (0x54), hits landed
+    /// (the hits' window), attacks (0x13), the crowd's reactions (0x5C), heavy items held
+    /// (0x99), powershields (0x3D).
+    #[at(0xD9C)]
+    #[doc(alias("xD9C"))]
+    pub window_wall_bounces: u32,
+    #[at(0xDA0)]
+    #[doc(alias("xDA0"))]
+    pub window_action_112: u32,
+    #[at(0xDA4)]
+    #[doc(alias("xDA4"))]
+    pub window_action_99: u32,
+    #[at(0xDA8)]
+    #[doc(alias("xDA8"))]
+    pub window_action_111: u32,
+    #[at(0xDAC)]
+    #[doc(alias("xDAC"))]
+    pub window_hits: u32,
+    #[at(0xDB0)]
+    #[doc(alias("xDB0"))]
+    pub window_attacks: u32,
+    #[at(0xDB4)]
+    #[doc(alias("xDB4"))]
+    pub window_crowd: u32,
+    #[at(0xDB8)]
+    #[doc(alias("xDB8"))]
+    pub window_heavy: u32,
+    #[at(0xDBC)]
+    #[doc(alias("xDBC"))]
+    pub window_powershields: u32,
+    /// The smash DI distance's window (bonus 0x44, `pl_80039238`).
+    #[at(0xDC0)]
+    #[doc(alias("xDC0"))]
+    pub window_sdi: f32,
+    /// The presses' window.
+    #[at(0xDC4)]
+    #[doc(alias("xDC4"))]
+    pub window_presses: u32,
+    /// The hits' window's flag.
+    #[at(0xDC8)]
+    #[doc(alias("xDC8"))]
+    pub hits_flag: u32,
+    /// The presses' window's flag.
+    #[at(0xDCC)]
+    #[doc(alias("xDCC"))]
+    pub presses_flag: u32,
+    /// Frame flags, `bit0` the top one: 0 landed or left the ground with a jump left, 1 A and
+    /// B both let go, 2 L or R pressed, 3 to 6 at the screen's edges, 7 at an edge now.
+    #[at(0xDD0)]
+    #[doc(alias("xDD0"))]
+    pub frame_flags: u8,
+    /// KO and window flags, `bit0` the top one: 0 to 3 KO'd right, left, up, down; 5 the
+    /// quickest press within the presses' window.
+    #[at(0xDD1)]
+    #[doc(alias("xDD1"))]
+    pub ko_flags: u8,
+}
+
+impl StatsExt {
+    /// The tail as memory holds it, its two bytes of padding zero: what the generated struct
+    /// held as `xDB0`'s bytes.
+    pub fn bytes(&self) -> [u8; 0xE0] {
+        let mut b = [0; 0xE0];
+        Export::export(
+            self,
+            &mut MemMut {
+                bytes: &mut b,
+                base: 0,
+            },
+            0,
+        );
+        b
+    }
+}
+
+/// The tail compares and hashes as the bytes the generated struct held (`[u8; 224]`): the
+/// sync test's hash, the goldens' and the snapshots' stay as they were, floats by their bits.
+impl StateEq for StatsExt {
+    fn state_diff(&self, other: &Self) -> Option<Diff> {
+        (self.bytes() != other.bytes()).then(|| Diff::values(self, other))
+    }
+
+    fn state_hash(&self, h: &mut StateHasher) {
+        StateEq::state_hash(&self.bytes(), h);
     }
 }

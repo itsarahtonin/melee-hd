@@ -373,17 +373,18 @@ impl Running<'_> {
         }
     }
 
-    /// A hit's count on the victim's frame counters (`pl_80040FBC`): its hit while the victim
-    /// shields (`xD50`), and hits but by a few attacks, past `x4` a bonus unless teammates.
+    /// A hit's count on the victim's frame counters (`pl_80040FBC`): its hit while the victim's
+    /// own taunt's window is open (`StatsExt::own_taunt_window`, `xD50`), and hits but by a
+    /// few attacks, past `x4` a bonus unless teammates.
     #[doc(alias = "pl_80040FBC")]
     fn count_hits_on(&mut self, aslot: i32, vslot: i32, vsub: i32, id: i32) {
         if vsub == 1 {
             return;
         }
-        let shielding = self.game.player_mut(vslot).ext_u32(0xD50) != 0;
+        let taunting = self.game.player_mut(vslot).ext.own_taunt_window != 0;
         let limit = self.bonus_param(4) as i32;
         let e = &mut self.game.player_combos(vslot).by_attacker[aslot as usize];
-        if id == 1 && shielding {
+        if id == 1 && taunting {
             e.shield_jabbed = true;
         }
         if !matches!(id, 76 | 90 | 91 | 92 | 96) {
@@ -459,7 +460,7 @@ impl Running<'_> {
             let held = reg(self.game.fighter(g).smash_attrs.smash_since_hitbox);
             if held > reg(self.bonus_param_f32(0x38)) {
                 let p = self.game.player_mut(slot);
-                p.set_ext_u8(0xDD1, p.ext_u8(0xDD1) | 0x08);
+                p.ext.ko_flags = p.ext.ko_flags | 0x08;
             }
         }
         // `pl_8003EAAC`.

@@ -90,7 +90,7 @@ impl Running<'_> {
             );
         }
         if !sub {
-            self.game.player_mut(slot).set_ext_u32(0xD6C, 6);
+            self.game.player_mut(slot).ext.item_thrower = 6;
         }
         self.game.fighter_mut(gobj).item_gobj = None;
     }
@@ -234,7 +234,7 @@ impl Running<'_> {
             if reg(t.peak_damage) < reg(percent) {
                 t.peak_damage = percent;
             }
-            self.game.player_mut(slot).set_ext_u32(0xD10, 0);
+            self.game.player_mut(slot).ext.since_taking = 0;
         }
         let gobj = self.game.fighters[f.0].gobj.expect("a fighter's GObj");
         self.stamina_check(gobj);

@@ -1,43 +1,11 @@
 //! A player's match statistics (`plstale.c`, `plattack.c`, and the resets in `plbonus.c`
 //! and `pl_040D.c`): the stale-move queue, attack counts, and the records bonuses are
 //! scored from. The block's tail past the stale-move table (`xDB0`) is the rest of
-//! `pl_StaleMoveTableExt_t`, which the original reaches by casting the table.
+//! `pl_StaleMoveTableExt_t` ([`super::types::StatsExt`]), which the original reaches by
+//! casting the table.
 
 use super::super::state::Game;
-use super::types::{AttackStats, StaticPlayer};
-
-/// Where `pl_StaleMoveTableExt_t`'s fields past the stale-move table start, in its own
-/// offsets: the block's `xDB0`.
-const EXT: usize = 0xCF4;
-
-impl StaticPlayer {
-    /// A word of `pl_StaleMoveTableExt_t` past the stale-move table, by its offset there.
-    pub fn ext_u32(&self, off: usize) -> u32 {
-        let i = off - EXT;
-        u32::from_be_bytes(self.stats_ext[i..i + 4].try_into().unwrap())
-    }
-
-    pub fn set_ext_u32(&mut self, off: usize, v: u32) {
-        let i = off - EXT;
-        self.stats_ext[i..i + 4].copy_from_slice(&v.to_be_bytes());
-    }
-
-    pub fn ext_f32(&self, off: usize) -> f32 {
-        f32::from_bits(self.ext_u32(off))
-    }
-
-    pub fn set_ext_f32(&mut self, off: usize, v: f32) {
-        self.set_ext_u32(off, v.to_bits());
-    }
-
-    pub fn ext_u8(&self, off: usize) -> u8 {
-        self.stats_ext[off - EXT]
-    }
-
-    pub fn set_ext_u8(&mut self, off: usize, v: u8) {
-        self.stats_ext[off - EXT] = v;
-    }
-}
+use super::types::AttackStats;
 
 impl Game {
     /// Adds how far smash DI moved a player to their stats (`xCDC`, `xCE0`), `pl_800401F0`.
@@ -233,37 +201,80 @@ impl Game {
         t.ledge_catches = 0;
         t.mash_frames = 0;
         t.mashes = 0;
-        p.set_ext_u32(0xCF4, 0);
-        p.set_ext_f32(0xCF8, 0.0);
+        p.ext.presses = 0;
+        p.ext.lowest_value = 0.0;
         p.stale_moves.ray_gun_hits = 0;
-        for off in (0xD04..=0xD54).step_by(4) {
-            p.set_ext_u32(off, 0);
-        }
-        p.set_ext_f32(0xDC0, 0.0);
-        p.set_ext_u32(0xD58, 0);
-        p.set_ext_u32(0xD5C, u32::MAX);
-        p.set_ext_u32(0xD60, 0);
-        p.set_ext_u32(0xD64, 6);
-        p.set_ext_u32(0xD68, 0);
-        p.set_ext_u32(0xD6C, 6);
-        p.set_ext_u32(0xCFC, 0);
-        p.set_ext_u32(0xD00, 0);
-        p.set_ext_u32(0xD70, 0);
-        for off in [0xD74, 0xD78, 0xD7C, 0xD80, 0xD84, 0xD88, 0xD94] {
-            p.set_ext_f32(off, 0.0);
-        }
-        p.set_ext_u32(0xD98, 0);
-        p.set_ext_f32(0xD8C, 0.0);
-        p.set_ext_u32(0xD90, 0);
-        for off in [
-            0xD9C, 0xDA0, 0xDA4, 0xDA8, 0xDAC, 0xDB4, 0xDBC, 0xDC4, 0xDC8, 0xDCC,
+        let e = &mut p.ext;
+        for v in [
+            &mut e.longest_without_dealing,
+            &mut e.since_dealing,
+            &mut e.longest_without_taking,
+            &mut e.since_taking,
+            &mut e.long_streak_frames,
+            &mut e.streak,
+            &mut e.attack_0x68_frames,
+            &mut e.air_frames,
+            &mut e.ground_frames,
+            &mut e.steep_frames,
+            &mut e.nudged_frames,
+            &mut e.edge_frames,
+            &mut e.heavy_frames,
+            &mut e.screw_attack_frames,
+            &mut e.saturn_frames,
+            &mut e.longest_hold,
+            &mut e.hold_frames,
+            &mut e.shortest_hold,
+            &mut e.their_taunt_window,
+            &mut e.own_taunt_window,
+            &mut e.ko_window,
         ] {
-            p.set_ext_u32(off, 0);
+            *v = 0;
+        }
+        p.ext.window_sdi = 0.0;
+        p.ext.since_press = 0;
+        p.ext.quickest_press = u32::MAX;
+        p.ext.respawn_window = 0;
+        p.ext.last_ko_by = 6;
+        p.ext.altered_frames = 0;
+        p.ext.item_thrower = 6;
+        p.ext.kind_ea_kos = 0;
+        p.ext.kind_ea_falls = 0;
+        p.ext.crowd_reactions = 0;
+        let e = &mut p.ext;
+        for v in [
+            &mut e.walked,
+            &mut e.rose,
+            &mut e.fell,
+            &mut e.knocked,
+            &mut e.farthest_knocked,
+            &mut e.farthest_knocked_away,
+            &mut e.center_distance,
+        ] {
+            *v = 0.0;
+        }
+        p.ext.center_distance_frames = 0;
+        p.ext.opponent_distance = 0.0;
+        p.ext.opponent_distance_frames = 0;
+        // Neither `window_attacks` (`xDB0`), which this reset leaves, nor `window_heavy` (below).
+        let e = &mut p.ext;
+        for v in [
+            &mut e.window_wall_bounces,
+            &mut e.window_action_112,
+            &mut e.window_action_99,
+            &mut e.window_action_111,
+            &mut e.window_hits,
+            &mut e.window_crowd,
+            &mut e.window_powershields,
+            &mut e.window_presses,
+            &mut e.hits_flag,
+            &mut e.presses_flag,
+        ] {
+            *v = 0;
         }
         // `xDD0`'s and `xDD1`'s bits, one by one.
-        p.set_ext_u8(0xDD0, 0);
-        p.set_ext_u8(0xDD1, 0);
-        p.set_ext_u32(0xDB8, 0);
+        p.ext.frame_flags = 0;
+        p.ext.ko_flags = 0;
+        p.ext.window_heavy = 0;
     }
 
     /// Clears a player's per-frame counters, `pl_80040DDC`.
@@ -342,21 +353,21 @@ impl Game {
     #[doc(alias = "pl_80038F10")]
     pub fn forget_player_records(&mut self, slot: i32) {
         let p = self.player_mut(slot);
-        p.set_ext_u32(0xD50, 0);
-        p.set_ext_u32(0xD54, 0);
-        p.set_ext_u32(0xD60, 0);
-        p.set_ext_u32(0xD64, 6);
+        p.ext.own_taunt_window = 0;
+        p.ext.ko_window = 0;
+        p.ext.respawn_window = 0;
+        p.ext.last_ko_by = 6;
         for i in 0..6 {
             let o = self.player_mut(i);
-            if slot == o.ext_u32(0xD64) as i32 {
-                o.set_ext_u32(0xD60, 0);
-                o.set_ext_u32(0xD64, 6);
+            if slot == o.ext.last_ko_by as i32 {
+                o.ext.respawn_window = 0;
+                o.ext.last_ko_by = 6;
             }
             if slot == o.stale_moves.flowered_by as i32 {
                 o.stale_moves.flowered_by = 6;
             }
-            if slot == o.ext_u32(0xD6C) as i32 {
-                o.set_ext_u32(0xD6C, 6);
+            if slot == o.ext.item_thrower as i32 {
+                o.ext.item_thrower = 6;
             }
         }
     }

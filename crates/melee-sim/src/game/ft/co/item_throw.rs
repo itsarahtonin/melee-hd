@@ -378,7 +378,7 @@ impl Running<'_> {
     #[doc(alias = "pl_8003E978")]
     #[doc(alias = "fn_8003E998")]
     pub fn item_thrown_stat(&mut self, slot: i32, sub: i32) {
-        let who = self.game.player(slot).ext_u32(0xD6C) as i32;
+        let who = self.game.player(slot).ext.item_thrower as i32;
         if sub == 0 && who != 6 {
             let g = self
                 .game

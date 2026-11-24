@@ -446,8 +446,8 @@ impl Running<'_> {
             let (slot, _) = self.fighter_slot(g);
             // `pl_8003FDC8`.
             let p = &mut self.game.players[slot as usize];
-            let n = p.ext_u32(0xD70);
-            p.set_ext_u32(0xD70, n.wrapping_add(1));
+            let n = p.ext.crowd_reactions;
+            p.ext.crowd_reactions = n.wrapping_add(1);
         }
         true
     }

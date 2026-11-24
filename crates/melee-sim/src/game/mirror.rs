@@ -96,6 +96,10 @@ pub struct Layout {
     /// The decomp's name of the struct, or none for a group of fields with no C struct of its
     /// own (its fields are checked against the struct around it).
     pub c_name: Option<&'static str>,
+    /// Where in the C struct it starts: 0, or the offset of a tail the decomp leaves untyped
+    /// in the struct that holds it (`#[mirror(from = ..)]`), whose fields are checked against
+    /// that part of the C struct.
+    pub from: u32,
     pub size: u32,
     /// The runs of bits no field holds (first bit, bits): the compiler's padding.
     pub pads: Vec<(u32, u32)>,
@@ -843,8 +847,13 @@ mod label_tests {
             labels_after::<StaticPlayer>("player", |p| {
                 p.coins_lost = 1;
                 p.flags.rumbles = true;
+                p.ext.walked = 1.0;
             }),
-            ["player.coins_lost (unk9C)", "player.flags.rumbles (b0)"]
+            [
+                "player.coins_lost (unk9C)",
+                "player.flags.rumbles (b0)",
+                "player.ext (xDB0).walked (xD74)"
+            ]
         );
         assert_eq!(
             labels_after::<StaleMoveTable>("stale_moves", |t| {

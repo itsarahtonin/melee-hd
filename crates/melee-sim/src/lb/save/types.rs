@@ -143,7 +143,14 @@ pub struct MessageRecords {
 #[derive(
     melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq, melee_derive::Mirror,
 )]
-#[mirror(c = "GamePrefs", size = 0x20, export, pad(0x1, 7), pad(0x17, 1), pad(0x1C, 4))]
+#[mirror(
+    c = "GamePrefs",
+    size = 0x20,
+    export,
+    pad(0x1, 7),
+    pad(0x17, 1),
+    pad(0x1C, 4)
+)]
 pub struct GamePrefs {
     #[at(0x0)]
     pub item_freq: u8,

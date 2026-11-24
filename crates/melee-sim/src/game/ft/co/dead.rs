@@ -124,8 +124,8 @@ impl Running<'_> {
             item::destroy(self, it);
             self.game.fighters[f.0].item_gobj = None;
             if !sub {
-                self.game.player_mut(slot).set_ext_u32(0xD6C, 6);
-                self.game.player_mut(slot).set_ext_u32(0xD44, 0);
+                self.game.player_mut(slot).ext.item_thrower = 6;
+                self.game.player_mut(slot).ext.hold_frames = 0;
             }
         }
         if let Some(hood) = self.game.fighters[f.0].bunny_hood {
@@ -437,7 +437,7 @@ impl Running<'_> {
             return;
         }
         let t = self.bonus_param(0xB4);
-        self.game.player_mut(last).set_ext_u32(0xD54, t);
+        self.game.player_mut(last).ext.ko_window = t;
     }
 
     /// A KO past a blast zone, `ftCo_800D3680` (left), `ftCo_800D3950` (right),

@@ -223,7 +223,7 @@ impl Running<'_> {
         self.tally_ending(player);
         self.tally_variety(player);
         let p = self.game.player(player);
-        let (dd0, dd1, dcc) = (p.ext_u8(0xDD0), p.ext_u8(0xDD1), p.ext_u32(0xDCC));
+        let (dd0, dd1, dcc) = (p.ext.frame_flags, p.ext.ko_flags, p.ext.presses_flag);
         if !bit(dd0, 1) {
             self.game.set_bonus_flag(player, 0x4F);
         }
@@ -261,10 +261,10 @@ impl Running<'_> {
         let (xc60, xc64, xc74, xc94) =
             (t.damage_taken, t.peak_damage, t.scope_damage, t.star_falls);
         let (xd04, xd0c, xdc8, dd1) = (
-            p.ext_u32(0xD04),
-            p.ext_u32(0xD0C),
-            p.ext_u32(0xDC8),
-            p.ext_u8(0xDD1),
+            p.ext.longest_without_dealing,
+            p.ext.longest_without_taking,
+            p.ext.hits_flag,
+            p.ext.ko_flags,
         );
         let mut flags = Vec::new();
         if aerials != 0 && aerials == hits_total {
@@ -538,12 +538,12 @@ impl Running<'_> {
             t.victim_percent_sum,
         );
         let (xd14, xd2c, xd8c, xd94, dd0, dd1) = (
-            p.ext_u32(0xD14),
-            p.ext_u32(0xD2C),
-            p.ext_f32(0xD8C),
-            p.ext_f32(0xD94),
-            p.ext_u8(0xDD0),
-            p.ext_u8(0xDD1),
+            p.ext.long_streak_frames,
+            p.ext.nudged_frames,
+            p.ext.opponent_distance,
+            p.ext.center_distance,
+            p.ext.frame_flags,
+            p.ext.ko_flags,
         );
         let mut flags = Vec::new();
         if !b0 {
@@ -676,19 +676,19 @@ impl Running<'_> {
     #[doc(alias = "fn_8003BD60")]
     fn tally_time(&mut self, player: i32) {
         let p = self.game.player(player);
-        let w = |off| p.ext_u32(off);
+        let e = &p.ext;
         let (xd14, xd1c, xd20, xd24, xd28, xd2c, xd30, xd38, xd3c) = (
-            w(0xD14),
-            w(0xD1C),
-            w(0xD20),
-            w(0xD24),
-            w(0xD28),
-            w(0xD2C),
-            w(0xD30),
-            w(0xD38),
-            w(0xD3C),
+            e.long_streak_frames,
+            e.attack_0x68_frames,
+            e.air_frames,
+            e.ground_frames,
+            e.steep_frames,
+            e.nudged_frames,
+            e.edge_frames,
+            e.screw_attack_frames,
+            e.saturn_frames,
         );
-        let dd0 = p.ext_u8(0xDD0);
+        let dd0 = p.ext.frame_flags;
         let frames = self.game.vs_frame_count();
         if frames != 0 {
             let f = single(frames);
@@ -854,7 +854,7 @@ impl Running<'_> {
         if self.taunted_last(gobj) {
             self.game.set_bonus_flag(player, 0x8B);
         }
-        if self.game.player(player).ext_u8(0xDD0) & 1 != 0 {
+        if self.game.player(player).ext.frame_flags & 1 != 0 {
             self.game.set_bonus_flag(player, 0x8A);
         }
         if self.parasol_moving(gobj) {

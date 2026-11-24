@@ -288,10 +288,10 @@ impl Running<'_> {
             return;
         }
         let p = self.game.player_mut(slot);
-        if p.ext_u32(0xD4C) != 0 {
+        if p.ext.their_taunt_window != 0 {
             self.count_bonus(slot, 0x4A);
         }
-        if self.game.player_mut(slot).ext_u32(0xD54) != 0 {
+        if self.game.player_mut(slot).ext.ko_window != 0 {
             self.count_bonus(slot, 0x4D);
         }
         let (mine, theirs) = (self.bonus_param(0xB0), self.bonus_param(0xA4));
@@ -300,9 +300,9 @@ impl Running<'_> {
                 continue;
             }
             if i == slot {
-                self.game.player_mut(slot).set_ext_u32(0xD50, mine);
+                self.game.player_mut(slot).ext.own_taunt_window = mine;
             } else {
-                self.game.player_mut(i).set_ext_u32(0xD4C, theirs);
+                self.game.player_mut(i).ext.their_taunt_window = theirs;
             }
         }
     }

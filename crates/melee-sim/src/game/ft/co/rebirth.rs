@@ -346,9 +346,9 @@ impl Running<'_> {
         }
         let t = self.common().i32(0x5D8);
         self.respawn_invincibility(gobj, t);
-        if !sub && self.game.player_mut(slot).ext_u32(0xD64) != 6 {
+        if !sub && self.game.player_mut(slot).ext.last_ko_by != 6 {
             let v = self.bonus_param(0x124);
-            self.game.player_mut(slot).set_ext_u32(0xD60, v);
+            self.game.player_mut(slot).ext.respawn_window = v;
         }
     }
 

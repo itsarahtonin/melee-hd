@@ -8,7 +8,9 @@
 //! field at the wrong offset or of the wrong size fails; a field whose type is itself a
 //! hand-written struct sits where the C struct holds one of that name; and padding covers only
 //! bytes no C field names. A group of fields with no C struct of its own (`c_name` none) is
-//! checked field by field against the struct around it.
+//! checked field by field against the struct around it. A tail (`from`, the part of a C struct
+//! the decomp leaves as bytes in the struct that holds it) is checked against that part of its
+//! C struct, and where it is held, against the untyped bytes it stands for.
 
 use std::collections::HashMap;
 
@@ -56,7 +58,7 @@ fn owned() -> Vec<Layout> {
     use crate::game::pl::types::{
         ActionStats, AttackStats, AttackerCombo, BobOmbRing, BobOmbRingEntry, ComboStats, KoRing,
         KoRingEntry, PlayerFlags, PlayerInitFlags, PlayerRuleFlags, StaleMove, StaleMoveTable,
-        StaticPlayer,
+        StaticPlayer, StatsExt,
     };
     use crate::lb::colanim::ColorOverlay;
     use crate::lb::save::{
@@ -132,6 +134,7 @@ fn owned() -> Vec<Layout> {
         BobOmbRing::layout(),
         StaleMoveTable::layout(),
         StaticPlayer::layout(),
+        StatsExt::layout(),
         StartMeleeRules::layout(),
         PlayerInitData::layout(),
         StartMeleeData::layout(),
@@ -184,7 +187,7 @@ fn check(l: &Layout, c: &CRecord, name: &str) -> Vec<String> {
         ));
     }
     // Every field and pad as a run of bits, groups flattened.
-    let mut runs: Vec<(u32, u32, String, Option<&'static str>)> = Vec::new();
+    let mut runs: Vec<(u32, u32, String, Option<(&'static str, u32)>)> = Vec::new();
     let mut pads: Vec<(u32, u32)> = Vec::new();
     flatten(l, 0, "", &mut runs, &mut pads);
     let mut all: Vec<(u32, u32, String)> = runs
@@ -237,9 +240,11 @@ fn check(l: &Layout, c: &CRecord, name: &str) -> Vec<String> {
                 c_names(c, e - 1, *e)
             ));
         }
-        if let Some(want) = nested {
+        if let Some((want, from)) = nested {
             match c.fields.iter().find(|f| f.start == *s) {
-                Some(f) if f.rec.as_deref() == Some(want) => {}
+                Some(f) if *from == 0 && f.rec.as_deref() == Some(want) => {}
+                // A tail stands for bytes the decomp leaves untyped.
+                Some(f) if *from != 0 && f.rec.is_none() => {}
                 f => errors.push(format!(
                     "{name}.{n}: a {want}, where the decomp holds {}",
                     f.map_or("nothing".to_owned(), |f| format!(
@@ -268,11 +273,29 @@ fn check(l: &Layout, c: &CRecord, name: &str) -> Vec<String> {
     errors
 }
 
+/// The part of `c` from byte `from` on, as a struct of its own.
+fn tail(c: &CRecord, from: u32) -> CRecord {
+    CRecord {
+        size: c.size - from,
+        fields: c
+            .fields
+            .iter()
+            .filter(|f| f.start >= from * 8)
+            .map(|f| CField {
+                name: f.name.clone(),
+                start: f.start - from * 8,
+                end: f.end - from * 8,
+                rec: f.rec.clone(),
+            })
+            .collect(),
+    }
+}
+
 fn flatten(
     l: &Layout,
     base: u32,
     prefix: &str,
-    runs: &mut Vec<(u32, u32, String, Option<&'static str>)>,
+    runs: &mut Vec<(u32, u32, String, Option<(&'static str, u32)>)>,
     pads: &mut Vec<(u32, u32)>,
 ) {
     pads.extend(l.pads.iter().map(|&(a, n)| (base + a, base + a + n)));
@@ -294,7 +317,12 @@ fn flatten(
             Some(inner) if inner.c_name.is_none() => {
                 flatten(&inner, start, &format!("{path}."), runs, pads)
             }
-            inner => runs.push((start, start + size * 8, path, inner.and_then(|i| i.c_name))),
+            inner => runs.push((
+                start,
+                start + size * 8,
+                path,
+                inner.and_then(|i| i.c_name.map(|c| (c, i.from))),
+            )),
         }
     }
 }
@@ -562,6 +590,7 @@ fn owned_structs_match_the_decomps_layout() {
     for l in &owned {
         let name = l.c_name.expect("an owned struct names its C struct");
         match recs.get(name) {
+            Some(c) if l.from != 0 => errors.extend(check(l, &tail(c, l.from), name)),
             Some(c) => errors.extend(check(l, c, name)),
             None => errors.push(format!("{name}: no such C struct")),
         }
@@ -571,7 +600,12 @@ fn owned_structs_match_the_decomps_layout() {
         "the hand-written structs differ from the decomp's layout:\n{}",
         errors.join("\n")
     );
-    let mut ours: Vec<String> = owned.iter().map(|l| l.c_name.unwrap().to_owned()).collect();
+    // A tail isn't a struct structgen would generate: none is on its list.
+    let mut ours: Vec<String> = owned
+        .iter()
+        .filter(|l| l.from == 0)
+        .map(|l| l.c_name.unwrap().to_owned())
+        .collect();
     let mut theirs = structgen_owned();
     ours.sort();
     theirs.sort();

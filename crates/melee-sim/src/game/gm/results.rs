@@ -201,16 +201,16 @@ impl Game {
             p.damage_recovered = t.damage_recovered as u32;
             p.peak_damage = to_u32(t.peak_damage);
             let pl = self.player(s);
-            p.walk_distance = to_u32(pl.ext_f32(0xD74)).wrapping_mul(10);
-            p.run_distance = to_u32(pl.ext_f32(0xD78)).wrapping_mul(10);
-            p.fall_distance = to_u32(pl.ext_f32(0xD7C)).wrapping_mul(10);
-            p.peak_height = to_u32(pl.ext_f32(0xD80)).wrapping_mul(10);
+            p.walk_distance = to_u32(pl.ext.walked).wrapping_mul(10);
+            p.run_distance = to_u32(pl.ext.rose).wrapping_mul(10);
+            p.fall_distance = to_u32(pl.ext.fell).wrapping_mul(10);
+            p.peak_height = to_u32(pl.ext.knocked).wrapping_mul(10);
             p.coins_collected = self.player_total_coins(s) as u32;
             p.coins_swiped = self.player_coins_knocked(s) as u32;
             p.coins_lost = self.player_coins_lost(s) as u32;
             let pl = self.player(s);
-            p.air_time = pl.ext_u32(0xD24) / 60;
-            p.ground_time = pl.ext_u32(0xD20) / 60;
+            p.air_time = pl.ext.ground_frames / 60;
+            p.ground_time = pl.ext.air_frames / 60;
             p.ground_attacks = st.attacks.total.wrapping_sub(st.attacks.aerials_count);
             p.air_attacks = st.attacks.aerials_count;
             p.items_thrown = st.attacks.thrown_item_count;
@@ -224,13 +224,13 @@ impl Game {
                 .items_picked_up
                 .iter()
                 .fold(0u32, |a, &v| a.wrapping_add(v));
-            let (d44, d68) = (pl.ext_f32(0xD84), pl.ext_f32(0xD88));
+            let (d44, d68) = (pl.ext.farthest_knocked, pl.ext.farthest_knocked_away);
             p.timed_stat_1 =
                 crate::ppc::cvt_fp2unsigned(fp::fmuls(60.0, fp::fmuls(10.0, reg(d44))));
             p.timed_stat_2 =
                 crate::ppc::cvt_fp2unsigned(fp::fmuls(60.0, fp::fmuls(10.0, reg(d68))));
-            p.timed_stat_3 = (pl.ext_u32(0xD04) / 60) as i32;
-            p.timed_stat_4 = (pl.ext_u32(0xD68) / 60) as i32;
+            p.timed_stat_3 = (pl.ext.longest_without_dealing / 60) as i32;
+            p.timed_stat_4 = (pl.ext.altered_frames / 60) as i32;
             p.teammate_hits = pl.stale_moves.teammate_hits as u32;
             for (j, k) in row.iter_mut().enumerate() {
                 if r.player_standings[j].pkind != PKIND_NA {

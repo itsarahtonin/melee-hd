@@ -500,7 +500,7 @@ impl Game {
     /// The lowest of a value the player library keeps per player (`xCF8`), `pl_80040870`.
     #[doc(alias = "pl_80040870")]
     pub fn lowest_value(&self, slot: i32) -> f32 {
-        self.player(slot).ext_f32(0xCF8)
+        self.player(slot).ext.lowest_value
     }
 
     /// The single-player modes' progress the bonuses ask about, `fn_80171A88`: 0 outside
@@ -744,7 +744,7 @@ impl Running<'_> {
                 one(v != 0 && u32::from(r.joiners) == v)
             }
             0xFE => {
-                let mine = self.game.player(a).ext_u32(0xD48);
+                let mine = self.game.player(a).ext.shortest_hold;
                 if mine == 0 || mine >= self.pl_common_u32(0x13C) {
                     return 0;
                 }
@@ -752,7 +752,7 @@ impl Running<'_> {
                     return 1;
                 }
                 let mut v: [u32; 4] = core::array::from_fn(|i| {
-                    let x = self.game.player(i as i32).ext_u32(0xD48);
+                    let x = self.game.player(i as i32).ext.shortest_hold;
                     if p[i].pkind != 3 && x != 0 {
                         x
                     } else {
@@ -763,7 +763,7 @@ impl Running<'_> {
                 one(v[0] == mine && v[0] <= v[1] / 2)
             }
             0xFF => {
-                let mine = self.game.player(a).ext_u32(0xD40);
+                let mine = self.game.player(a).ext.longest_hold;
                 if mine <= self.pl_common_u32(0x140) {
                     return 0;
                 }
@@ -772,7 +772,7 @@ impl Running<'_> {
                 }
                 let mut v: [u32; 4] = core::array::from_fn(|i| {
                     if p[i].pkind != 3 {
-                        self.game.player(i as i32).ext_u32(0xD40)
+                        self.game.player(i as i32).ext.longest_hold
                     } else {
                         0
                     }

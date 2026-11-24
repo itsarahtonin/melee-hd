@@ -22,11 +22,11 @@ const DEAD_UP_FALL_HIT_CAMERA_ICE: i32 = 10;
 
 /// `xDD1`'s bits, `bit0` the top one.
 fn set_dd1(p: &mut StaticPlayer, n: u8) {
-    p.set_ext_u8(0xDD1, p.ext_u8(0xDD1) | (0x80 >> n));
+    p.ext.ko_flags |= 0x80 >> n;
 }
 
-fn inc(p: &mut StaticPlayer, off: usize) {
-    p.set_ext_u32(off, p.ext_u32(off).wrapping_add(1));
+fn inc(v: &mut u32) {
+    *v = v.wrapping_add(1);
 }
 
 /// `between_A1_D0`.
@@ -173,7 +173,7 @@ impl Running<'_> {
                         self.set_point(slot, 0x9C, 1);
                     }
                     if source_kind == 0xEA {
-                        inc(self.game.player_mut(slot), 0xD00);
+                        inc(&mut self.game.player_mut(slot).ext.kind_ea_falls);
                     }
                 }
             }
@@ -197,19 +197,19 @@ impl Running<'_> {
         }
         if self.no_rival(slot, last) {
             let p = self.game.player_mut(slot);
-            p.set_ext_u32(0xD60, 0);
-            p.set_ext_u32(0xD64, NO_SLOT as u32);
+            p.ext.respawn_window = 0;
+            p.ext.last_ko_by = NO_SLOT as u32;
         } else {
             let lp = self.game.player_mut(last);
-            if lp.ext_u32(0xD60) != 0 && lp.ext_u32(0xD64) as i32 == slot {
+            if lp.ext.respawn_window != 0 && lp.ext.last_ko_by as i32 == slot {
                 self.count_bonus(last, 0x79);
                 let lp = self.game.player_mut(last);
-                lp.set_ext_u32(0xD60, 0);
-                lp.set_ext_u32(0xD64, NO_SLOT as u32);
+                lp.ext.respawn_window = 0;
+                lp.ext.last_ko_by = NO_SLOT as u32;
             }
             let p = self.game.player_mut(slot);
-            p.set_ext_u32(0xD60, 0);
-            p.set_ext_u32(0xD64, last as u32);
+            p.ext.respawn_window = 0;
+            p.ext.last_ko_by = last as u32;
         }
         if self.no_rival(slot, last) {
             return;
@@ -298,7 +298,7 @@ impl Running<'_> {
                         self.count_bonus(last, 0x80);
                     }
                     if source_kind == 0xEA {
-                        inc(self.game.player_mut(last), 0xCFC);
+                        inc(&mut self.game.player_mut(last).ext.kind_ea_kos);
                     }
                 }
             }

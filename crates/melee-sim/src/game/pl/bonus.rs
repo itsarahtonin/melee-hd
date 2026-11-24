@@ -1,12 +1,12 @@
 //! A player's per-frame bonus records (`plbonuslib.c`'s `pl_8003FAA8` and the windowed
 //! checks of `plbonus.c`): the counters, the bonuses a frame window decides, the inputs and
 //! the distances the results screen's bonuses are scored from. Each record is a field of
-//! `pl_StaleMoveTableExt_t`, by its offset there (see [`super::stats`]).
+//! the stats tail ([`StatsExt`], the rest of `pl_StaleMoveTableExt_t`).
 
 use gekko_fp as fp;
 
 use super::super::state::{Game, Running};
-use super::types::StaticPlayer;
+use super::types::StatsExt;
 use crate::fpu::{mem, reg};
 use crate::game::it::ItKind;
 use crate::vec::Vec3;
@@ -51,23 +51,22 @@ fn match_item_kind(kind: i32) -> i32 {
     }
 }
 
-fn inc(p: &mut StaticPlayer, off: usize) {
-    p.set_ext_u32(off, p.ext_u32(off).wrapping_add(1));
+fn inc(v: &mut u32) {
+    *v = v.wrapping_add(1);
 }
 
-fn dec_to_zero(p: &mut StaticPlayer, off: usize) {
-    if p.ext_u32(off) != 0 {
-        p.set_ext_u32(off, p.ext_u32(off).wrapping_sub(1));
+fn dec_to_zero(v: &mut u32) {
+    if *v != 0 {
+        *v = v.wrapping_sub(1);
     }
 }
 
-fn set_bit(p: &mut StaticPlayer, off: usize, n: u8, on: bool) {
-    let b = p.ext_u8(off);
-    p.set_ext_u8(off, if on { b | bit(n) } else { b & !bit(n) });
+fn set_bit(b: &mut u8, n: u8, on: bool) {
+    *b = if on { *b | bit(n) } else { *b & !bit(n) };
 }
 
-fn add_f32(p: &mut StaticPlayer, off: usize, v: f64) {
-    p.set_ext_f32(off, mem(fp::fadds(reg(p.ext_f32(off)), v)));
+fn add_f32(v: &mut f32, x: f64) {
+    *v = mem(fp::fadds(reg(*v), x));
 }
 
 /// `|v|` as the original writes it, on a register.
@@ -80,8 +79,14 @@ fn abs(v: f64) -> f64 {
 #[derive(Clone, Copy, melee_derive::StateEq)]
 pub(super) enum Flag {
     Bonus(i32),
-    Record(usize),
+    /// The hits' window's (`StatsExt::hits_flag`, `xDC8`).
+    Hits,
+    /// The presses' window's (`StatsExt::presses_flag`, `xDCC`).
+    Presses,
 }
+
+/// A frame window's last value, a record of the stats tail (`StatsExt::window_*`).
+type Last<T> = fn(&mut StatsExt) -> &mut T;
 
 impl Game {
     /// Records that the player's fighter went airborne or landed with a jump left
@@ -92,7 +97,7 @@ impl Game {
         if sub != 0 {
             return;
         }
-        set_bit(p, 0xDD0, 0, true);
+        set_bit(&mut p.ext.frame_flags, 0, true);
     }
 }
 
@@ -269,7 +274,8 @@ impl Running<'_> {
         let p = self.game.player_mut(slot);
         match flag {
             Flag::Bonus(kind) => p.stale_moves.bonuses[kind as usize],
-            Flag::Record(off) => p.ext_u32(off),
+            Flag::Hits => p.ext.hits_flag,
+            Flag::Presses => p.ext.presses_flag,
         }
     }
 
@@ -279,7 +285,8 @@ impl Running<'_> {
         let p = self.game.player_mut(slot);
         match flag {
             Flag::Bonus(kind) => p.stale_moves.bonuses[kind as usize] = v,
-            Flag::Record(off) => p.set_ext_u32(off, v),
+            Flag::Hits => p.ext.hits_flag = v,
+            Flag::Presses => p.ext.presses_flag = v,
         }
     }
 
@@ -296,7 +303,7 @@ impl Running<'_> {
         period: u32,
         threshold: u32,
         value: u32,
-        last: usize,
+        last: Last<u32>,
     ) -> bool {
         if !counting(self.game) {
             return false;
@@ -307,16 +314,16 @@ impl Running<'_> {
                 self.set_flag(slot, flag, 1);
             }
             if period == n {
-                self.game.player_mut(slot).set_ext_u32(last, value);
+                *last(&mut self.game.player_mut(slot).ext) = value;
                 return true;
             }
         } else if n.checked_rem(period).unwrap_or(n) == 0 {
             let cur = self.flag(slot, flag);
-            let before = self.game.player_mut(slot).ext_u32(last);
+            let before = *last(&mut self.game.player_mut(slot).ext);
             if cur as i32 != 0 && value.wrapping_sub(before) < threshold {
                 self.set_flag(slot, flag, 0);
             }
-            self.game.player_mut(slot).set_ext_u32(last, value);
+            *last(&mut self.game.player_mut(slot).ext) = value;
             return true;
         }
         false
@@ -329,7 +336,7 @@ impl Running<'_> {
         slot: i32,
         flag: Flag,
         period: u32,
-        last: usize,
+        last: Last<f32>,
         threshold: f64,
         value: f64,
     ) -> bool {
@@ -342,16 +349,16 @@ impl Running<'_> {
                 self.set_flag(slot, flag, 1);
             }
             if period == n {
-                self.game.player_mut(slot).set_ext_f32(last, mem(value));
+                *last(&mut self.game.player_mut(slot).ext) = mem(value);
                 return true;
             }
         } else if n.checked_rem(period).unwrap_or(n) == 0 {
             let cur = self.flag(slot, flag) as i32;
-            let before = reg(self.game.player_mut(slot).ext_f32(last));
+            let before = reg(*last(&mut self.game.player_mut(slot).ext));
             if cur != 0 && fp::fsubs(value, before) < threshold {
                 self.set_flag(slot, flag, 0);
             }
-            self.game.player_mut(slot).set_ext_f32(last, mem(value));
+            *last(&mut self.game.player_mut(slot).ext) = mem(value);
             return true;
         }
         false
@@ -414,81 +421,85 @@ impl Running<'_> {
         });
         let changed = game.ft_is_altered(g);
         let p = self.game.player_mut(slot);
-        inc(p, 0xD08);
-        if p.ext_u32(0xD08) > p.ext_u32(0xD04) {
-            p.set_ext_u32(0xD04, p.ext_u32(0xD08));
+        inc(&mut p.ext.since_dealing);
+        if p.ext.since_dealing > p.ext.longest_without_dealing {
+            p.ext.longest_without_dealing = p.ext.since_dealing;
         }
-        inc(p, 0xD10);
-        if p.ext_u32(0xD10) > p.ext_u32(0xD0C) {
-            p.set_ext_u32(0xD0C, p.ext_u32(0xD10));
+        inc(&mut p.ext.since_taking);
+        if p.ext.since_taking > p.ext.longest_without_taking {
+            p.ext.longest_without_taking = p.ext.since_taking;
         }
-        inc(p, if airborne { 0xD20 } else { 0xD24 });
+        inc(if airborne {
+            &mut p.ext.air_frames
+        } else {
+            &mut p.ext.ground_frames
+        });
         if x2072_b1 {
-            inc(p, 0xD18);
-            if fp::frsp(f64::from(p.ext_u32(0xD18))) >= reg(streak) {
-                inc(p, 0xD14);
+            inc(&mut p.ext.streak);
+            if fp::frsp(f64::from(p.ext.streak)) >= reg(streak) {
+                inc(&mut p.ext.long_streak_frames);
             }
         } else {
-            p.set_ext_u32(0xD18, 0);
+            p.ext.streak = 0;
         }
         if x2073 == 0x68 {
-            inc(p, 0xD1C);
+            inc(&mut p.ext.attack_0x68_frames);
         }
         if let Some(s) = slope
             && abs(s) >= steep
         {
-            inc(p, 0xD28);
+            inc(&mut p.ext.steep_frames);
         }
         if nudged {
-            inc(p, 0xD2C);
+            inc(&mut p.ext.nudged_frames);
         }
         if edge != 0 {
-            inc(p, 0xD30);
+            inc(&mut p.ext.edge_frames);
         }
-        set_bit(p, 0xDD0, 7, edge != 0);
+        set_bit(&mut p.ext.frame_flags, 7, edge != 0);
         match edge {
-            1 => set_bit(p, 0xDD0, 5, true),
-            2 => set_bit(p, 0xDD0, 4, true),
-            3 => set_bit(p, 0xDD0, 6, true),
-            4 => set_bit(p, 0xDD0, 3, true),
+            1 => set_bit(&mut p.ext.frame_flags, 5, true),
+            2 => set_bit(&mut p.ext.frame_flags, 4, true),
+            3 => set_bit(&mut p.ext.frame_flags, 6, true),
+            4 => set_bit(&mut p.ext.frame_flags, 3, true),
             _ => {}
         }
         if heavy {
-            inc(p, 0xD34);
+            inc(&mut p.ext.heavy_frames);
         }
         if scball {
-            inc(p, 0xD38);
+            inc(&mut p.ext.screw_attack_frames);
         }
         if dosei {
-            inc(p, 0xD3C);
+            inc(&mut p.ext.saturn_frames);
         }
         match item {
             Some(logged) => {
                 if logged {
-                    inc(p, 0xD44);
-                    if p.ext_u32(0xD44) > p.ext_u32(0xD40) {
-                        p.set_ext_u32(0xD40, p.ext_u32(0xD44));
+                    inc(&mut p.ext.hold_frames);
+                    if p.ext.hold_frames > p.ext.longest_hold {
+                        p.ext.longest_hold = p.ext.hold_frames;
                     }
                 }
             }
             None => {
-                let held = p.ext_u32(0xD44);
+                let held = p.ext.hold_frames;
                 if held != 0 {
-                    let shortest = p.ext_u32(0xD48);
+                    let shortest = p.ext.shortest_hold;
                     if held < shortest || shortest == 0 {
-                        p.set_ext_u32(0xD48, held);
+                        p.ext.shortest_hold = held;
                     }
-                    p.set_ext_u32(0xD44, 0);
+                    p.ext.hold_frames = 0;
                 }
             }
         }
-        dec_to_zero(p, 0xD4C);
-        dec_to_zero(p, 0xD50);
-        dec_to_zero(p, 0xD54);
-        inc(p, 0xD58);
-        dec_to_zero(p, 0xD60);
+        dec_to_zero(&mut p.ext.their_taunt_window);
+        dec_to_zero(&mut p.ext.own_taunt_window);
+        dec_to_zero(&mut p.ext.ko_window);
+        inc(&mut p.ext.since_press);
+        dec_to_zero(&mut p.ext.respawn_window);
         if changed {
-            inc(p, 0xD68);
+            inc(&mut p.ext.altered_frames);
         }
     }
 
@@ -512,25 +523,33 @@ impl Running<'_> {
         let (hits, attacks) = (s.hits.total, s.attacks.total);
         let p = self.game.player_mut(slot);
         let (xd70, xd34, xcd8) = (
-            p.ext_u32(0xD70),
-            p.ext_u32(0xD34),
+            p.ext.crowd_reactions,
+            p.ext.heavy_frames,
             p.stale_moves.powershields,
         );
         let (sdi_x, sdi_y) = (
             reg(p.stale_moves.sdi_distance_x),
             reg(p.stale_moves.sdi_distance_y),
         );
-        let presses = p.ext_u32(0xCF4);
-        let windows = [
-            (Flag::Bonus(0x3B), 0x70, hi_107, 0xD9C),
-            (Flag::Bonus(0x45), 0x90, hi_112, 0xDA0),
-            (Flag::Bonus(0x49), 0xA8, e8, 0xDA4),
-            (Flag::Bonus(0x54), 0xC4, hi_111, 0xDA8),
-            (Flag::Record(0xDC8), 0x18, hits, 0xDAC),
-            (Flag::Bonus(0x13), 0x2C, attacks, 0xDB0),
-            (Flag::Bonus(0x5C), 0xE0, xd70, 0xDB4),
-            (Flag::Bonus(0x99), 0x130, xd34, 0xDB8),
-            (Flag::Bonus(0x3D), 0x7C, xcd8 as u32, 0xDBC),
+        let presses = p.ext.presses;
+        let windows: [(Flag, u32, u32, Last<u32>); 9] = [
+            (Flag::Bonus(0x3B), 0x70, hi_107, |e| {
+                &mut e.window_wall_bounces
+            }),
+            (Flag::Bonus(0x45), 0x90, hi_112, |e| {
+                &mut e.window_action_112
+            }),
+            (Flag::Bonus(0x49), 0xA8, e8, |e| &mut e.window_action_99),
+            (Flag::Bonus(0x54), 0xC4, hi_111, |e| {
+                &mut e.window_action_111
+            }),
+            (Flag::Hits, 0x18, hits, |e| &mut e.window_hits),
+            (Flag::Bonus(0x13), 0x2C, attacks, |e| &mut e.window_attacks),
+            (Flag::Bonus(0x5C), 0xE0, xd70, |e| &mut e.window_crowd),
+            (Flag::Bonus(0x99), 0x130, xd34, |e| &mut e.window_heavy),
+            (Flag::Bonus(0x3D), 0x7C, xcd8 as u32, |e| {
+                &mut e.window_powershields
+            }),
         ];
         for (flag, param, value, last) in windows {
             let (period, threshold) = (self.bonus_param(param), self.bonus_param(param + 4));
@@ -540,20 +559,29 @@ impl Running<'_> {
             crate::math::sqrt_reg(fp::fadds(fp::fmuls(sdi_x, sdi_x), fp::fmuls(sdi_y, sdi_y)));
         let period = self.bonus_param(0x88);
         let threshold = reg(self.bonus_param_f32(0x8C));
-        self.bonus_window_f32(slot, Flag::Bonus(0x44), period, 0xDC0, threshold, distance);
+        self.bonus_window_f32(
+            slot,
+            Flag::Bonus(0x44),
+            period,
+            |e| &mut e.window_sdi,
+            threshold,
+            distance,
+        );
         let (period, threshold) = (self.bonus_param(0xB8), self.bonus_param(0xBC));
-        if self.bonus_window(slot, Flag::Record(0xDCC), period, threshold, presses, 0xDC4) {
+        if self.bonus_window(slot, Flag::Presses, period, threshold, presses, |e| {
+            &mut e.window_presses
+        }) {
             let n = self.game.vs_frame_count();
             let p = self.game.player_mut(slot);
-            let quickest = p.ext_u32(0xD5C);
+            let quickest = p.ext.quickest_press;
             if period == n {
                 if quickest <= period {
-                    set_bit(p, 0xDD1, 5, true);
+                    set_bit(&mut p.ext.ko_flags, 5, true);
                 }
-            } else if p.ext_u8(0xDD1) & bit(5) != 0 && quickest > period {
-                set_bit(p, 0xDD1, 5, false);
+            } else if p.ext.ko_flags & bit(5) != 0 && quickest > period {
+                set_bit(&mut p.ext.ko_flags, 5, false);
             }
-            p.set_ext_u32(0xD5C, u32::MAX);
+            p.ext.quickest_press = u32::MAX;
         }
     }
 
@@ -578,18 +606,18 @@ impl Running<'_> {
         let pressed = game.ft_pressed(g, PAD_A) || game.ft_pressed(g, PAD_B);
         let p = self.game.player_mut(slot);
         if released {
-            set_bit(p, 0xDD0, 1, true);
+            set_bit(&mut p.ext.frame_flags, 1, true);
         }
         if lr {
-            set_bit(p, 0xDD0, 2, true);
+            set_bit(&mut p.ext.frame_flags, 2, true);
         }
         if pressed {
-            inc(p, 0xCF4);
-            let since = p.ext_u32(0xD58);
-            if since < p.ext_u32(0xD5C) {
-                p.set_ext_u32(0xD5C, since);
+            inc(&mut p.ext.presses);
+            let since = p.ext.since_press;
+            if since < p.ext.quickest_press {
+                p.ext.quickest_press = since;
             }
-            p.set_ext_u32(0xD58, 0);
+            p.ext.since_press = 0;
         }
     }
 
@@ -615,14 +643,14 @@ impl Running<'_> {
                 let dist = crate::math::sqrt_reg(fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy)));
                 let attacker = self.game.ft_last_attacker(g);
                 let p = self.game.player_mut(slot);
-                add_f32(p, 0xD80, dist);
-                if dist > reg(p.ext_f32(0xD84)) {
-                    p.set_ext_f32(0xD84, mem(dist));
+                add_f32(&mut p.ext.knocked, dist);
+                if dist > reg(p.ext.farthest_knocked) {
+                    p.ext.farthest_knocked = mem(dist);
                 }
                 if attacker != 6 {
                     let o = self.game.player_mut(attacker);
-                    if dist > reg(o.ext_f32(0xD88)) {
-                        o.set_ext_f32(0xD88, mem(dist));
+                    if dist > reg(o.ext.farthest_knocked_away) {
+                        o.ext.farthest_knocked_away = mem(dist);
                     }
                 }
             }
@@ -631,10 +659,15 @@ impl Running<'_> {
                     self.game.fighter(g).ground_or_air == super::super::ft::common::GA_GROUND;
                 let p = self.game.player_mut(slot);
                 if grounded {
-                    add_f32(p, 0xD74, abs(fp::fsubs(x, px)));
+                    add_f32(&mut p.ext.walked, abs(fp::fsubs(x, px)));
                 } else {
                     let dy = fp::fsubs(y, py);
-                    add_f32(p, if dy > 0.0 { 0xD78 } else { 0xD7C }, abs(dy));
+                    let v = if dy > 0.0 {
+                        &mut p.ext.rose
+                    } else {
+                        &mut p.ext.fell
+                    };
+                    add_f32(v, abs(dy));
                 }
             }
             _ => {}
@@ -659,26 +692,26 @@ impl Running<'_> {
         }
         let p = self.game.player_mut(slot);
         if count != 0 {
-            let n = p.ext_u32(0xD90).wrapping_add(1);
-            p.set_ext_u32(0xD90, n);
+            let n = p.ext.opponent_distance_frames.wrapping_add(1);
+            p.ext.opponent_distance_frames = n;
             let avg = reg(average(sum, fp::frsp(f64::from(count))));
             let total = fp::fmadds(
-                reg(p.ext_f32(0xD8C)),
+                reg(p.ext.opponent_distance),
                 fp::frsp(f64::from((n as i32).wrapping_sub(1))),
                 avg,
             );
-            p.set_ext_f32(0xD8C, average(total, fp::frsp(f64::from(n as i32))));
+            p.ext.opponent_distance = average(total, fp::frsp(f64::from(n as i32)));
         }
-        let n = p.ext_u32(0xD98).wrapping_add(1);
-        p.set_ext_u32(0xD98, n);
+        let n = p.ext.center_distance_frames.wrapping_add(1);
+        p.ext.center_distance_frames = n;
         let cam = super::super::gr::stage::cam_center(self.game);
         let off = abs(fp::fsubs(x, reg(cam.x)));
         let p = self.game.player_mut(slot);
         let total = fp::fmadds(
-            reg(p.ext_f32(0xD94)),
+            reg(p.ext.center_distance),
             fp::frsp(f64::from((n as i32).wrapping_sub(1))),
             off,
         );
-        p.set_ext_f32(0xD94, average(total, fp::frsp(f64::from(n as i32))));
+        p.ext.center_distance = average(total, fp::frsp(f64::from(n as i32)));
     }
 }

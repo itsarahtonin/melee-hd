@@ -175,7 +175,7 @@ impl Running<'_> {
                 && !self.game.fighter(o).is_sub_fighter
             {
                 let thrower = u32::from(self.game.fighter(o).player_idx);
-                self.game.players[slot as usize].set_ext_u32(0xD6C, thrower);
+                self.game.players[slot as usize].ext.item_thrower = thrower;
             }
         }
         if lib26b1::kind(self.game, it) == ItKind::BobOmb
