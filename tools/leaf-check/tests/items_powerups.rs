@@ -34,7 +34,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
-use melee_sim::game::it::kinds::{kinoko, metalb, rabbitc, spycloak, star, wstar};
+use melee_sim::game::it::kinds::{kinoko, powerup, rabbitc, star, wstar};
 use melee_sim::game::it::{self, CLASS_ITEM};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -241,12 +241,12 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_80293A70", kinoko::landed),
     ("it_80293BE8", kinoko::fell),
     ("it_80293C10", kinoko::walked_off),
-    ("it_802953FC", metalb::landed),
-    ("it_80295498", metalb::fell),
-    ("it_80295C68", spycloak::landed),
-    ("it_80295D04", spycloak::fell),
-    ("it_80295138", rabbitc::landed),
-    ("it_802951C0", rabbitc::fell),
+    ("it_802953FC", powerup::landed),
+    ("it_80295498", powerup::fell),
+    ("it_80295C68", powerup::landed),
+    ("it_80295D04", powerup::fell),
+    ("it_80295138", powerup::landed),
+    ("it_802951C0", powerup::fell),
     ("it_802946B0", wstar::descend),
     (
         "it_80272784",
@@ -358,9 +358,9 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "itKinoko_Logic26_EvtUnk" | "itDKinoko_Logic27_EvtUnk" => {
             kinoko::forget(g, gobj, maybe(4));
         }
-        "itMetalB_Logic32_EvtUnk" => metalb::forget(g, gobj, maybe(4)),
-        "itSpyCloak_Logic33_EvtUnk" => spycloak::forget(g, gobj, maybe(4)),
-        "itRabbitC_Logic31_EvtUnk" => rabbitc::forget(g, gobj, maybe(4)),
+        "itMetalB_Logic32_EvtUnk" => powerup::forget(g, gobj, maybe(4)),
+        "itSpyCloak_Logic33_EvtUnk" => powerup::forget(g, gobj, maybe(4)),
+        "itRabbitC_Logic31_EvtUnk" => powerup::forget(g, gobj, maybe(4)),
         "it_80294E78" => rabbitc::scale_ears(g, gobj, f(1)),
         "it_80294EB0" => rabbitc::shift_parts(g, gobj, vec_at(r(4)), vec_at(r(5))),
         "it_802950D4" => rabbitc::show_shine(g, gobj, r(4) != 0),

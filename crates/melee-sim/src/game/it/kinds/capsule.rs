@@ -1,16 +1,17 @@
 //! The capsule, `melee/it/kinds/itcapsule.c`: a container that breaks open when it lands
-//! after a throw or takes a hit, dropping an item (or coins), or exploding.
+//! after a throw or takes a hit, dropping an item (or coins), or exploding. Its rest, falls,
+//! pickup, throw and drop are the containers' ([`container`]).
 
-use super::super::ground::{fall, fall_to_floor, ground_or_fall, ground_skid};
-use super::super::item::{article, attr_of, change_state, common_data};
+use super::super::ground::fall_to_floor;
+use super::super::item::{article, change_state};
 use gekko_fp as fp;
 
 use super::super::{drop, hitbox, item, item_mut, jobj_of, lib26b1, lib2725};
+use super::container::{self, Container};
 use crate::fpu::mem;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x8027_CF00;
 pub const LANDED: u32 = 0x8027_D0B8;
@@ -45,17 +46,28 @@ pub const SHIELD_BOUNCED: u32 = 0x8027_D614;
 /// `it_8027CF30`, the landing's break check, which the landed state's collision passes on.
 pub const LAND_CHECK: u32 = 0x8027_CF30;
 
+/// The capsule: its own fall (the state alone), held in 2, thrown into 3 and dropped into 4,
+/// still to be picked up as it goes.
+pub const CAPSULE: Container = Container {
+    fell,
+    landed: container::landed,
+    tilts: false,
+    held: 2,
+    thrown: 3,
+    dropped: 4,
+    let_go_disables_pickup: false,
+};
+
 /// Runs one of the capsule's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM4 | ANIM2 | ANIM6 => idle_anim(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL4 => coll4(r, gobj),
+        ANIM0 | ANIM4 | ANIM2 | ANIM6 | COLL5 => container::still(r, gobj),
+        COLL0 => container::rests(r, gobj, &CAPSULE),
+        COLL4 => container::lands(r, gobj, &CAPSULE),
         COLL3 => coll3(r, gobj),
-        ANIM5 => vanishing(r, gobj),
-        COLL5 => idle_anim(r, gobj),
-        COLL6 => coll6(r, gobj),
+        ANIM5 => container::blast_lasts(r, gobj),
+        COLL6 => container::skids(r, gobj, &CAPSULE),
         DMG_DEALT | DMG_RECEIVED | CLANKED | REFLECTED => hit(r, gobj),
         HIT_SHIELD => hit_shield(r, gobj),
         SHIELD_BOUNCED => shield_bounced(r, gobj),
@@ -68,14 +80,14 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
-        LANDED => landed(r, gobj),
-        PHYS0 | PHYS2 | PHYS5 | PHYS6 => idle_phys(r, gobj),
+        LANDED => container::landed(r, gobj),
+        PHYS0 | PHYS2 | PHYS5 | PHYS6 => container::idle(r, gobj),
         FELL => fell(r, gobj),
-        PHYS4 => phys4(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        DROPPED => dropped(r, gobj),
-        THROWN => thrown(r, gobj),
-        PHYS3 => phys3(r, gobj),
+        PHYS4 => container::gravity(r, gobj),
+        PICKED_UP => container::picked_up(r, gobj, &CAPSULE),
+        DROPPED => container::dropped(r, gobj, &CAPSULE),
+        THROWN => container::thrown(r, gobj, &CAPSULE),
+        PHYS3 => container::thrown_phys(r, gobj),
         BREAK => break_open(r, gobj),
         ENTERED_AIR => entered_air(r, gobj),
         LAND_CHECK => land_check(r, gobj),
@@ -146,49 +158,10 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 5, 2);
 }
 
-/// Lands, stopped, `it_8027D0B8`.
-#[doc(alias = "it_8027D0B8")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib26b1::enable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
-    change_state(r, gobj, 0, 2);
-}
-
-/// `itCapsule_UnkMotion0_Coll`: falls off ledges.
-#[doc(alias = "itCapsule_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
-}
-
 /// Falls, `it_8027D148`.
 #[doc(alias = "it_8027D148")]
 pub fn fell(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, 2);
-}
-
-/// `itCapsule_UnkMotion4_Phys`: gravity.
-#[doc(alias = "itCapsule_UnkMotion4_Phys")]
-pub fn phys4(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
-    let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
-}
-
-/// `itCapsule_UnkMotion4_Coll`: lands.
-#[doc(alias = "itCapsule_UnkMotion4_Coll")]
-pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
-    false
-}
-
-/// `itCapsule_UnkMotion3_Phys`: thrown, falling and spinning.
-#[doc(alias = "itCapsule_UnkMotion3_Phys")]
-pub fn phys3(r: &mut Running, gobj: GObjId) {
-    phys4(r, gobj);
-    let x68 = common_data(r.game).f32(r.data, super::super::data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
 }
 
 /// `itCapsule_UnkMotion3_Coll`: thrown, it opens where it lands.
@@ -219,13 +192,6 @@ pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
     item_mut(r.game, gobj).vars.capsule().hit.get() != 0
 }
 
-/// `itCapsule_UnkMotion6_Coll`: skidding, it stops or falls.
-#[doc(alias = "itCapsule_UnkMotion6_Coll")]
-pub fn coll6(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
-}
-
 /// Opens on a shield when thrown, `itCapsule_Logic0_HitShield`.
 #[doc(alias = "itCapsule_Logic0_HitShield")]
 pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
@@ -246,50 +212,8 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// The states that animate nothing, `itCapsule_UnkMotion0_Anim` (and 2, 4, 6, and 5's
-/// collision).
-#[doc(alias = "itCapsule_UnkMotion0_Anim")]
-#[doc(alias = "itCapsule_UnkMotion2_Anim")]
-#[doc(alias = "itCapsule_UnkMotion4_Anim")]
-#[doc(alias = "itCapsule_UnkMotion6_Anim")]
-#[doc(alias = "itCapsule_UnkMotion5_Coll")]
-pub fn idle_anim(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itCapsule_UnkMotion0_Phys` (and 2, 5, 6).
-#[doc(alias = "itCapsule_UnkMotion0_Phys")]
-#[doc(alias = "itCapsule_UnkMotion2_Phys")]
-#[doc(alias = "itCapsule_UnkMotion5_Phys")]
-#[doc(alias = "itCapsule_UnkMotion6_Phys")]
-pub fn idle_phys(_: &mut Running, _: GObjId) {}
-
-/// Held, `itCapsule_Logic0_PickedUp`.
-#[doc(alias = "itCapsule_Logic0_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, 2);
-}
-
-/// Let go of, `itCapsule_Logic0_Dropped`.
-#[doc(alias = "itCapsule_Logic0_Dropped")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, 6);
-}
-
-/// Thrown, `itCapsule_Logic0_Thrown`.
-#[doc(alias = "itCapsule_Logic0_Thrown")]
-pub fn thrown(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 3, 6);
-}
-
 /// Skidding off a slope, `itCapsule_Logic0_EnteredAir`.
 #[doc(alias = "itCapsule_Logic0_EnteredAir")]
 pub fn entered_air(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 6, 2);
-}
-
-/// Exploding, until its life runs out, `itCapsule_UnkMotion5_Anim`.
-#[doc(alias = "itCapsule_UnkMotion5_Anim")]
-pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::tick_life(r.game, gobj)
 }
