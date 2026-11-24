@@ -1,23 +1,21 @@
 //! Chikorita (`It_PKind_Chicorita`), `melee/it/kinds/itchicorita.c`: out of the ball it lands
 //! facing its owner's nearest opponent and fires Razor Leaf a number of times, each leaf (its
-//! script says when) an item flying ahead, then leaves.
+//! script says when) an item flying ahead, then leaves. The way out, the rounds and the leaf's
+//! launch are [`shooter`]'s, over [`CHIKORITA`] and [`LEAF`].
 //!
 //! The unit also holds the leaf's code (`It_Kind_Chicorita_Leaf`): it flies straight until its
 //! life runs out or it touches the stage.
 
 use gekko_fp as fp;
 
-use super::super::ground::{air_touched_any, fall, ground_or_fall};
-use super::super::item::{attr_of, change, change_state, play_sfx, spawn_air};
-use super::super::pokemon::{self, attr_f32, attr_i32};
-use super::super::{data, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
+use super::super::item::{attr_of, change, change_state, play_sfx};
+use super::super::pokemon::{self, attr_f32};
+use super::super::{data, item, item_mut, jobj_of, lib26b1, lib2725};
+use super::shooter::{self, Release, Rounds, Shot, ShotSound};
 use crate::fpu::{mem, reg};
-use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
-use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
-use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_9588;
 pub const LANDED_NOTHING: u32 = 0x802C_9618;
@@ -42,24 +40,53 @@ pub const LEAF_ANIM: u32 = 0x802C_9CE8;
 pub const LEAF_PHYS: u32 = 0x802C_9D1C;
 pub const LEAF_COLL: u32 = 0x802C_9D20;
 
-/// Its variables past the release's (`itChicorita_ItemVars`): the leaves left (`x60`, -1
-/// until the first) and its own fall speed (`x64`).
-const SHOTS: usize = 0x60;
+/// Its own fall speed (`itChicorita_ItemVars`' `x64`, past the leaves left, [`shooter::ROUNDS`]).
 const FALL_SPEED: usize = 0x64;
+
+/// Chikorita's way out, its rounds of leaves (state 0, no stand) and leaving (state 1); none of
+/// its states pause its effects in hitlag.
+pub const CHIKORITA: Rounds = Rounds {
+    release: Release {
+        out: 2,
+        hitlag: false,
+        posed: false,
+        landed,
+        fallen: None,
+    },
+    stand: None,
+    fire: 0,
+    leave: 1,
+    accessory: FIRE_ACCESSORY,
+    first_round: shooter::rounds_from_attrs,
+    on_round: None,
+    each_frame: Some(bone_motion),
+    stops: false,
+};
+
+/// Its leaf: `x8` ahead, `xC` up, at `x10`, with its own sound.
+pub const LEAF: Shot = Shot {
+    kind: ItKind::ChikoritaLeaf,
+    ahead: 8,
+    up: 0xC,
+    speed: 0x10,
+    flagged: true,
+    depth: None,
+    sound: ShotSound::Sfx(0x2710),
+};
 
 /// Runs one of Chikorita's (or its leaf's) predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 => anim0(r, gobj),
-        COLL0 | COLL1 => coll(r, gobj),
-        ANIM1 => anim1(r, gobj),
-        ANIM2 => anim2(r, gobj),
-        COLL2 => coll2(r, gobj),
-        LEAF_KEPT => false,
-        LEAF_REFLECTED => leaf_reflected(r, gobj),
-        LEAF_ANIM => leaf_anim(r, gobj),
-        LEAF_COLL => leaf_coll(r, gobj),
+        ANIM0 => shooter::rounds(r, gobj, &CHIKORITA),
+        COLL0 | COLL1 => shooter::stays(r, gobj),
+        ANIM1 => shooter::leaving(r, gobj, &CHIKORITA),
+        ANIM2 => shooter::growing(r, gobj),
+        COLL2 => shooter::landing(r, gobj, &CHIKORITA.release),
+        LEAF_KEPT => shooter::kept(r, gobj),
+        LEAF_REFLECTED => shooter::reflected(r, gobj),
+        LEAF_ANIM => shooter::life_ticks(r, gobj),
+        LEAF_COLL => shooter::gone_on_touch(r, gobj),
         _ => return None,
     })
 }
@@ -69,11 +96,11 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
-        LANDED_NOTHING | LEAF_PHYS => {}
+        LANDED_NOTHING | LEAF_PHYS => shooter::nothing(r, gobj),
         PHYS0 | PHYS1 => phys(r, gobj),
-        FIRE_ACCESSORY => fire_when_told(r, gobj),
-        PHYS2 => phys2(r, gobj),
-        LEAF_SPAWNED => leaf_spawned(r, gobj),
+        FIRE_ACCESSORY => shooter::fire_when_told(r, gobj, shoot, None),
+        PHYS2 => shooter::falling(r, gobj, &CHIKORITA.release),
+        LEAF_SPAWNED => shooter::shot_out(r, gobj, leaf_fly, uncounted),
         _ => return false,
     }
     true
@@ -84,18 +111,14 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802C9588")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     pokemon::face_nearest_opponent(r, gobj);
-    pokemon::vars(r.game, gobj).set_i32(SHOTS, -1);
+    pokemon::vars(r.game, gobj).set_i32(shooter::ROUNDS, -1);
     item_mut(r.game, gobj).cmd_flags[0] &= !0x80;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     pokemon::vars(r.game, gobj).set_f32(FALL_SPEED, 0.0);
-    enter_air(r, gobj);
+    shooter::enter_air(r, gobj, &CHIKORITA.release);
     play_sfx(r, gobj, 0x2711, 0x7F, 0x40);
 }
-
-/// Landing in its states, `it_802C9618`: nothing.
-#[doc(alias = "it_802C9618")]
-pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `itChicorita_Logic1_EvtUnk` and the leaf's
 /// `itChicoritaLeaf_Logic30_EvtUnk` (`it_8026B894`).
@@ -106,47 +129,20 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
-/// Lands out of the ball, `it_802C963C`: still.
-#[doc(alias = "it_802C963C")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib2725::clear_velocity(r.game, gobj);
-    fire(r, gobj);
+/// Lands out of the ball ([`shooter::landed`]).
+fn landed(r: &mut Running, gobj: GObjId) {
+    shooter::landed(r, gobj, &CHIKORITA);
 }
 
-/// Fires, `it_802C9670` (and its inline copy in `itChicorita_UnkMotion0_Anim`): the first
-/// time, its leaves from its attributes; firing when its script says.
-#[doc(alias = "it_802C9670")]
-pub fn fire(r: &mut Running, gobj: GObjId) {
-    if pokemon::vars(r.game, gobj).i32(SHOTS) == -1 {
-        let shots = attr_i32(r, gobj, 4);
-        pokemon::vars(r.game, gobj).set_i32(SHOTS, shots);
-    }
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-    item_mut(r.game, gobj).on_accessory = Some(CodeRef(FIRE_ACCESSORY));
+/// Fires a leaf ([`shooter::shoot`]).
+fn shoot(r: &mut Running, gobj: GObjId) {
+    shooter::shoot(r, gobj, &LEAF);
 }
 
 /// Its root joint's child's motion taken as its own.
 fn bone_motion(r: &mut Running, gobj: GObjId) {
     let bone = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
     pokemon::take_bone_motion(r, bone, gobj);
-}
-
-/// `itChicorita_UnkMotion0_Anim`: at each leaf's end, fires again, or with none left leaves.
-#[doc(alias = "itChicorita_UnkMotion0_Anim")]
-pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    bone_motion(r, gobj);
-    if !lib2725::is_animating(r.game, gobj) {
-        let v = pokemon::vars(r.game, gobj);
-        let shots = v.i32(SHOTS);
-        if shots <= 0 {
-            v.set_i32(SHOTS, 0);
-            leave(r, gobj);
-        } else {
-            v.set_i32(SHOTS, shots.wrapping_sub(1));
-            fire(r, gobj);
-        }
-    }
-    false
 }
 
 /// `itChicorita_UnkMotion0_Phys` and `_1_Phys` (the inline `itChicorita_Phys`): the bone's
@@ -185,146 +181,13 @@ pub fn phys(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).vel.y = s;
 }
 
-/// Lands in the air, falls off the floor on it, doing nothing either way
-/// (`itChicorita_UnkMotion0_Coll`, `_1_Coll`).
-#[doc(alias = "itChicorita_UnkMotion0_Coll")]
-#[doc(alias = "itChicorita_UnkMotion1_Coll")]
-pub fn coll(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == 1 {
-        fall(r, gobj, landed_nothing);
-    } else {
-        ground_or_fall(r, gobj, landed_nothing);
-    }
-    false
-}
-
-/// Its `on_accessory`, `it_802C989C`: fires a leaf when its script says.
-#[doc(alias = "it_802C989C")]
-pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).cmd_flags[0] & 0x80 != 0 {
-        shoot(r, gobj);
-        item_mut(r.game, gobj).cmd_flags[0] &= !0x80;
-    }
-}
-
-/// Leaves, `it_802C98E4`.
-#[doc(alias = "it_802C98E4")]
-pub fn leave(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
-/// `itChicorita_UnkMotion1_Anim`: gone when its animation ends.
-#[doc(alias = "itChicorita_UnkMotion1_Anim")]
-pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    bone_motion(r, gobj);
-    !lib2725::is_animating(r.game, gobj)
-}
-
-/// Into the air out of the ball, `it_802C9A74`.
-#[doc(alias = "it_802C9A74")]
-pub fn enter_air(r: &mut Running, gobj: GObjId) {
-    maplib::enter_air(item_mut(r.game, gobj));
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-}
-
-/// `itChicorita_UnkMotion2_Anim`: growing out of the ball.
-#[doc(alias = "itChicorita_UnkMotion2_Anim")]
-pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::grow(r, gobj);
-    false
-}
-
-/// `itChicorita_UnkMotion2_Phys`: falling out of the ball.
-#[doc(alias = "itChicorita_UnkMotion2_Phys")]
-pub fn phys2(r: &mut Running, gobj: GObjId) {
-    pokemon::fall(r, gobj);
-}
-
-/// `itChicorita_UnkMotion2_Coll`: lands out of the ball.
-#[doc(alias = "itChicorita_UnkMotion2_Coll")]
-pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::land(r, gobj, landed)
-}
-
-/// Fires a leaf, `it_802C9B20`: ahead of and above it, flying its way, with a sound.
-#[doc(alias = "it_802C9B20")]
-pub fn shoot(r: &mut Running, gobj: GObjId) {
-    let (ahead, up, speed) = (
-        attr_f32(r, gobj, 8),
-        attr_f32(r, gobj, 0xC),
-        attr_f32(r, gobj, 0x10),
-    );
-    let ip = item(r.game, gobj);
-    let (pos, facing, owner) = (ip.pos, reg(ip.facing_dir), ip.owner);
-    let mut prev = pos;
-    prev.x = mem(fp::fmadds(reg(ahead), facing, reg(prev.x)));
-    prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
-    let mut spawn = SpawnItem {
-        kind: ItKind::ChikoritaLeaf.id(),
-        ..Default::default()
-    };
-    spawn.prev_pos = prev;
-    spawn.pos = lib26b1::ecb_center(r.game, gobj);
-    spawn.facing_dir = mem(facing);
-    spawn.damage = 0;
-    spawn.vel = Vec3::new(mem(fp::fmuls(reg(speed), facing)), 0.0, 0.0);
-    spawn.ignore_id = 0;
-    spawn.owner = owner;
-    spawn.maker = Some(gobj);
-    spawn.flags[0] |= 0x80;
-    if spawn_air(r, &mut spawn).is_some() {
-        play_sfx(r, gobj, 0x2710, 0x7F, 0x40);
-    }
-}
-
-/// The leaf's `itChicoritaLeaf_Logic30_Spawned`: its life, not spinning, flying, not
-/// pickable, its hits not counted.
-#[doc(alias = "itChicoritaLeaf_Logic30_Spawned")]
-pub fn leaf_spawned(r: &mut Running, gobj: GObjId) {
-    let life = attr_f32(r, gobj, 0);
-    item_mut(r.game, gobj).life_timer = life;
-    lib2725::stop_spin(r.game, r.data, gobj);
-    leaf_fly(r, gobj);
-    lib26b1::disable_pickup(r.game, gobj);
+/// The leaf's hits not counted.
+fn uncounted(r: &mut Running, gobj: GObjId) {
     lib2725::uncount_hits(r.game, gobj);
-}
-
-/// The leaf's `itChicoritaLeaf_Logic30_HitShield` (also its damage dealt, clank and
-/// absorption): kept.
-#[doc(alias = "itChicoritaLeaf_Logic30_HitShield")]
-pub fn leaf_kept(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The leaf's `itChicoritaLeaf_Logic30_Reflected`: reflected back.
-#[doc(alias = "itChicoritaLeaf_Logic30_Reflected")]
-pub fn leaf_reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::reflected_back(r.game, gobj)
 }
 
 /// The leaf flies, `it_802C9CC0`.
 #[doc(alias = "it_802C9CC0")]
 pub fn leaf_fly(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The leaf's `itChicoritaleaf_UnkMotion0_Anim`: gone once its life is out, else one less.
-#[doc(alias = "itChicoritaleaf_UnkMotion0_Anim")]
-pub fn leaf_anim(r: &mut Running, gobj: GObjId) -> bool {
-    let ip = item_mut(r.game, gobj);
-    if reg(ip.life_timer) <= 0.0 {
-        return true;
-    }
-    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
-    false
-}
-
-/// The leaf's `itChicoritaleaf_UnkMotion0_Phys`: nothing.
-#[doc(alias = "itChicoritaleaf_UnkMotion0_Phys")]
-pub fn leaf_phys(_: &mut Running, _: GObjId) {}
-
-/// The leaf's `itChicoritaleaf_UnkMotion0_Coll`: gone when it touches the stage.
-#[doc(alias = "itChicoritaleaf_UnkMotion0_Coll")]
-pub fn leaf_coll(r: &mut Running, gobj: GObjId) -> bool {
-    air_touched_any(r, gobj)
 }
