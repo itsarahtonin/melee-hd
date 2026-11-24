@@ -76,9 +76,12 @@ pub struct Shot {
     /// Whether it's spawned with `flags[0]`'s top bit (all but the star, which clears it).
     pub flagged: bool,
     /// Its depth from the Pokémon's facing and depth (Blastoise's cannons).
-    pub depth: Option<fn(&mut Running, GObjId, f64, f32) -> f32>,
+    pub depth: Option<Depth>,
     pub sound: ShotSound,
 }
+
+/// A shot's depth from the Pokémon's facing (in a register) and depth.
+pub type Depth = fn(&mut Running, GObjId, f64, f32) -> f32;
 
 /// The sound a shot makes when it's out.
 pub enum ShotSound {
