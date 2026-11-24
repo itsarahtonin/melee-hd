@@ -52,6 +52,7 @@ pub mod title;
 pub mod tournament;
 pub mod training;
 pub mod trophies;
+pub mod types;
 pub mod unlocks;
 pub mod vs;
 pub mod vs_melee;

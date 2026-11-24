@@ -454,6 +454,22 @@ OWNED = {
     "pl_x8D8_t": ("BobOmbRing", "crate::game::pl::types::BobOmbRing"),
     "StaleMoveTable": ("StaleMoveTable", "crate::game::pl::types::StaleMoveTable"),
     "_StaticPlayer": ("StaticPlayer", "crate::game::pl::types::StaticPlayer"),
+    # The structs every match mode shares (task 31).
+    "StartMeleeRules": ("StartMeleeRules", "crate::game::gm::types::StartMeleeRules"),
+    "PlayerInitData": ("PlayerInitData", "crate::game::gm::types::PlayerInitData"),
+    "StartMeleeData": ("StartMeleeData", "crate::game::gm::types::StartMeleeData"),
+    "VsSceneFighter": ("VsSceneFighter", "crate::game::gm::types::VsSceneFighter"),
+    "VsSceneState": ("VsSceneState", "crate::game::gm::types::VsSceneState"),
+    "VsSceneController": ("VsSceneController", "crate::game::gm::types::VsSceneController"),
+    "MatchTeamData": ("MatchTeamData", "crate::game::gm::types::MatchTeamData"),
+    "MatchPlayerData": ("MatchPlayerData", "crate::game::gm::types::MatchPlayerData"),
+    "UnkResultPlayerData": ("PlayerDecisions", "crate::game::gm::types::PlayerDecisions"),
+    "MatchEnd": ("MatchEnd", "crate::game::gm::types::MatchEnd"),
+    "gm_DbPauseInputHandlers": ("DebugPauseInput", "crate::game::gm::types::DebugPauseInput"),
+    "gm_801677C0_s": ("DebugPause", "crate::game::gm::types::DebugPause"),
+    "gm_80479D58_t": ("SceneLoop", "crate::game::gm::types::SceneLoop"),
+    "gm_controller_map": ("GmControllerMap", "crate::game::gm::types::GmControllerMap"),
+    "controller_map": ("ControllerMap", "crate::game::gm::types::ControllerMap"),
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.

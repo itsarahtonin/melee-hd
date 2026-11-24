@@ -78,142 +78,6 @@ CM_SUBJECT = {"x54": "unread_54", "x60": "unread_60"}
 
 CAMERA_DEBUG_MODE = {"_58": "unused_58"}
 
-# A match's rules (`StartMeleeRules`, `vs.start`), which the replays' game info block holds.
-START_MELEE_RULES = {
-    # How the damage displays show (`ifStatus_802F665C`).
-    "x0_3": "damage_display",
-    # The frame counter starts at `start_frame` as it is (else one less).
-    "x1_0": "exact_start_frame",
-    # The coins count toward the clear's bonus.
-    "x1_1": "counts_coins",
-    # The countdown's announcement is the long one (8 rather than 3).
-    "x1_2": "long_countdown",
-    # The "Go!" is announced as kind 8 rather than 4.
-    "x1_3": "alt_go",
-    # The stage's layout is the rules' (`stage_layout`): no alternate from held buttons.
-    "x1_4": "fixed_layout",
-    # The match's end leaves the controllers' rumble as it is.
-    "x1_5": "keeps_rumble",
-    # Kept by the HUD's offscreen arrows (`arrows.x30`).
-    "x2_1": "arrows_flag",
-    # Written by the modes that set up rules, read by none.
-    "x2_2": "unread_2_2",
-    # The damage displays show KOs and teammates' KOs.
-    "x2_5": "damage_display_kos",
-    "x2_6": "damage_displays_on",
-    "x2_7": "damage_display_fades",
-    "x3_0": "shows_score",
-    # The pause screen's controls it lists (the stick, Z, L+R+A+Start), whether it lists none,
-    # and whether the timers show.
-    "x3_1": "pause_shows_stick",
-    "x3_2": "pause_z_retries",
-    "x3_3": "pause_shows_z",
-    "x3_4": "pause_lras_quits",
-    "x3_5": "pause_shows_lras",
-    "x3_6": "pause_hides_controls",
-    "x3_7": "pause_shows_timers",
-    # The pause camera (and the rules' `on_pause_override`).
-    "x4_0": "pause_camera",
-    # A single-player run's or Target Test's rules (`gm_8016B0E8`).
-    "x4_2": "single_player",
-    # A game over goes to its own scene.
-    "x4_3": "game_over_scene",
-    # The score is the clear's (`fn_8017F294`), else `score`.
-    "x4_4": "clear_scores",
-    "x4_5": "allows_continue",
-    "x4_6": "time_bonus",
-    "x4_7": "damage_bonus",
-    # The match has no outcome of its own (it ends from outside).
-    "x5_0": "endless",
-    # The match goes on past the opponents' KOs (a horde's).
-    "x5_1": "goes_on",
-    "x5_2": "no_fighter_hits",
-    "x5_3": "stadium_zoom",
-    "x5_4": "unused_5_4",
-    "x5_5": "unused_5_5",
-    "x5_6": "unused_5_6",
-    "x5_7": "unused_5_7",
-    # A Sudden Death: no items but the Bob-ombs' rain (`gm_8016B238`).
-    "x6": "sudden_death",
-    # The match's ending kind, if the rules set one.
-    "x7": "end_kind",
-    # The run's kind: 1 a Target Test stage.
-    "x9": "run_kind",
-    # The stage's layout (0: chosen by held buttons, `fn_8016E5C0`).
-    "xA": "stage_layout",
-    # Frames the match waits after its end.
-    "xD": "end_wait",
-    "x14": "start_frame",
-    "x18": "score",
-    "x1C_pad": "pad_1c",
-    # The items the match may spawn, a bit each by kind.
-    "x20": "item_switch",
-    # The Pokémon a Poké Ball lets out, 0 for a random one.
-    "x28": "forced_pokemon",
-    "x2C": "quake_scale",
-    "x30": "damage_ratio",
-    # A single-player run's opponents' list, and a challenger's record.
-    "x54": "opponent_list",
-    "x58": "challenger_record",
-    "pad_x5C": "pad_5c",
-}
-
-# A player's line of a match's results (`MatchPlayerData`, `player_standings`), as
-# `fn_80165418`'s standings fill it from the player's stats; the stats' names are the records'
-# (`gmMainLib`'s `add_stats`) where they add to one.
-MATCH_PLAYER_DATA = {
-    # The costume (the top six bits), the rumble and the stamina flags (bits 1 and 0).
-    "x3_u": "flags",
-    # The name tag (0x78: none).
-    "x4": "nametag",
-    "x9": "remaining_hp",
-    "xE": "coins",
-    # KOs of the players past the four `kills` count.
-    "x18": "kills_rest",
-    "x1C": "coins_held",
-    "x20": "kos",
-    "x24": "falls",
-    "x28": "match_frames",
-    "x30": "sub_rank",
-    # Hits over attacks, in percent.
-    "x34": "hit_percent",
-    "x35_pad": "pad_35",
-    "x38": "attacks_hit",
-    "x3C": "attacks_total",
-    "x40": "damage_dealt",
-    "x44": "damage_taken",
-    "x48": "damage_recovered",
-    "x4C": "peak_damage",
-    "x50": "walk_distance",
-    "x54": "run_distance",
-    "x58": "fall_distance",
-    "x5C": "peak_height",
-    "x60": "coins_collected",
-    "x64": "coins_swiped",
-    "x68": "coins_lost",
-    # Seconds from the player's stats' timers (`pl_80040CB4`, `pl_80040CD8`).
-    "x6C": "air_time",
-    "x70": "ground_time",
-    "x74": "ground_attacks",
-    "x78": "air_attacks",
-    "x7C": "items_thrown",
-    "x80": "specials",
-    "x84": "grabs",
-    "x88": "down_attacks",
-    # The action stats' ledge catches (id 112, `pl_800386D8(stats, 112)`: `more_actions[4]`).
-    "x8C": "ledge_catches",
-    # Items picked up, every kind's.
-    "x90": "items_picked_up",
-    # Two more of the stats' timers, in tenths of frames (`pl_80040D44`, `pl_80040D68`), and two
-    # in seconds (`pl_80040CFC`, `pl_80040D20`).
-    "x94": "timed_stat_1",
-    "x98": "timed_stat_2",
-    "x9C": "timed_stat_3",
-    "xA0": "timed_stat_4",
-    # The stale-move table's `teammate_hits` (`pl_80040DB8`).
-    "xA4": "teammate_hits",
-}
-
 # The fighter's data structs (the continuation's second group): a character's save records
 # (`FighterData`, its 1P records `FighterData_x7C`), a smash attack's charge (`_SmashAttr`), the
 # common attributes (`ftCo_DatAttrs`, Yoshi's egg `ftCo_DatAttrs_xBC_t`), a part's bone
@@ -417,95 +281,6 @@ EVENT_DATA = {
 }
 TARGET_TEST_CHOICE = {"unk_584": "ckind", "unk_585": "color", "unk_586": "nametag", "unk_587": "unused_587"}
 
-# The modes (the continuation's fifth group): the VS scene's state and its fighters
-# (`VsSceneState`, `VsSceneFighter`), a slot's start data (`PlayerInitData`), the match's end
-# (`MatchEnd`, `UnkResultPlayerData`), the game's data (`gmm_x0` and its parts), the saved
-# rules (`GameRules`), the VS modes' data (`VsModeData`), a name tag (`NameTagData`) and the
-# scene loop (`gm_80479D58_t`, `gm_801677C0_s`). Their address-named types are named too.
-VS_SCENE_STATE = {
-    # 0 playing, 1 the frames after GAME!, 2 the clear screen, 3 leaving (the VS scene's
-    # frame function, `gm_Scene_Vs_OnFrame`, switches on it).
-    "unk_0": "phase",
-    # Camera mode's shot: the HUD off, the pause's quit buttons ignored.
-    "unk_3": "photo_mode",
-    # A single-player match cleared (`clear_start`): its mode's own results count.
-    "unk_9": "cleared",
-    # The staggered entries' delay, 5 frames more for each slot that enters.
-    "unk_A": "entry_delay",
-    # One more than the GAME! announcement's kind (0 the outcome's own).
-    "unk_B": "end_kind",
-    # The opponents that joined (`fn_8016B728`).
-    "unk_C": "joiners",
-    # The slot of the last KO (6 none), for the stage bonuses.
-    "unk_D": "last_ko",
-    "unk_F": "unused_f",
-    # The GAME! announcement's lines, one more than each sound (0 none), and the frame of the
-    # second.
-    "unk_10": "end_sfx_1",
-    "unk_14": "end_sfx_2",
-    "unk_18": "end_sfx_2_frame",
-    # The countdown's sounds (`lbl_803D5630`) and the entries' voices (`lbl_803D5620`).
-    "unk_1C": "countdown_sfx",
-    "unk_20": "entry_voices",
-    "unk_2C": "timer_frames",
-    # The first player's score (`gm_8016B6E8`).
-    "unk_2E": "score",
-    # The frames after GAME!, counted to the rules' `end_wait`.
-    "unk_30": "end_frames",
-    # The weight on each item kind's count in the random items' table.
-    "unk_34": "item_weight",
-    "x24C": "match_end",
-}
-VS_SCENE_FIGHTER = {
-    "x0": "ckind",
-    # The entry's countdown (0x82 at entry): the announcer's line at 0x50.
-    "x1": "entry_timer",
-    # `b0` metal, `b1` (`PlayerInitData`'s `unread_c_b3`), `b2` invisible, `b3` shows the
-    # team's hearts, `b4` Zelda and Sheik swapped on load, `b5` the stamina display explodes.
-    "x4": "flags",
-    "x5": "unused_5",
-    "x6": "respawn_damage",
-    # A respawn platform's place in use (counts down from 0x90), and the character on it.
-    "x8": "platform_timer",
-    "x9": "unread_9",
-    # The fighter that respawns (0 the first), and `0x8000` to show every camera layer on
-    # respawning; nothing sets either.
-    "xB": "respawn_sub",
-    "xC": "respawn_flags",
-}
-PLAYER_INIT_DATA = {
-    # The player's `more_flags.sfx_size`.
-    "xB": "sfx_size",
-    # The fighter comes in through the entry state, staggered (`entry_delay`).
-    "xC_b1": "enters",
-    # Copied to the VS fighter's flag `b1`, which nothing reads.
-    "xC_b3": "unread_c_b3",
-    # The player's `attrs_scaled`, `voice_muted` and `stamina`.
-    "xC_b5": "attrs_scaled",
-    "xC_b6": "voice_muted",
-    "xC_b7": "stamina",
-    # The stamina display explodes at 0 HP (the hands).
-    "xD_b0": "hp_explodes",
-    # The fighter shows its team's hearts.
-    "xD_b1": "shows_hearts",
-    # The player takes no offscreen damage, has no magnifier bubble, is KO'd upward.
-    "xD_b2": "no_offscreen_damage",
-    "xD_b3": "no_magnifier",
-    "xD_b4": "dies_up",
-    "xD_b5": "unused_d_b5",
-    "xD_b6": "unused_d_b6",
-    "xD_b7": "unused_d_b7",
-}
-MATCH_END = {
-    # The scene tick the standings were last worked out (`gm_8016C75C`).
-    "x0": "standings_tick",
-    "x7": "joiners",
-    # A single-player mode's bonuses' bits (Classic's, Adventure's, All-Star's results).
-    "_x448": "mode_bonuses",
-    # Each player's decisions: earned and their points (`fn_8016C4F4`).
-    "x44C": "decisions",
-}
-PLAYER_DECISIONS = {"x0": "earned", "x104": "points"}
 GAME_DATA = {
     # The attract loop's and the how-to's rounds.
     "unk_1": "demo_count",
@@ -542,30 +317,6 @@ NAME_TAG_DATA = {
     "x1A2": "handicap",
     "padding_x1A2": "pad_1a3",
 }
-SCENE_LOOP = {
-    "unk_0": "ticks",
-    "unk_4": "frames_drawn",
-    # Ticks the game clock was due.
-    "unk_8": "game_ticks",
-    # 1 ends the scene after the frame, 2 at once.
-    "unk_C": "ending",
-    "unk_10": "pause",
-}
-DEBUG_PAUSE = {
-    # The debug pause's bits, a frame step's, each as last applied.
-    "x0": "pause_bits",
-    "x1": "applied_pause_bits",
-    "x2": "step_bits",
-    "x3": "applied_step_bits",
-    # The process links the pause stops, and those the scheduler skips this tick.
-    "unk_20": "paused_links",
-    "unk_28": "skip_links",
-    "unk_34": "clock_mask",
-    # The tick runs the game (no debug pause, or a frame step).
-    "unk_38_0": "runs",
-    "unk_38_1": "unused_38_1",
-}
-
 # The HUD (the continuation's sixth group): the announcements (`Element_803F9628`), the layout
 # (`ifAll_804A0FD8_t`), the stock icons and the single-player tallies (`ifStock_*`), the
 # damage displays' flags, the magnifier's colors, the coin counter, the off-screen arrows and
@@ -760,19 +511,6 @@ SPAWN_ITEM = {
     "x47_flag": "unused_47",
     "x48_ground_or_air": "ground_or_air",
 }
-CONTROLLER_MAP = {
-    "x0": "ports",
-    "xF0": "repeat_fn",
-    # The key repeat: the first delay; the delays after, by how long the buttons are held.
-    "xF4": "repeat_delay",
-    "xF6": "slow_repeat",
-    "xF8": "mid_after",
-    "xFA": "mid_repeat",
-    "xFC": "fast_after",
-    "xFE": "fast_repeat",
-}
-GM_CONTROLLER_MAP = {"x2C": "held_frames"}
-
 # The structs by step 3's commits, in order.
 GROUPS = [
     {"HitCapsule": HIT_CAPSULE, "HitVictim": HIT_VICTIM, "HurtCapsule": HURT_CAPSULE},
@@ -781,7 +519,7 @@ GROUPS = [
         "CameraDebugMode": CAMERA_DEBUG_MODE,
     },
     {},
-    {"StartMeleeRules": START_MELEE_RULES, "MatchPlayerData": MATCH_PLAYER_DATA},
+    {},
     {},
     {},
     {
@@ -801,20 +539,13 @@ GROUPS = [
         "gmm_x0_584_t": TARGET_TEST_CHOICE,
     },
     {
-        "VsSceneState": VS_SCENE_STATE,
-        "VsSceneFighter": VS_SCENE_FIGHTER,
-        "PlayerInitData": PLAYER_INIT_DATA,
-        "MatchEnd": MATCH_END,
-        "UnkResultPlayerData": PLAYER_DECISIONS,
         "gmm_x0": GAME_DATA,
         "GameRules": GAME_RULES,
         "gmm_x0_vsdata": ONE_PLAYER_MODES,
         "gmm_x0_528_t": ONE_PLAYER_CHOICE,
         "VsModeData": VS_MODE_DATA,
         "NameTagData": NAME_TAG_DATA,
-        "gm_80479D58_t": SCENE_LOOP,
-        "gm_801677C0_s": DEBUG_PAUSE,
-    },
+        },
     {
         "Element_803F9628": ANNOUNCEMENT,
         "Element_803F9628_x12": ANNOUNCEMENT_FLAGS,
@@ -839,9 +570,7 @@ GROUPS = [
         "lb_00F9_UnkDesc0": SWING_LINK,
         "DynamicsData": DYNAMICS_DATA,
         "SpawnItem": SPAWN_ITEM,
-        "controller_map": CONTROLLER_MAP,
-        "gm_controller_map": GM_CONTROLLER_MAP,
-    },
+        },
 ]
 
 # The port's names for the decomp's address-named structs (C name to Rust name), which

@@ -36,6 +36,11 @@ fn owned() -> Vec<Layout> {
         FtPartsVis, HitResult, IntVec2, ItemPickup, LedgePoint, ModelVariant, PartAnim,
         PartnerInput, ReflectAttrs, SmashAttrs, StaminaMarker, StepFeet, U8Vec2,
     };
+    use crate::game::gm::types::{
+        ControllerMap, DebugPause, DebugPauseInput, GmControllerMap, MatchEnd, MatchPlayerData,
+        MatchTeamData, PlayerDecisions, PlayerInitData, SceneLoop, StartMeleeData, StartMeleeRules,
+        VsSceneController, VsSceneFighter, VsSceneState,
+    };
     use crate::game::gr::types::{
         Ground, GroundFlags, GroundParam, StageBits, StageBlastZone, StageCameraInfo, StageInfo,
     };
@@ -118,6 +123,21 @@ fn owned() -> Vec<Layout> {
         BobOmbRing::layout(),
         StaleMoveTable::layout(),
         StaticPlayer::layout(),
+        StartMeleeRules::layout(),
+        PlayerInitData::layout(),
+        StartMeleeData::layout(),
+        VsSceneFighter::layout(),
+        VsSceneState::layout(),
+        VsSceneController::layout(),
+        MatchTeamData::layout(),
+        MatchPlayerData::layout(),
+        PlayerDecisions::layout(),
+        MatchEnd::layout(),
+        DebugPauseInput::layout(),
+        DebugPause::layout(),
+        SceneLoop::layout(),
+        GmControllerMap::layout(),
+        ControllerMap::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))
