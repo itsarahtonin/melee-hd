@@ -142,7 +142,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     lib2725::start_vanishing(r.game, r.data, gobj);
     let pos = item(r.game, gobj).pos;
     let angle = mem(fp::frsp(60.0 * std::f64::consts::PI / 180.0));
-    crate::lb::wind::blast(&mut r.game.gr.winds_mut(), pos, 0x78, 1.0, 0.02, angle);
+    crate::lb::wind::blast(r.game.gr.winds_mut(), pos, 0x78, 1.0, 0.02, angle);
     change_state(r, gobj, 5, 2);
 }
 

@@ -263,7 +263,7 @@ impl Running<'_> {
                 let j = self.bone_joint(gobj, 0);
                 let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
                 crate::lb::wind::blast(
-                    &mut self.game.gr.winds_mut(),
+                    self.game.gr.winds_mut(),
                     pos,
                     80,
                     1.0,

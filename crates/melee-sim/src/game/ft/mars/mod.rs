@@ -298,14 +298,7 @@ impl Running<'_> {
     fn mars_hip_wind(&mut self, gobj: GObjId, frames: i32, scale: f32, decay: f32, angle: f32) {
         let j = self.part_joint(gobj, PART_HIP_N);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
-        crate::lb::wind::blast(
-            &mut self.game.gr.winds_mut(),
-            pos,
-            frames,
-            scale,
-            decay,
-            angle,
-        );
+        crate::lb::wind::blast(self.game.gr.winds_mut(), pos, frames, scale, decay, angle);
     }
 }
 

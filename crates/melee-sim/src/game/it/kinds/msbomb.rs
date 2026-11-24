@@ -290,7 +290,7 @@ pub fn blast(r: &mut Running, gobj: GObjId) {
     super::super::lib279c::count_owner_attack(r, gobj);
     let pos = item(r.game, gobj).pos;
     let angle = mem(fp::frsp(1.0471975803375244));
-    crate::lb::wind::blast(&mut r.game.gr.winds_mut(), pos, 120, 1.0, 0.02, angle);
+    crate::lb::wind::blast(r.game.gr.winds_mut(), pos, 120, 1.0, 0.02, angle);
     lib2725::blast_effect(r, gobj);
     hitbox::set_hit_ids(r.game, gobj);
     hitbox::start_blink(r.game, gobj);

@@ -706,7 +706,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     hitbox::set_hit_ids(r.game, gobj);
     let pos = item(r.game, gobj).pos;
     crate::lb::wind::blast(
-        &mut r.game.gr.winds_mut(),
+        r.game.gr.winds_mut(),
         pos,
         0x78,
         1.0,

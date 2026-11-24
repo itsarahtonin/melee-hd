@@ -304,14 +304,7 @@ impl Running<'_> {
         let at = crate::vec::Vec3::new(x, y, 0.0);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, joint, Some(at));
         let frames = if frames < 0 { 120 } else { frames };
-        crate::lb::wind::blast(
-            &mut self.game.gr.winds_mut(),
-            pos,
-            frames,
-            scale,
-            decay,
-            angle,
-        );
+        crate::lb::wind::blast(self.game.gr.winds_mut(), pos, frames, scale, decay, angle);
     }
     /// Swings the fighter's dynamic bone chains a frame, `ftCo_8009E0A8` (`ftCo_8009DD94`
     /// with `x2228_b1`, whose chains take a flat floor at the fighter's height instead of the

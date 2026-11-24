@@ -224,7 +224,7 @@ impl Running<'_> {
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         // `60 * (float) M_PI / 180`, folded in single precision.
         let a = 60.0_f32 * std::f32::consts::PI / 180.0;
-        crate::lb::wind::blast(&mut self.game.gr.winds_mut(), pos, 120, 1.5, 0.02, a);
+        crate::lb::wind::blast(self.game.gr.winds_mut(), pos, 120, 1.5, 0.02, a);
     }
 
     /// The script's flag and the frames in the air cleared.

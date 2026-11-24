@@ -148,7 +148,7 @@ impl Running<'_> {
         let facing = reg(self.game.fighter(gobj).facing_dir);
         pos.x = mem(fp::fmadds(3.0, facing, reg(pos.x)));
         crate::lb::wind::blast(
-            &mut self.game.gr.winds_mut(),
+            self.game.gr.winds_mut(),
             pos,
             120,
             scale,
