@@ -372,6 +372,9 @@ pub const MODULES: &[&str] = &[
     "it/spawn",
     "it/tables",
     "it/tables_gen",
+    "it/types/item",
+    "it/types/mod",
+    "it/types/parts",
     "it/vars",
     "it/zako",
 ];

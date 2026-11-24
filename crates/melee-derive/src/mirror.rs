@@ -18,7 +18,8 @@
 //! - `#[mirror(..)]` on the struct: `c` the decomp's name of the struct it mirrors (none for a
 //!   group of fields that has no C struct of its own), `size` its bytes, `lay` to lay it out for
 //!   the heap's image too (`LayOut`), and a `pad(OFFSET, BYTES)` for each run of bytes no field
-//!   holds (the compiler's padding), which nothing compares.
+//!   holds (the compiler's padding), which nothing compares; `pad(OFFSET, bits(FIRST, COUNT))`
+//!   for the bits a bitfield's byte leaves over.
 //! - `#[at(OFFSET)]` on each field, in increasing order: a value of a `Mirror` type at that
 //!   offset; `#[at(OFFSET, bits(FIRST, COUNT))]` a bitfield of the byte at OFFSET (bits counted
 //!   from the top, as the compiler allocates them) of a `BitField` type; `#[at(OFFSET, union)]`
@@ -77,12 +78,30 @@ fn struct_opts(input: &DeriveInput) -> syn::Result<StructOpts> {
             } else if meta.path.is_ident("lay") {
                 o.lay = true;
             } else if meta.path.is_ident("pad") {
+                // `pad(AT, BYTES)`, or `pad(AT, bits(FIRST, COUNT))` for the bits a bitfield's
+                // byte leaves over: kept as a run of bits.
                 let content;
                 syn::parenthesized!(content in meta.input);
                 let at = int(&content)?;
                 content.parse::<Token![,]>()?;
-                let n = int(&content)?;
-                o.pads.push((at, n));
+                if content.peek(syn::Ident) {
+                    let what: syn::Ident = content.parse()?;
+                    if what != "bits" {
+                        return Err(syn::Error::new_spanned(
+                            what,
+                            "expected BYTES or bits(FIRST, COUNT)",
+                        ));
+                    }
+                    let inner;
+                    syn::parenthesized!(inner in content);
+                    let first = int(&inner)?;
+                    inner.parse::<Token![,]>()?;
+                    let count = int(&inner)?;
+                    o.pads.push((at * 8 + first, count));
+                } else {
+                    let n = int(&content)?;
+                    o.pads.push((at * 8, n * 8));
+                }
             } else {
                 return Err(meta.error("expected `c`, `size`, `lay` or `pad`"));
             }

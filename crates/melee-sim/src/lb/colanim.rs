@@ -7,8 +7,9 @@ use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
 use crate::fpu::{mem, reg};
-use crate::game::structs::{_GXColor, ColorOverlay};
+use crate::game::structs::_GXColor;
 use crate::lb::command;
+use crate::lb::command::Script;
 
 /// Clears a color overlay's script and effects, `lb_80014498`.
 #[doc(alias = "lb_80014498")]
@@ -291,4 +292,105 @@ pub fn start(co: &mut ColorOverlay, data: &Archives, table: DataRef, id: i32, fr
     co.color_enable = false;
     co.flag2 = false;
     true
+}
+
+/// The decomp's `ColorOverlay`.
+#[derive(
+    melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq, melee_derive::Mirror,
+)]
+#[mirror(c = "ColorOverlay", size = 0x80, lay, pad(0x7D, 3))]
+pub struct ColorOverlay {
+    #[at(0x0)]
+    pub script: Script,
+    /// Laid out for the heap's image; nothing writes or reads it.
+    #[at(0x24)]
+    #[doc(alias("x24"))]
+    pub unused_24: i32,
+    #[at(0x28, union)]
+    #[doc(alias("x28_colanim"))]
+    pub colanim: [u8; 4],
+    #[at(0x2C)]
+    #[doc(alias("x2C_hex"))]
+    pub hex: _GXColor,
+    #[at(0x30)]
+    #[doc(alias("x30_color_red"))]
+    pub color_red: f32,
+    #[at(0x34)]
+    #[doc(alias("x34_color_green"))]
+    pub color_green: f32,
+    #[at(0x38)]
+    #[doc(alias("x38_color_blue"))]
+    pub color_blue: f32,
+    #[at(0x3C)]
+    #[doc(alias("x3C_color_alpha"))]
+    pub color_alpha: f32,
+    #[at(0x40)]
+    #[doc(alias("x40_colorblend_red"))]
+    pub colorblend_red: f32,
+    #[at(0x44)]
+    #[doc(alias("x44_colorblend_green"))]
+    pub colorblend_green: f32,
+    #[at(0x48)]
+    #[doc(alias("x48_colorblend_blue"))]
+    pub colorblend_blue: f32,
+    #[at(0x4C)]
+    #[doc(alias("x4C_colorblend_alpha"))]
+    pub colorblend_alpha: f32,
+    #[at(0x50)]
+    #[doc(alias("x50_light_color"))]
+    pub light_color: _GXColor,
+    #[at(0x54)]
+    #[doc(alias("x54_light_red"))]
+    pub light_red: f32,
+    #[at(0x58)]
+    #[doc(alias("x58_light_green"))]
+    pub light_green: f32,
+    #[at(0x5C)]
+    #[doc(alias("x5C_light_blue"))]
+    pub light_blue: f32,
+    #[at(0x60)]
+    #[doc(alias("x60_light_alpha"))]
+    pub light_alpha: f32,
+    #[at(0x64)]
+    #[doc(alias("x64_lightblend_red"))]
+    pub lightblend_red: f32,
+    #[at(0x68)]
+    #[doc(alias("x68_lightblend_green"))]
+    pub lightblend_green: f32,
+    #[at(0x6C)]
+    #[doc(alias("x6C_lightblend_blue"))]
+    pub lightblend_blue: f32,
+    #[at(0x70)]
+    #[doc(alias("x70_lightblend_alpha"))]
+    pub lightblend_alpha: f32,
+    #[at(0x74)]
+    #[doc(alias("x74_light_rot_x"))]
+    pub light_rot_x: f32,
+    #[at(0x78)]
+    #[doc(alias("x78_light_rot_yz"))]
+    pub light_rot_yz: f32,
+    #[at(0x7C, bits(0, 1))]
+    #[doc(alias("x7C_color_enable"))]
+    pub color_enable: bool,
+    #[at(0x7C, bits(1, 1))]
+    #[doc(alias("x7C_flag2"))]
+    pub flag2: bool,
+    #[at(0x7C, bits(2, 1))]
+    #[doc(alias("x7C_light_enable"))]
+    pub light_enable: bool,
+    #[at(0x7C, bits(3, 1))]
+    #[doc(alias("x7C_flag4"))]
+    pub flag4: bool,
+    #[at(0x7C, bits(4, 1))]
+    #[doc(alias("x7C_flag5"))]
+    pub flag5: bool,
+    #[at(0x7C, bits(5, 1))]
+    #[doc(alias("x7C_flag6"))]
+    pub flag6: bool,
+    #[at(0x7C, bits(6, 1))]
+    #[doc(alias("x7C_flag7"))]
+    pub flag7: bool,
+    #[at(0x7C, bits(7, 1))]
+    #[doc(alias("x7C_flag8"))]
+    pub flag8: bool,
 }

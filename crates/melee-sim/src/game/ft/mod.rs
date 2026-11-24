@@ -80,6 +80,7 @@ pub mod second;
 pub mod sound;
 pub mod spawn;
 pub mod transform;
+pub mod types;
 pub mod unload;
 pub mod vars;
 pub mod yoshi;

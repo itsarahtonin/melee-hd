@@ -30,9 +30,21 @@ struct CRecord {
 /// The hand-written structs, by their layouts. Each is on structgen's `OWNED` list.
 fn owned() -> Vec<Layout> {
     use crate::game::camera::types::{Camera, CameraQuake, CameraTransformState, OrbitLimits};
+    use crate::game::ft::types::{
+        AbsorbAttrs, AfterimagePoints, AttackRecord, CommonAttrs, CpuFighter, DObjList, EggAttrs,
+        Fighter, FighterDamage, FighterHurtCapsule, FighterInput, FighterStateFlags, FtInputTimers,
+        FtPartsVis, HitResult, IntVec2, ItemPickup, LedgePoint, ModelVariant, PartAnim,
+        PartnerInput, ReflectAttrs, SmashAttrs, StaminaMarker, StepFeet, U8Vec2,
+    };
     use crate::game::gr::types::{
         Ground, GroundFlags, GroundParam, StageBits, StageBlastZone, StageCameraInfo, StageInfo,
     };
+    use crate::game::it::types::{
+        DynamicsPoint, Item, ItemFlagBits, ItemFlags, ItemHitBits, ItemHitFlags, ItemHitbox,
+        ItemOutline, ItemStateFlags, StepBox,
+    };
+    use crate::lb::colanim::ColorOverlay;
+    use crate::lb::shadow::LbShadow;
     use crate::mp::coll::{CollData, Ecb, Surface};
     [
         CollData::layout(),
@@ -49,6 +61,44 @@ fn owned() -> Vec<Layout> {
         GroundParam::layout(),
         Ground::layout(),
         GroundFlags::layout(),
+        FighterStateFlags::layout(),
+        PartAnim::layout(),
+        StaminaMarker::layout(),
+        LedgePoint::layout(),
+        AfterimagePoints::layout(),
+        ModelVariant::layout(),
+        FighterInput::layout(),
+        FtInputTimers::layout(),
+        U8Vec2::layout(),
+        IntVec2::layout(),
+        ItemPickup::layout(),
+        FtPartsVis::layout(),
+        DObjList::layout(),
+        FighterHurtCapsule::layout(),
+        ReflectAttrs::layout(),
+        AbsorbAttrs::layout(),
+        FighterDamage::layout(),
+        StepFeet::layout(),
+        HitResult::layout(),
+        AttackRecord::layout(),
+        CommonAttrs::layout(),
+        EggAttrs::layout(),
+        SmashAttrs::layout(),
+        CpuFighter::layout(),
+        PartnerInput::layout(),
+        ColorOverlay::layout(),
+        LbShadow::layout(),
+        Fighter::layout(),
+        ItemHitFlags::layout(),
+        ItemHitBits::layout(),
+        ItemHitbox::layout(),
+        ItemOutline::layout(),
+        ItemStateFlags::layout(),
+        ItemFlags::layout(),
+        ItemFlagBits::layout(),
+        DynamicsPoint::layout(),
+        StepBox::layout(),
+        Item::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))
@@ -156,11 +206,7 @@ fn flatten(
     runs: &mut Vec<(u32, u32, String, Option<&'static str>)>,
     pads: &mut Vec<(u32, u32)>,
 ) {
-    pads.extend(
-        l.pads
-            .iter()
-            .map(|&(a, n)| (base + a * 8, base + (a + n) * 8)),
-    );
+    pads.extend(l.pads.iter().map(|&(a, n)| (base + a, base + a + n)));
     for f in &l.fields {
         let FieldLayout {
             name,
@@ -592,6 +638,48 @@ mod proof {
             e.iter().any(|e| e.contains("size 0xb, the decomp's 0xc")),
             "{e:?}"
         );
+    }
+
+    /// A flag byte's one bitfield, its other seven bits the compiler's padding:
+    /// `{ int a; float b; short c; u8 d:1; /* pad */ }`.
+    #[derive(melee_derive::Mirror, Debug, Default)]
+    #[mirror(c = "T", size = 12, pad(10, bits(1, 7)), pad(11, 1))]
+    struct BitPad {
+        #[at(0)]
+        a: i32,
+        #[at(4)]
+        b: f32,
+        #[at(8)]
+        c: i16,
+        #[at(10, bits(0, 1))]
+        d: bool,
+    }
+
+    /// The same padding declared over the whole byte, the bitfield's bit too.
+    #[derive(melee_derive::Mirror, Debug, Default)]
+    #[mirror(c = "T", size = 12, pad(10, bits(0, 8)), pad(11, 1))]
+    struct BitPadOver {
+        #[at(0)]
+        a: i32,
+        #[at(4)]
+        b: f32,
+        #[at(8)]
+        c: i16,
+        #[at(10, bits(0, 1))]
+        d: bool,
+    }
+
+    /// A pad of bits covers exactly the bits a bitfield's byte leaves over.
+    #[test]
+    fn a_pad_of_bits_covers_what_a_bitfield_leaves() {
+        let mut c = c_record();
+        c.fields.truncate(4);
+        assert_eq!(
+            check(&BitPad::layout().unwrap(), &c, "T"),
+            Vec::<String>::new()
+        );
+        let e = check(&BitPadOver::layout().unwrap(), &c, "T");
+        assert!(e.iter().any(|e| e.contains("overlaps")), "{e:?}");
     }
 
     /// A handle's kind is its type's own name, as the generated mirrors and every `Cx` take it
