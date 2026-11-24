@@ -46,6 +46,8 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::co::cargo::CARGO;
+use melee_sim::game::ft::donkey::heavy::HEAVY as HEAVY_CARRY;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -234,12 +236,12 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     // The attribute copy and the state changes other code calls directly.
     let entry: Option<fn(&mut Running, GObjId)> = match name.as_str() {
         "ftDk_Init_LoadSpecialAttrs" => Some(|g, o| g.dk_load_special_attrs(o)),
-        "ftCo_8009B518" => Some(|g, o| g.enter_cargo_wait(o)),
+        "ftCo_8009B518" => Some(|g, o| g.enter_carry_wait(o, &CARGO)),
         "ftCo_8009B56C" => Some(|g, o| g.enter_cargo_start(o)),
-        "ftCo_8009B860" => Some(|g, o| g.enter_cargo_turn(o)),
-        "ftCo_8009BB64" => Some(|g, o| g.enter_cargo_jump(o)),
-        "ftCo_8009BC58" => Some(|g, o| g.enter_cargo_fall(o)),
-        "ftCo_8009BD4C" => Some(|g, o| g.enter_cargo_landing(o)),
+        "ftCo_8009B860" => Some(|g, o| g.enter_carry_turn(o, &CARGO)),
+        "ftCo_8009BB64" => Some(|g, o| g.enter_carry_jump(o, &CARGO)),
+        "ftCo_8009BC58" => Some(|g, o| g.enter_carry_fall(o, &CARGO)),
+        "ftCo_8009BD4C" => Some(|g, o| g.enter_carry_landing(o, &CARGO)),
         "ftCo_8009C540" => Some(|g, o| g.enter_cargo_pass(o)),
         "ftCo_8009C170" => Some(|g, o| g.cargo_throw_to_air(o)),
         "ftCo_8009C45C" => Some(|g, o| g.cargo_throw_to_ground(o)),
@@ -248,11 +250,11 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftCo_800C124C" => Some(|g, o| g.enter_bury_wait(o)),
         "ftCo_800C13BC" => Some(|g, o| g.enter_bury_jump(o)),
         "ftCo_Jump_Phys_Inner" => Some(|g, o| g.co_cargo_jump_phys(o)),
-        "ftDk_MS_341_800DF980" => Some(|g, o| g.enter_dk_heavy_wait(o)),
-        "ifSomething" => Some(|g, o| g.enter_dk_heavy_turn(o)),
-        "ftDk_MS_345_800E0294" => Some(|g, o| g.enter_dk_heavy_fall(o)),
-        "ftDk_MS_347_800E03C0" => Some(|g, o| g.enter_dk_heavy_jump(o)),
-        "ftDk_MS_346_800E05E4" => Some(|g, o| g.enter_dk_heavy_landing(o)),
+        "ftDk_MS_341_800DF980" => Some(|g, o| g.enter_carry_wait(o, &HEAVY_CARRY)),
+        "ifSomething" => Some(|g, o| g.enter_carry_turn(o, &HEAVY_CARRY)),
+        "ftDk_MS_345_800E0294" => Some(|g, o| g.enter_carry_fall(o, &HEAVY_CARRY)),
+        "ftDk_MS_347_800E03C0" => Some(|g, o| g.enter_carry_jump(o, &HEAVY_CARRY)),
+        "ftDk_MS_346_800E05E4" => Some(|g, o| g.enter_carry_landing(o, &HEAVY_CARRY)),
         "ftDk_MS_349_800E06D8" => Some(|g, o| g.dk_heavy_hit(o)),
         "doSomething" => Some(|g, o| g.dk_heavy_hit_keep(o)),
         "ftCo_Turn_Anim_Inner" => Some(|g, o| g.turn_anim_inner(o)),
@@ -263,32 +265,32 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         return Ret::Nothing;
     }
     match name.as_str() {
-        "ftCo_8009B4D0" => b(g.cargo_wait_check(gobj)),
-        "ftCo_8009B67C" => b(g.cargo_walk_check(gobj)),
-        "ftCo_8009B818" => b(g.cargo_turn_check(gobj)),
-        "ftCo_8009BB1C" => b(g.cargo_jump_check(gobj)),
+        "ftCo_8009B4D0" => b(g.carry_wait_check(gobj, &CARGO)),
+        "ftCo_8009B67C" => b(g.carry_walk_check(gobj, &CARGO)),
+        "ftCo_8009B818" => b(g.carry_turn_check(gobj, &CARGO)),
+        "ftCo_8009BB1C" => b(g.carry_jump_check(gobj, &CARGO)),
         "ftCo_8009BF3C" => b(g.cargo_throw_check(gobj)),
         "ftCo_8009C4F8" => b(g.cargo_pass_check(gobj)),
         "ft_8008A1FC" => b(g.stick_not_forward(gobj)),
-        "ftDk_MS_341_800DF938" => b(g.dk_heavy_wait_check(gobj)),
-        "ftDk_MS_341_800DFA98" => b(g.dk_heavy_walk_check(gobj)),
-        "ftDk_MS_345_800E0134" => b(g.dk_heavy_turn_check(gobj)),
-        "ftDk_MS_347_800E0378" => b(g.dk_heavy_jump_check(gobj)),
+        "ftDk_MS_341_800DF938" => b(g.carry_wait_check(gobj, &HEAVY_CARRY)),
+        "ftDk_MS_341_800DFA98" => b(g.carry_walk_check(gobj, &HEAVY_CARRY)),
+        "ftDk_MS_345_800E0134" => b(g.carry_turn_check(gobj, &HEAVY_CARRY)),
+        "ftDk_MS_347_800E0378" => b(g.carry_jump_check(gobj, &HEAVY_CARRY)),
         "checkSomething" => b(g.dk_heavy_hit_keeps(gobj)),
         "ftDk_MS_341_800DFAE4" => {
-            g.enter_dk_heavy_walk(gobj, f32::from_bits(gekko_fp::stfs(f1)));
+            g.enter_carry_walk(gobj, f32::from_bits(gekko_fp::stfs(f1)), &HEAVY_CARRY);
             Ret::Nothing
         }
         "ftDk_MS_348_800E04A4" => {
-            g.enter_dk_heavy_knee_bend(gobj, r4);
+            g.enter_carry_knee_bend(gobj, r4, &HEAVY_CARRY);
             Ret::Nothing
         }
         "ftCo_8009B6C8" => {
-            g.enter_cargo_walk(gobj, f32::from_bits(gekko_fp::stfs(f1)));
+            g.enter_carry_walk(gobj, f32::from_bits(gekko_fp::stfs(f1)), &CARGO);
             Ret::Nothing
         }
         "ftCo_8009B9C8" => {
-            g.enter_cargo_knee_bend(gobj, r4);
+            g.enter_carry_knee_bend(gobj, r4, &CARGO);
             Ret::Nothing
         }
         "ftCo_8009C02C" => {

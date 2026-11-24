@@ -12,6 +12,7 @@ use gekko_fp as fp;
 
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::state::Running;
+use super::super::coll::Cb;
 use super::super::parts::TRANS_N2;
 use super::checks::abs;
 use super::ids::ms;
@@ -61,8 +62,45 @@ const SHOULDERED_MASHED: usize = 0x4;
 const THROW_COLL_FLAGS: u32 = 0x0C4C_5080;
 /// `Ft_MF_FreezeState`.
 const MF_FREEZE_STATE: u32 = 0x20_0000;
+/// `Ft_MF_KeepFastFall`.
+const MF_KEEP_FAST_FALL: u32 = 1;
 /// The held fighter's follow callback (`ftCo_800DB464`).
 const HELD_FOLLOW: u32 = 0x800D_B464;
+
+/// What Donkey Kong's two carries differ by: the cargo after his forward throw ([`CARGO`], the
+/// common `ftCo_Cargo*` states, a fighter on his shoulders) and a heavy item's
+/// ([`HEAVY`](super::super::donkey::heavy::HEAVY), his `ftDk_Heavy*` states). Their states
+/// come in the same order from the first, and the functions below that carry both
+/// originals' `#[doc(alias)]` are both's; each keeps its own turn, its throws and the rest.
+pub struct Carry {
+    /// The cargo attributes' word naming its first state (`x4_motion_state`; the heavy item's
+    /// `motion_state`, the first word).
+    pub first: usize,
+    /// Its throw on A or B (`ftCo_8009BF3C`; the heavy item's, `ftCo_80094EA4`).
+    pub throw: fn(&mut Running, GObjId) -> bool,
+    /// Whether it drops through platforms (the cargo).
+    pub pass: bool,
+    /// Whether a fighter rides on the shoulders, into its shouldered state with each of the
+    /// carrier's (the cargo).
+    pub rider: bool,
+    /// Whether its wait lands it first if it's in the air (the heavy item's).
+    pub wait_lands: bool,
+    /// Its fall off a ledge and its landing, as the collision callbacks take them.
+    pub fall: Cb,
+    pub landing: Cb,
+}
+
+/// The cargo: a fighter on the shoulders, following each state, and dropping through
+/// platforms.
+pub const CARGO: Carry = Carry {
+    first: X4_MOTION_STATE,
+    throw: |g, gobj| g.cargo_throw_check(gobj),
+    pass: true,
+    rider: true,
+    wait_lands: false,
+    fall: |g, gobj| g.enter_carry_fall(gobj, &CARGO),
+    landing: |g, gobj| g.enter_carry_landing(gobj, &CARGO),
+};
 
 impl Running<'_> {
     /// A float of the fighter's cargo attributes (`x2CC`).
@@ -75,14 +113,13 @@ impl Running<'_> {
     }
 
     /// One of the carrier's states, `step` past the first.
-    pub(crate) fn cargo_state(&self, gobj: GObjId, step: i32) -> i32 {
+    pub(crate) fn carry_state(&self, gobj: GObjId, s: &Carry, step: i32) -> i32 {
         let f = self.game.fighter_id(gobj);
         let a = self.game.fighters[f.0]
             .cargo_attrs
             .expect("a cargo fighter without cargo attributes");
         let b = &self.game.fighter_attrs[a.0];
-        i32::from_be_bytes(b[X4_MOTION_STATE..X4_MOTION_STATE + 4].try_into().unwrap())
-            .wrapping_add(step)
+        i32::from_be_bytes(b[s.first..s.first + 4].try_into().unwrap()).wrapping_add(step)
     }
 
     /// The carried fighter.
@@ -91,6 +128,14 @@ impl Running<'_> {
             .fighter(gobj)
             .victim_gobj
             .expect("carrying no one")
+    }
+
+    /// The rider into its shouldered state `msid`, if the carry has one.
+    fn carry_rider(&mut self, gobj: GObjId, s: &Carry, msid: i32) {
+        if s.rider {
+            let v = self.cargo_victim(gobj);
+            self.enter_shouldered(v, msid);
+        }
     }
 
     /// The stick pulled back or within the walk's threshold, `ft_8008A1FC`.
@@ -102,30 +147,36 @@ impl Running<'_> {
         fp::fmuls(x, reg(fp.facing_dir)) < 0.0 || abs(x) < t
     }
 
-    /// Back to the cargo wait when the stick lets go, `ftCo_8009B4D0`.
+    /// Back to the carry's wait when the stick lets go (`ftCo_8009B4D0`,
+    /// `ftDk_MS_341_800DF938`).
     #[doc(alias = "ftCo_8009B4D0")]
-    pub fn cargo_wait_check(&mut self, gobj: GObjId) -> bool {
+    #[doc(alias = "ftDk_MS_341_800DF938")]
+    pub fn carry_wait_check(&mut self, gobj: GObjId, s: &Carry) -> bool {
         if self.stick_not_forward(gobj) {
-            self.enter_cargo_wait(gobj);
+            self.enter_carry_wait(gobj, s);
             return true;
         }
         false
     }
 
-    /// The cargo wait, `ftCo_8009B518`, the carried fighter waiting too.
+    /// The carry's wait (`ftCo_8009B518`, `ftDk_MS_341_800DF980`): the heavy item's landed
+    /// first if in the air, the rider waiting too.
     #[doc(alias = "ftCo_8009B518")]
-    pub fn enter_cargo_wait(&mut self, gobj: GObjId) {
-        let msid = self.cargo_state(gobj, 0);
+    #[doc(alias = "ftDk_MS_341_800DF980")]
+    pub fn enter_carry_wait(&mut self, gobj: GObjId, s: &Carry) {
+        if s.wait_lands && self.is_airborne(gobj) {
+            self.land(gobj);
+        }
+        let msid = self.carry_state(gobj, s, 0);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        let v = self.cargo_victim(gobj);
-        self.enter_shouldered(v, ms::SHOULDERED_WAIT);
+        self.carry_rider(gobj, s, ms::SHOULDERED_WAIT);
     }
 
     /// The cargo wait after the forward throw, `ftCo_8009B56C`: the carried fighter's mash
     /// timer starts.
     #[doc(alias = "ftCo_8009B56C")]
     pub fn enter_cargo_start(&mut self, gobj: GObjId) {
-        let msid = self.cargo_state(gobj, 0);
+        let msid = self.carry_state(gobj, &CARGO, 0);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let v = self.cargo_victim(gobj);
         self.enter_shouldered_start(v, ms::SHOULDERED_WAIT);
@@ -141,105 +192,125 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Shouldered_Coll")]
     pub fn co_cargo_nothing(&mut self, _gobj: GObjId) {}
 
-    /// `ftCo_CargoWait_IASA`: a throw, a jump, a drop through a platform, a turn or a walk.
+    /// The wait's interrupt (`ftCo_CargoWait_IASA`, `ftDk_HeavyWait0_IASA`): a throw, a jump,
+    /// the cargo's drop through a platform, a turn or a walk.
     #[doc(alias = "ftCo_CargoWait_IASA")]
-    pub fn co_cargo_wait_iasa(&mut self, gobj: GObjId) {
-        let _ = self.cargo_throw_check(gobj)
-            || self.cargo_jump_check(gobj)
-            || self.cargo_pass_check(gobj)
-            || self.cargo_turn_check(gobj)
-            || self.cargo_walk_check(gobj);
+    #[doc(alias = "ftDk_HeavyWait0_IASA")]
+    pub fn carry_wait_iasa(&mut self, gobj: GObjId, s: &Carry) {
+        let _ = (s.throw)(self, gobj)
+            || self.carry_jump_check(gobj, s)
+            || (s.pass && self.cargo_pass_check(gobj))
+            || self.carry_turn_check(gobj, s)
+            || self.carry_walk_check(gobj, s);
     }
 
-    /// The grounded cargo states' physics: friction or the animation's motion.
+    /// The grounded carry states' physics: friction.
     #[doc(alias = "ftCo_CargoWait_Phys")]
     #[doc(alias = "ftCo_CargoTurn_Phys")]
     #[doc(alias = "ftCo_CargoKneebend_Phys")]
     #[doc(alias = "ftCo_CargoLanding_Phys")]
-    pub fn co_cargo_ground_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyWait0_Phys")]
+    #[doc(alias = "ftDk_HeavyTurn_Phys")]
+    #[doc(alias = "ftDk_HeavyWait1_Phys")]
+    #[doc(alias = "ftDk_HeavyLanding_Phys")]
+    pub fn carry_ground_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
 
-    /// The grounded cargo states' collision: off a ledge, the cargo fall.
+    /// The grounded carry states' collision: off a ledge, the carry's fall.
     #[doc(alias = "ftCo_CargoWait_Coll")]
     #[doc(alias = "ftCo_CargoWalk_Coll")]
     #[doc(alias = "ftCo_CargoTurn_Coll")]
     #[doc(alias = "ftCo_CargoKneebend_Coll")]
     #[doc(alias = "ftCo_CargoLanding_Coll")]
-    pub fn co_cargo_wait_coll(&mut self, gobj: GObjId) {
-        self.ground_coll_fall_off_then(gobj, |g, gobj| g.enter_cargo_fall(gobj));
+    #[doc(alias = "ftDk_HeavyWait0_Coll")]
+    #[doc(alias = "ftDk_HeavyWalk_Coll")]
+    #[doc(alias = "ftDk_HeavyTurn_Coll")]
+    #[doc(alias = "ftDk_HeavyWait1_Coll")]
+    #[doc(alias = "ftDk_HeavyLanding_Coll")]
+    pub fn carry_wait_coll(&mut self, gobj: GObjId, s: &Carry) {
+        self.ground_coll_fall_off_then(gobj, s.fall);
     }
 
-    /// Walking when the stick leans forward, `ftCo_8009B67C`.
+    /// Walking when the stick leans forward (`ftCo_8009B67C`, `ftDk_MS_341_800DFA98`).
     #[doc(alias = "ftCo_8009B67C")]
-    pub fn cargo_walk_check(&mut self, gobj: GObjId) -> bool {
+    #[doc(alias = "ftDk_MS_341_800DFA98")]
+    pub fn carry_walk_check(&mut self, gobj: GObjId, s: &Carry) -> bool {
         if self.walk_input(gobj) {
-            self.enter_cargo_walk(gobj, 0.0);
+            self.enter_carry_walk(gobj, 0.0, s);
             return true;
         }
         false
     }
 
-    /// A cargo walk at the speed the ground speed calls for, `ftCo_8009B6C8`, the carried
-    /// fighter walking with it.
+    /// A carry's walk at the speed the ground speed calls for (`ftCo_8009B6C8`,
+    /// `ftDk_MS_341_800DFAE4`), the rider walking with it.
     #[doc(alias = "ftCo_8009B6C8")]
-    pub fn enter_cargo_walk(&mut self, gobj: GObjId, anim_start: f32) {
+    #[doc(alias = "ftDk_MS_341_800DFAE4")]
+    pub fn enter_carry_walk(&mut self, gobj: GObjId, anim_start: f32, s: &Carry) {
         let f = self.game.fighter_id(gobj);
-        let msid = self.cargo_state(gobj, WALK);
+        let msid = self.carry_state(gobj, s, WALK);
         let at = |g: &Self, base: usize| [0, 1, 2].map(|i| g.cargo_attr_f32(f, base + 4 * i));
         let (frames, rates) = (at(self, WALK_FRAMES), at(self, WALK_RATES));
         self.enter_walk_common(gobj, msid, 0, anim_start, frames, rates, 1.0);
-        let walk = self.walk_type(gobj);
-        let v = self.cargo_victim(gobj);
-        self.enter_shouldered(v, walk.wrapping_add(ms::SHOULDERED_WAIT));
+        if s.rider {
+            let walk = self.walk_type(gobj);
+            self.carry_rider(gobj, s, walk.wrapping_add(ms::SHOULDERED_WAIT));
+        }
     }
 
-    /// `ftCo_CargoWalk_Anim`: the walk's animation speed follows the ground speed.
+    /// The walk's animation (`ftCo_CargoWalk_Anim`, `ftDk_HeavyWalk_Anim`): its speed follows
+    /// the ground speed.
     #[doc(alias = "ftCo_CargoWalk_Anim")]
-    pub fn co_cargo_walk_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyWalk_Anim")]
+    pub fn carry_walk_anim(&mut self, gobj: GObjId) {
         self.co_walk_anim(gobj);
     }
 
-    /// `ftCo_CargoWalk_IASA`: a throw, a jump, a drop through, the wait when the stick lets
-    /// go, else the walk's speed switch.
+    /// The walk's interrupt (`ftCo_CargoWalk_IASA`, `ftDk_HeavyWalk_IASA`): a throw, a jump,
+    /// the cargo's drop through, the wait when the stick lets go, else the walk's speed
+    /// switch.
     #[doc(alias = "ftCo_CargoWalk_IASA")]
-    pub fn co_cargo_walk_iasa(&mut self, gobj: GObjId) {
-        if self.cargo_throw_check(gobj)
-            || self.cargo_jump_check(gobj)
-            || self.cargo_pass_check(gobj)
-            || self.cargo_wait_check(gobj)
+    #[doc(alias = "ftDk_HeavyWalk_IASA")]
+    pub fn carry_walk_iasa(&mut self, gobj: GObjId, s: &Carry) {
+        if (s.throw)(self, gobj)
+            || self.carry_jump_check(gobj, s)
+            || (s.pass && self.cargo_pass_check(gobj))
+            || self.carry_wait_check(gobj, s)
         {
             return;
         }
-        self.walk_speed_switch(gobj, |g, gobj, frame| g.enter_cargo_walk(gobj, frame));
+        self.walk_speed_switch(gobj, |g, gobj, frame| g.enter_carry_walk(gobj, frame, s));
     }
 
-    /// `ftCo_CargoWalk_Phys`: the walk's acceleration.
+    /// The walk's physics (`ftCo_CargoWalk_Phys`, `ftDk_HeavyWalk_Phys`): its acceleration.
     #[doc(alias = "ftCo_CargoWalk_Phys")]
-    pub fn co_cargo_walk_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyWalk_Phys")]
+    pub fn carry_walk_phys(&mut self, gobj: GObjId) {
         self.co_walk_phys(gobj);
     }
 
-    /// Turning when the stick points back, `ftCo_8009B818`.
+    /// Turning when the stick points back (`ftCo_8009B818`, `ftDk_MS_345_800E0134`).
     #[doc(alias = "ftCo_8009B818")]
-    pub fn cargo_turn_check(&mut self, gobj: GObjId) -> bool {
+    #[doc(alias = "ftDk_MS_345_800E0134")]
+    pub fn carry_turn_check(&mut self, gobj: GObjId, s: &Carry) -> bool {
         if self.turn_input(gobj) {
-            self.enter_cargo_turn(gobj);
+            self.enter_carry_turn(gobj, s);
             return true;
         }
         false
     }
 
-    /// The cargo turn, `ftCo_8009B860`, over `TURN_SPEED` frames, the carried fighter
-    /// turning too.
+    /// The carry's turn over `TURN_SPEED` frames (`ftCo_8009B860`; the heavy item's,
+    /// `ftDk_MS_345_800E0134`'s `ifSomething`), the rider turning too.
     #[doc(alias = "ftCo_8009B860")]
-    pub fn enter_cargo_turn(&mut self, gobj: GObjId) {
+    #[doc(alias = "ifSomething")]
+    pub fn enter_carry_turn(&mut self, gobj: GObjId, s: &Carry) {
         let f = self.game.fighter_id(gobj);
-        let msid = self.cargo_state(gobj, TURN);
+        let msid = self.carry_state(gobj, s, TURN);
         let frames = self.cargo_attr_f32(f, TURN_SPEED);
         self.enter_turn(gobj, msid, 0, 0.0, frames, 0.0);
-        let v = self.cargo_victim(gobj);
-        self.enter_shouldered(v, ms::SHOULDERED_TURN);
+        self.carry_rider(gobj, s, ms::SHOULDERED_TURN);
     }
 
     /// `ftCo_CargoTurn_Anim`: after the turn's frames, both face the other way once; the wait
@@ -258,137 +329,152 @@ impl Running<'_> {
             self.game.fighter_mut(v).facing_dir = facing;
         }
         if !self.anim_frames_remaining(gobj) {
-            self.enter_cargo_wait(gobj);
+            self.enter_carry_wait(gobj, &CARGO);
         }
     }
 
     /// `ftCo_CargoTurn_IASA`: a throw or a jump.
     #[doc(alias = "ftCo_CargoTurn_IASA")]
     pub fn co_cargo_turn_iasa(&mut self, gobj: GObjId) {
-        let _ = self.cargo_throw_check(gobj) || self.cargo_jump_check(gobj);
+        let _ = self.cargo_throw_check(gobj) || self.carry_jump_check(gobj, &CARGO);
     }
 
-    /// The cargo knee bend, `ftCo_8009B9C8`: `input` the jump's input, held for
-    /// `JUMP_STARTUP_LAG` frames with the animation stopped.
+    /// The carry's knee bend (`ftCo_8009B9C8`, `ftDk_MS_348_800E04A4`): `input` the jump's
+    /// input, held for `JUMP_STARTUP_LAG` frames with the animation stopped.
     #[doc(alias = "ftCo_8009B9C8")]
-    pub fn enter_cargo_knee_bend(&mut self, gobj: GObjId, input: i32) {
+    #[doc(alias = "ftDk_MS_348_800E04A4")]
+    pub fn enter_carry_knee_bend(&mut self, gobj: GObjId, input: i32, s: &Carry) {
         let f = self.game.fighter_id(gobj);
         let lag = self.cargo_attr_f32(f, JUMP_STARTUP_LAG);
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_i32(KNEE_BEND_INPUT, input);
         fp.set_mv_i32(KNEE_BEND_X0, 0);
         fp.set_mv_f32(KNEE_BEND_LAG, reg(lag));
-        let msid = self.cargo_state(gobj, KNEE_BEND);
+        let msid = self.carry_state(gobj, s, KNEE_BEND);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.set_anim_rate(gobj, 0.0);
-        let v = self.cargo_victim(gobj);
-        self.enter_shouldered(v, ms::SHOULDERED_WAIT);
+        self.carry_rider(gobj, s, ms::SHOULDERED_WAIT);
     }
 
-    /// `ftCo_CargoKneebend_Anim`: the jump once the lag runs out.
+    /// The knee bend's animation (`ftCo_CargoKneebend_Anim`, `ftDk_HeavyWait1_Anim`): the jump
+    /// once the lag runs out.
     #[doc(alias = "ftCo_CargoKneebend_Anim")]
-    pub fn co_cargo_knee_bend_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyWait1_Anim")]
+    pub fn carry_knee_bend_anim(&mut self, gobj: GObjId, s: &Carry) {
         if self.game.fighter(gobj).mv_f32(KNEE_BEND_LAG) <= 0.0 {
-            self.enter_cargo_jump(gobj);
+            self.enter_carry_jump(gobj, s);
         }
         let fp = self.game.fighter_mut(gobj);
         let lag = reg(fp.mv_f32(KNEE_BEND_LAG));
         fp.set_mv_f32(KNEE_BEND_LAG, fp::fsubs(lag, 1.0));
     }
 
-    /// `ftCo_CargoKneebend_IASA`: a throw, else a short hop's input.
+    /// The knee bend's interrupt (`ftCo_CargoKneebend_IASA`, `ftDk_HeavyWait1_IASA`): a throw,
+    /// else a short hop's input.
     #[doc(alias = "ftCo_CargoKneebend_IASA")]
-    pub fn co_cargo_knee_bend_iasa(&mut self, gobj: GObjId) {
-        if !self.cargo_throw_check(gobj) {
+    #[doc(alias = "ftDk_HeavyWait1_IASA")]
+    pub fn carry_knee_bend_iasa(&mut self, gobj: GObjId, s: &Carry) {
+        if !(s.throw)(self, gobj) {
             self.knee_bend_short_hop_check(gobj);
         }
     }
 
-    /// The cargo knee bend on a jump's input, `ftCo_8009BB1C`.
+    /// The carry's knee bend on a jump's input (`ftCo_8009BB1C`, `ftDk_MS_347_800E0378`).
     #[doc(alias = "ftCo_8009BB1C")]
-    pub fn cargo_jump_check(&mut self, gobj: GObjId) -> bool {
+    #[doc(alias = "ftDk_MS_347_800E0378")]
+    pub fn carry_jump_check(&mut self, gobj: GObjId, s: &Carry) -> bool {
         let input = self.jump_input(gobj);
         if input != 0 {
-            self.enter_cargo_knee_bend(gobj, input);
+            self.enter_carry_knee_bend(gobj, input, s);
             return true;
         }
         false
     }
 
-    /// The cargo jump, `ftCo_8009BB64`: airborne, its animation stopped, the jump's takeoff.
+    /// The carry's jump (`ftCo_8009BB64`, `ftDk_MS_347_800E03C0`): airborne, its animation
+    /// stopped, the jump's takeoff.
     #[doc(alias = "ftCo_8009BB64")]
-    pub fn enter_cargo_jump(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_MS_347_800E03C0")]
+    pub fn enter_carry_jump(&mut self, gobj: GObjId, s: &Carry) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
-        let msid = self.cargo_state(gobj, JUMP);
+        let msid = self.carry_state(gobj, s, JUMP);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.set_anim_rate(gobj, 0.0);
         self.jump_take_off(gobj, true, 1.0);
-        let v = self.cargo_victim(gobj);
-        self.enter_shouldered(v, ms::SHOULDERED_WAIT);
+        self.carry_rider(gobj, s, ms::SHOULDERED_WAIT);
     }
 
-    /// The airborne cargo states' interrupt: a throw.
+    /// The airborne carry states' interrupt: a throw.
     #[doc(alias = "ftCo_CargoJump_IASA")]
     #[doc(alias = "ftCo_CargoFall_IASA")]
-    pub fn co_cargo_air_iasa(&mut self, gobj: GObjId) {
-        let _ = self.cargo_throw_check(gobj);
+    #[doc(alias = "ftDk_HeavyJump_IASA")]
+    #[doc(alias = "ftDk_HeavyFall_IASA")]
+    pub fn carry_air_iasa(&mut self, gobj: GObjId, s: &Carry) {
+        let _ = (s.throw)(self, gobj);
     }
 
-    /// `ftCo_CargoJump_Phys`: the jump's physics (`ftCo_Jump_Phys_Inner`).
+    /// The carry's jump's physics: the jump's (`ftCo_Jump_Phys_Inner`).
     #[doc(alias = "ftCo_CargoJump_Phys")]
+    #[doc(alias = "ftDk_HeavyJump_Phys")]
     #[doc(alias = "ftCo_Jump_Phys_Inner")]
     pub fn co_cargo_jump_phys(&mut self, gobj: GObjId) {
         self.co_jump_phys(gobj);
     }
 
-    /// The airborne cargo states' collision: landing, the cargo landing.
+    /// The airborne carry states' collision: landing, the carry's landing.
     #[doc(alias = "ftCo_CargoJump_Coll")]
     #[doc(alias = "ftCo_CargoFall_Coll")]
-    pub fn co_cargo_fall_coll(&mut self, gobj: GObjId) {
-        self.air_coll_then(gobj, |g, gobj| g.enter_cargo_landing(gobj));
+    #[doc(alias = "ftDk_HeavyJump_Coll")]
+    #[doc(alias = "ftDk_HeavyFall_Coll")]
+    pub fn carry_fall_coll(&mut self, gobj: GObjId, s: &Carry) {
+        self.air_coll_then(gobj, s.landing);
     }
 
-    /// The cargo fall, `ftCo_8009BC58`, keeping a fast fall, its animation stopped; airborne
-    /// if it starts on the ground.
+    /// The carry's fall (`ftCo_8009BC58`, `ftDk_MS_345_800E0294`), keeping a fast fall, its
+    /// animation stopped; airborne if it starts on the ground.
     #[doc(alias = "ftCo_8009BC58")]
-    pub fn enter_cargo_fall(&mut self, gobj: GObjId) {
-        let msid = self.cargo_state(gobj, FALL);
-        self.change_motion_state(gobj, msid, 1, 0.0, 1.0, 0.0, None);
+    #[doc(alias = "ftDk_MS_345_800E0294")]
+    pub fn enter_carry_fall(&mut self, gobj: GObjId, s: &Carry) {
+        let msid = self.carry_state(gobj, s, FALL);
+        self.change_motion_state(gobj, msid, MF_KEEP_FAST_FALL, 0.0, 1.0, 0.0, None);
         self.set_anim_rate(gobj, 0.0);
         if !self.is_airborne(gobj) {
             let f = self.game.fighter_id(gobj);
             self.go_airborne(f);
         }
-        let v = self.cargo_victim(gobj);
-        self.enter_shouldered(v, ms::SHOULDERED_WAIT);
+        self.carry_rider(gobj, s, ms::SHOULDERED_WAIT);
     }
 
-    /// `ftCo_CargoFall_Phys`: the air's physics.
+    /// The carry's fall's physics: the air's.
     #[doc(alias = "ftCo_CargoFall_Phys")]
     #[doc(alias = "ftCo_CargoThrowAir_Phys")]
-    pub fn co_cargo_fall_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyFall_Phys")]
+    pub fn carry_fall_phys(&mut self, gobj: GObjId) {
         self.air_physics(gobj);
     }
 
-    /// The cargo landing, `ftCo_8009BD4C`: `LANDING_LAG` frames with its animation stopped.
+    /// The carry's landing (`ftCo_8009BD4C`, `ftDk_MS_346_800E05E4`): `LANDING_LAG` frames
+    /// with its animation stopped.
     #[doc(alias = "ftCo_8009BD4C")]
-    pub fn enter_cargo_landing(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_MS_346_800E05E4")]
+    pub fn enter_carry_landing(&mut self, gobj: GObjId, s: &Carry) {
         let f = self.game.fighter_id(gobj);
         let lag = self.cargo_attr_f32(f, LANDING_LAG);
         self.game.fighters[f.0].set_mv_f32(LANDING_LAG_LEFT, reg(lag));
-        let msid = self.cargo_state(gobj, LANDING);
+        let msid = self.carry_state(gobj, s, LANDING);
         self.enter_landing(gobj, msid, 1, 0, 0.0, 1.0);
         self.set_anim_rate(gobj, 0.0);
-        let v = self.cargo_victim(gobj);
-        self.enter_shouldered(v, ms::SHOULDERED_WAIT);
+        self.carry_rider(gobj, s, ms::SHOULDERED_WAIT);
     }
 
-    /// `ftCo_CargoLanding_Anim`: the wait once the lag runs out.
+    /// The landing's animation (`ftCo_CargoLanding_Anim`, `ftDk_HeavyLanding_Anim`): the wait
+    /// once the lag runs out.
     #[doc(alias = "ftCo_CargoLanding_Anim")]
-    pub fn co_cargo_landing_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyLanding_Anim")]
+    pub fn carry_landing_anim(&mut self, gobj: GObjId, s: &Carry) {
         if self.game.fighter(gobj).mv_f32(LANDING_LAG_LEFT) <= 0.0 {
-            self.enter_cargo_wait(gobj);
+            self.enter_carry_wait(gobj, s);
         }
         let fp = self.game.fighter_mut(gobj);
         let lag = reg(fp.mv_f32(LANDING_LAG_LEFT));
@@ -408,35 +494,39 @@ impl Running<'_> {
     /// The drop through a platform as the cargo fall, `ftCo_8009C540`.
     #[doc(alias = "ftCo_8009C540")]
     pub fn enter_cargo_pass(&mut self, gobj: GObjId) {
-        let msid = self.cargo_state(gobj, FALL);
+        let msid = self.carry_state(gobj, &CARGO, FALL);
         self.enter_pass_as(gobj, msid, 0, 0.0);
         self.set_anim_rate(gobj, 0.0);
         let v = self.cargo_victim(gobj);
         self.enter_shouldered(v, ms::SHOULDERED_WAIT);
     }
 
-    /// `ftCo_CargoWait2_Anim`: the hurt wait's hitstun, then the cargo fall or wait.
+    /// The hurt wait's animation (`ftCo_CargoWait2_Anim`, `ftDk_HeavyWait2_Anim`): its
+    /// hitstun, then the carry's fall or wait.
     #[doc(alias = "ftCo_CargoWait2_Anim")]
-    pub fn co_cargo_wait2_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyWait2_Anim")]
+    pub fn carry_wait2_anim(&mut self, gobj: GObjId, s: &Carry) {
         self.damage_tick(gobj);
         if !self.game.fighter(gobj).in_hitstun {
             if self.is_airborne(gobj) {
-                self.enter_cargo_fall(gobj);
+                self.enter_carry_fall(gobj, s);
             } else {
-                self.enter_cargo_wait(gobj);
+                self.enter_carry_wait(gobj, s);
             }
         }
     }
 
-    /// `ftCo_CargoWait2_Phys`: the damage state's physics.
+    /// The hurt wait's physics: the damage state's.
     #[doc(alias = "ftCo_CargoWait2_Phys")]
-    pub fn co_cargo_wait2_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyWait2_Phys")]
+    pub fn carry_wait2_phys(&mut self, gobj: GObjId) {
         self.co_damage_phys(gobj);
     }
 
-    /// `ftCo_CargoWait2_Coll`: off the ground, airborne; in the air, landing.
+    /// The hurt wait's collision: off the ground, airborne; in the air, landing.
     #[doc(alias = "ftCo_CargoWait2_Coll")]
-    pub fn co_cargo_wait2_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftDk_HeavyWait2_Coll")]
+    pub fn carry_wait2_coll(&mut self, gobj: GObjId) {
         if !self.is_airborne(gobj) {
             if !self.ground_coll_off_ledges(gobj) {
                 let f = self.game.fighter_id(gobj);
@@ -471,7 +561,7 @@ impl Running<'_> {
                 None
             };
             if let Some(s) = step {
-                msid = self.cargo_state(gobj, s);
+                msid = self.carry_state(gobj, &CARGO, s);
             }
         }
         msid
@@ -501,7 +591,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, state, flags, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         self.game.fighter_mut(gobj).grab_immune = 0x1FF;
-        let first = self.cargo_state(gobj, THROW_F);
+        let first = self.carry_state(gobj, &CARGO, THROW_F);
         let thrown = msid.wrapping_sub(first).wrapping_add(ms::THROWN_FF);
         let v = self.cargo_victim(gobj);
         self.enter_thrown(v, thrown, 1.0);
@@ -751,26 +841,26 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         // ftCo_CargoThrowAir_IASA, ftCo_Shouldered_IASA, _Phys and _Coll.
         0x8009_B5C0 | 0x8009_BBF0 | 0x8009_BCDC | 0x8009_C410 | 0x8009_CA00 | 0x8009_CA04
         | 0x8009_CA08 => g.co_cargo_nothing(gobj),
-        0x8009_B5C4 => g.co_cargo_wait_iasa(gobj),
-        0x8009_B634 | 0x8009_B988 | 0x8009_BADC | 0x8009_BE14 => g.co_cargo_ground_phys(gobj),
+        0x8009_B5C4 => g.carry_wait_iasa(gobj, &CARGO),
+        0x8009_B634 | 0x8009_B988 | 0x8009_BADC | 0x8009_BE14 => g.carry_ground_phys(gobj),
         0x8009_B654 | 0x8009_B7F8 | 0x8009_B9A8 | 0x8009_BAFC | 0x8009_BE34 => {
-            g.co_cargo_wait_coll(gobj)
+            g.carry_wait_coll(gobj, &CARGO)
         }
-        0x8009_B744 => g.co_cargo_walk_anim(gobj),
-        0x8009_B764 => g.co_cargo_walk_iasa(gobj),
-        0x8009_B7D8 => g.co_cargo_walk_phys(gobj),
+        0x8009_B744 => g.carry_walk_anim(gobj),
+        0x8009_B764 => g.carry_walk_iasa(gobj, &CARGO),
+        0x8009_B7D8 => g.carry_walk_phys(gobj),
         0x8009_B8B4 => g.co_cargo_turn_anim(gobj),
         0x8009_B948 => g.co_cargo_turn_iasa(gobj),
-        0x8009_BA50 => g.co_cargo_knee_bend_anim(gobj),
-        0x8009_BAA0 => g.co_cargo_knee_bend_iasa(gobj),
-        0x8009_BBF4 | 0x8009_BCE0 => g.co_cargo_air_iasa(gobj),
+        0x8009_BA50 => g.carry_knee_bend_anim(gobj, &CARGO),
+        0x8009_BAA0 => g.carry_knee_bend_iasa(gobj, &CARGO),
+        0x8009_BBF4 | 0x8009_BCE0 => g.carry_air_iasa(gobj, &CARGO),
         0x8009_BC18 => g.co_cargo_jump_phys(gobj),
-        0x8009_BC38 | 0x8009_BD24 => g.co_cargo_fall_coll(gobj),
-        0x8009_BD04 | 0x8009_C414 => g.co_cargo_fall_phys(gobj),
-        0x8009_BDC4 => g.co_cargo_landing_anim(gobj),
-        0x8009_BE54 => g.co_cargo_wait2_anim(gobj),
-        0x8009_BEB8 => g.co_cargo_wait2_phys(gobj),
-        0x8009_BED8 => g.co_cargo_wait2_coll(gobj),
+        0x8009_BC38 | 0x8009_BD24 => g.carry_fall_coll(gobj, &CARGO),
+        0x8009_BD04 | 0x8009_C414 => g.carry_fall_phys(gobj),
+        0x8009_BDC4 => g.carry_landing_anim(gobj, &CARGO),
+        0x8009_BE54 => g.carry_wait2_anim(gobj, &CARGO),
+        0x8009_BEB8 => g.carry_wait2_phys(gobj),
+        0x8009_BED8 => g.carry_wait2_coll(gobj),
         0x8009_C0EC | 0x8009_C3CC => g.co_cargo_throw_f_anim(gobj),
         // ftCo_CargoThrowF_IASA, ftCo_CargoThrowB_IASA, ftCo_CargoThrowHi_IASA,
         // ftCo_CargoThrowLw_IASA: the throws' (empty).
