@@ -288,7 +288,9 @@ fn traced_trace(name: &str) -> &'static str {
 /// The folder of ssbm-rs's playback of a replay-made trace at Slippi Dolphin's fast disc
 /// speed, as replays read since ssbm-rs's `05d550a` (`DiscSpeed::Fast`): the original folder's
 /// `-v6mem` sibling, remade with memory every tick and the replay check's log beside each. The
-/// sessions' own traces stay where they were, on the flat model they were recorded at.
+/// sessions' own traces stay where they were, on the flat model they were recorded at. Their field
+/// counts are the originals', so a trace that stops before its match's end (`matches-a-5`'s,
+/// 7,440 fields) holds 31 ticks fewer: the boot's reads take longer at Dolphin's speed.
 fn v6mem(dir: &str) -> String {
     format!("{dir}-v6mem")
 }
@@ -309,7 +311,7 @@ fn the_live_matches_play_back_as_ssbm_rs_does() {
         ("matches-a-2", 2732, 0),
         ("matches-a-3", 1030, 5),
         ("matches-a-4", 1829, 0),
-        ("matches-a-5", 7428, 0),
+        ("matches-a-5", 7397, 0),
         ("matches-b-1", 1531, 6),
         ("matches-b-2", 2732, 0),
         ("matches-b-3", 1530, 2),
