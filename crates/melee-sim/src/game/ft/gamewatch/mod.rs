@@ -452,6 +452,101 @@ impl Running<'_> {
     pub(crate) fn gw_set_accessory(&mut self, gobj: GObjId, cb: Option<u32>) {
         self.game.fighter_mut(gobj).accessory4_cb = cb.map(CodeRef);
     }
+
+    /// His damage hooks if he holds the move's item, and the move's hitlag hooks
+    /// (`ftGameWatch_SpecialS_SetCall`'s, as Oil Panic's and Judgement's setups do too).
+    fn gw_held_cbs(&mut self, gobj: GObjId, s: &ItemSlot) {
+        if self.gw_item(gobj, s.slot).is_some() {
+            self.gw_damage_cbs(gobj);
+        }
+        let (enter, exit) = s.hitlag_cbs;
+        self.gw_hitlag_cbs(gobj, enter, exit);
+    }
+
+    /// The move's item forgotten: running again by the move's hook, his slot emptied and his
+    /// damage hooks cleared (`ftGw_AttackAirN_ItemParachuteSetFlag`, `_ItemTurtleSetFlag`,
+    /// `_ItemSparkySetFlag`, `ftGw_SpecialS_ItemJudgementSetFlag`,
+    /// `ftGw_SpecialLw_ItemPanicSetFlag`).
+    #[doc(alias = "ftGw_AttackAirN_ItemParachuteSetFlag")]
+    #[doc(alias = "ftGw_AttackAirN_ItemTurtleSetFlag")]
+    #[doc(alias = "ftGw_AttackAirN_ItemSparkySetFlag")]
+    #[doc(alias = "ftGw_SpecialS_ItemJudgementSetFlag")]
+    #[doc(alias = "ftGw_SpecialLw_ItemPanicSetFlag")]
+    pub fn gw_held_set_flag(&mut self, gobj: GObjId, s: &ItemSlot) {
+        (s.exit_hitlag)(self, gobj);
+        self.gw_set_item(gobj, s.slot, None);
+        self.gw_clear_damage_cbs(gobj);
+    }
+
+    /// The move's item taken away, then forgotten (`ftGw_AttackAirN_ItemParachuteRemove`,
+    /// `_ItemTurtleRemove`, `_ItemSparkyRemove`, `ftGw_SpecialS_ItemJudgementRemove`,
+    /// `ftGw_SpecialLw_ItemPanicRemove`).
+    #[doc(alias = "ftGw_AttackAirN_ItemParachuteRemove")]
+    #[doc(alias = "ftGw_AttackAirN_ItemTurtleRemove")]
+    #[doc(alias = "ftGw_AttackAirN_ItemSparkyRemove")]
+    #[doc(alias = "ftGw_SpecialS_ItemJudgementRemove")]
+    #[doc(alias = "ftGw_SpecialLw_ItemPanicRemove")]
+    pub fn gw_held_remove(&mut self, gobj: GObjId, s: &ItemSlot) {
+        if let Some(item) = self.gw_item(gobj, s.slot) {
+            (s.remove)(self, item);
+            self.gw_held_set_flag(gobj, s);
+        }
+    }
+
+    /// The move's item pauses (`ftGw_SpecialS_ItemJudgementEnterHitlag`,
+    /// `ftGw_SpecialLw_ItemPanicEnterHitlag`; the aerials' three in turn,
+    /// `ftGw_AttackAirN_EnterItemHitlag`).
+    #[doc(alias = "ftGw_SpecialS_ItemJudgementEnterHitlag")]
+    #[doc(alias = "ftGw_SpecialLw_ItemPanicEnterHitlag")]
+    pub fn gw_held_enter_hitlag(&mut self, gobj: GObjId, s: &ItemSlot) {
+        if let Some(item) = self.gw_item(gobj, s.slot) {
+            (s.hitlag_start)(self, item);
+        }
+    }
+
+    /// The move's item runs again (`ftGw_SpecialS_ItemJudgementExitHitlag`,
+    /// `ftGw_SpecialLw_ItemPanicExitHitlag`; the aerials' three in turn,
+    /// `ftGw_AttackAirN_ExitItemHitlag`).
+    #[doc(alias = "ftGw_SpecialS_ItemJudgementExitHitlag")]
+    #[doc(alias = "ftGw_SpecialLw_ItemPanicExitHitlag")]
+    pub fn gw_held_exit_hitlag(&mut self, gobj: GObjId, s: &ItemSlot) {
+        if let Some(item) = self.gw_item(gobj, s.slot) {
+            (s.hitlag_end)(self, item);
+        }
+    }
+
+    /// Whether the move's item should go: out of the states it stays out in
+    /// (`ftGw_AttackAirN_ItemCheckParachuteRemove`, `_ItemCheckTurtleRemove`,
+    /// `_ItemCheckSparkyRemove`, `ftGw_SpecialS_ItemCheckJudgementRemove`,
+    /// `ftGw_SpecialLw_ItemCheckPanicRemove`).
+    #[doc(alias = "ftGw_AttackAirN_ItemCheckParachuteRemove")]
+    #[doc(alias = "ftGw_AttackAirN_ItemCheckTurtleRemove")]
+    #[doc(alias = "ftGw_AttackAirN_ItemCheckSparkyRemove")]
+    #[doc(alias = "ftGw_SpecialS_ItemCheckJudgementRemove")]
+    #[doc(alias = "ftGw_SpecialLw_ItemCheckPanicRemove")]
+    pub fn gw_held_should_go(&self, gobj: GObjId, s: &ItemSlot) -> bool {
+        let msid = self.game.fighter(gobj).motion_id;
+        let (first, last) = s.states;
+        !(first..=last).contains(&msid)
+    }
+}
+
+/// One of his items as a move's hooks keep it (the aerials' parachute, turtle and Sparky,
+/// Judgement's hammer, Oil Panic's oil): what the shared hooks above differ by.
+pub struct ItemSlot {
+    /// Its word in his variables (`u`).
+    pub slot: usize,
+    /// The states it stays out in, the first and the last.
+    pub states: (i32, i32),
+    /// The move's hitlag hooks (`pre_hitlag_cb`, `post_hitlag_cb`).
+    pub hitlag_cbs: (u32, u32),
+    /// The item's hooks: taken away, paused, running again.
+    pub remove: fn(&mut Running, GObjId),
+    pub hitlag_start: fn(&mut Running, GObjId),
+    pub hitlag_end: fn(&mut Running, GObjId),
+    /// The move's hook that runs its items again, which forgetting the item runs first (the
+    /// aerials' runs all three).
+    pub exit_hitlag: fn(&mut Running, GObjId),
 }
 
 /// Runs one of his callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is one.

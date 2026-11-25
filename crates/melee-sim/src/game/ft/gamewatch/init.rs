@@ -7,7 +7,7 @@ use super::super::super::handles::FighterId;
 use super::super::super::state::Running;
 use super::super::super::structs::_GXColor;
 use super::super::common::GA_AIR;
-use super::{ITEMS, attr, panic, u};
+use super::{ITEMS, attack_air, attr, panic, special_lw, special_s, u};
 use crate::hsd::Objects;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -136,11 +136,11 @@ impl Running<'_> {
         self.gw_greenhouse_remove(gobj);
         self.gw_manhole_on_damage(gobj);
         self.gw_torch_on_damage(gobj);
-        self.gw_parachute_remove(gobj);
-        self.gw_turtle_remove(gobj);
-        self.gw_sparky_remove(gobj);
-        self.gw_judgement_remove(gobj);
-        self.gw_panic_remove(gobj);
+        self.gw_held_remove(gobj, &attack_air::PARACHUTE);
+        self.gw_held_remove(gobj, &attack_air::TURTLE);
+        self.gw_held_remove(gobj, &attack_air::SPARKY);
+        self.gw_held_remove(gobj, &special_s::JUDGEMENT);
+        self.gw_held_remove(gobj, &special_lw::PANIC);
         self.gw_rescue_remove(gobj);
     }
 

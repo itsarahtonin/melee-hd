@@ -2,48 +2,36 @@
 //! Party Ball on his shoulders in his own states, 341 to 350, counted from the first one his
 //! cargo attributes name (`x2CC`'s `motion_state`; the cargo states after his forward throw
 //! count from its `x4_motion_state`): wait, three walks, turn, knee bend, fall, jump, landing
-//! and the hurt wait. Unlike
-//! the common carry (`ft::co::lift`) he walks, turns, jumps and falls with it, and only a hit
-//! hard enough (or a throw) makes him let go.
-
-// The original's comparisons are kept as written: a NaN fails them.
-#![allow(clippy::neg_cmp_op_on_partial_ord)]
+//! and the hurt wait. Unlike the common carry (`ft::co::lift`) he walks, turns, jumps and
+//! falls with it, and only a hit hard enough (or a throw) makes him let go. Its states are
+//! the cargo's but for the turn ([`HEAVY`], `ft::co::cargo`'s [`Carry`]).
 
 use gekko_fp as fp;
 
 use super::super::super::it::release;
 use super::super::super::state::Running;
+use super::super::co::cargo::Carry;
 use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
-/// The states past the first: walks, turn, knee bend, fall, jump, landing, the hurt wait.
-const WALK: i32 = 1;
-const TURN: i32 = 4;
-const KNEE_BEND: i32 = 5;
-const FALL: i32 = 6;
-const JUMP: i32 = 7;
-const LANDING: i32 = 8;
+/// The hurt wait, past the first state.
 const WAIT2: i32 = 9;
 
-/// `ftDonkeyAttributes`: the walks' animation frames (`x8` to `x10`) and speed scales (`x14` to
-/// `x1C`), and `cargo_hold`'s turn frames, jump startup and landing lag.
-const WALK_FRAMES: usize = 0x8;
-const WALK_RATES: usize = 0x14;
-const TURN_SPEED: usize = 0x20;
-const JUMP_STARTUP_LAG: usize = 0x24;
-const LANDING_LAG: usize = 0x28;
-
-/// `mv.dk`: the turn's `x0` (has turned, `ftCo_Turn_Enter`'s), the knee bend's jump input
-/// (`unk7.x4`), its `x0` and its lag left (`unk7.x8`), and the landing's lag left (`unk8.x4`).
+/// `mv.dk`: the turn's `x0` (has turned, `ftCo_Turn_Enter`'s).
 const TURN_HAS_TURNED: usize = 0x0;
-const KNEE_BEND_X0: usize = 0x0;
-const KNEE_BEND_INPUT: usize = 0x4;
-const KNEE_BEND_LAG: usize = 0x8;
-const LANDING_LAG_LEFT: usize = 0x4;
 
-/// `Ft_MF_KeepFastFall`.
-const MF_KEEP_FAST_FALL: u32 = 1;
+/// The heavy item's carry: its first state the cargo attributes' first word, its throw the
+/// heavy item's, landed first by its wait, with no rider and no drop through platforms.
+pub const HEAVY: Carry = Carry {
+    first: 0,
+    throw: |g, gobj| g.heavy_throw_check(gobj),
+    pass: false,
+    rider: false,
+    wait_lands: true,
+    fall: |g, gobj| g.enter_carry_fall(gobj, &HEAVY),
+    landing: |g, gobj| g.enter_carry_landing(gobj, &HEAVY),
+};
 
 /// The states' callbacks.
 pub mod addr {
@@ -79,169 +67,44 @@ pub mod addr {
 /// Runs one of the heavy states' callbacks, if `a` is one.
 #[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
+    let s = &HEAVY;
     match a {
-        addr::WAIT0_IASA => g.dk_heavy_wait0_iasa(gobj),
-        addr::WAIT0_PHYS => g.dk_heavy_wait0_phys(gobj),
-        addr::WAIT0_COLL => g.dk_heavy_wait0_coll(gobj),
-        addr::WALK_ANIM => g.dk_heavy_walk_anim(gobj),
-        addr::WALK_IASA => g.dk_heavy_walk_iasa(gobj),
-        addr::WALK_PHYS => g.dk_heavy_walk_phys(gobj),
-        addr::WALK_COLL => g.dk_heavy_walk_coll(gobj),
+        addr::WAIT0_IASA => g.carry_wait_iasa(gobj, s),
+        addr::WAIT0_PHYS | addr::TURN_PHYS | addr::WAIT1_PHYS | addr::LANDING_PHYS => {
+            g.carry_ground_phys(gobj)
+        }
+        addr::WAIT0_COLL
+        | addr::WALK_COLL
+        | addr::TURN_COLL
+        | addr::WAIT1_COLL
+        | addr::LANDING_COLL => g.carry_wait_coll(gobj, s),
+        addr::WALK_ANIM => g.carry_walk_anim(gobj),
+        addr::WALK_IASA => g.carry_walk_iasa(gobj, s),
+        addr::WALK_PHYS => g.carry_walk_phys(gobj),
         addr::TURN_ANIM => g.dk_heavy_turn_anim(gobj),
         addr::TURN_IASA => g.dk_heavy_turn_iasa(gobj),
-        addr::TURN_PHYS => g.dk_heavy_turn_phys(gobj),
-        addr::TURN_COLL => g.dk_heavy_turn_coll(gobj),
-        addr::FALL_IASA => g.dk_heavy_fall_iasa(gobj),
-        addr::FALL_PHYS => g.dk_heavy_fall_phys(gobj),
-        addr::FALL_COLL => g.dk_heavy_fall_coll(gobj),
-        addr::JUMP_IASA => g.dk_heavy_jump_iasa(gobj),
-        addr::JUMP_PHYS => g.dk_heavy_jump_phys(gobj),
-        addr::JUMP_COLL => g.dk_heavy_jump_coll(gobj),
-        addr::WAIT1_ANIM => g.dk_heavy_wait1_anim(gobj),
-        addr::WAIT1_IASA => g.dk_heavy_wait1_iasa(gobj),
-        addr::WAIT1_PHYS => g.dk_heavy_wait1_phys(gobj),
-        addr::WAIT1_COLL => g.dk_heavy_wait1_coll(gobj),
-        addr::LANDING_ANIM => g.dk_heavy_landing_anim(gobj),
-        addr::LANDING_PHYS => g.dk_heavy_landing_phys(gobj),
-        addr::LANDING_COLL => g.dk_heavy_landing_coll(gobj),
-        addr::WAIT2_ANIM => g.dk_heavy_wait2_anim(gobj),
-        addr::WAIT2_PHYS => g.dk_heavy_wait2_phys(gobj),
-        addr::WAIT2_COLL => g.dk_heavy_wait2_coll(gobj),
+        addr::FALL_IASA | addr::JUMP_IASA => g.carry_air_iasa(gobj, s),
+        addr::FALL_PHYS => g.carry_fall_phys(gobj),
+        addr::FALL_COLL | addr::JUMP_COLL => g.carry_fall_coll(gobj, s),
+        addr::JUMP_PHYS => g.co_cargo_jump_phys(gobj),
+        addr::WAIT1_ANIM => g.carry_knee_bend_anim(gobj, s),
+        addr::WAIT1_IASA => g.carry_knee_bend_iasa(gobj, s),
+        addr::LANDING_ANIM => g.carry_landing_anim(gobj, s),
+        addr::WAIT2_ANIM => g.carry_wait2_anim(gobj, s),
+        addr::WAIT2_PHYS => g.carry_wait2_phys(gobj),
+        addr::WAIT2_COLL => g.carry_wait2_coll(gobj),
         _ => return false,
     }
     true
 }
 
 impl Running<'_> {
-    /// One of the heavy states, `step` past the first (`x2CC`'s `motion_state`).
-    fn dk_heavy_state(&self, gobj: GObjId, step: i32) -> i32 {
-        let a = self
-            .game
-            .fighter(gobj)
-            .cargo_attrs
-            .expect("a heavy carrier without cargo attributes");
-        let b = &self.game.fighter_attrs[a.0];
-        i32::from_be_bytes(b[0..4].try_into().unwrap()).wrapping_add(step)
-    }
-
-    /// Back to the heavy wait when the stick lets go, `ftDk_MS_341_800DF938`.
-    #[doc(alias = "ftDk_MS_341_800DF938")]
-    pub fn dk_heavy_wait_check(&mut self, gobj: GObjId) -> bool {
-        if self.stick_not_forward(gobj) {
-            self.enter_dk_heavy_wait(gobj);
-            return true;
-        }
-        false
-    }
-
-    /// Carrying the item, waiting, `ftDk_MS_341_800DF980`: landed first if in the air.
-    #[doc(alias = "ftDk_MS_341_800DF980")]
-    pub fn enter_dk_heavy_wait(&mut self, gobj: GObjId) {
-        if self.is_airborne(gobj) {
-            self.land(gobj);
-        }
-        let msid = self.dk_heavy_state(gobj, 0);
-        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-    }
-
-    /// `ftDk_HeavyWait0_IASA`: a throw, a jump, a turn or a walk.
-    #[doc(alias = "ftDk_HeavyWait0_IASA")]
-    pub fn dk_heavy_wait0_iasa(&mut self, gobj: GObjId) {
-        let _ = self.heavy_throw_check(gobj)
-            || self.dk_heavy_jump_check(gobj)
-            || self.dk_heavy_turn_check(gobj)
-            || self.dk_heavy_walk_check(gobj);
-    }
-
-    /// `ftDk_HeavyWait0_Phys`: friction.
-    #[doc(alias = "ftDk_HeavyWait0_Phys")]
-    pub fn dk_heavy_wait0_phys(&mut self, gobj: GObjId) {
-        self.ground_friction(gobj);
-    }
-
-    /// `ftDk_HeavyWait0_Coll`: off a ledge, the heavy fall, the item kept.
-    #[doc(alias = "ftDk_HeavyWait0_Coll")]
-    pub fn dk_heavy_wait0_coll(&mut self, gobj: GObjId) {
-        self.ground_coll_fall_off_then(gobj, |g, gobj| g.enter_dk_heavy_fall(gobj));
-    }
-
-    /// A heavy walk when the stick leans forward, `ftDk_MS_341_800DFA98`.
-    #[doc(alias = "ftDk_MS_341_800DFA98")]
-    pub fn dk_heavy_walk_check(&mut self, gobj: GObjId) -> bool {
-        if self.walk_input(gobj) {
-            self.enter_dk_heavy_walk(gobj, 0.0);
-            return true;
-        }
-        false
-    }
-
-    /// A heavy walk at the speed the ground speed calls for, `ftDk_MS_341_800DFAE4`.
-    #[doc(alias = "ftDk_MS_341_800DFAE4")]
-    pub fn enter_dk_heavy_walk(&mut self, gobj: GObjId, anim_start: f32) {
-        let f = self.game.fighter_id(gobj);
-        let msid = self.dk_heavy_state(gobj, WALK);
-        let at = |g: &Self, base: usize| [0, 1, 2].map(|i| g.cargo_attr_f32(f, base + 4 * i));
-        let (frames, rates) = (at(self, WALK_FRAMES), at(self, WALK_RATES));
-        self.enter_walk_common(gobj, msid, 0, anim_start, frames, rates, 1.0);
-    }
-
-    /// `ftDk_HeavyWalk_Anim`: the walk's animation speed follows the ground speed.
-    #[doc(alias = "ftDk_HeavyWalk_Anim")]
-    pub fn dk_heavy_walk_anim(&mut self, gobj: GObjId) {
-        self.co_walk_anim(gobj);
-    }
-
-    /// `ftDk_HeavyWalk_IASA`: a throw, a jump, the wait when the stick lets go, else the walk's
-    /// speed switch.
-    #[doc(alias = "ftDk_HeavyWalk_IASA")]
-    pub fn dk_heavy_walk_iasa(&mut self, gobj: GObjId) {
-        if self.heavy_throw_check(gobj)
-            || self.dk_heavy_jump_check(gobj)
-            || self.dk_heavy_wait_check(gobj)
-        {
-            return;
-        }
-        self.walk_speed_switch(gobj, |g, gobj, frame| g.enter_dk_heavy_walk(gobj, frame));
-    }
-
-    /// `ftDk_HeavyWalk_Phys`: the walk's acceleration.
-    #[doc(alias = "ftDk_HeavyWalk_Phys")]
-    pub fn dk_heavy_walk_phys(&mut self, gobj: GObjId) {
-        self.co_walk_phys(gobj);
-    }
-
-    /// `ftDk_HeavyWalk_Coll`: the wait's.
-    #[doc(alias = "ftDk_HeavyWalk_Coll")]
-    pub fn dk_heavy_walk_coll(&mut self, gobj: GObjId) {
-        self.dk_heavy_wait0_coll(gobj);
-    }
-
-    /// A heavy turn when the stick points back, `ftDk_MS_345_800E0134`.
-    #[doc(alias = "ftDk_MS_345_800E0134")]
-    pub fn dk_heavy_turn_check(&mut self, gobj: GObjId) -> bool {
-        if self.turn_input(gobj) {
-            self.enter_dk_heavy_turn(gobj);
-            return true;
-        }
-        false
-    }
-
-    /// The heavy turn over `cargo_hold.x20_TURN_SPEED` frames, `ftDk_MS_345_800E0134`'s
-    /// `ifSomething`.
-    #[doc(alias = "ifSomething")]
-    pub fn enter_dk_heavy_turn(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let msid = self.dk_heavy_state(gobj, TURN);
-        let frames = self.cargo_attr_f32(f, TURN_SPEED);
-        self.enter_turn(gobj, msid, 0, 0.0, frames, 0.0);
-    }
-
     /// `ftDk_HeavyTurn_Anim`: the turn, then the wait when it ends.
     #[doc(alias = "ftDk_HeavyTurn_Anim")]
     pub fn dk_heavy_turn_anim(&mut self, gobj: GObjId) {
         self.turn_anim_inner(gobj);
         if !self.anim_frames_remaining(gobj) {
-            self.enter_dk_heavy_wait(gobj);
+            self.enter_carry_wait(gobj, &HEAVY);
         }
     }
 
@@ -249,173 +112,8 @@ impl Running<'_> {
     #[doc(alias = "ftDk_HeavyTurn_IASA")]
     pub fn dk_heavy_turn_iasa(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).mv_i32(TURN_HAS_TURNED) != 0 && !self.heavy_throw_check(gobj) {
-            self.dk_heavy_jump_check(gobj);
+            self.carry_jump_check(gobj, &HEAVY);
         }
-    }
-
-    /// `ftDk_HeavyTurn_Phys`: friction.
-    #[doc(alias = "ftDk_HeavyTurn_Phys")]
-    pub fn dk_heavy_turn_phys(&mut self, gobj: GObjId) {
-        self.ground_friction(gobj);
-    }
-
-    /// `ftDk_HeavyTurn_Coll`: the wait's.
-    #[doc(alias = "ftDk_HeavyTurn_Coll")]
-    pub fn dk_heavy_turn_coll(&mut self, gobj: GObjId) {
-        self.dk_heavy_wait0_coll(gobj);
-    }
-
-    /// The heavy fall, `ftDk_MS_345_800E0294`, keeping a fast fall, its animation stopped;
-    /// airborne if it starts on the ground.
-    #[doc(alias = "ftDk_MS_345_800E0294")]
-    pub fn enter_dk_heavy_fall(&mut self, gobj: GObjId) {
-        let msid = self.dk_heavy_state(gobj, FALL);
-        self.change_motion_state(gobj, msid, MF_KEEP_FAST_FALL, 0.0, 1.0, 0.0, None);
-        self.set_anim_rate(gobj, 0.0);
-        if !self.is_airborne(gobj) {
-            let f = self.game.fighter_id(gobj);
-            self.go_airborne(f);
-        }
-    }
-
-    /// `ftDk_HeavyFall_IASA`: a throw.
-    #[doc(alias = "ftDk_HeavyFall_IASA")]
-    pub fn dk_heavy_fall_iasa(&mut self, gobj: GObjId) {
-        self.heavy_throw_check(gobj);
-    }
-
-    /// `ftDk_HeavyFall_Phys`: the air's physics.
-    #[doc(alias = "ftDk_HeavyFall_Phys")]
-    pub fn dk_heavy_fall_phys(&mut self, gobj: GObjId) {
-        self.air_physics(gobj);
-    }
-
-    /// `ftDk_HeavyFall_Coll`: landing, the heavy landing.
-    #[doc(alias = "ftDk_HeavyFall_Coll")]
-    pub fn dk_heavy_fall_coll(&mut self, gobj: GObjId) {
-        self.air_coll_then(gobj, |g, gobj| g.enter_dk_heavy_landing(gobj));
-    }
-
-    /// The heavy knee bend on a jump's input, `ftDk_MS_347_800E0378`.
-    #[doc(alias = "ftDk_MS_347_800E0378")]
-    pub fn dk_heavy_jump_check(&mut self, gobj: GObjId) -> bool {
-        let input = self.jump_input(gobj);
-        if input != 0 {
-            self.enter_dk_heavy_knee_bend(gobj, input);
-            return true;
-        }
-        false
-    }
-
-    /// The heavy jump, `ftDk_MS_347_800E03C0`: airborne, its animation stopped, the jump's
-    /// takeoff.
-    #[doc(alias = "ftDk_MS_347_800E03C0")]
-    pub fn enter_dk_heavy_jump(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        self.go_airborne(f);
-        let msid = self.dk_heavy_state(gobj, JUMP);
-        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        self.set_anim_rate(gobj, 0.0);
-        self.jump_take_off(gobj, true, 1.0);
-    }
-
-    /// `ftDk_HeavyJump_IASA`: a throw.
-    #[doc(alias = "ftDk_HeavyJump_IASA")]
-    pub fn dk_heavy_jump_iasa(&mut self, gobj: GObjId) {
-        self.heavy_throw_check(gobj);
-    }
-
-    /// `ftDk_HeavyJump_Phys`: the jump's physics (`ftCo_Jump_Phys_Inner`).
-    #[doc(alias = "ftDk_HeavyJump_Phys")]
-    pub fn dk_heavy_jump_phys(&mut self, gobj: GObjId) {
-        self.co_jump_phys(gobj);
-    }
-
-    /// `ftDk_HeavyJump_Coll`: the fall's.
-    #[doc(alias = "ftDk_HeavyJump_Coll")]
-    pub fn dk_heavy_jump_coll(&mut self, gobj: GObjId) {
-        self.dk_heavy_fall_coll(gobj);
-    }
-
-    /// The heavy knee bend, `ftDk_MS_348_800E04A4`: `input` the jump's input, held for
-    /// `cargo_hold.x24_JUMP_STARTUP_LAG` frames with the animation stopped.
-    #[doc(alias = "ftDk_MS_348_800E04A4")]
-    pub fn enter_dk_heavy_knee_bend(&mut self, gobj: GObjId, input: i32) {
-        let f = self.game.fighter_id(gobj);
-        let lag = self.cargo_attr_f32(f, JUMP_STARTUP_LAG);
-        let fp = &mut self.game.fighters[f.0];
-        fp.set_mv_i32(KNEE_BEND_INPUT, input);
-        fp.set_mv_i32(KNEE_BEND_X0, 0);
-        fp.set_mv_f32(KNEE_BEND_LAG, reg(lag));
-        let msid = self.dk_heavy_state(gobj, KNEE_BEND);
-        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        self.set_anim_rate(gobj, 0.0);
-    }
-
-    /// `ftDk_HeavyWait1_Anim`: the jump once the knee bend's lag runs out.
-    #[doc(alias = "ftDk_HeavyWait1_Anim")]
-    pub fn dk_heavy_wait1_anim(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).mv_f32(KNEE_BEND_LAG) <= 0.0 {
-            self.enter_dk_heavy_jump(gobj);
-        }
-        let fp = self.game.fighter_mut(gobj);
-        let lag = reg(fp.mv_f32(KNEE_BEND_LAG));
-        fp.set_mv_f32(KNEE_BEND_LAG, fp::fsubs(lag, 1.0));
-    }
-
-    /// `ftDk_HeavyWait1_IASA`: a throw, else a short hop's input.
-    #[doc(alias = "ftDk_HeavyWait1_IASA")]
-    pub fn dk_heavy_wait1_iasa(&mut self, gobj: GObjId) {
-        if !self.heavy_throw_check(gobj) {
-            self.knee_bend_short_hop_check(gobj);
-        }
-    }
-
-    /// `ftDk_HeavyWait1_Phys`: friction.
-    #[doc(alias = "ftDk_HeavyWait1_Phys")]
-    pub fn dk_heavy_wait1_phys(&mut self, gobj: GObjId) {
-        self.ground_friction(gobj);
-    }
-
-    /// `ftDk_HeavyWait1_Coll`: the wait's.
-    #[doc(alias = "ftDk_HeavyWait1_Coll")]
-    pub fn dk_heavy_wait1_coll(&mut self, gobj: GObjId) {
-        self.dk_heavy_wait0_coll(gobj);
-    }
-
-    /// The heavy landing, `ftDk_MS_346_800E05E4`: `cargo_hold.x28_LANDING_LAG` frames with its
-    /// animation stopped.
-    #[doc(alias = "ftDk_MS_346_800E05E4")]
-    pub fn enter_dk_heavy_landing(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let lag = self.cargo_attr_f32(f, LANDING_LAG);
-        self.game.fighters[f.0].set_mv_f32(LANDING_LAG_LEFT, reg(lag));
-        let msid = self.dk_heavy_state(gobj, LANDING);
-        self.enter_landing(gobj, msid, 1, 0, 0.0, 1.0);
-        self.set_anim_rate(gobj, 0.0);
-    }
-
-    /// `ftDk_HeavyLanding_Anim`: the wait once the lag runs out.
-    #[doc(alias = "ftDk_HeavyLanding_Anim")]
-    pub fn dk_heavy_landing_anim(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).mv_f32(LANDING_LAG_LEFT) <= 0.0 {
-            self.enter_dk_heavy_wait(gobj);
-        }
-        let fp = self.game.fighter_mut(gobj);
-        let lag = reg(fp.mv_f32(LANDING_LAG_LEFT));
-        fp.set_mv_f32(LANDING_LAG_LEFT, fp::fsubs(lag, 1.0));
-    }
-
-    /// `ftDk_HeavyLanding_Phys`: friction.
-    #[doc(alias = "ftDk_HeavyLanding_Phys")]
-    pub fn dk_heavy_landing_phys(&mut self, gobj: GObjId) {
-        self.ground_friction(gobj);
-    }
-
-    /// `ftDk_HeavyLanding_Coll`: the wait's.
-    #[doc(alias = "ftDk_HeavyLanding_Coll")]
-    pub fn dk_heavy_landing_coll(&mut self, gobj: GObjId) {
-        self.dk_heavy_wait0_coll(gobj);
     }
 
     /// A hit while carrying the item, `ftDk_MS_349_800E06D8`: a light one (`checkSomething`)
@@ -463,39 +161,7 @@ impl Running<'_> {
     /// Hurt carrying the item, `doSomething`: hitstun in the hurt wait.
     #[doc(alias = "doSomething")]
     pub fn dk_heavy_hit_keep(&mut self, gobj: GObjId) {
-        let msid = self.dk_heavy_state(gobj, WAIT2);
+        let msid = self.carry_state(gobj, &HEAVY, WAIT2);
         self.enter_damage(gobj, msid, 0.0);
-    }
-
-    /// `ftDk_HeavyWait2_Anim`: the hurt wait's hitstun, then the heavy fall or wait.
-    #[doc(alias = "ftDk_HeavyWait2_Anim")]
-    pub fn dk_heavy_wait2_anim(&mut self, gobj: GObjId) {
-        self.damage_tick(gobj);
-        if !self.game.fighter(gobj).in_hitstun {
-            if self.is_airborne(gobj) {
-                self.enter_dk_heavy_fall(gobj);
-            } else {
-                self.enter_dk_heavy_wait(gobj);
-            }
-        }
-    }
-
-    /// `ftDk_HeavyWait2_Phys`: the damage state's physics.
-    #[doc(alias = "ftDk_HeavyWait2_Phys")]
-    pub fn dk_heavy_wait2_phys(&mut self, gobj: GObjId) {
-        self.co_damage_phys(gobj);
-    }
-
-    /// `ftDk_HeavyWait2_Coll`: off the ground, airborne; in the air, landing.
-    #[doc(alias = "ftDk_HeavyWait2_Coll")]
-    pub fn dk_heavy_wait2_coll(&mut self, gobj: GObjId) {
-        if !self.is_airborne(gobj) {
-            if !self.ground_coll_off_ledges(gobj) {
-                let f = self.game.fighter_id(gobj);
-                self.go_airborne(f);
-            }
-        } else if self.air_coll_land(gobj) {
-            self.land(gobj);
-        }
     }
 }

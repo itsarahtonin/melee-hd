@@ -5,11 +5,12 @@
 
 use gekko_fp as fp;
 
+use super::super::super::it::kinds::gamewatch as items;
 use super::super::super::it::kinds::gamewatchpanic as panic_item;
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::super::motion::flags::*;
-use super::{addr, attr, ms, mv, panic, part, u};
+use super::{ItemSlot, addr, attr, ms, mv, panic, part, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::ppc::cvt_fp2unsigned;
@@ -41,6 +42,19 @@ const LOOP_FLAGS: u32 = KEEP_GFX
     | SKIP_MODEL_PART_VIS
     | SKIP_MODEL_FLAGS
     | UNK_27;
+/// The oil: out through Oil Panic's throw's states (and the air catch's between them).
+pub const PANIC: ItemSlot = ItemSlot {
+    slot: u::PANIC,
+    states: (ms::SPECIAL_LW_SHOOT, ms::SPECIAL_AIR_LW_SHOOT),
+    hitlag_cbs: (
+        addr::SPECIAL_LW_ITEM_PANIC_ENTER_HITLAG,
+        addr::SPECIAL_LW_ITEM_PANIC_EXIT_HITLAG,
+    ),
+    remove: |r, i| items::held_remove(r, i, &panic_item::HELD),
+    hitlag_start: items::held_hitlag_start,
+    hitlag_end: items::held_hitlag_end,
+    exit_hitlag: |r, g| r.gw_held_exit_hitlag(g, &PANIC),
+};
 
 impl Running<'_> {
     /// The oil out, `ftGw_SpecialLw_ItemPanicSetup`.
@@ -49,59 +63,11 @@ impl Running<'_> {
         if self.gw_item(gobj, u::PANIC).is_none() {
             let pos = self.gw_part_pos(gobj, part::TOP_N, None);
             let facing = self.game.fighter(gobj).facing_dir;
-            let item = panic_item::spawn(self, gobj, pos, 0, facing);
+            let item = items::held_spawn(self, &panic_item::HELD, gobj, pos, 0, facing);
             self.gw_set_item(gobj, u::PANIC, item);
         }
-        if self.gw_item(gobj, u::PANIC).is_some() {
-            self.gw_damage_cbs(gobj);
-        }
-        self.gw_hitlag_cbs(
-            gobj,
-            addr::SPECIAL_LW_ITEM_PANIC_ENTER_HITLAG,
-            addr::SPECIAL_LW_ITEM_PANIC_EXIT_HITLAG,
-        );
+        self.gw_held_cbs(gobj, &PANIC);
         self.gw_set_accessory(gobj, None);
-    }
-
-    /// The oil forgotten, `ftGw_SpecialLw_ItemPanicSetFlag`.
-    #[doc(alias = "ftGw_SpecialLw_ItemPanicSetFlag")]
-    pub fn gw_panic_set_flag(&mut self, gobj: GObjId) {
-        self.gw_panic_exit_hitlag(gobj);
-        self.gw_set_item(gobj, u::PANIC, None);
-        self.gw_clear_damage_cbs(gobj);
-    }
-
-    /// The oil taken away, `ftGw_SpecialLw_ItemPanicRemove`.
-    #[doc(alias = "ftGw_SpecialLw_ItemPanicRemove")]
-    pub fn gw_panic_remove(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::PANIC) {
-            panic_item::remove(self, item);
-            self.gw_panic_set_flag(gobj);
-        }
-    }
-
-    /// `ftGw_SpecialLw_ItemPanicEnterHitlag`.
-    #[doc(alias = "ftGw_SpecialLw_ItemPanicEnterHitlag")]
-    pub fn gw_panic_enter_hitlag(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::PANIC) {
-            panic_item::hitlag_start(self, item);
-        }
-    }
-
-    /// `ftGw_SpecialLw_ItemPanicExitHitlag`.
-    #[doc(alias = "ftGw_SpecialLw_ItemPanicExitHitlag")]
-    pub fn gw_panic_exit_hitlag(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::PANIC) {
-            panic_item::hitlag_end(self, item);
-        }
-    }
-
-    /// Whether the oil should go, `ftGw_SpecialLw_ItemCheckPanicRemove`: out of the throw's
-    /// states (and the air catch's between them).
-    #[doc(alias = "ftGw_SpecialLw_ItemCheckPanicRemove")]
-    pub fn gw_panic_should_go(&self, gobj: GObjId) -> bool {
-        let msid = self.game.fighter(gobj).motion_id;
-        !(ms::SPECIAL_LW_SHOOT..=ms::SPECIAL_AIR_LW_SHOOT).contains(&msid)
     }
 
     /// The bucket's model and its fill, `ftGw_SpecialLw_UpdateBucketModel`.
@@ -545,10 +511,10 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_LW_ITEM_PANIC_SETUP => g.gw_panic_setup(gobj),
-        addr::SPECIAL_LW_ITEM_PANIC_SET_FLAG => g.gw_panic_set_flag(gobj),
-        addr::SPECIAL_LW_ITEM_PANIC_REMOVE => g.gw_panic_remove(gobj),
-        addr::SPECIAL_LW_ITEM_PANIC_ENTER_HITLAG => g.gw_panic_enter_hitlag(gobj),
-        addr::SPECIAL_LW_ITEM_PANIC_EXIT_HITLAG => g.gw_panic_exit_hitlag(gobj),
+        addr::SPECIAL_LW_ITEM_PANIC_SET_FLAG => g.gw_held_set_flag(gobj, &PANIC),
+        addr::SPECIAL_LW_ITEM_PANIC_REMOVE => g.gw_held_remove(gobj, &PANIC),
+        addr::SPECIAL_LW_ITEM_PANIC_ENTER_HITLAG => g.gw_held_enter_hitlag(gobj, &PANIC),
+        addr::SPECIAL_LW_ITEM_PANIC_EXIT_HITLAG => g.gw_held_exit_hitlag(gobj, &PANIC),
         addr::SPECIAL_LW_UPDATE_BUCKET_MODEL => g.gw_update_bucket_model(gobj),
         addr::SPECIAL_LW_ENTER => g.gw_special_lw_enter(gobj),
         addr::SPECIAL_AIR_LW_ENTER => g.gw_special_air_lw_enter(gobj),

@@ -2,13 +2,15 @@
 //! (`it::kinds::gamewatchparachute`), the back aerial's turtle (`gamewatchturtle`) and the up
 //! aerial's Sparky (`gamewatchbreath`), each spawned on the script's accessory frame and kept
 //! through the aerial's landing when the script says so. His forward and down aerials are
-//! the common ones.
+//! the common ones. The three items' hooks are one each ([`AirItem`], and his items' shared
+//! hooks over their [`ItemSlot`]s).
 
+use super::super::super::it::kinds::gamewatch::{self as items, Held};
 use super::super::super::it::kinds::{
     gamewatchbreath as breath, gamewatchparachute as parachute, gamewatchturtle as turtle,
 };
 use super::super::super::state::Running;
-use super::{addr, ms, part, u};
+use super::{ItemSlot, addr, ms, part, u};
 use crate::hsd::gobj::GObjId;
 
 /// `ftCo_MS_AttackAirN` to `ftCo_MS_AttackAirLw`, the aerials the C-stick asks for.
@@ -18,142 +20,93 @@ const CO_ATTACK_AIR_B: i32 = 67;
 const CO_ATTACK_AIR_HI: i32 = 68;
 const CO_ATTACK_AIR_LW: i32 = 69;
 
+/// The aerials' hitlag hooks, the three items'.
+const AIR_HITLAG_CBS: (u32, u32) = (
+    addr::ATTACK_AIR_N_ENTER_ITEM_HITLAG,
+    addr::ATTACK_AIR_N_EXIT_ITEM_HITLAG,
+);
+
+/// The parachute: out through the neutral aerial and its landing.
+pub const PARACHUTE: ItemSlot = ItemSlot {
+    slot: u::PARACHUTE,
+    states: (ms::ATTACK_AIR_N, ms::LANDING_AIR_N),
+    hitlag_cbs: AIR_HITLAG_CBS,
+    remove: |r, i| items::held_remove(r, i, &parachute::HELD),
+    hitlag_start: items::held_hitlag_start,
+    hitlag_end: items::held_hitlag_end,
+    exit_hitlag: |r, g| r.gw_air_exit_item_hitlag(g),
+};
+
+/// The turtle: out through the back aerial and its landings.
+pub const TURTLE: ItemSlot = ItemSlot {
+    slot: u::TURTLE,
+    states: (ms::ATTACK_AIR_B, ms::LANDING_AIR_B),
+    hitlag_cbs: AIR_HITLAG_CBS,
+    remove: |r, i| items::held_remove(r, i, &turtle::HELD),
+    hitlag_start: items::held_hitlag_start,
+    hitlag_end: items::held_hitlag_end,
+    exit_hitlag: |r, g| r.gw_air_exit_item_hitlag(g),
+};
+
+/// Sparky: out through the up aerial and its landings.
+pub const SPARKY: ItemSlot = ItemSlot {
+    slot: u::SPARKY,
+    states: (ms::ATTACK_AIR_HI, ms::LANDING_AIR_HI),
+    hitlag_cbs: AIR_HITLAG_CBS,
+    remove: |r, i| items::held_remove(r, i, &breath::HELD),
+    hitlag_start: items::held_hitlag_start,
+    hitlag_end: items::held_hitlag_end,
+    exit_hitlag: |r, g| r.gw_air_exit_item_hitlag(g),
+};
+
+/// The aerials' items in the order their hooks run them.
+const AIR_ITEMS: [&ItemSlot; 3] = [&PARACHUTE, &TURTLE, &SPARKY];
+
+/// One aerial's item as its setup and landing take it: its slot, the part it's held at and
+/// the item's settings.
+pub struct AirItem {
+    pub slot: &'static ItemSlot,
+    pub part: i32,
+    pub item: &'static Held,
+}
+
+pub const PARACHUTE_OUT: AirItem = AirItem {
+    slot: &PARACHUTE,
+    part: part::TRANS_N,
+    item: &parachute::HELD,
+};
+pub const TURTLE_OUT: AirItem = AirItem {
+    slot: &TURTLE,
+    part: part::L_SHOULDER_N,
+    item: &turtle::HELD,
+};
+pub const SPARKY_OUT: AirItem = AirItem {
+    slot: &SPARKY,
+    part: part::L_HAND_N,
+    item: &breath::HELD,
+};
+
 impl Running<'_> {
     /// The aerials' item hooks: hitlag's and damage's.
     fn gw_air_item_cbs(&mut self, gobj: GObjId) {
         self.gw_damage_cbs(gobj);
-        self.gw_hitlag_cbs(
-            gobj,
-            addr::ATTACK_AIR_N_ENTER_ITEM_HITLAG,
-            addr::ATTACK_AIR_N_EXIT_ITEM_HITLAG,
-        );
+        let (enter, exit) = AIR_HITLAG_CBS;
+        self.gw_hitlag_cbs(gobj, enter, exit);
     }
 
-    /// The parachute out, `ftGw_AttackAirN_ItemParachuteSetup`: a new one, or on landing the
-    /// one he has.
+    /// The aerial's item out: a new one, or on landing the one he has
+    /// (`ftGw_AttackAirN_ItemParachuteSetup`, `_ItemTurtleSetup`, `_ItemSparkySetup`).
     #[doc(alias = "ftGw_AttackAirN_ItemParachuteSetup")]
-    pub fn gw_parachute_setup(&mut self, gobj: GObjId) {
-        if self.gw_item(gobj, u::PARACHUTE).is_some() {
-            self.gw_parachute_on_land(gobj);
-        } else {
-            let pos = self.gw_part_pos(gobj, part::TRANS_N, None);
-            let facing = self.game.fighter(gobj).facing_dir;
-            let item = parachute::spawn(self, gobj, pos, part::TRANS_N, facing);
-            self.gw_set_item(gobj, u::PARACHUTE, item);
-            if item.is_some() {
-                self.gw_air_item_cbs(gobj);
-            }
-        }
-        self.gw_set_accessory(gobj, None);
-    }
-
-    /// The parachute kept through the landing, `ftGw_AttackAirN_ItemParachuteOnLand`: its
-    /// landing animation, in the neutral aerial's landing.
-    #[doc(alias = "ftGw_AttackAirN_ItemParachuteOnLand")]
-    pub fn gw_parachute_on_land(&mut self, gobj: GObjId) {
-        let Some(item) = self.gw_item(gobj, u::PARACHUTE) else {
-            return;
-        };
-        self.gw_air_exit_item_hitlag(gobj);
-        if self.game.fighter(gobj).motion_id == ms::LANDING_AIR_N {
-            parachute::land(self, item);
-        }
-        self.gw_air_item_cbs(gobj);
-        self.gw_set_accessory(gobj, None);
-    }
-
-    /// The parachute forgotten, `ftGw_AttackAirN_ItemParachuteSetFlag`.
-    #[doc(alias = "ftGw_AttackAirN_ItemParachuteSetFlag")]
-    pub fn gw_parachute_set_flag(&mut self, gobj: GObjId) {
-        self.gw_air_exit_item_hitlag(gobj);
-        self.gw_set_item(gobj, u::PARACHUTE, None);
-        self.gw_clear_damage_cbs(gobj);
-    }
-
-    /// The parachute taken away, `ftGw_AttackAirN_ItemParachuteRemove`.
-    #[doc(alias = "ftGw_AttackAirN_ItemParachuteRemove")]
-    pub fn gw_parachute_remove(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::PARACHUTE) {
-            parachute::remove(self, item);
-            self.gw_parachute_set_flag(gobj);
-        }
-    }
-
-    /// Whether the parachute should go, `ftGw_AttackAirN_ItemCheckParachuteRemove`: out of
-    /// the aerials and the neutral aerial's landing.
-    #[doc(alias = "ftGw_AttackAirN_ItemCheckParachuteRemove")]
-    pub fn gw_parachute_should_go(&self, gobj: GObjId) -> bool {
-        let msid = self.game.fighter(gobj).motion_id;
-        !(ms::ATTACK_AIR_N..=ms::LANDING_AIR_N).contains(&msid)
-    }
-
-    /// The turtle out, `ftGw_AttackAirN_ItemTurtleSetup`.
     #[doc(alias = "ftGw_AttackAirN_ItemTurtleSetup")]
-    pub fn gw_turtle_setup(&mut self, gobj: GObjId) {
-        if self.gw_item(gobj, u::TURTLE).is_some() {
-            self.gw_turtle_on_land(gobj);
-        } else {
-            let pos = self.gw_part_pos(gobj, part::L_SHOULDER_N, None);
-            let facing = self.game.fighter(gobj).facing_dir;
-            let item = turtle::spawn(self, gobj, pos, part::L_SHOULDER_N, facing);
-            self.gw_set_item(gobj, u::TURTLE, item);
-            if item.is_some() {
-                self.gw_air_item_cbs(gobj);
-            }
-        }
-        self.gw_set_accessory(gobj, None);
-    }
-
-    /// The turtle kept through the landing, `ftGw_AttackAirN_ItemTurtleOnLand`: its landing
-    /// animation only in the neutral aerial's landing, which the back aerial never lands in.
-    #[doc(alias = "ftGw_AttackAirN_ItemTurtleOnLand")]
-    pub fn gw_turtle_on_land(&mut self, gobj: GObjId) {
-        let Some(item) = self.gw_item(gobj, u::TURTLE) else {
-            return;
-        };
-        self.gw_air_exit_item_hitlag(gobj);
-        if self.game.fighter(gobj).motion_id == ms::LANDING_AIR_N {
-            turtle::land(self, item);
-        }
-        self.gw_air_item_cbs(gobj);
-        self.gw_set_accessory(gobj, None);
-    }
-
-    /// The turtle forgotten, `ftGw_AttackAirN_ItemTurtleSetFlag`.
-    #[doc(alias = "ftGw_AttackAirN_ItemTurtleSetFlag")]
-    pub fn gw_turtle_set_flag(&mut self, gobj: GObjId) {
-        self.gw_air_exit_item_hitlag(gobj);
-        self.gw_set_item(gobj, u::TURTLE, None);
-        self.gw_clear_damage_cbs(gobj);
-    }
-
-    /// The turtle taken away, `ftGw_AttackAirN_ItemTurtleRemove`.
-    #[doc(alias = "ftGw_AttackAirN_ItemTurtleRemove")]
-    pub fn gw_turtle_remove(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::TURTLE) {
-            turtle::remove(self, item);
-            self.gw_turtle_set_flag(gobj);
-        }
-    }
-
-    /// Whether the turtle should go, `ftGw_AttackAirN_ItemCheckTurtleRemove`: out of the back
-    /// aerial and its landings.
-    #[doc(alias = "ftGw_AttackAirN_ItemCheckTurtleRemove")]
-    pub fn gw_turtle_should_go(&self, gobj: GObjId) -> bool {
-        let msid = self.game.fighter(gobj).motion_id;
-        !(ms::ATTACK_AIR_B..=ms::LANDING_AIR_B).contains(&msid)
-    }
-
-    /// Sparky out, `ftGw_AttackAirN_ItemSparkySetup`.
     #[doc(alias = "ftGw_AttackAirN_ItemSparkySetup")]
-    pub fn gw_sparky_setup(&mut self, gobj: GObjId) {
-        if self.gw_item(gobj, u::SPARKY).is_some() {
-            self.gw_sparky_on_land(gobj);
+    pub fn gw_air_item_setup(&mut self, gobj: GObjId, a: &AirItem) {
+        if self.gw_item(gobj, a.slot.slot).is_some() {
+            self.gw_air_item_on_land(gobj, a);
         } else {
-            let pos = self.gw_part_pos(gobj, part::L_HAND_N, None);
+            let pos = self.gw_part_pos(gobj, a.part, None);
             let facing = self.game.fighter(gobj).facing_dir;
-            let item = breath::spawn(self, gobj, pos, part::L_HAND_N, facing);
-            self.gw_set_item(gobj, u::SPARKY, item);
+            let item = items::held_spawn(self, a.item, gobj, pos, a.part, facing);
+            self.gw_set_item(gobj, a.slot.slot, item);
             if item.is_some() {
                 self.gw_air_item_cbs(gobj);
             }
@@ -161,71 +114,38 @@ impl Running<'_> {
         self.gw_set_accessory(gobj, None);
     }
 
-    /// Sparky kept through the landing, `ftGw_AttackAirN_ItemSparkyOnLand`.
+    /// The aerial's item kept through the landing: its landing animation only in the neutral
+    /// aerial's landing, which the back and up aerials never land in
+    /// (`ftGw_AttackAirN_ItemParachuteOnLand`, `_ItemTurtleOnLand`, `_ItemSparkyOnLand`).
+    #[doc(alias = "ftGw_AttackAirN_ItemParachuteOnLand")]
+    #[doc(alias = "ftGw_AttackAirN_ItemTurtleOnLand")]
     #[doc(alias = "ftGw_AttackAirN_ItemSparkyOnLand")]
-    pub fn gw_sparky_on_land(&mut self, gobj: GObjId) {
-        let Some(item) = self.gw_item(gobj, u::SPARKY) else {
+    pub fn gw_air_item_on_land(&mut self, gobj: GObjId, a: &AirItem) {
+        let Some(item) = self.gw_item(gobj, a.slot.slot) else {
             return;
         };
         self.gw_air_exit_item_hitlag(gobj);
         if self.game.fighter(gobj).motion_id == ms::LANDING_AIR_N {
-            breath::land(self, item);
+            items::held_land(self, item, a.item);
         }
         self.gw_air_item_cbs(gobj);
         self.gw_set_accessory(gobj, None);
-    }
-
-    /// Sparky forgotten, `ftGw_AttackAirN_ItemSparkySetFlag`.
-    #[doc(alias = "ftGw_AttackAirN_ItemSparkySetFlag")]
-    pub fn gw_sparky_set_flag(&mut self, gobj: GObjId) {
-        self.gw_air_exit_item_hitlag(gobj);
-        self.gw_set_item(gobj, u::SPARKY, None);
-        self.gw_clear_damage_cbs(gobj);
-    }
-
-    /// Sparky taken away, `ftGw_AttackAirN_ItemSparkyRemove`.
-    #[doc(alias = "ftGw_AttackAirN_ItemSparkyRemove")]
-    pub fn gw_sparky_remove(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::SPARKY) {
-            breath::remove(self, item);
-            self.gw_sparky_set_flag(gobj);
-        }
     }
 
     /// The aerials' items pause, `ftGw_AttackAirN_EnterItemHitlag`.
     #[doc(alias = "ftGw_AttackAirN_EnterItemHitlag")]
     pub fn gw_air_enter_item_hitlag(&mut self, gobj: GObjId) {
-        if let Some(i) = self.gw_item(gobj, u::PARACHUTE) {
-            parachute::hitlag_start(self, i);
-        }
-        if let Some(i) = self.gw_item(gobj, u::TURTLE) {
-            turtle::hitlag_start(self, i);
-        }
-        if let Some(i) = self.gw_item(gobj, u::SPARKY) {
-            breath::hitlag_start(self, i);
+        for s in AIR_ITEMS {
+            self.gw_held_enter_hitlag(gobj, s);
         }
     }
 
     /// The aerials' items run again, `ftGw_AttackAirN_ExitItemHitlag`.
     #[doc(alias = "ftGw_AttackAirN_ExitItemHitlag")]
     pub fn gw_air_exit_item_hitlag(&mut self, gobj: GObjId) {
-        if let Some(i) = self.gw_item(gobj, u::PARACHUTE) {
-            parachute::hitlag_end(self, i);
+        for s in AIR_ITEMS {
+            self.gw_held_exit_hitlag(gobj, s);
         }
-        if let Some(i) = self.gw_item(gobj, u::TURTLE) {
-            turtle::hitlag_end(self, i);
-        }
-        if let Some(i) = self.gw_item(gobj, u::SPARKY) {
-            breath::hitlag_end(self, i);
-        }
-    }
-
-    /// Whether Sparky should go, `ftGw_AttackAirN_ItemCheckSparkyRemove`: out of the up
-    /// aerial and its landings.
-    #[doc(alias = "ftGw_AttackAirN_ItemCheckSparkyRemove")]
-    pub fn gw_sparky_should_go(&self, gobj: GObjId) -> bool {
-        let msid = self.game.fighter(gobj).motion_id;
-        !(ms::ATTACK_AIR_HI..=ms::LANDING_AIR_HI).contains(&msid)
     }
 
     /// The aerial the C-stick or stick asks for, `ftGw_AttackAirN_DecideAction`: his own
@@ -442,18 +362,18 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::ATTACK_AIR_N_ITEM_PARACHUTE_SETUP => g.gw_parachute_setup(gobj),
-        addr::ATTACK_AIR_N_ITEM_PARACHUTE_ON_LAND => g.gw_parachute_on_land(gobj),
-        addr::ATTACK_AIR_N_ITEM_PARACHUTE_SET_FLAG => g.gw_parachute_set_flag(gobj),
-        addr::ATTACK_AIR_N_ITEM_PARACHUTE_REMOVE => g.gw_parachute_remove(gobj),
-        addr::ATTACK_AIR_N_ITEM_TURTLE_SETUP => g.gw_turtle_setup(gobj),
-        addr::ATTACK_AIR_N_ITEM_TURTLE_ON_LAND => g.gw_turtle_on_land(gobj),
-        addr::ATTACK_AIR_N_ITEM_TURTLE_SET_FLAG => g.gw_turtle_set_flag(gobj),
-        addr::ATTACK_AIR_N_ITEM_TURTLE_REMOVE => g.gw_turtle_remove(gobj),
-        addr::ATTACK_AIR_N_ITEM_SPARKY_SETUP => g.gw_sparky_setup(gobj),
-        addr::ATTACK_AIR_N_ITEM_SPARKY_ON_LAND => g.gw_sparky_on_land(gobj),
-        addr::ATTACK_AIR_N_ITEM_SPARKY_SET_FLAG => g.gw_sparky_set_flag(gobj),
-        addr::ATTACK_AIR_N_ITEM_SPARKY_REMOVE => g.gw_sparky_remove(gobj),
+        addr::ATTACK_AIR_N_ITEM_PARACHUTE_SETUP => g.gw_air_item_setup(gobj, &PARACHUTE_OUT),
+        addr::ATTACK_AIR_N_ITEM_PARACHUTE_ON_LAND => g.gw_air_item_on_land(gobj, &PARACHUTE_OUT),
+        addr::ATTACK_AIR_N_ITEM_PARACHUTE_SET_FLAG => g.gw_held_set_flag(gobj, &PARACHUTE),
+        addr::ATTACK_AIR_N_ITEM_PARACHUTE_REMOVE => g.gw_held_remove(gobj, &PARACHUTE),
+        addr::ATTACK_AIR_N_ITEM_TURTLE_SETUP => g.gw_air_item_setup(gobj, &TURTLE_OUT),
+        addr::ATTACK_AIR_N_ITEM_TURTLE_ON_LAND => g.gw_air_item_on_land(gobj, &TURTLE_OUT),
+        addr::ATTACK_AIR_N_ITEM_TURTLE_SET_FLAG => g.gw_held_set_flag(gobj, &TURTLE),
+        addr::ATTACK_AIR_N_ITEM_TURTLE_REMOVE => g.gw_held_remove(gobj, &TURTLE),
+        addr::ATTACK_AIR_N_ITEM_SPARKY_SETUP => g.gw_air_item_setup(gobj, &SPARKY_OUT),
+        addr::ATTACK_AIR_N_ITEM_SPARKY_ON_LAND => g.gw_air_item_on_land(gobj, &SPARKY_OUT),
+        addr::ATTACK_AIR_N_ITEM_SPARKY_SET_FLAG => g.gw_held_set_flag(gobj, &SPARKY),
+        addr::ATTACK_AIR_N_ITEM_SPARKY_REMOVE => g.gw_held_remove(gobj, &SPARKY),
         addr::ATTACK_AIR_N_ENTER_ITEM_HITLAG => g.gw_air_enter_item_hitlag(gobj),
         addr::ATTACK_AIR_N_EXIT_ITEM_HITLAG => g.gw_air_exit_item_hitlag(gobj),
         addr::ATTACK_AIR_N_DECIDE_ACTION => g.gw_attack_air_decide(gobj),
