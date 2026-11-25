@@ -296,6 +296,12 @@ pub(crate) fn import_tick(
         (imp.game, imp.maps, imp.unhandled)
     }));
     let (mut game, maps, unhandled) = imported.map_err(|p| panic_text(&p))?;
+    // Taken up with the allocator model stopped, under every ruleset: the importer doesn't
+    // give the model every block (an envelope's list node, a memory piece), so it couldn't
+    // follow the original's, and new objects get no address, as before the model came under
+    // the ruleset. The state's own addresses are the original's, which the comparison checks
+    // (`Game::models_memory`).
+    game.objs.heap.imported = true;
     // The disc files the audio driver's device commands read: the music stream's and the
     // sound banks, as a started match has them.
     if game.audio.clock.is_some() {

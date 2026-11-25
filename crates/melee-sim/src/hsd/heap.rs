@@ -682,6 +682,15 @@ pub struct Heap {
     /// The game's pools that hold the last scene's counts and free list ([`Carried`]) until
     /// this scene's code inits them again, by [`Kind`].
     pub carried: Vec<bool>,
+    /// Whether the state was taken up from memory with the model stopped (the oracle's
+    /// `--from`): its objects hold the original's addresses, which a tool compares, and no
+    /// model follows them (the importer doesn't give the model every block). Each step lends
+    /// the stopped model whatever the rules choose (`game::ruleset`'s `Game::models_memory`),
+    /// as an import under Vanilla's rules has it: the hooks give address 0, [`with`] gives
+    /// nothing, and the tripwire stays off. A tool's mark, not the game's: the state's
+    /// comparison and hash leave it out.
+    #[state_eq(skip)]
+    pub imported: bool,
 }
 
 /// `HSD_MemoryEntry`'s size.
@@ -731,6 +740,7 @@ impl Heap {
             classes,
             image: Default::default(),
             carried: vec![false; Kind::COUNT],
+            imported: false,
         }
     }
 
