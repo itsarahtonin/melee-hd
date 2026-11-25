@@ -1038,7 +1038,7 @@ impl Session {
                 let playing: Vec<(i32, i32)> = start
                     .players
                     .iter()
-                    .filter(|p| i32::from(p.slot_type) != PlayerKind::None)
+                    .filter(|p| p.slot_type != PlayerKind::None)
                     .map(|p| {
                         let m = super::pl::player::mapping(i32::from(p.ckind));
                         (i32::from(m.internal_id), i32::from(m.extra_internal_id))
@@ -1106,7 +1106,7 @@ impl Session {
                 for set in sets {
                     let mut joining = start.clone();
                     let free: Vec<usize> = (1..6)
-                        .filter(|&i| i32::from(joining.players[i].slot_type) == PlayerKind::None)
+                        .filter(|&i| joining.players[i].slot_type == PlayerKind::None)
                         .collect();
                     for (&i, &(ck, c)) in free.iter().zip(&set) {
                         let t = super::ft::data::kind_tables(super::pl::player::ckind_ftkind(

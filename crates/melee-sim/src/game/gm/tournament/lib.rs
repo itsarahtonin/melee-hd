@@ -1519,7 +1519,7 @@ impl Running<'_> {
                     p.defense_ratio = 1.0;
                 }
             } else {
-                d.players[i].slot_type = PlayerKind::None as u8;
+                d.players[i].slot_type = PlayerKind::None.into();
             }
         }
         let stkind = i32::from(d.rules.stkind);
@@ -1545,7 +1545,7 @@ impl Running<'_> {
             let take = if alt {
                 i < n
             } else {
-                i32::from(slot_type) != PlayerKind::None
+                slot_type != PlayerKind::None
             };
             if take {
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;

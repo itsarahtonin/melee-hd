@@ -828,7 +828,7 @@ impl Running<'_> {
             }
             f.entry_timer -= 1;
             let left = f.entry_timer;
-            let human = i32::from(f.slot_type) == PlayerKind::Human;
+            let human = f.slot_type == PlayerKind::Human;
             if left == 0x50 {
                 let id = if human {
                     assert_eq!(
@@ -1390,7 +1390,7 @@ impl Running<'_> {
 /// (humans brighter than computers), by port otherwise, 4 for computers outside teams.
 #[doc(alias = "gm_80160854")]
 pub fn player_color(port: u8, team: u8, is_teams: u8, pkind: u8) -> u32 {
-    let human = i32::from(pkind) == PlayerKind::Human;
+    let human = pkind == PlayerKind::Human;
     if is_teams != 0 {
         return match team {
             0 => {
@@ -1819,7 +1819,7 @@ impl Game {
         );
         let port = usize::from(self.player_port(slot) as u8);
         let ck = self.player_ckind(slot);
-        if i32::from(d.slot_type) == PlayerKind::Human
+        if d.slot_type == PlayerKind::Human
             && self.pads.copy[port].button & 0x100 != 0
             && (ck == CharacterKind::Zelda || ck == CharacterKind::Seak)
         {
@@ -1967,7 +1967,7 @@ impl Game {
         }
         let mut human = false;
         for (i, p) in d.players.iter().enumerate() {
-            if i32::from(p.slot_type) == PlayerKind::Human {
+            if p.slot_type == PlayerKind::Human {
                 human = true;
                 if self.pads.copy[i].button & (0x40 | 0x20) == 0 {
                     return 0;

@@ -958,7 +958,7 @@ impl Running<'_> {
     pub fn vs_add_player(&mut self, slot: i32, p: &PlayerInitData) -> bool {
         let g = &*self.game;
         if g.vs.state.is_singleplayer != 0
-            || g.player_pkind(slot) != i32::from(PlayerKind::None)
+            || g.player_pkind(slot) != PlayerKind::None
             || g.player_entity(slot).is_some()
         {
             return false;
@@ -1008,8 +1008,7 @@ impl Running<'_> {
         }
         self.free_damage_display(slot as u8);
         self.player_free_fighters(slot);
-        self.game
-            .set_player_pkind(slot, i32::from(PlayerKind::None));
+        self.game.set_player_pkind(slot, PlayerKind::None);
         true
     }
 }

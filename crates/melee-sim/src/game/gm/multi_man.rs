@@ -817,9 +817,7 @@ impl Running<'_> {
         let mut count = 0;
         let mut free = None;
         for i in 1..6 {
-            if self.game.player_falls(i) == 0
-                && self.game.player_pkind(i) != i32::from(PlayerKind::None)
-            {
+            if self.game.player_falls(i) == 0 && self.game.player_pkind(i) != PlayerKind::None {
                 count += 1;
             } else {
                 free = Some(i);
@@ -841,7 +839,7 @@ impl Running<'_> {
         }
         // `sp38` is written for every slot not counted, so with fewer than five in it's set.
         let slot = free.expect("a free slot (fn_80181C80's sp38 unwritten)");
-        if self.game.player_pkind(slot) != i32::from(PlayerKind::None) {
+        if self.game.player_pkind(slot) != PlayerKind::None {
             self.game.set_player_falls(slot, 0);
             self.game.set_player_self_destructs(slot, 0);
             self.vs_remove_player(slot);

@@ -1314,7 +1314,7 @@ impl Running<'_> {
         {
             for p in &mut self.game.one_player.match_start.players[1..4] {
                 if p.ckind == CharacterKind::Luigi as i8 {
-                    p.slot_type = PlayerKind::None as u8;
+                    p.slot_type = PlayerKind::None.into();
                 }
             }
         }
@@ -1328,7 +1328,7 @@ impl Running<'_> {
         self.adventure_enter_vs();
         let start = &mut self.game.one_player.match_start;
         for p in &mut start.players[1..4] {
-            if i32::from(p.slot_type) == PlayerKind::Cpu {
+            if p.slot_type == PlayerKind::Cpu {
                 p.model_scale = 1.4;
             }
         }

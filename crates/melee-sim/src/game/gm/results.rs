@@ -297,7 +297,7 @@ impl Game {
             return v;
         }
         let count = (0..6)
-            .filter(|&i| self.player_pkind(i) != i32::from(PlayerKind::None))
+            .filter(|&i| self.player_pkind(i) != PlayerKind::None)
             .count();
         match count {
             2 => f64::from(0.9_f32),

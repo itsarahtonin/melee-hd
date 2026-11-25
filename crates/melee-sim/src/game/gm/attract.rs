@@ -94,7 +94,7 @@ impl Running<'_> {
             let p = &mut start.players[i];
             p.ckind = d.ckinds[i] as i8;
             p.color = d.colors[i];
-            p.slot_type = PlayerKind::Cpu as u8;
+            p.slot_type = PlayerKind::Cpu.into();
             p.cpu_level = 9;
             p.cpu_kind = 4;
             p.enters = false;

@@ -453,7 +453,7 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         .iter()
         .enumerate()
         .take(4)
-        .filter(|(_, p)| i32::from(p.slot_type) != PlayerKind::None)
+        .filter(|(_, p)| p.slot_type != PlayerKind::None)
         .map(|(i, p)| Player {
             character: p.ckind as u8,
             costume: p.color,
@@ -469,7 +469,7 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         .players
         .iter()
         .take(4)
-        .any(|p| i32::from(p.slot_type) != PlayerKind::None && p.handicap != 9);
+        .any(|p| p.slot_type != PlayerKind::None && p.handicap != 9);
     // The challenger approach's match (VS mode's state 0x81) is set up from the challenger's
     // data, not the select screens': the launcher makes none.
     if s.game.machine.routing.curr_state_id == 0x81 {

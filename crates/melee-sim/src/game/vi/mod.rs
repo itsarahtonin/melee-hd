@@ -807,7 +807,7 @@ impl SceneFiles {
         let p = &mut self.players.players[slot];
         p.ckind = ckind as i8;
         p.color = costume;
-        p.slot_type = PlayerKind::Demo as u8;
+        p.slot_type = PlayerKind::Demo.into();
     }
 
     /// A player's demo animations from `file` (`Player_80036E20`'s `idx`) for `pose`: its

@@ -1519,7 +1519,7 @@ impl Running<'_> {
             let p = &mut f.players.players[slot];
             p.ckind = ckind as i8;
             p.color = costume;
-            p.slot_type = PlayerKind::Demo as u8;
+            p.slot_type = PlayerKind::Demo.into();
             slot += 1;
             let m = super::super::pl::player::mapping(i32::from(ckind));
             for kind in [m.internal_id, m.extra_internal_id] {

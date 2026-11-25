@@ -973,7 +973,7 @@ pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, 
         _ => Vec::new(),
     };
     for p in &start.players {
-        if i32::from(p.slot_type) == PlayerKind::None {
+        if p.slot_type == PlayerKind::None {
             continue;
         }
         let m = super::pl::player::mapping(i32::from(p.ckind));
@@ -1036,7 +1036,7 @@ pub fn load_fighter_files(
     add(files, data, "PlCo.dat");
     let mut anims: Vec<&'static str> = Vec::new();
     for p in &start.players {
-        if i32::from(p.slot_type) == PlayerKind::None {
+        if p.slot_type == PlayerKind::None {
             continue;
         }
         let m = super::pl::player::mapping(i32::from(p.ckind));
@@ -1073,15 +1073,13 @@ pub fn load_fighter_files(
     let kirby_costumes: Vec<usize> = start
         .players
         .iter()
-        .filter(|p| {
-            i32::from(p.slot_type) != PlayerKind::None && i32::from(p.ckind) == CharacterKind::Kirby
-        })
+        .filter(|p| p.slot_type != PlayerKind::None && i32::from(p.ckind) == CharacterKind::Kirby)
         .map(|p| usize::from(p.color))
         .collect();
     if !kirby_costumes.is_empty() {
         use super::ft::kirby::init::{COPY_FILES, copy_costume_files};
         for p in &start.players {
-            if i32::from(p.slot_type) == PlayerKind::None {
+            if p.slot_type == PlayerKind::None {
                 continue;
             }
             let m = super::pl::player::mapping(i32::from(p.ckind));
@@ -1390,7 +1388,7 @@ pub fn load_results_files(
         add(files, data, name);
     }
     for p in &start.players {
-        if i32::from(p.slot_type) == PlayerKind::None {
+        if p.slot_type == PlayerKind::None {
             continue;
         }
         let ck = i32::from(p.ckind);
