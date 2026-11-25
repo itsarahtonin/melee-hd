@@ -468,10 +468,16 @@ pub struct Controllers {
     pub playback: bool,
     pub lib: PadLib,
     pub rumble: Rumble,
-    /// Polls of a scene's entry whose frame of rumble ran before the entry finished (a
-    /// rumble started in it: [`Controllers::rumble_ahead`]), which their queued reads then
-    /// skip.
+    /// Pad alarms whose frame of rumble ran before their poll was queued (a scene's entry, or
+    /// game code in a tick, changing the rumble after the alarm fired:
+    /// [`Controllers::rumble_frame_ahead`]), which their queued reads then skip.
     pub rumble_ahead: u32,
+    /// The motor changes those frames made, which the next skipped read's requests carry.
+    /// Not compared: what the original sends `PADControlMotor` at once, held only until the
+    /// poll's requests hand it to the frontend (nothing in the game reads it), and empty at
+    /// every tick's end, where the tick's last polls have been queued.
+    #[state_eq(skip)]
+    pub ahead_motors: [Option<Motor>; 4],
     pub master: [Status; 4],
     pub copy: [Status; 4],
     pub game: [Status; 4],
@@ -495,6 +501,7 @@ impl Controllers {
             lib: PadLib::new(qnum),
             rumble: Rumble::new(nb_list),
             rumble_ahead: 0,
+            ahead_motors: [None; 4],
             master: [Status::DEFAULT; 4],
             copy: [Status::DEFAULT; 4],
             game: [Status::DEFAULT; 4],
@@ -532,6 +539,22 @@ impl Controllers {
         self.lib.reset_switch != 0
     }
 
+    /// A pad alarm's frame of rumble (`HSD_PadRumbleInterpret` in `HSD_PadRenewRawStatus`),
+    /// run when the alarm fired, ahead of the poll it queues ([`Controllers::rumble_ahead`]):
+    /// its motor changes go with that poll's requests.
+    pub fn rumble_frame_ahead(&mut self, data: &Archives) {
+        for (m, new) in self
+            .ahead_motors
+            .iter_mut()
+            .zip(self.rumble.interpret(data))
+        {
+            if new.is_some() {
+                *m = new;
+            }
+        }
+        self.rumble_ahead += 1;
+    }
+
     /// `HSD_PadRenewRawStatus`: runs a frame of rumble, then queues one poll of the four
     /// ports (`now`, what `PADRead` reported: see [`read`](super::pad::read)) and follows the
     /// console's reset button (`reset_pressed`, `OSGetResetSwitchState`). With `err_check`, a
@@ -546,7 +569,7 @@ impl Controllers {
     ) -> Requests {
         let motors = if self.rumble_ahead > 0 {
             self.rumble_ahead -= 1;
-            [None; 4]
+            std::mem::take(&mut self.ahead_motors)
         } else {
             self.rumble.interpret(data)
         };

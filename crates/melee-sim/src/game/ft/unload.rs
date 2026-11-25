@@ -254,7 +254,8 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007ED2C")]
     fn stop_port_rumble(&mut self, gobj: GObjId) {
         let port = self.game.fighter(gobj).pad_port;
-        self.game.pads.rumble.remove(port);
-        self.game.pads.rumble.on(port);
+        let rumble = self.rumble_mut();
+        rumble.remove(port);
+        rumble.on(port);
     }
 }

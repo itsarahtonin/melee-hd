@@ -1577,6 +1577,64 @@ fn a_stadium_replay_plays_to_its_end_at_the_default_settings() {
     });
 }
 
+/// The music stream's box moves in a replay's first `ticks` as the player plays it (`--replay`,
+/// `--disc-speed SPEED`, `Session::open`, its mix each tick): how many, and the last's tick.
+fn song_moves(disc: &str, path: &str, speed: &str, ticks: u32) -> (u32, Option<u32>) {
+    let mut args = crate::parse_args_from(
+        ["--replay", path, "--disc-speed", speed]
+            .iter()
+            .map(|&a| a.to_owned())
+            .collect(),
+    )
+    .expect("the command line");
+    args.disc = disc.to_owned();
+    args.mute = true;
+    args.bench = Some(0);
+    let mut s = Session::open(&args).expect("the match");
+    let none = [PadStatus::default(); 4];
+    let (mut moves, mut last) = (0, None);
+    let mut box_playing = s.game().audio.synth.stream.playing;
+    for tick in 0..ticks {
+        let f = s.tick(none);
+        s.recycle(f);
+        let now = s.game().audio.synth.stream.playing;
+        if now != box_playing {
+            (moves, last, box_playing) = (moves + 1, Some(tick), now);
+        }
+    }
+    melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    (moves, last)
+}
+
+/// At the fast disc speed (`DiscSpeed::Fast`, Slippi Dolphin's), which a replay reads at by
+/// default, the two benchmark replays whose songs ssbm-rs's flat model of it cut 1.8 s in keep
+/// them, as Slippi Dolphin plays them: the stream's start (`stream_header`'s `AXSetVoiceAddr`,
+/// its loop flag) and its first box's addresses five reads later reach the DSP in separate
+/// audio frames. At the flat model (`fast-flat`) the last box moves at tick 109
+/// (docs/player.md, "The music the fast speed cuts").
+#[test]
+fn replays_keep_their_songs_at_dolphins_fast_disc_speed() {
+    crate::on_game_stack(|| {
+        let Ok(disc) = std::env::var("SSBM_DISC") else {
+            eprintln!("skipped: SSBM_DISC names no disc");
+            return;
+        };
+        for name in ["fox-marth-fd", "fox-marth-ps"] {
+            let path = format!("{}/../../data/bench/{name}.slp", env!("CARGO_MANIFEST_DIR"));
+            let (moves, last) = song_moves(&disc, &path, "fast", 400);
+            assert!(
+                last.is_some_and(|t| t > 300),
+                "{name} at Dolphin's fast disc speed: {moves} box moves, the last at {last:?}"
+            );
+            let (moves, last) = song_moves(&disc, &path, "fast-flat", 400);
+            assert!(
+                last.is_some_and(|t| t < 200),
+                "{name} at the flat model no longer cuts its song ({moves} box moves, the last at {last:?})"
+            );
+        }
+    });
+}
+
 /// A live match takes the console's counters no scene resets at the handoff (`live::Counters`:
 /// the collision joints' stamp, the collision update counter, the particles' family ids, display
 /// frame and links' sort frames), as Slippi Dolphin's live play carries them on, where melee-hd's

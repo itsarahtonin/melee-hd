@@ -128,7 +128,7 @@ fn run(args: Vec<String>) -> ExitCode {
             );
             eprintln!("                              [--draw-offscreen-fighters]");
             eprintln!(
-                "       melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N]"
+                "       melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|fast-flat|drive] [--ticks N]"
             );
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");

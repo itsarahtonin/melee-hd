@@ -409,14 +409,16 @@ impl Audio {
                 self.devcom_dvd_wake_up(data);
                 return;
             }
+            // `DVDReadAsyncPrio` of the file from where the command has got to.
+            let at = super::clock::disc_offset(c.file, c.src);
             if c.kind == 0x21 {
-                self.hw.disc_read(c.size.min(MEM_CHUNK), self.disc);
+                self.hw.disc_read(at, c.size.min(MEM_CHUNK), self.disc);
                 self.devcom.dvd_busy = 1;
                 return;
             }
             if let Some(b) = self.devcom.relay_buf() {
                 self.devcom.dvd_buf = b;
-                self.hw.disc_read(c.size.min(BUF_SIZE), self.disc);
+                self.hw.disc_read(at, c.size.min(BUF_SIZE), self.disc);
                 self.devcom.dvd_busy = 1;
                 return;
             }

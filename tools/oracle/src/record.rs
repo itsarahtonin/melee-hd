@@ -1,4 +1,4 @@
-//! `melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive]
+//! `melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|fast-flat|drive]
 //! [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all]`: plays a replay with melee-hd's recorder on
 //! (`melee_sim::game::record`), writes the recording as a `.slp` file, and compares it with the
 //! replay: the frames' events through ssbm-rs's comparison (`ssbm_slippi::compare`, as
@@ -52,7 +52,7 @@ pub fn record(args: &[&str]) -> ExitCode {
                 disc_speed = it
                     .next()
                     .and_then(|s| DiscSpeed::parse(s))
-                    .expect("--disc-speed fast|drive")
+                    .expect("--disc-speed fast|fast-flat|drive")
             }
             "--known" => known = Some(*it.next().expect("--known FILE")),
             "--free-seed" => free_seed = true,
@@ -71,7 +71,7 @@ pub fn record(args: &[&str]) -> ExitCode {
     }
     let [replay_path, out_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all] [--no-settling] [--rules slippi|own]"
+            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|fast-flat|drive] [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all] [--no-settling] [--rules slippi|own]"
         );
         return ExitCode::from(2);
     };

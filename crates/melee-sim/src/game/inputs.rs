@@ -24,6 +24,10 @@ pub const LEVEL_ALONE: u8 = 0x08;
 /// `--ruleset slippi`, [`super::state::Ruleset`]), in Slippi's floating point, with no card
 /// and no debug level.
 pub const SLIPPI_RULESET: u8 = 0x04;
+/// The flags' bit 7: with no disc rate, the disc ran at Slippi Dolphin's fast disc speed
+/// ([`DiscSpeed::Fast`], ssbm-rs's `DiscSpeed::Dolphin` since its `05d550a`); without it, at the
+/// flat model every earlier recording ran ([`DiscSpeed::FastFlat`]).
+pub const DOLPHIN_DISC: u8 = 0x80;
 const PAD_BYTES: usize = 11;
 
 /// A session ssbm-rs recorded: the settings its course depends on, and the controllers of
@@ -31,7 +35,8 @@ const PAD_BYTES: usize = 11;
 ///
 /// The file is `SSBMINP1`, a version (u32), the disc rate in bytes a second (u64, 0 for none)
 /// and flags (u8: 1 sound mixed, 2 a card beside it, 4 the Slippi ruleset, 8 the debug level
-/// raised alone, and in bits 4 to 6 the debug level plus one, 0 for none), all little-endian. Version 2 adds the
+/// raised alone, in bits 4 to 6 the debug level plus one, 0 for none, and 0x80 that with no
+/// disc rate the disc ran at Dolphin's fast speed, [`DOLPHIN_DISC`]), all little-endian. Version 2 adds the
 /// console's settings the boot reads: the clock at power-on (u64, time base ticks from
 /// 2000-01-01), the VI's DTV status (u8, 1 a component cable) and the SRAM's language and
 /// flags (u8 each); a version 1 file has ssbm-rs's defaults (0, 0, 0 and 0x2C). Then a byte per
@@ -40,6 +45,9 @@ const PAD_BYTES: usize = 11;
 pub struct Recording {
     /// The disc's read rate in bytes a second, none for Slippi's fast disc speed.
     pub disc_rate: Option<u64>,
+    /// With no rate, whether the fast speed was Dolphin's ([`DOLPHIN_DISC`]) rather than the
+    /// flat model's.
+    pub dolphin_disc: bool,
     /// Whether the DSP mixed sound (the sample-accurate model) rather than only answering.
     pub sound: bool,
     /// The memory card the session started with (beside the recording, as `FILE.card`).
@@ -137,6 +145,7 @@ impl Recording {
         }
         Ok(Recording {
             disc_rate: (rate > 0).then_some(rate),
+            dolphin_disc: flags & DOLPHIN_DISC != 0,
             sound: flags & SOUND != 0,
             card: (flags & CARD != 0).then(|| path.with_extension("card")),
             version,
@@ -162,10 +171,13 @@ impl Recording {
         })
     }
 
-    /// The disc's pace, as melee-sim's timeline models it.
+    /// The disc's pace, as melee-sim's timeline models it: with no rate, Dolphin's fast speed
+    /// where the flags mark it and the flat model where they don't (every recording before
+    /// ssbm-rs's `05d550a`), as ssbm-rs plays them back.
     pub fn disc(&self) -> Result<DiscSpeed, String> {
         match self.disc_rate {
-            None => Ok(DiscSpeed::Fast),
+            None if self.dolphin_disc => Ok(DiscSpeed::Fast),
+            None => Ok(DiscSpeed::FastFlat),
             Some(r) if r == u64::from(crate::audio::clock::DRIVE_RATE) => Ok(DiscSpeed::Drive),
             Some(r) => Err(format!(
                 "a disc read at {r} bytes a second: melee-sim models Slippi's fast disc speed and a drive's {}",

@@ -70,6 +70,7 @@ pub fn boot(
     let file = load(SOUND_BANK);
     let bank = SoundBank {
         len: file.bytes.len() as u32,
+        entrynum: file.entrynum,
         archive: data.add(Archive::raw(&file.bytes)),
     };
     let audio = &mut game.audio;

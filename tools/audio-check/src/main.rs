@@ -1,5 +1,5 @@
 //! `melee-audio-check TRACE REPLAY.slp AUDIO.wav [--fp hardware|slippi] [--ticks N]
-//! [--window SECONDS] [--disc-speed fast|drive] [--out MIX.wav]`: plays a replay natively from
+//! [--window SECONDS] [--disc-speed fast|fast-flat|drive] [--out MIX.wav]`: plays a replay natively from
 //! the boot state in ssbm-rs's state trace (version 5, with memory over the boot tick), mixes
 //! its audio with melee-audio, and compares the samples with ssbm-rs's recording of the same
 //! run's audio interface (`AUDIO_OUT=AUDIO.wav ssbm-run ...`), which starts at power-on: the
@@ -11,8 +11,9 @@
 //! starts one, from melee-sim's port of the boot's audio setup (`game::boot`), and the mix
 //! covers the boot's frames too.
 //!
-//! The disc reads at Slippi's fast disc speed, as ssbm-rs's runs do, unless `--disc-speed
-//! drive` reads it at a drive's pace, the player's, as ssbm-rs's window and its runs with
+//! The disc reads at Slippi Dolphin's fast disc speed, as ssbm-rs's runs do since its `05d550a`,
+//! unless `--disc-speed fast-flat` reads it at the flat model its earlier runs read at, or
+//! `--disc-speed drive` at a drive's pace, the player's, as ssbm-rs's window and its runs with
 //! `DISC_RATE=3000000` do.
 //!
 //! With `--session INPUTS` (and no trace or replay) a recorded session plays from power-on
@@ -183,7 +184,8 @@ fn run(args: &[String]) -> Result<bool, String> {
             "--out" => out = Some(value()?.clone()),
             "--port" => port = true,
             "--disc-speed" => {
-                disc_speed = DiscSpeed::parse(value()?).ok_or("--disc-speed fast|drive")?
+                disc_speed =
+                    DiscSpeed::parse(value()?).ok_or("--disc-speed fast|fast-flat|drive")?
             }
             "--fp" => {
                 fp_mode = match value()?.as_str() {
@@ -197,7 +199,7 @@ fn run(args: &[String]) -> Result<bool, String> {
     }
     let [trace_path, replay_path, wav_path] = pos[..] else {
         return Err(
-            "usage: melee-audio-check TRACE|- REPLAY.slp AUDIO.wav [--port] [--fp hardware|slippi] [--ticks N] [--window SECONDS] [--disc-speed fast|drive] [--out MIX.wav]"
+            "usage: melee-audio-check TRACE|- REPLAY.slp AUDIO.wav [--port] [--fp hardware|slippi] [--ticks N] [--window SECONDS] [--disc-speed fast|fast-flat|drive] [--out MIX.wav]"
                 .into(),
         );
     };
@@ -209,8 +211,10 @@ fn run(args: &[String]) -> Result<bool, String> {
     let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .map_err(|e| format!("{replay_path}: {e}"))?;
     settings.disc = disc_speed;
-    if disc_speed == DiscSpeed::Drive {
-        println!("the disc reads at a drive's pace");
+    match disc_speed {
+        DiscSpeed::Fast => {}
+        DiscSpeed::FastFlat => println!("the disc reads at the flat model of the fast speed"),
+        DiscSpeed::Drive => println!("the disc reads at a drive's pace"),
     }
     let theirs = read_wav(wav_path)?;
     let boot = if port {

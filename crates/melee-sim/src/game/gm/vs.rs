@@ -895,8 +895,8 @@ impl Running<'_> {
                 None => self.game.enable_pause_camera(slot, pauser),
             }
         }
+        self.rumble_mut().pause_all();
         let g = &mut *self.game;
-        g.pads.rumble.pause_all();
         g.vs.state.pauser = pauser as i8;
         g.vs.state.pause_timer = 0xA;
     }
@@ -916,7 +916,7 @@ impl Running<'_> {
         self.game.clear_db_pause_flag(bit);
         self.show_hud_parts();
         self.game.hide_pause(i);
-        self.game.pads.rumble.unpause_all();
+        self.rumble_mut().unpause_all();
         let start = self.game.vs.start.clone();
         if start.pause_camera {
             match start.on_unpause_override {
@@ -954,11 +954,12 @@ impl Running<'_> {
             let o = self.game.vs.state.match_result;
             code::call(self, f.0, &[Val::Int(o.into())]);
         }
-        let g = &mut *self.game;
-        g.pads.rumble.remove_all();
+        let rumble = self.rumble_mut();
+        rumble.remove_all();
         for port in 0..4 {
-            g.pads.rumble.on(port);
+            rumble.on(port);
         }
+        let g = &mut *self.game;
         if !g.vs.start.keeps_rumble {
             self.lb_audio_music_stop();
         }

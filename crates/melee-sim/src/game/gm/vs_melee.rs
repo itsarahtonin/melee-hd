@@ -462,9 +462,10 @@ impl Running<'_> {
     #[doc(alias = "lb_800145F4")]
     #[doc(alias = "lb_800145C0")]
     pub fn rumble_stop_all(&mut self) {
+        let rumble = self.rumble_mut();
         for i in 0..4 {
-            self.game.pads.rumble.remove(i);
-            self.game.pads.rumble.on(i);
+            rumble.remove(i);
+            rumble.on(i);
         }
     }
 }

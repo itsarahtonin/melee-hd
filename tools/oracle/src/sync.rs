@@ -158,7 +158,7 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
                 disc_speed = it
                     .next()
                     .and_then(|s| DiscSpeed::parse(s))
-                    .expect("--disc-speed fast|drive")
+                    .expect("--disc-speed fast|fast-flat|drive")
             }
             "--draw-offscreen-fighters" => draw_offscreen_fighters = true,
             "--state-only" => state_only = true,
@@ -167,7 +167,7 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
     }
     let [replay_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive] [--draw-offscreen-fighters] [--state-only]"
+            "usage: melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|fast-flat|drive] [--draw-offscreen-fighters] [--state-only]"
         );
         return ExitCode::from(2);
     };
