@@ -192,8 +192,8 @@ impl Running<'_> {
         } else {
             (smids[0], 0.0)
         };
-        let x4 = reg(fp.mv_f32(4));
-        fp.set_mv_f32(4, fp::fmadds(ease, fp::fsubs(target, x4), x4));
+        let eased = reg(fp.mv_f32(4));
+        fp.set_mv_f32(4, fp::fmadds(ease, fp::fsubs(target, eased), eased));
         if fp.mv_f32(4) != 0.0 && smid != fp.mv_i32(0) {
             let frame = fp.cur_anim_frame;
             let f = self.game.fighter_id(gobj);
@@ -249,8 +249,8 @@ impl Running<'_> {
     fn damage_tech(&mut self, gobj: GObjId) -> bool {
         let window = self.common().f32(0x1D0);
         let fp = self.game.fighter_mut(gobj);
-        let x14 = fp.mv_f32(0x14);
-        if x14 != 0.0 && x14 <= window {
+        let tech_buffer = fp.mv_f32(0x14);
+        if tech_buffer != 0.0 && tech_buffer <= window {
             fp.input.pressed_buttons |= (1 << 10) | (1 << 11);
             return self.jump_aerial_check(gobj);
         }

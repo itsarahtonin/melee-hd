@@ -34,14 +34,14 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialAirHi_Enter")]
     pub fn mars_special_air_hi_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x3c = reg(self.mars_attr_f32(f, attr::X3C));
+        let drift_scale = reg(self.mars_attr_f32(f, attr::X3C));
         let fp = &mut self.game.fighters[f.0];
         fp.cmd_vars[2] = 0;
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
         fp.throw_flags = [0; 4];
         fp.self_vel.y = 0.0;
-        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), x3c));
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), drift_scale));
         self.change_motion_state(gobj, ms::SPECIAL_AIR_HI, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
     }
@@ -67,16 +67,19 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialAirHi_IASA")]
     pub fn mars_special_hi_iasa(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x30 = reg(self.mars_attr_f32(f, attr::X30));
-        let x34 = reg(self.mars_attr_f32(f, attr::X34));
-        let x38 = reg(self.mars_attr_f32(f, attr::X38));
+        let turn_threshold = reg(self.mars_attr_f32(f, attr::X30));
+        let tilt_threshold = reg(self.mars_attr_f32(f, attr::X34));
+        let max_tilt = reg(self.mars_attr_f32(f, attr::X38));
         let fp = &mut self.game.fighters[f.0];
         let x = reg(fp.input.lstick[0].x);
         let abs_x = abs(x);
-        if fp.cmd_vars[0] == 0 && abs_x > x34 {
+        if fp.cmd_vars[0] == 0 && abs_x > tilt_threshold {
             let t = fp::frsp(fp::fmul(
-                x38,
-                fp::fdiv(fp::fsubs(abs_x, x34), fp::fsub(1.0, x34)),
+                max_tilt,
+                fp::fdiv(
+                    fp::fsubs(abs_x, tilt_threshold),
+                    fp::fsub(1.0, tilt_threshold),
+                ),
             ));
             let deg = fp::fdivs(reg(std::f32::consts::PI), 180.0);
             let t = if x > 0.0 {
@@ -90,7 +93,7 @@ impl Running<'_> {
         }
         if self.take_throw_flag3(gobj) {
             let x = reg(self.game.fighters[f.0].input.lstick[0].x);
-            if abs(x) > x30 {
+            if abs(x) > turn_threshold {
                 self.face_stick(gobj);
                 let facing = reg(self.game.fighters[f.0].facing_dir);
                 let rot = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, facing)));
@@ -126,11 +129,11 @@ impl Running<'_> {
             reg(self.mars_attr_f32(f, attr::X44)),
             reg(self.mars_attr_f32(f, attr::X48)),
         );
-        let x28 = reg(self.mars_attr_f32(f, attr::X28));
+        let drift_scale = reg(self.mars_attr_f32(f, attr::X28));
         let fp = &mut self.game.fighters[f.0];
         Self::fall(fp, g, t);
-        let accel = fp::fmuls(reg(fp.co_attrs.air_drift_stick_mul), x28);
-        let target = fp::fmuls(reg(fp.co_attrs.air_drift_max), x28);
+        let accel = fp::fmuls(reg(fp.co_attrs.air_drift_stick_mul), drift_scale);
+        let target = fp::fmuls(reg(fp.co_attrs.air_drift_max), drift_scale);
         Self::drift_simple(fp, 0.0, accel, target);
     }
 
@@ -157,8 +160,8 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         if fp.cmd_vars[0] != 0 {
             if fp.cmd_vars[2] == 0 {
-                let x40 = reg(self.mars_attr_f32(f, attr::X40));
-                self.mars_special_hi_rise(gobj, Some(x40));
+                let rise_scale = reg(self.mars_attr_f32(f, attr::X40));
+                self.mars_special_hi_rise(gobj, Some(rise_scale));
             } else {
                 self.mars_special_hi_descent(gobj);
             }

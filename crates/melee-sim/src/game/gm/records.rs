@@ -26,7 +26,7 @@ impl Game {
             return;
         }
         let k = usize::from(selkind(ckind));
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         let f = &mut s.fighters[k];
         let v = bump16(u16::from_be_bytes([
             f.play_count_hi as u8,
@@ -50,7 +50,7 @@ impl Game {
     #[doc(alias = "gmMainLib_GetBonusMatchTotal")]
     pub fn count_match_kind(&mut self, match_kind: u8, outcome: u8) {
         let stamina = self.game_mode == GameMode::Stamina;
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         if outcome.wrapping_sub(7) <= 1 {
             s.match_resets = s.match_resets.wrapping_add(1);
             return;
@@ -83,7 +83,7 @@ impl Game {
     #[doc(alias = "gmMainLib_GetVsPlayTime")]
     #[doc(alias = "gmMainLib_GetCombinedVSPlayTime")]
     pub fn add_play_time(&mut self, seconds: u32, humans: u32) {
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         s.vs_play_time = (s.vs_play_time as u32).wrapping_add(seconds) as i32;
         let both = seconds.wrapping_mul(humans);
         s.combined_vs_play_time = (s.combined_vs_play_time as u32).wrapping_add(both) as i32;
@@ -102,7 +102,7 @@ impl Game {
             .iter()
             .filter(|p| p.pkind == PKIND_HUMAN)
             .count() as u32;
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         s.vs_contestants = (s.vs_contestants as u32).wrapping_add(n) as i32;
         n
     }
@@ -112,7 +112,7 @@ impl Game {
     #[doc(alias = "gmMainLib_GetKOTotal")]
     #[doc(alias = "gmMainLib_8015EDC8")]
     pub fn add_kos(&mut self, n: i32) {
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         s.total_kos = s.total_kos.wrapping_add(n);
         s.trophy_records.kos = (n as u32).wrapping_add(s.trophy_records.kos);
         s.message_records.kos = (n as u32).wrapping_add(s.message_records.kos);
@@ -122,7 +122,7 @@ impl Game {
     #[doc(alias = "gm_RecordSelfDestructs")]
     #[doc(alias = "gmMainLib_GetSelfDestructTotal")]
     pub fn add_self_destructs(&mut self, n: i32) {
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         s.total_self_destructs = (s.total_self_destructs as u32).wrapping_add(n as u32) as i32;
     }
 
@@ -131,7 +131,7 @@ impl Game {
     #[doc(alias = "gm_80162A4C")]
     #[doc(alias = "gmMainLib_GetTotalDamage")]
     pub fn add_damage(&mut self, n: i32) {
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         s.total_damage = s.total_damage.wrapping_add(n);
     }
 
@@ -139,7 +139,7 @@ impl Game {
     /// whose ten words run on past the three the struct names).
     #[doc(alias = "gmMainLib_8015DAB4")]
     pub fn note_bonus_seen(&mut self, n: usize) {
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         let w = n / 32;
         let bit = 1u32 << (n % 32);
         if w < s.bonuses_seen.len() {
@@ -155,7 +155,7 @@ impl Game {
     /// The VS matches the save counts, of every kind, `gm_GetVsPlayMatchTotal`.
     #[doc(alias = "gm_GetVsPlayMatchTotal")]
     pub fn vs_matches_played(&self) -> u32 {
-        let s = &self.game_data.thing.save_data;
+        let s = &self.game_data.card.save_data;
         s.time_matches
             .wrapping_add(s.stock_matches)
             .wrapping_add(s.coin_matches)
@@ -464,9 +464,9 @@ fn add_stats(end: &MatchEnd, slot: usize, s: &mut GmStats, vs_walk: &mut i32) {
     s.total_player_count = if total > 0xFFFF { 0xFFFF } else { total };
     s.walk_distance = add(s.walk_distance, p.walk_distance);
     *vs_walk = p.walk_distance.wrapping_add(*vs_walk as u32) as i32;
-    s.run_distance = add(s.run_distance, p.run_distance);
+    s.rise_distance = add(s.rise_distance, p.rise_distance);
     s.fall_distance = add(s.fall_distance, p.fall_distance);
-    s.peak_height = add(s.peak_height, p.peak_height);
+    s.knockback_distance = add(s.knockback_distance, p.knockback_distance);
     if end.match_kind == 2 {
         s.coins_collected = add(s.coins_collected, p.coins_collected);
         s.coins_swiped = add(s.coins_swiped, p.coins_swiped);
@@ -495,11 +495,11 @@ impl Game {
                     continue;
                 }
                 let sj = usize::from(selkind(ps[j].ckind as u8));
-                let fd = &mut self.game_data.thing.save_data.fighters[si];
+                let fd = &mut self.game_data.card.save_data.fighters[si];
                 let sum = u32::from(ps[i].kills[j]) + u32::from(fd.fighter_kos[sj]);
                 fd.fighter_kos[sj] = sum.min(0xFFFF) as u16;
             }
-            let sd = &mut self.game_data.thing.save_data;
+            let sd = &mut self.game_data.card.save_data;
             let mut walk = sd.trophy_records.walk_distance;
             add_stats(end, i, &mut sd.fighters[si].stats, &mut walk);
             sd.trophy_records.walk_distance = walk;
@@ -519,12 +519,12 @@ impl Game {
                 }
             }
             let s = usize::from(selkind(p.ckind as u8));
-            let mut walk = self.game_data.thing.save_data.trophy_records.walk_distance;
+            let mut walk = self.game_data.card.save_data.trophy_records.walk_distance;
             let nt = self.game_data.name_tag(usize::from(p.nametag));
             nt.play_time_by_fighter[s] =
                 nt.play_time_by_fighter[s].wrapping_add(end.frame_count / 60);
             add_stats(end, i, &mut nt.stats, &mut walk);
-            self.game_data.thing.save_data.trophy_records.walk_distance = walk;
+            self.game_data.card.save_data.trophy_records.walk_distance = walk;
         }
     }
 }

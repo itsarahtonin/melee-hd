@@ -314,7 +314,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 
 /// Its time moving and its half life from the attributes' first word (both spawns).
 pub fn start_life(r: &mut Running, gobj: GObjId, s: &Shell) {
-    let x0 = attr(r, gobj, 0);
-    vars(r, gobj, s).life.set(x0);
-    lib2725::set_half_life(r.game, r.data, gobj, x0);
+    let life = attr(r, gobj, 0);
+    vars(r, gobj, s).life.set(life);
+    lib2725::set_half_life(r.game, r.data, gobj, life);
 }

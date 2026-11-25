@@ -124,10 +124,14 @@ pub fn sink(r: &mut Running, gobj: GObjId) {
     lg::enter(r, gobj, 4);
     let home_y = pokemon::vars(r.game, gobj).f32(HOME + 4);
     let disc = fp::fsubs(reg(item(r.game, gobj).pos.y), reg(home_y));
-    let x18 = reg(attr_f32(r, gobj, 0x18));
-    let prod = fp::fmuls(8.0, x18);
-    let root = math::sqrt_accurate(mem(fp::fnmsubs(prod, fp::fneg(disc), fp::fmuls(x18, x18))));
-    let speed = fp::fneg(fp::fdivs(fp::fadds(fp::fneg(x18), reg(root)), 2.0));
+    let climb_step = reg(attr_f32(r, gobj, 0x18));
+    let prod = fp::fmuls(8.0, climb_step);
+    let root = math::sqrt_accurate(mem(fp::fnmsubs(
+        prod,
+        fp::fneg(disc),
+        fp::fmuls(climb_step, climb_step),
+    )));
+    let speed = fp::fneg(fp::fdivs(fp::fadds(fp::fneg(climb_step), reg(root)), 2.0));
     pokemon::vars(r.game, gobj).set_f32(CLIMB, mem(speed));
 }
 
@@ -141,9 +145,9 @@ fn sink_again(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itLugia_UnkMotion4_Phys")]
 pub fn phys4(r: &mut Running, gobj: GObjId) {
     pokemon::move_by_bone(r.game, gobj);
-    let x18 = attr_f32(r, gobj, 0x18);
+    let climb_step = attr_f32(r, gobj, 0x18);
     let v = pokemon::vars(r.game, gobj);
-    let climb = mem(fp::fadds(reg(v.f32(CLIMB)), reg(x18)));
+    let climb = mem(fp::fadds(reg(v.f32(CLIMB)), reg(climb_step)));
     v.set_f32(CLIMB, climb);
     let ip = item_mut(r.game, gobj);
     ip.vel.y = climb;

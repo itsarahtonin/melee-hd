@@ -652,7 +652,7 @@ impl Running<'_> {
             return (true, r5);
         }
         let r5 = Leftover::Unknown("ftCo_800ADE48");
-        let x18 = self.game.fighters[f.0].cpu.behavior;
+        let behavior = self.game.fighters[f.0].cpu.behavior;
         let ms = self.game.fighters[f.0].motion_id;
         // Each check: the behavior, whether the fighter is in it already, and whether it
         // switches to it.
@@ -664,35 +664,35 @@ impl Running<'_> {
             }};
         }
         // Leaving a barrel (`ftCo_MS_BarrelWait`, `ftCo_MS_Barrel`).
-        if x18 == 0x11 {
+        if behavior == 0x11 {
             return (true, r5);
         }
         if ms == 0x125 || ms == 0x154 {
             switch_to!(0x11);
         }
         // Riding a Warp Star.
-        if x18 == 0x13 {
+        if behavior == 0x13 {
             return (true, r5);
         }
         if ms == 0x131 || ms == 0x132 {
             switch_to!(0x13);
         }
         // Lying down.
-        if x18 == 5 {
+        if behavior == 5 {
             return (true, r5);
         }
         if matches!(ms, 0xB7 | 0xB8 | 0xBF | 0xC0) {
             switch_to!(5);
         }
         // On a ledge.
-        if x18 == 6 {
+        if behavior == 6 {
             return (true, r5);
         }
         if matches!(ms, 0xFC | 0xFD) {
             switch_to!(6);
         }
         // Holding a fighter.
-        if x18 == 9 {
+        if behavior == 9 {
             return (true, r5);
         }
         if self.cpu_is_grabbing(f) {
@@ -704,17 +704,17 @@ impl Running<'_> {
         if self.cpu_falling_away(f) {
             switch_to!(behavior::WAIT_OUT);
         }
-        let x18 = self.game.fighters[f.0].cpu.behavior;
+        let behavior = self.game.fighters[f.0].cpu.behavior;
         let fpp = &self.game.fighters[f.0];
         // Tumbling (`ftCo_MS_DamageFall`) at level 5 and up.
-        if x18 == 0xF {
+        if behavior == 0xF {
             return (true, r5);
         }
         if fpp.cpu.level >= 5 && fpp.motion_id == 0x26 {
             switch_to!(0xF);
         }
         // Held.
-        if x18 == 0x10 {
+        if behavior == 0x10 {
             return (true, r5);
         }
         let ms = fpp.motion_id;

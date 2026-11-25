@@ -14,7 +14,7 @@ use super::super::handles::{DynamicsId, FighterId};
 use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{Game, Running};
 use super::super::structs::DynamicsDesc;
-use super::anim::{bone_flag, x594_bit};
+use super::anim::{anim_bit, bone_flag};
 use super::common::GA_AIR;
 use crate::fpu::{copy, mem, reg};
 use crate::game::ft::FighterKind;
@@ -243,8 +243,8 @@ impl Running<'_> {
             self.set_dynamics(f, true);
             return;
         }
-        if !x594_bit(fp, 4) {
-            let on = !x594_bit(fp, 3);
+        if !anim_bit(fp, 4) {
+            let on = !anim_bit(fp, 3);
             self.set_dynamics(f, on);
             return;
         }
@@ -447,7 +447,7 @@ impl Running<'_> {
             -1 => self.capes_out_of_wind(f),
             1 => {
                 let fp = &self.game.fighters[f.0];
-                if x594_bit(fp, 4) || x594_bit(fp, 3) {
+                if anim_bit(fp, 4) || anim_bit(fp, 3) {
                     let (frame, speed) = (fp.cur_anim_frame, fp.frame_speed_mul);
                     let n = self.data.u32(self.dynamics_desc(f));
                     for i in 0..n {
@@ -484,7 +484,7 @@ impl Running<'_> {
                 r.restart_part_anim(f, bone, frame, speed);
             }
         };
-        if x594_bit(fp, 4) {
+        if anim_bit(fp, 4) {
             let anim = u32::try_from(fp.anim_id).expect("an animation's trees without one");
             let pair = fp
                 .anim_flags
@@ -506,7 +506,7 @@ impl Running<'_> {
                 self.set_bone_dynamics(f, i as usize, true, arg);
                 restart(self, i);
             }
-        } else if x594_bit(fp, 3) {
+        } else if anim_bit(fp, 3) {
             for i in 0..n {
                 self.set_bone_dynamics(f, i as usize, false, BoneSlot::Id(0));
                 restart(self, i);

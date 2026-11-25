@@ -249,7 +249,7 @@ impl AutoHandicaps {
         AutoHandicaps {
             ports: g.modes.nametags[..4].try_into().expect("four ports"),
             tags: g
-                .thing
+                .card
                 .nametag_banks
                 .iter()
                 .flat_map(|b| b.inner.iter().map(|t| t.handicap))

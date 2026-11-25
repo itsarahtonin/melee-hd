@@ -67,11 +67,11 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.change_motion_state(gobj, ms::SPECIAL_AIR_HI, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
-        let x34 = self.link_attr_f32(f, attr::X34);
-        let x40 = self.link_attr_f32(f, attr::X40);
+        let drift_scale = self.link_attr_f32(f, attr::X34);
+        let rise = self.link_attr_f32(f, attr::X40);
         let fp = &mut self.game.fighters[f.0];
-        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), reg(x34)));
-        fp.self_vel.y = x40;
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), reg(drift_scale)));
+        fp.self_vel.y = rise;
         fp.jumps_used = fp.co_attrs.max_jumps as u8;
         fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_HI_ON_ACCESSORY4));
     }

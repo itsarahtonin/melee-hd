@@ -302,20 +302,20 @@ pub fn spawn(
     let gobj = spawn_air(r, &mut spawn)?;
     let life = attr_u32(r, gobj, attr::X0);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
-    let x1c = attr_f32(r, gobj, attr::X1C);
-    let x3c = attr_f32(r, gobj, attr::X3C);
+    let angle = attr_f32(r, gobj, attr::X1C);
+    let flight_frames = attr_f32(r, gobj, attr::X3C);
     let owner_kind = r.game.ft_kind(owner);
     let ip = item_mut(r.game, gobj);
     ip.cmd_var0 = 0;
     ip.cmd_var1 = 0;
     ip.cmd_var2 = 0;
     let v = vars(r.game, gobj);
-    let rad = mem(fp::fmuls(reg(DEG_TO_RAD), reg(x1c)));
+    let rad = mem(fp::fmuls(reg(DEG_TO_RAD), reg(angle)));
     v.bounce_limit.set(mem(fp::fneg(reg(math::sin(rad)))));
     v.returning.set(0);
     v.owner.set(Some(owner));
     v.sfx_timer.set(0.0);
-    v.flight_left.set(x3c);
+    v.flight_left.set(flight_frames);
     v.owner_kind.set(owner_kind);
     for i in 0..16 {
         v.trail_pos[i].set(Vec3::new(0.0, 0.0, 0.0));
@@ -461,8 +461,8 @@ fn fly(r: &mut Running, gobj: GObjId) -> bool {
             SFX_WHOOSH_CLINK
         };
         play_sfx1(r, gobj, sfx, 0x7F, 0x40);
-        let x38 = attr_f32(r, gobj, attr::X38);
-        vars(r.game, gobj).sfx_timer.set(x38);
+        let sfx_frames = attr_f32(r, gobj, attr::X38);
+        vars(r.game, gobj).sfx_timer.set(sfx_frames);
     }
     vars(r.game, gobj)
         .sfx_timer
@@ -479,8 +479,8 @@ fn fly(r: &mut Running, gobj: GObjId) -> bool {
         if left <= 0.0 {
             place_trail(r, gobj, 0);
             item_mut(r.game, gobj).cmd_var1 = 2;
-            let x40 = attr_f32(r, gobj, attr::X40);
-            vars(r.game, gobj).flight_left.set(x40);
+            let flight_frames = attr_f32(r, gobj, attr::X40);
+            vars(r.game, gobj).flight_left.set(flight_frames);
         }
     } else if item(r.game, gobj).cmd_var2 == 0 {
         let left = vars(r.game, gobj).flight_left.get();
@@ -576,10 +576,10 @@ fn phys_flying(r: &mut Running, gobj: GObjId) {
     if vars(r.game, gobj).returning.get() == 1 {
         return;
     }
-    let (xc, x18) = (attr_f32(r, gobj, attr::XC), attr_f32(r, gobj, attr::X18));
-    let mut speed = mem(fp::fsubs(speed_xy(item(r.game, gobj).vel), reg(xc)));
-    if speed < x18 {
-        speed = x18;
+    let (decel, min_speed) = (attr_f32(r, gobj, attr::XC), attr_f32(r, gobj, attr::X18));
+    let mut speed = mem(fp::fsubs(speed_xy(item(r.game, gobj).vel), reg(decel)));
+    if speed < min_speed {
+        speed = min_speed;
         turn_back(r, gobj, false);
     }
     let h = vars(r.game, gobj).heading.get();
@@ -702,12 +702,12 @@ fn coll_flying(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802A1948")]
 fn turn_back(r: &mut Running, gobj: GObjId, hit: bool) {
     let deg = attr_f32(r, gobj, if hit { attr::X24 } else { attr::X20 });
-    let x28 = attr_f32(r, gobj, attr::X28);
+    let home_frames = attr_f32(r, gobj, attr::X28);
     let v = vars(r.game, gobj);
     let h = turn_half(v.heading.get());
     v.heading.set(h);
     v.turn_limit.set(mem(fp::fmuls(reg(DEG_TO_RAD), reg(deg))));
-    v.home_frames.set(x28);
+    v.home_frames.set(home_frames);
     home_state(r, gobj);
 }
 
@@ -717,14 +717,14 @@ fn turn_back(r: &mut Running, gobj: GObjId, hit: bool) {
 fn home_state(r: &mut Running, gobj: GObjId) {
     let c = child(r, gobj).expect("a boomerang's model without its spinning part");
     let spin = get_rotation(r, c);
-    let x8 = attr_u32(r, gobj, attr::X8);
+    let unwind_frames = attr_u32(r, gobj, attr::X8);
     let unwind = fp::fdivs(
         fp::fneg(fp::fmuls(2.0, reg(spin.0.z))),
-        fp::frsp(f64::from(x8)),
+        fp::frsp(f64::from(unwind_frames)),
     );
     let v = vars(r.game, gobj);
     v.unwind_step.set(mem(unwind));
-    v.unwind_frames.set(x8 as i32);
+    v.unwind_frames.set(unwind_frames as i32);
     if item(r.game, gobj).msid == 1 {
         change_state(r, gobj, 3, 0x12);
     } else {
@@ -755,18 +755,18 @@ fn phys_homing(r: &mut Running, gobj: GObjId) {
     if vars(r.game, gobj).returning.get() == 1 {
         return;
     }
-    let (xc, x14) = (attr_f32(r, gobj, attr::XC), attr_f32(r, gobj, attr::X14));
-    let mut speed = mem(fp::fadds(speed_xy(item(r.game, gobj).vel), reg(xc)));
-    if speed > x14 {
-        speed = x14;
+    let (accel, max_speed) = (attr_f32(r, gobj, attr::XC), attr_f32(r, gobj, attr::X14));
+    let mut speed = mem(fp::fadds(speed_xy(item(r.game, gobj).vel), reg(accel)));
+    if speed > max_speed {
+        speed = max_speed;
     }
     let h = vars(r.game, gobj).heading.get();
     let ip = item_mut(r.game, gobj);
     ip.vel.x = mem(fp::fmuls(reg(speed), reg(math::cos(h))));
     ip.vel.y = mem(fp::fmuls(reg(speed), reg(math::sin(h))));
     let dist = home(r, gobj);
-    let x2c = attr_f32(r, gobj, attr::X2C);
-    if item(r.game, gobj).msid == 3 && dist < x2c {
+    let catch_range = attr_f32(r, gobj, attr::X2C);
+    if item(r.game, gobj).msid == 3 && dist < catch_range {
         if let Some(t) = vars(r.game, gobj).owner.get() {
             if !r.link_attack_id_1_to_13(t) && !r.game.fighter(t).in_hitlag {
                 r.link_special_s2_enter(t);
@@ -820,9 +820,15 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     vars(r.game, gobj).heading.set(h);
     let speed = speed_xy(item(r.game, gobj).vel);
     let ip = item_mut(r.game, gobj);
-    let xc70 = reg(ip.reflect_speed_mul);
-    ip.vel.x = mem(fp::fmuls(xc70, fp::fmuls(speed, reg(math::cos(h)))));
-    ip.vel.y = mem(fp::fmuls(xc70, fp::fmuls(speed, reg(math::sin(h)))));
+    let reflect_speed_mul = reg(ip.reflect_speed_mul);
+    ip.vel.x = mem(fp::fmuls(
+        reflect_speed_mul,
+        fp::fmuls(speed, reg(math::cos(h))),
+    ));
+    ip.vel.y = mem(fp::fmuls(
+        reflect_speed_mul,
+        fp::fmuls(speed, reg(math::sin(h))),
+    ));
     if let Some(t) = vars(r.game, gobj).owner.get() {
         r.link_remove_boomerang0(t);
     }

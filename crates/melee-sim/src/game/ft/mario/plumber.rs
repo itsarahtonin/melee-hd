@@ -249,7 +249,7 @@ impl Running<'_> {
         let vel_y = reg(self.char_attr_f32(f, p.base + LW_VEL_Y));
         let max = self.char_attr_f32(f, p.base + LW_TAP_Y_VEL_MAX);
         let air_x = reg(self.char_attr_f32(f, p.base + LW_AIR_MOMENTUM_X));
-        let unk = self.char_attr_word(f, p.base + LW_UNK0) as i32;
+        let tap_count = self.char_attr_word(f, p.base + LW_UNK0) as i32;
         let fp = &mut self.game.fighters[f.0];
         let cut = if grounded || fp.u_i32(p.charged) == 0 {
             reg(max)
@@ -261,7 +261,7 @@ impl Running<'_> {
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
         fp.set_mv_f32(MV_GROUND_VEL_X, 0.0);
-        fp.set_mv_i32(MV_UNK, unk.wrapping_add(1));
+        fp.set_mv_i32(MV_UNK, tap_count.wrapping_add(1));
         fp.set_mv_i32(MV_IS_UNK_COLL, 0);
         self.set_damage_cb(gobj, Some(p.on_damage));
         let root = Some(self.root_jobj(gobj));

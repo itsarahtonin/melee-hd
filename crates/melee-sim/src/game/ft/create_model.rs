@@ -171,15 +171,15 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let data = fp.ft_data.expect("a fighter without data");
         let parts = fp.parts.expect("a fighter without parts").0;
-        let x30 = self.data.ptr(data.at(0x30)).expect("ftData::x30");
+        let hurt_list = self.data.ptr(data.at(0x30)).expect("ftData::x30");
         let dynamics = self.data.ptr(data.at(0x2C)).expect("ftData::x2C");
-        let n = self.data.u32(x30) as i32;
+        let n = self.data.u32(hurt_list) as i32;
         assert!(
             n <= 15,
             "the original's assertion failed: fighter hit num over!"
         );
         self.game.fighters[f.0].hurt_capsules_len = n as u8;
-        let inits = self.data.ptr(x30.at(4));
+        let inits = self.data.ptr(hurt_list.at(4));
         let raw = |at: DataRef| f32::from_bits(self.data.u32(at));
         let raw3 = |at: DataRef| Vec3::new(raw(at), raw(at.at(4)), raw(at.at(8)));
         for i in 0..n.max(0) as u32 {
@@ -221,8 +221,8 @@ impl Running<'_> {
     pub fn init_bone_dynamics(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
         let data = fp.ft_data.expect("a fighter without data");
-        let x2c = self.data.ptr(data.at(0x2C)).expect("ftData::x2C");
-        let n = self.data.u32(x2c) as i32;
+        let dynamics_list = self.data.ptr(data.at(0x2C)).expect("ftData::x2C");
+        let n = self.data.u32(dynamics_list) as i32;
         self.game.fighters[f.0].dynamics_num = n;
         assert!(
             n < 10,
@@ -233,7 +233,10 @@ impl Running<'_> {
             .expect("a fighter without parts")
             .0;
         for i in 0..n.max(0) as usize {
-            let bones = self.data.ptr(x2c.at(4)).expect("ftDynamics bones");
+            let bones = self
+                .data
+                .ptr(dynamics_list.at(4))
+                .expect("ftDynamics bones");
             let entry = bones.at(0x18 * i as u32);
             let bone_id = self.data.u32(entry) as usize;
             let count = self.data.u32(entry.at(8));
@@ -247,7 +250,10 @@ impl Running<'_> {
             set.dyn_desc = desc;
             set.bone_id = BoneSlot::Id(0);
             self.set_bone_dynamics(f, i, true, BoneSlot::Id(0));
-            let bones = self.data.ptr(x2c.at(4)).expect("ftDynamics bones");
+            let bones = self
+                .data
+                .ptr(dynamics_list.at(4))
+                .expect("ftDynamics bones");
             let src = bones.at(0x18 * i as u32 + 4);
             let mut desc = self.game.fighters[f.0].dynamic_bone_sets[i]
                 .dyn_desc

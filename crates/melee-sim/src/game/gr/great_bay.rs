@@ -539,7 +539,7 @@ pub fn proc_tingle(r: &mut Running, gobj: GObjId) {
 pub fn balloon_touched(
     gp: &mut super::super::structs::Ground,
     coll: &super::super::structs::CollData,
-    x50: i32,
+    weight: i32,
 ) {
     let kind = u32::from(coll.ecb_flags.b1234);
     if kind == 1 || kind == 2 || kind == 3 {
@@ -549,7 +549,7 @@ pub fn balloon_touched(
         v.standing = v.standing.wrapping_add(1);
         v.weight = mem(fp::fadds(
             reg(v.weight),
-            fp::fdivs(fp::frsp(f64::from(x50)), 100.0),
+            fp::fdivs(fp::frsp(f64::from(weight)), 100.0),
         ));
     }
 }
@@ -721,7 +721,7 @@ pub fn platform_touched(
     yakumono: Option<DataRef>,
     g: super::super::handles::GroundId,
     coll: &super::super::structs::CollData,
-    x50: i32,
+    weight: i32,
     ground_kind: i32,
 ) {
     let kind = u32::from(coll.ecb_flags.b1234);
@@ -730,9 +730,9 @@ pub fn platform_touched(
     }
     let yaku = yakumono.expect("grgreatbay.c: grGb_804D69E0");
     let pf = |off: u32| reg(data.f32(yaku.at(off)));
-    let mut x50 = x50;
+    let mut weight = weight;
     if ground_kind == 1 {
-        x50 = fp::fctiwz(fp::fmuls(fp::frsp(f64::from(x50)), pf(p::LANDING_RATE)));
+        weight = fp::fctiwz(fp::fmuls(fp::frsp(f64::from(weight)), pf(p::LANDING_RATE)));
     }
     let Some(j) = grounds[g.0].u.greatbay3().jobj else {
         return;
@@ -744,7 +744,7 @@ pub fn platform_touched(
     if t > 1.0 {
         t = 1.0;
     }
-    let w = fp::frsp(f64::from(x50));
+    let w = fp::frsp(f64::from(weight));
     let rot = fp::fmuls(
         t,
         fp::fmuls(

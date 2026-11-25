@@ -207,6 +207,6 @@ pub fn gravity(r: &mut Running, gobj: GObjId) {
 /// Gravity and the spin it slows (`Item_ApplyFallingPhysics`), a thrown item's states.
 pub fn falling_phys(r: &mut Running, gobj: GObjId) {
     gravity(r, gobj);
-    let x68 = common_data(r.game).f32(r.data, data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }

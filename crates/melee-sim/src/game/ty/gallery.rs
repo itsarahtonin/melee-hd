@@ -306,7 +306,7 @@ impl Running<'_> {
         if self.toy_own_table() {
             self.game.toys.table.categories |= 4;
         } else {
-            self.game.game_data.thing.save_data.trophy_category_flags |= 4;
+            self.game.game_data.card.save_data.trophy_category_flags |= 4;
         }
         self.game.toys.table.screen = 1;
     }
@@ -349,7 +349,7 @@ impl Running<'_> {
     pub fn toy_table_sync(&mut self, back: bool) {
         if back {
             let t = self.game.toys.table.clone();
-            let s = &mut self.game.game_data.thing.save_data;
+            let s = &mut self.game.game_data.card.save_data;
             for i in 0..TROPHY_COUNT {
                 let f = t.flags[i];
                 if f & 0x8000 != 0 {
@@ -362,18 +362,18 @@ impl Running<'_> {
                 if class > 1
                     && class != 8
                     && class != 3
-                    && self.game.game_data.thing.save_data.trophy_category_flags & (1 << class) != 0
+                    && self.game.game_data.card.save_data.trophy_category_flags & (1 << class) != 0
                 {
                     for j in 0..TROPHY_COUNT {
                         if self.toy_param_int(j as i32, 6) == class {
-                            self.game.game_data.thing.save_data.trophy_flags[j] |= 0x4000;
+                            self.game.game_data.card.save_data.trophy_flags[j] |= 0x4000;
                         }
                     }
                 }
             }
-            self.game.game_data.thing.save_data.trophy_count = t.count;
+            self.game.game_data.card.save_data.trophy_count = t.count;
         } else {
-            let s = &self.game.game_data.thing.save_data;
+            let s = &self.game.game_data.card.save_data;
             let t = &mut self.game.toys.table;
             t.categories = s.trophy_category_flags;
             t.extra_categories = 0;
@@ -394,7 +394,7 @@ impl Running<'_> {
                 self.toy_flags_mut()[i] |= 0x4000;
             }
         }
-        self.game.game_data.thing.save_data.trophy_category_flags |= 4;
+        self.game.game_data.card.save_data.trophy_category_flags |= 4;
         self.game.toys.table.categories |= 4;
         self.toy_load_dataf();
         self.toy_table_sync(false);
@@ -488,7 +488,7 @@ impl Running<'_> {
         let count = if self.toy_own_table() {
             i32::from(t.count)
         } else {
-            i32::from(self.game.game_data.thing.save_data.trophy_count)
+            i32::from(self.game.game_data.card.save_data.trophy_count)
         };
         let t = &mut self.game.toys.table;
         if t.selected < 0 || i32::from(t.selected) > count {
@@ -598,7 +598,7 @@ impl Running<'_> {
     /// (from the end of the save's count) or not.
     #[doc(alias = "Toy_803067BC")]
     pub(super) fn toy_order(&mut self, sort: usize, reversed: bool) {
-        let count = i32::from(self.game.game_data.thing.save_data.trophy_count);
+        let count = i32::from(self.game.game_data.card.save_data.trophy_count);
         let g = &mut self.game.toys.gallery;
         if !reversed {
             for i in 0..count.max(0) as usize {
@@ -812,12 +812,12 @@ impl Running<'_> {
         pos: Vec3,
         h: f32,
         size: [f32; 2],
-        x34: Option<[f32; 2]>,
+        default_scale: Option<[f32; 2]>,
     ) -> TextId {
         let t = self.create_text(font, canvas, pos, 384.0, h);
         let tx = self.game.sis.text_mut(t);
         tx.font_size = size;
-        if let Some(s) = x34 {
+        if let Some(s) = default_scale {
             tx.default_scale = s;
         }
         t

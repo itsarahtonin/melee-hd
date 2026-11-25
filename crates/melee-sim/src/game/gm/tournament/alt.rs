@@ -167,13 +167,13 @@ impl Running<'_> {
         let c = self.tou_child(Some(j));
         let c = self.tou_next(c);
         let c = self.tou_next(c);
-        let (x2e, x30) = (
+        let (entrants, per_match) = (
             self.game.tou.tm.entrant_count,
             self.game.tou.tm.players_per_match,
         );
-        self.tou_frame(c, mem(f(i32::from(x2e))));
+        self.tou_frame(c, mem(f(i32::from(entrants))));
         let c = self.tou_next(c);
-        self.tou_frame(c, mem(f(i32::from(x30))));
+        self.tou_frame(c, mem(f(i32::from(per_match))));
     }
 
     /// `fn_8019D1BC`: the screen's models: for each player their character model, name,
@@ -196,8 +196,8 @@ impl Running<'_> {
                 crate::hsd::mobj::remove_anim_by_flags(&mut self.game.objs, mo, 4);
                 c = self.tou_next(c);
             }
-            let x30 = self.game.tou.tm.players_per_match;
-            let pos = match x30 {
+            let per_match = self.game.tou.tm.players_per_match;
+            let pos = match per_match {
                 4 => fp::fadds(73.0, fp::fmadds(240.0, f(ii), 152.0)),
                 3 => fp::fadds(73.0, fp::fmadds(240.0, f(ii), 270.0)),
                 _ => fp::fadds(73.0, fp::fmadds(480.0, f(ii), 270.0)),
@@ -218,7 +218,7 @@ impl Running<'_> {
             let g = self.tou_model(false, m, 0, 0x1A, 2, true, Some(PROC_BASE), posf);
             let j = self.tou_jobj(g);
             self.tou_set_index(g, ii);
-            let px = player_x(x30, ii);
+            let px = player_x(per_match, ii);
             self.tou_move(j, fp::fsubs(px, reg(2.799_999)), reg(4.3), reg(0.001));
             let c = self.tou_child(Some(j));
             let c = self.tou_next(c);
@@ -560,17 +560,17 @@ impl Running<'_> {
                 self.game.tou.tm.roster[j].handicap = h;
             }
         }
-        let x2e = i32::from(self.game.tou.tm.entrant_count);
+        let entrants = i32::from(self.game.tou.tm.entrant_count);
         let winner_out = self.game.tou.tm.match_type() == 1;
         for i in 0..hmn_cpu {
             let at = if winner_out { i } else { n - 1 - i };
             let id = indices[at as usize];
             let j = self.alt_entrant_kept(id);
-            self.game.tou.tm.roster[j].matchup_seat = (x2e - 1 - i) as u8;
+            self.game.tou.tm.roster[j].matchup_seat = (entrants - 1 - i) as u8;
             let j = self.alt_entrant_kept(n + i);
             self.game.tou.tm.roster[j].matchup_seat = id as u8;
         }
-        for i in n + hmn_cpu..x2e {
+        for i in n + hmn_cpu..entrants {
             let j = self.alt_entrant_kept(i);
             let e = &mut self.game.tou.tm.roster[j];
             e.matchup_seat = e.matchup_seat.wrapping_sub(hmn_cpu as u8);

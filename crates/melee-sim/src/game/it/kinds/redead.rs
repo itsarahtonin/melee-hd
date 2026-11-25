@@ -961,7 +961,7 @@ pub fn grab(r: &mut Running, gobj: GObjId, fighter: GObjId, part: i32) {
     change_state(r, gobj, 5, change::ANIM_UPDATE);
     let z = zako::bytes(r.game, gobj).f32(off::HOLD_Z);
     set_hold_z(r, gobj, z);
-    lib2725::set_xd09(r.game, gobj, true);
+    lib2725::set_no_catch(r.game, gobj, true);
     play_sfx(r, gobj, 0x135, 127, 64);
     let v = r.game.ft_pos(fighter);
     let ip = item_mut(r.game, gobj);

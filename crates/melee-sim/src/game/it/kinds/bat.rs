@@ -151,8 +151,8 @@ pub fn phys3(r: &mut Running, gobj: GObjId) {
     let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
     let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
     lib2725::fall(r.game, gobj, accel, max);
-    let x68 = common_data(r.game).f32(r.data, super::super::data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, super::super::data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }
 
 /// `itBat_UnkMotion3_Coll`: lands.

@@ -274,21 +274,21 @@ impl<K: Kinds> Geometry<K> {
                 if joint.flags & JOINT_ROTATED != 0 {
                     // The other two corners.
                     let c = at(d.right, d.bottom);
-                    let (x30, y31) = (reg(c.x), reg(c.y));
+                    let (rb_x, rb_y) = (reg(c.x), reg(c.y));
                     let c = at(d.left, d.top);
-                    let (x2, y3) = (reg(c.x), reg(c.y));
+                    let (lt_x, lt_y) = (reg(c.x), reg(c.y));
                     for (min, max, a, b) in [
                         (
                             &mut joint.bounding_min.x,
                             &mut joint.bounding_max.x,
-                            x30,
-                            x2,
+                            rb_x,
+                            lt_x,
                         ),
                         (
                             &mut joint.bounding_min.y,
                             &mut joint.bounding_max.y,
-                            y31,
-                            y3,
+                            rb_y,
+                            lt_y,
                         ),
                     ] {
                         let (lo, hi) = (reg(*min), reg(*max));

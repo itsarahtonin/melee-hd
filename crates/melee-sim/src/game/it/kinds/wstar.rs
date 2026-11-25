@@ -129,11 +129,11 @@ pub fn ride_anim(r: &mut Running, gobj: GObjId) -> Option<melee_data::archive::D
 pub fn size_for_rider(r: &mut Running, gobj: GObjId, height: f32, hit_scale: f32) {
     use crate::fpu::{mem, reg};
     use gekko_fp as fp;
-    let (x4, x8) = (r.data.f32(attr(r, gobj, 4)), r.data.f32(attr(r, gobj, 8)));
+    let (rise, rise_speed) = (r.data.f32(attr(r, gobj, 4)), r.data.f32(attr(r, gobj, 8)));
     let item_scale = super::super::item::attr_of(item(r.game, gobj))
         .f32(r.data, super::super::data::attr::SCALE);
     let j = lib2725::attach_bone(r.game, r.data, gobj).expect("a Warp Star without its bone");
-    let speed = fp::fmuls(reg(x8), fp::fdivs(reg(height), reg(x4)));
+    let speed = fp::fmuls(reg(rise_speed), fp::fdivs(reg(height), reg(rise)));
     let speed = mem(fp::fmuls(speed, reg(item_scale)));
     item_mut(r.game, gobj).vars.wstar().speed.set(speed);
     lib2725::set_uniform_scale(r.game, j, speed);

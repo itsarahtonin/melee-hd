@@ -582,7 +582,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009F184")]
     #[doc(alias = "ftCo_8009F0F0")]
     pub fn down_damage_check(&mut self, gobj: GObjId) -> bool {
-        let x428 = f64::from(self.common().i32(0x428));
+        let stay_down_damage = f64::from(self.common().i32(0x428));
         let fp = self.game.fighter(gobj);
         let m = fp.motion_id;
         let down = [
@@ -593,7 +593,7 @@ impl Running<'_> {
             ms::DOWN_WAIT_D,
             ms::DOWN_DAMAGE_D,
         ];
-        if down.contains(&m) && (fp.stamina_dead || reg(fp.dmg.pending_damage) < x428) {
+        if down.contains(&m) && (fp.stamina_dead || reg(fp.dmg.pending_damage) < stay_down_damage) {
             // `ftCo_8009F184`.
             let msid = if m == ms::DOWN_WAIT_U {
                 ms::DOWN_DAMAGE_U

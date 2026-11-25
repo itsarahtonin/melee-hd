@@ -362,11 +362,11 @@ impl Running<'_> {
     /// Falling out of the bow in the air: plainly, or helpless with the attributes' `x8`
     /// landing lag.
     fn link_bow_fall(&mut self, gobj: GObjId, p: &Bow) {
-        let x8 = self.link_n_attr_f32(gobj, p, attr::X8);
-        if x8 == 0.0 {
+        let landing = self.link_n_attr_f32(gobj, p, attr::X8);
+        if landing == 0.0 {
             self.enter_fall(gobj);
         } else {
-            self.enter_fall_special(gobj, 1, 0, 1, 1.0, x8, 0.0, true);
+            self.enter_fall_special(gobj, 1, 0, 1, 1.0, landing, 0.0, true);
         }
     }
 

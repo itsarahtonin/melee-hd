@@ -46,7 +46,7 @@ impl Running<'_> {
     /// `gmMainLib_8015F4F4`: the save's deflicker option.
     #[doc(alias = "gmMainLib_8015F4F4")]
     pub fn set_deflicker(&mut self, on: u8) {
-        self.game.game_data.thing.save_data.prefs.deflicker = on;
+        self.game.game_data.card.save_data.prefs.deflicker = on;
     }
 
     /// The switch at `on`, its texture held there, and the video mode with the filter or
@@ -145,7 +145,7 @@ impl Running<'_> {
         jobj::add_anim_all(&mut g.objs, data, Some(j), m.anim, m.matanim, m.shapeanim);
         self.options_set_frame(Some(j), 0.0);
         let addr = crate::hsd::heap::mem_alloc(8);
-        let on = self.game.game_data.thing.save_data.prefs.deflicker;
+        let on = self.game.game_data.card.save_data.prefs.deflicker;
         let g = &mut *self.game;
         g.options.menus.insert(
             addr,

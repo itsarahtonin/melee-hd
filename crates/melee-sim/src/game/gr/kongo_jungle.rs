@@ -525,10 +525,10 @@ impl Kicks {
         if !(ty == 1 || ty == 3) || ground_kind != 1 {
             return;
         }
-        let (x1, _) = g.vertex_pos(0x1D);
-        let (x2, _) = g.vertex_pos(0x1A);
-        let size = fp::fdivs(fp::fsubs(reg(x2), reg(x1)), 15.0);
-        let ratio = fp::fdivs(fp::fsubs(reg(coll.cur_pos.x), reg(x1)), size);
+        let (left, _) = g.vertex_pos(0x1D);
+        let (right, _) = g.vertex_pos(0x1A);
+        let size = fp::fdivs(fp::fsubs(reg(right), reg(left)), 15.0);
+        let ratio = fp::fdivs(fp::fsubs(reg(coll.cur_pos.x), reg(left)), size);
         let idx = fp::fctiwz(ratio);
         let idx = if idx < 0 {
             0

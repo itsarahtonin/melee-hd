@@ -117,7 +117,7 @@ impl Running<'_> {
         let last = self.game.ft_last_attacker(gobj);
         let last_sub = fp.last_hit_by_sub;
         // `ft_80087858`, `ft_80087878`.
-        let x2227_b1 = fp.ledge_jumped;
+        let ledge_jumped = fp.ledge_jumped;
         let grounded_jump =
             fp.jumps_used <= 1 && fp.motion_id == 0 && !matches!(motion, 0x23..=0x25);
         if sub {
@@ -149,7 +149,7 @@ impl Running<'_> {
             DEAD_LEFT => set_dd1(p, 1),
             _ => {}
         }
-        if x2227_b1 {
+        if ledge_jumped {
             self.set_point(slot, 0x83, 1);
         }
         if grounded_jump {
@@ -214,8 +214,9 @@ impl Running<'_> {
         if self.no_rival(slot, last) {
             return;
         }
-        let x2073 = attack_bits[3];
-        let (count_x1a4, count_specials) = (attack_bits[2] & 0x10 != 0, attack_bits[2] & 1 != 0);
+        let attack_kind = attack_bits[3];
+        let (counts_reflector, count_specials) =
+            (attack_bits[2] & 0x10 != 0, attack_bits[2] & 1 != 0);
         if (DEAD_UP_STAR..=DEAD_UP_STAR_ICE).contains(&msid) {
             self.count_bonus(last, 0x6D);
         }
@@ -228,28 +229,28 @@ impl Running<'_> {
         }
         match source_type {
             1 | 2 => {
-                if (1..=3).contains(&x2073) {
+                if (1..=3).contains(&attack_kind) {
                     self.count_bonus(last, 0x6E);
                 }
-                if (0x40..=0x43).contains(&x2073) {
+                if (0x40..=0x43).contains(&attack_kind) {
                     self.count_bonus(last, 0xC0);
                 }
-                if x2073 == 0x46 {
+                if attack_kind == 0x46 {
                     self.count_bonus(last, 0xC1);
                 }
-                if x2073 == 0x5F {
+                if attack_kind == 0x5F {
                     self.count_bonus(last, 0xAD);
                 }
-                if x2073 == 0x63 {
+                if attack_kind == 0x63 {
                     self.count_bonus(last, 0x70);
                 }
-                if x2073 == 0x61 {
+                if attack_kind == 0x61 {
                     self.count_bonus(last, 0xC6);
                 }
                 if count_specials {
                     self.count_bonus(last, 0x6F);
                 }
-                if source_type == 2 && count_x1a4 {
+                if source_type == 2 && counts_reflector {
                     self.count_bonus(last, 0x72);
                 }
                 for (on, k) in [
@@ -281,7 +282,7 @@ impl Running<'_> {
                     self.count_bonus(last, 0x73);
                 }
                 if source_type == 2 {
-                    if x2073 == 0x62 {
+                    if attack_kind == 0x62 {
                         match source_kind {
                             0 | 3 => self.count_bonus(last, 0x97),
                             1 | 2 | 4 => self.count_bonus(last, 0x98),

@@ -32,12 +32,12 @@ impl Running<'_> {
     #[doc(alias = "on21EC")]
     pub fn link_special_s_smash(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (t, window, x44) = (reg(c.f32(0x3C)), c.i32(0x40), reg(c.f32(0x44)));
+        let (t, window, window_extra) = (reg(c.f32(0x3C)), c.i32(0x40), reg(c.f32(0x44)));
         let fp = self.game.fighter_mut(gobj);
         let x = reg(fp.input.lstick[0].x);
         let abs = if x < 0.0 { fp::fneg(x) } else { x };
         let timer = fp::frsp(f64::from(i32::from(fp.active_sticky.lstick.x)));
-        if abs >= t && timer < fp::fadds(fp::frsp(f64::from(window)), x44) {
+        if abs >= t && timer < fp::fadds(fp::frsp(f64::from(window)), window_extra) {
             fp.attack_flags[2] |= 0x08;
             fp.set_u_i32(u::X4, 1);
         } else {
@@ -99,14 +99,14 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let mut angle = 0.0f64;
         let y = reg(fp.input.lstick[0].y);
-        let (x14, x18, x1c) = (
+        let (aim_threshold, aim_limit, aim_scale) = (
             self.link_attr_f32(f, attr::X14),
             self.link_attr_f32(f, attr::X18),
             self.link_attr_f32(f, attr::X1C),
         );
-        let lim = fp::fmuls(reg(x18), reg(x1c));
+        let lim = fp::fmuls(reg(aim_limit), reg(aim_scale));
         let abs_y = if y < 0.0 { fp::fneg(y) } else { y };
-        if abs_y > reg(x14) {
+        if abs_y > reg(aim_threshold) {
             let mut x = reg(fp.input.lstick[0].x);
             if x < 0.0 {
                 x = fp::fneg(x);

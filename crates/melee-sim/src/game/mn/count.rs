@@ -490,7 +490,7 @@ impl Running<'_> {
     #[doc(alias = "gm_GetPlayTime")]
     #[doc(alias = "gmMainLib_GetSingleplayerTime")]
     fn count_row_number(&self, r: u8) -> u32 {
-        let s = &self.game.game_data.thing.save_data;
+        let s = &self.game.game_data.card.save_data;
         let v = match r {
             row::POWER_COUNT => s.power_count as u32,
             row::POWER_TIME => s.power_time as u32,

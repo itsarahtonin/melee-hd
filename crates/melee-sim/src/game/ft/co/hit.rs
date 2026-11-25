@@ -120,10 +120,11 @@ impl Running<'_> {
     /// or (smash DI allowed and `x221A_b3`) less than `x18A8` plus `ftCommonData` x140.
     #[doc(alias = "ftCo_8008E984")]
     pub(crate) fn hit_too_light(&self, f: FighterId) -> bool {
-        let x140 = reg(self.common().f32(0x140));
+        let sdi_margin = reg(self.common().f32(0x140));
         let fp = &self.game.fighters[f.0];
         let kb = reg(fp.dmg.kb_applied);
-        kb == 0.0 || (fp.allow_sdi && fp.in_hitstun_sdi && kb < fp::fadds(reg(fp.dmg.hit_kb), x140))
+        kb == 0.0
+            || (fp.allow_sdi && fp.in_hitstun_sdi && kb < fp::fadds(reg(fp.dmg.hit_kb), sdi_margin))
     }
 
     /// A holder hit in the same frame as the victim it holds fast, the victim resolved first
@@ -155,15 +156,16 @@ impl Running<'_> {
             && !fp.held_in_model
         {
             if hold && keep {
-                let (x418, x41c) = (self.common().i32(0x418), self.common().i32(0x41C));
+                let (drop_odds, shooter_drop_odds) =
+                    (self.common().i32(0x418), self.common().i32(0x41C));
                 let gobj = self.game.fighters[f.0]
                     .gobj
                     .expect("a fighter without a GObj");
-                let drop = self.game.objs.rng.below(x418) < dmg || {
+                let drop = self.game.objs.rng.below(drop_odds) < dmg || {
                     let item = self.game.fighters[f.0].item_gobj.expect("an item");
                     self.item_a_kind(gobj) == 3
                         && lib26b1::is_empty_shooter(self.game, item)
-                        && self.game.objs.rng.below(x41c) == 0
+                        && self.game.objs.rng.below(shooter_drop_odds) == 0
                 };
                 if drop {
                     let zero = crate::vec::Vec3::new(0.0, 0.0, 0.0);
@@ -175,8 +177,8 @@ impl Running<'_> {
                 }
             }
             if let Some(hood) = self.game.fighters[f.0].bunny_hood {
-                let x418 = self.common().i32(0x418);
-                if self.game.objs.rng.below(x418) < dmg {
+                let drop_odds = self.common().i32(0x418);
+                if self.game.objs.rng.below(drop_odds) < dmg {
                     let gobj = self.game.fighters[f.0]
                         .gobj
                         .expect("a fighter without a GObj");
@@ -224,10 +226,10 @@ impl Running<'_> {
     /// the larger.
     #[doc(alias = "ftCo_Damage_CalcVel")]
     fn damage_vel(&mut self, f: FighterId, x: f64, y: f64) {
-        let xfc = self.common().i32(0xFC);
+        let combo_window = self.common().i32(0xFC);
         let abs = super::checks::abs;
         let fp = &mut self.game.fighters[f.0];
-        if fp.dmg.time_since_hit < xfc {
+        if fp.dmg.time_since_hit < combo_window {
             fp.kb_vel.x = mem(x);
             fp.kb_vel.y = mem(y);
             return;
@@ -572,10 +574,10 @@ impl Running<'_> {
             let pf = self.game.fighter_id(partner);
             self.go_airborne(pf);
             let c = self.common();
-            let (x374, x378) = (c.f32(0x374), c.f32(0x378));
+            let (release_vx, release_vy) = (c.f32(0x374), c.f32(0x378));
             let fp = &mut self.game.fighters[pf.0];
-            fp.self_vel.x = mem(fp::fmuls(reg(x374), fp::fneg(reg(fp.facing_dir))));
-            fp.self_vel.y = x378;
+            fp.self_vel.x = mem(fp::fmuls(reg(release_vx), fp::fneg(reg(fp.facing_dir))));
+            fp.self_vel.y = release_vy;
             fp.set_mv_f32(0, 0.0);
             // `ftCo_MS_CaptureJump`.
             self.change_motion_state(partner, 230, 0, 0.0, 1.0, 0.0, None);
@@ -1007,7 +1009,7 @@ impl Running<'_> {
     /// an address, keeps the last attacker's player).
     fn thrower_attack_landed(&mut self, holder: GObjId, gobj: GObjId) {
         let hp = self.game.fighter(holder);
-        let (akind, x2070, instance) = (
+        let (akind, attack_flags, instance) = (
             hp.kind,
             u32::from_be_bytes(hp.attack_flags),
             hp.attack_record.record_id,
@@ -1017,7 +1019,7 @@ impl Running<'_> {
             gobj,
             1,
             akind,
-            x2070,
+            attack_flags,
             super::super::super::pl::trick::AttackRecord::Fighter(holder),
             instance,
             true,
@@ -1300,7 +1302,7 @@ impl Running<'_> {
     /// it by up to `ftCommonData` x1A8 degrees, toward the stick's side.
     #[doc(alias = "ftCo_8008E5A4")]
     pub(crate) fn directional_influence(&mut self, gobj: GObjId) {
-        let x1a8 = reg(self.common().f32(0x1A8));
+        let max_di_angle = reg(self.common().f32(0x1A8));
         let fp = self.game.fighter_mut(gobj);
         let (sx, sy) = (reg(fp.input.lstick[0].x), reg(fp.input.lstick[0].y));
         if sx == 0.0 && sy == 0.0 {
@@ -1320,7 +1322,7 @@ impl Running<'_> {
         }
         let angle = math::atan2(mem(ky), mem(kx));
         let len = sqrt_reg(fp::fmadds(kx, kx, fp::fmuls(ky, ky)));
-        let angle = mem(fp::fmadds(deg_to_rad(x1a8), f30, reg(angle)));
+        let angle = mem(fp::fmadds(deg_to_rad(max_di_angle), f30, reg(angle)));
         fp.kb_vel.x = mem(fp::fmuls(len, reg(math::cos(angle))));
         fp.kb_vel.y = mem(fp::fmuls(len, reg(math::sin(angle))));
     }

@@ -414,12 +414,22 @@ pub fn dynamics_line(
 
 /// A coin's range, `lbColl_8000A10C`: from `x14` to `x8`, `x0` times the coin's scale wide.
 #[doc(alias = "lbColl_8000A10C")]
-pub fn coin_range(objs: &mut Objects, a: Vec3, b: Vec3, x0: f32, scale: f32, pass: i32) -> bool {
+pub fn coin_range(
+    objs: &mut Objects,
+    a: Vec3,
+    b: Vec3,
+    radius: f32,
+    scale: f32,
+    pass: i32,
+) -> bool {
     let (color, amb) = COIN;
     if pass_of(color) != pass {
         return false;
     }
-    let size = crate::fpu::mem(gekko_fp::fmuls(crate::fpu::reg(x0), crate::fpu::reg(scale)));
+    let size = crate::fpu::mem(gekko_fp::fmuls(
+        crate::fpu::reg(radius),
+        crate::fpu::reg(scale),
+    ));
     push(
         objs,
         DebugDraw::Capsule {

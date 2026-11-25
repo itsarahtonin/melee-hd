@@ -85,7 +85,9 @@ pub fn kind_tables(kind: i32) -> &'static KindTables {
 pub struct Costume {
     pub joint: Option<DataRef>,
     pub matanim: Option<DataRef>,
-    pub x8: u32,
+    /// `x8`, which the fighters' first setup clears and nothing reads.
+    #[doc(alias("x8"))]
+    pub cleared: u32,
 }
 
 /// The disc files the frontend has loaded for the fighter code, by name: archives in main
@@ -208,7 +210,8 @@ pub struct DataGlobals {
     pub demo_files: [Option<(ArchiveId, u32)>; FighterKind::COUNT],
     /// What the original writes into each kind's demo animations' entries
     /// (`ftData::x14[i].x14`, `ftData_80085B98`): where each animation is in main memory.
-    pub demo_x14: [[u32; 18]; FighterKind::COUNT],
+    #[doc(alias("demo_x14"))]
+    pub demo_anim_addrs: [[u32; 18]; FighterKind::COUNT],
     /// Each kind's reference count (`ft_8045996C`).
     pub ref_counts: [i32; FighterKind::COUNT],
     pub slot_words: [SlotWord; 6],
@@ -222,7 +225,7 @@ impl Default for DataGlobals {
             costumes: [[Costume::default(); MAX_COSTUMES]; FighterKind::COUNT],
             demo_anims: [0; FighterKind::COUNT],
             demo_files: [None; FighterKind::COUNT],
-            demo_x14: [[0; 18]; FighterKind::COUNT],
+            demo_anim_addrs: [[0; 18]; FighterKind::COUNT],
             ref_counts: [0; FighterKind::COUNT],
             slot_words: [SlotWord::default(); 6],
         }
@@ -239,7 +242,7 @@ impl DataGlobals {
             if t.dat_file
                 .is_some_and(|f| self.files.archive_id(f) == Some(archive))
             {
-                self.demo_x14[kind] = [0; 18];
+                self.demo_anim_addrs[kind] = [0; 18];
             }
         }
     }
@@ -285,7 +288,7 @@ impl Game {
             d.data_list[kind] = None;
             for c in 0..usize::from(tables.costume_count) {
                 d.costumes[kind][c].joint = None;
-                d.costumes[kind][c].x8 = 0;
+                d.costumes[kind][c].cleared = 0;
             }
             self.ft.anim_files[kind] = None;
             d.demo_anims[kind] = 0;

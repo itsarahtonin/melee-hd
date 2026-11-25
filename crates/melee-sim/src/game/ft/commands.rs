@@ -176,10 +176,10 @@ impl Running<'_> {
             35 => self.cmd_sword(gobj, f, w),
             36 => self.cmd_color_anim(gobj, f, w),
             37 => self.cmd_end_color_anim(gobj, f, w),
-            38 => self.cmd_x221e_b1(gobj, f, w),
+            38 => self.cmd_dead_flag(gobj, f, w),
             39 => self.cmd_sword_trail(gobj, f, w),
-            42 => self.cmd_x221c_flags(gobj, f, w),
-            43 => self.cmd_x2225_b2(gobj, f, w),
+            42 => self.cmd_leg_reach(gobj, f, w),
+            43 => self.cmd_hat_hidden(gobj, f, w),
             46 => self.cmd_smash_charge(gobj, f, w),
             47 => self.cmd_vibrate(gobj, f, w),
             41 => self.cmd_self_damage(gobj, f, w),
@@ -790,7 +790,8 @@ impl Running<'_> {
     /// Flag `x221E_b1`.
     /// `ftAction_80072B14`: dead, no fighter script on the disc holds its opcode
     /// (ledger/dead.txt).
-    fn cmd_x221e_b1(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+    #[doc(alias("cmd_x221e_b1"))]
+    fn cmd_dead_flag(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.game.fighters[f.0].dead_flag = bits(w, 6, 26) & 1 != 0;
     }
 
@@ -805,7 +806,8 @@ impl Running<'_> {
     /// Flags `x221C_u16_y`, the root's lean kept unless bit 2 (`ft_8008A1B8`).
     #[doc(alias = "ft_8008A1B8")]
     #[doc(alias = "ftAction_80072C6C")]
-    fn cmd_x221c_flags(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+    #[doc(alias("cmd_x221c_flags"))]
+    fn cmd_leg_reach(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let flags = bits(w, 6, 26);
         self.game.fighters[f.0].leg_reach = (flags & 7) as u8;
         if flags & 4 == 0 {
@@ -815,7 +817,8 @@ impl Running<'_> {
 
     /// Flag `x2225_b2`.
     #[doc(alias = "ftAction_80072CB0")]
-    fn cmd_x2225_b2(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+    #[doc(alias("cmd_x2225_b2"))]
+    fn cmd_hat_hidden(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.game.fighters[f.0].hat_hidden = bits(w, 6, 26) & 1 != 0;
     }
 

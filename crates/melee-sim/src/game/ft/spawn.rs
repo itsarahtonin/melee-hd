@@ -38,7 +38,7 @@ impl Running<'_> {
         fp.attack_instance = 0;
         clear_hit_records(fp);
         self.init_coll(gobj);
-        self.init_x1930(f);
+        self.init_item_pickup_bounds(f);
         let fp = &self.game.fighters[f.0];
         if fp.smash_attrs.rebirth_point == -1
             && self.land_on_spawn(f)
@@ -58,7 +58,7 @@ impl Running<'_> {
         crate::lb::colanim::clear(&mut fp.main_overlay);
         self.init_metal(gobj);
         self.init_clear(gobj);
-        self.init_x2034(gobj);
+        self.init_alt_metal(gobj);
         self.clear_hitboxes(f);
         self.set_hurtbox_state(f, 0);
         self.on_death(gobj);
@@ -508,22 +508,22 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let parts = fp.parts.expect("a fighter without parts").0;
-        let x44 = self
+        let ecb_desc = self
             .data
             .ptr(fp.ft_data.expect("a fighter without data").at(0x44))
             .expect("ftData::x44");
         let joint = |i: u32| {
-            let b = self.data.u16(x44.at(2 * i)) as usize;
+            let b = self.data.u16(ecb_desc.at(2 * i)) as usize;
             self.game.fighter_parts[parts][b].joint
         };
         let joints = [joint(0), joint(1), joint(2), joint(3), joint(4), joint(5)];
         let root = self.game.fighter_parts[parts][0].joint;
         let scale = reg(fp.scale.y);
-        let x124 = mem(fp::fmuls(reg(self.data.f32(x44.at(0xC))), scale));
-        let snap = |o: u32| mem(fp::fmuls(reg(self.data.f32(x44.at(o))), scale));
+        let side_lift = mem(fp::fmuls(reg(self.data.f32(ecb_desc.at(0xC))), scale));
+        let snap = |o: u32| mem(fp::fmuls(reg(self.data.f32(ecb_desc.at(o))), scale));
         let (sx, sy, sh) = (snap(0x10), snap(0x14), snap(0x18));
         let weight = fp.co_attrs.weight;
-        let x128 = mem(fp::fmuls(10.0, scale));
+        let min_size = mem(fp::fmuls(10.0, scale));
         let game = &mut *self.game;
         let fp = &mut game.fighters[f.0];
         fp.ecb_lock = 0;
@@ -559,18 +559,19 @@ impl Running<'_> {
         let cd = &mut game.fighters[f.0].coll_data;
         coll.init(cd);
         cd.ecb_flags.b1234 = 1;
-        cd.set_ecb_source_joints(Some(gobj), root, joints, x124);
+        cd.set_ecb_source_joints(Some(gobj), root, joints, side_lift);
         cd.set_ledge_snap(sx, sy, sh);
         cd.weight = weight;
         if cd.ecb_source.kind == crate::mp::coll::ECB_SOURCE_JOBJ {
-            cd.ecb_source.min_height = x128;
-            cd.ecb_source.min_width = x128;
+            cd.ecb_source.min_height = min_size;
+            cd.ecb_source.min_width = min_size;
         }
     }
 
     /// `dmg.x1930` from the ECB's sides and the fighter's height, `ft_80081938`.
     #[doc(alias = "ft_80081938")]
-    fn init_x1930(&mut self, f: FighterId) {
+    #[doc(alias("init_x1930"))]
+    fn init_item_pickup_bounds(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         let p = fp.coll_data.cur_pos;
         let (lx, rx) = (fp.coll_data.ecb.left.x, fp.coll_data.ecb.right.x);
@@ -644,14 +645,14 @@ impl Running<'_> {
     pub(crate) fn init_camera_box(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
         let b = fp.camera_box.expect("a fighter without a camera box");
-        let x3c = self
+        let box_desc = self
             .data
             .ptr(fp.ft_data.expect("a fighter without data").at(0x3C))
             .expect("ftData::x3C");
         let s = reg(fp.scale.y);
-        let v = |o: u32| mem(fp::fmuls(reg(self.data.f32(x3c.at(o))), s));
+        let v = |o: u32| mem(fp::fmuls(reg(self.data.f32(box_desc.at(o))), s));
         let (x0, y0, z0) = (v(0), v(4), v(8));
-        let (xc, yc, zc) = (v(0xC), v(0x10), v(0x14));
+        let (vx, vy, vz) = (v(0xC), v(0x10), v(0x14));
         let zoom = reg(self.game.stage_info.camera_settings().cam_fixed_zoom);
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
         let cb = self.game.camera.subject_mut(b);
@@ -665,9 +666,9 @@ impl Running<'_> {
             cb.target_ext.h.y = mem(fp::fneg(reg(z0)));
             cb.facing_dir = -1.0;
         }
-        cb.target_ext.v.x = xc;
-        cb.target_ext.v.y = yc;
-        cb.target_ext.v.z = zc;
+        cb.target_ext.v.x = vx;
+        cb.target_ext.v.y = vy;
+        cb.target_ext.v.z = vz;
         cb.pos.x = pos.x;
         cb.pos.y = mem(fp::fadds(reg(pos.y), reg(x0)));
         cb.pos.z = pos.z;
@@ -722,7 +723,8 @@ impl Running<'_> {
     /// `x2034` and `x2038` from the common data when the player's rules set it,
     /// `ftCo_800C8FC4`.
     #[doc(alias = "ftCo_800C8FC4")]
-    fn init_x2034(&mut self, gobj: GObjId) {
+    #[doc(alias("init_x2034"))]
+    fn init_alt_metal(&mut self, gobj: GObjId) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         if self.game.player_more_flags_bit0(slot) {
             unported_call("ftCo_800C8FC4 with its rule set");
@@ -734,12 +736,12 @@ impl Running<'_> {
     fn init_thrown_hitbox(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let x34 = self
+        let hitbox_desc = self
             .data
             .ptr(fp.ft_data.expect("a fighter without data").at(0x34))
             .expect("ftData::x34");
-        let bone = self.data.u32(x34) as i32;
-        let scale = copy(self.data.f32(x34.at(4)));
+        let bone = self.data.u32(hitbox_desc) as i32;
+        let scale = copy(self.data.f32(hitbox_desc.at(4)));
         let joint = self.bone(f, bone).joint;
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.thrown_hitbox;
@@ -768,16 +770,16 @@ impl Running<'_> {
     #[doc(alias("init_x1614"))]
     fn init_stamina_markers(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        let x38 = self
+        let marker_descs = self
             .data
             .ptr(fp.ft_data.expect("a fighter without data").at(0x38))
             .expect("ftData::x38");
         for i in 0..2u32 {
-            let e = x38.at(0x14 * i);
+            let e = marker_descs.at(0x14 * i);
             let bone = self.data.u32(e) as i32;
             let joint = self.bone(f, bone).joint;
             let offset = crate::game::mirror::read_vec3(self.data, e.at(4));
-            let x0 = copy(self.data.f32(e.at(0x10)));
+            let radius = copy(self.data.f32(e.at(0x10)));
             let v = crate::lb::joint::world_position(
                 &mut self.game.objs,
                 self.data,
@@ -786,7 +788,7 @@ impl Running<'_> {
             );
             let p = &mut self.game.fighters[f.0].stamina_markers[i as usize];
             p.joint = joint;
-            p.radius = x0;
+            p.radius = radius;
             p.pos = Vec3::new(v.x, v.y, 0.0);
             p.prev_pos = p.pos;
         }

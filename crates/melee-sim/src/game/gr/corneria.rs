@@ -1781,16 +1781,16 @@ pub fn demo_city(r: &mut Running) {
     r.game.grounds[g9.0].u.corneria_city().still = true;
     let s = reg(scale(r.game));
     let half = fp::fmuls(fp::fmuls(reg(CITY_WIDTH), s), 0.5);
-    let x9 = mem(fp::fnmadds(fp::fmuls(reg(CITY_WIDTH), s), 0.5, half));
+    let j9_x = mem(fp::fnmadds(fp::fmuls(reg(CITY_WIDTH), s), 0.5, half));
     let j9 = jobj_of(r.game, s9).expect("grcorneria.c: jobj");
-    jobj::set_srt(&mut r.game.objs.jobjs, j9, |o| o.translate.x = x9);
+    jobj::set_srt(&mut r.game.objs.jobjs, j9, |o| o.translate.x = j9_x);
     let s4 = map_gobj(r.game, 4).expect("grcorneria.c: map 4");
     let g4 = ground_of(r.game, s4);
     r.game.grounds[g4.0].u.corneria_city().still = true;
     let half = fp::fmuls(fp::fmuls(reg(CITY_WIDTH_LAST), s), 0.5);
-    let x4 = mem(fp::fmadds(fp::fmuls(reg(CITY_WIDTH), s), 0.5, half));
+    let j4_x = mem(fp::fmadds(fp::fmuls(reg(CITY_WIDTH), s), 0.5, half));
     let j4 = jobj_of(r.game, s4).expect("grcorneria.c: jobj");
-    jobj::set_srt(&mut r.game.objs.jobjs, j4, |o| o.translate.x = x4);
+    jobj::set_srt(&mut r.game.objs.jobjs, j4, |o| o.translate.x = j4_x);
 }
 
 /// Which city part a place's x is over, by the parts' widths from their places: 8, 9 or 4.

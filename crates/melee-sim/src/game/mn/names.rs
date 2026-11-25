@@ -301,7 +301,7 @@ impl Running<'_> {
     #[doc(alias = "GetPersistentNameData")]
     pub(crate) fn name_tag(&self, slot: u8) -> &NameTagData {
         let s = usize::from(slot);
-        &self.game.game_data.thing.nametag_banks[s / NAMETAG_BANK_SIZE].inner[s % NAMETAG_BANK_SIZE]
+        &self.game.game_data.card.nametag_banks[s / NAMETAG_BANK_SIZE].inner[s % NAMETAG_BANK_SIZE]
     }
 
     fn name_tag_mut(&mut self, slot: u8) -> &mut NameTagData {
@@ -1114,10 +1114,10 @@ impl Running<'_> {
         if self.game.game_data.saved_language() == LANG_US {
             let y = node(self, Some(j), 6);
             let n = node(self, Some(j), 7);
-            let x1 = tx(self, y);
+            let y_x = tx(self, y);
             let xn = tx(self, n);
             set_tx(self, y, xn);
-            set_tx(self, n, x1);
+            set_tx(self, n, y_x);
         }
     }
 

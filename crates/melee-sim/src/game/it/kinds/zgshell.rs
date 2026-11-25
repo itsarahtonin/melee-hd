@@ -276,7 +276,7 @@ pub fn trail(r: &mut Running, gobj: GObjId) {
 /// and its blink ends if the hit started one.
 #[doc(alias = "it_802DDBE8")]
 pub fn count_grace(r: &mut Running, gobj: GObjId) {
-    let x28 = attr(r, gobj, 0x28);
+    let grace = attr(r, gobj, 0x28);
     if !bit(r, gobj, off::FLAGS, B0) {
         return;
     }
@@ -284,7 +284,7 @@ pub fn count_grace(r: &mut Running, gobj: GObjId) {
     set_f32(r, gobj, off::GRACE, g);
     if reg(g) <= 0.0 {
         set_bit(r, gobj, off::FLAGS, B0, false);
-        set_f32(r, gobj, off::GRACE, x28);
+        set_f32(r, gobj, off::GRACE, grace);
         hitbox::set_hit_flag0(r.game, gobj, 0, true);
         if bit(r, gobj, off::FLAGS, B1) {
             hitbox::end_blink(r.game, gobj);
@@ -298,8 +298,8 @@ pub fn count_grace(r: &mut Running, gobj: GObjId) {
 pub fn landed(r: &mut Running, gobj: GObjId) {
     let b = item(r.game, gobj).kind_coll_box.clone();
     maplib::set_box(r.game, gobj, b);
-    let x8 = attr(r, gobj, 8);
-    if abs(item(r.game, gobj).vel.x) < reg(x8) {
+    let stop_speed = attr(r, gobj, 8);
+    if abs(item(r.game, gobj).vel.x) < reg(stop_speed) {
         stop(r, gobj);
         if !maplib::slides(r.game, r.data, gobj) {
             stopped(r, gobj);
@@ -320,9 +320,9 @@ fn to_f32(i: i32) -> f64 {
 /// sliding: the push added); a waking shell is knocked into the air instead.
 #[doc(alias = "it_802DDD38")]
 pub fn knocked(r: &mut Running, gobj: GObjId) {
-    let x14 = attr(r, gobj, 0x14);
+    let push_scale = attr(r, gobj, 0x14);
     let ip = item_mut(r.game, gobj);
-    let push = fp::fmuls(to_f32(ip.hit_damage), reg(x14));
+    let push = fp::fmuls(to_f32(ip.hit_damage), reg(push_scale));
     let away = fp::fneg(reg(ip.damage_dir));
     match ip.msid {
         0 | 1 | 3 | 4 | 9 | 10 => {
@@ -356,17 +356,18 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
 /// blinking, its hits back, bounced back at a random part of its speed and up at `x10`, in the
 /// air, stompable after `x34` frames, falling.
 fn pop_up(r: &mut Running, gobj: GObjId) {
-    let (xc, x10, x34) = (attr(r, gobj, 0xC), attr(r, gobj, 0x10), attr(r, gobj, 0x34));
+    let (bounce_back, pop_up_vel, stomp_delay) =
+        (attr(r, gobj, 0xC), attr(r, gobj, 0x10), attr(r, gobj, 0x34));
     hitbox::start_blink(r.game, gobj);
     hitbox::set_hit_ids(r.game, gobj);
     let f = r.game.objs.rng.draw_f32();
     let ip = item_mut(r.game, gobj);
-    let vx = fp::fmuls(fp::fneg(reg(ip.vel.x)), reg(xc));
+    let vx = fp::fmuls(fp::fneg(reg(ip.vel.x)), reg(bounce_back));
     ip.vel.x = mem(fp::fmuls(vx, reg(f)));
-    ip.vel.y = x10;
+    ip.vel.y = pop_up_vel;
     maplib::enter_air(ip);
     set_bit(r, gobj, off::POPPED, B0, true);
-    set_f32(r, gobj, off::STOMP_DELAY, x34);
+    set_f32(r, gobj, off::STOMP_DELAY, stomp_delay);
 }
 
 /// Jumped on, `it_802DDEB4`: a sliding (or waking-knocked) shell pops up, a still one is kicked
@@ -380,9 +381,9 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
             set_bit(r, gobj, off::FLAGS, B1, true);
         }
         0 | 1 | 3 | 4 | 9 => {
-            let x1c = attr(r, gobj, 0x1C);
+            let kick_speed = attr(r, gobj, 0x1C);
             let ip = item_mut(r.game, gobj);
-            ip.vel.x = mem(fp::fmuls(reg(x1c), fp::fneg(reg(ip.stomp_dir))));
+            ip.vel.x = mem(fp::fmuls(reg(kick_speed), fp::fneg(reg(ip.stomp_dir))));
             coll::take_stomper(r.game, gobj);
             set_bit(r, gobj, off::FLAGS, B1, true);
             if item(r.game, gobj).ground_or_air == GA_AIR {
@@ -409,17 +410,17 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802DE040")]
 #[doc(alias = "it_802E02E8")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let (x28, x34) = (attr(r, gobj, 0x28), attr(r, gobj, 0x34));
+    let (grace, stomp_delay) = (attr(r, gobj, 0x28), attr(r, gobj, 0x34));
     zako::reset(r.game, gobj);
-    zako::set_x1c(r.game, gobj);
+    zako::set_clear_of_fighters(r.game, gobj);
     set_bit(r, gobj, off::FLAGS, B0, false);
-    set_f32(r, gobj, off::GRACE, x28);
+    set_f32(r, gobj, off::GRACE, grace);
     set_bit(r, gobj, off::FLAGS, B1, true);
     set(r, gobj, off::KOOPA, 0);
     set(r, gobj, off::WAKE, 0);
     set(r, gobj, off::TIMER, 0);
     set_bit(r, gobj, off::POPPED, B0, false);
-    set_f32(r, gobj, off::STOMP_DELAY, x34);
+    set_f32(r, gobj, off::STOMP_DELAY, stomp_delay);
     let (a, b, scale) = coll::hurt_capsule(r.game, r.data, gobj, 0);
     let v = zako::bytes(r.game, gobj);
     v.set_vec(off::HURT + 4, a);
@@ -465,8 +466,8 @@ pub fn still(_: &mut Running, _: GObjId) -> bool {
 #[doc(alias = "itZrshell_UnkMotion2_Phys")]
 pub fn count_still(r: &mut Running, gobj: GObjId) {
     let counter = get(r, gobj, off::TIMER);
-    let x2c = attr(r, gobj, 0x2C);
-    if to_f32(counter) > reg(x2c) {
+    let wake_frames = attr(r, gobj, 0x2C);
+    if to_f32(counter) > reg(wake_frames) {
         wake(r, gobj);
     } else {
         set(r, gobj, off::TIMER, counter.wrapping_add(1));
@@ -594,7 +595,7 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 /// trail timers, its speed capped at `x4` and facing its way, its bone forgotten (on the
 /// ground), then `slow` when under `x8` (pickable) or `fast`; stompable.
 fn start_slide(r: &mut Running, gobj: GObjId, fast: i32, slow: i32, ground: bool) {
-    let (x4, x8, x24, x38) = (
+    let (max_speed, stop_speed, hit_delay, trail) = (
         attr(r, gobj, 4),
         attr(r, gobj, 8),
         attr(r, gobj, 0x24),
@@ -606,20 +607,20 @@ fn start_slide(r: &mut Running, gobj: GObjId, fast: i32, slow: i32, ground: bool
     let life = common_data(r.game).u32(r.data, data::common::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
     item_mut(r.game, gobj).skid = 0;
-    set_f32(r, gobj, off::HIT_DELAY, x24);
-    set_f32(r, gobj, off::TRAIL, x38);
+    set_f32(r, gobj, off::HIT_DELAY, hit_delay);
+    set_f32(r, gobj, off::TRAIL, trail);
     set_bit(r, gobj, off::POPPED, B0, false);
     let ip = item_mut(r.game, gobj);
-    if abs(ip.vel.x) > reg(x4) {
+    if abs(ip.vel.x) > reg(max_speed) {
         ip.vel.x = if reg(ip.vel.x) < 0.0 { -1.0 } else { 1.0 };
-        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(x4)));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(max_speed)));
     }
     lib2725::face_motion(r.game, gobj);
     set(r, gobj, off::TIMER, 0);
     if ground {
         forget_bone(r, gobj);
     }
-    if abs(item(r.game, gobj).vel.x) < reg(x8) {
+    if abs(item(r.game, gobj).vel.x) < reg(stop_speed) {
         change_state(r, gobj, slow, change::ANIM_UPDATE);
         lib26b1::enable_pickup(r.game, gobj);
         if ground {
@@ -661,14 +662,14 @@ pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
 /// up and hits nothing; under `x30` it stops (or slides off a slope).
 #[doc(alias = "itZrshell_UnkMotion6_Phys")]
 pub fn phys6(r: &mut Running, gobj: GObjId) {
-    let (x8, x30) = (attr(r, gobj, 8), attr(r, gobj, 0x30));
+    let (stop_speed, rest_speed) = (attr(r, gobj, 8), attr(r, gobj, 0x30));
     let ip = item(r.game, gobj);
-    if abs(ip.vel.x) < reg(x8) && !ip.flags.flags.pickup {
+    if abs(ip.vel.x) < reg(stop_speed) && !ip.flags.flags.pickup {
         lib26b1::enable_pickup(r.game, gobj);
         lib2725::clear_hitboxes(r.game, r.data, gobj);
         hitbox::set_hit_ids2(r.game, gobj);
     }
-    if abs(item(r.game, gobj).vel.x) < reg(x30) {
+    if abs(item(r.game, gobj).vel.x) < reg(rest_speed) {
         stop(r, gobj);
         if !maplib::slides(r.game, r.data, gobj) {
             rest(r, gobj, UNK_0X1, false);
@@ -721,8 +722,8 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
 /// last frame, it comes to rest; its position kept.
 #[doc(alias = "itZrshell_UnkMotion9_Phys")]
 pub fn phys9(r: &mut Running, gobj: GObjId) {
-    let x30 = attr(r, gobj, 0x30);
-    if abs(item(r.game, gobj).vel.x) < reg(x30) {
+    let rest_speed = attr(r, gobj, 0x30);
+    if abs(item(r.game, gobj).vel.x) < reg(rest_speed) {
         stop(r, gobj);
         rest(r, gobj, UNK_0X1, false);
     }

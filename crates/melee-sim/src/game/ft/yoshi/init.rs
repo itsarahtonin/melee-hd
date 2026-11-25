@@ -16,21 +16,21 @@ impl Running<'_> {
     /// How many DObjs one of the fighter's model lookups (`x5AC.xC[i]`, `S_UNK_YOSHI1`) names
     /// for the egg shield's texture animation, in its second variant.
     fn ys_shield_count(&self, lookup: DataRef) -> i32 {
-        let unk = self
+        let variant = self
             .data
             .ptr(lookup.at(4))
             .expect("S_UNK_YOSHI1::unk_struct");
-        self.data.u32(unk.at(8)) as i32
+        self.data.u32(variant.at(8)) as i32
     }
 
     /// The material of the `i`th DObj the lookup names for the egg shield: its second
     /// variant's indices into the DObj list.
     fn ys_shield_mobj(&self, f: FighterId, lookup: DataRef, i: i32) -> crate::hsd::mobj::MObjId {
-        let unk = self
+        let variant = self
             .data
             .ptr(lookup.at(4))
             .expect("S_UNK_YOSHI1::unk_struct");
-        let index = self.data.ptr(unk.at(0xC));
+        let index = self.data.ptr(variant.at(0xC));
         let list = self.game.fighters[f.0]
             .dobj_list
             .data
@@ -89,18 +89,18 @@ impl Running<'_> {
         let health = reg(fp.shield_health);
         let length = reg(self.ys_attr_f32(f, attr::XC));
         let frame = mem(fp::fmuls(length, fp::fsubs(1.0, fp::fdivs(health, start))));
-        let xc = self.game.fighters[f.0].parts_vis.lookups;
-        self.ys_shield_anim_frame(f, xc[0], frame);
-        self.ys_shield_anim_frame(f, xc[1], frame);
+        let lookups = self.game.fighters[f.0].parts_vis.lookups;
+        self.ys_shield_anim_frame(f, lookups[0], frame);
+        self.ys_shield_anim_frame(f, lookups[1], frame);
     }
 
     /// The egg shield whole again, `ftYs_Init_8012B918`.
     #[doc(alias = "ftYs_Init_8012B918")]
     pub fn ys_shield_mend(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let xc = self.game.fighters[f.0].parts_vis.lookups;
-        self.ys_shield_anim_frame(f, xc[0], 0.0);
-        self.ys_shield_anim_frame(f, xc[1], 0.0);
+        let lookups = self.game.fighters[f.0].parts_vis.lookups;
+        self.ys_shield_anim_frame(f, lookups[0], 0.0);
+        self.ys_shield_anim_frame(f, lookups[1], 0.0);
     }
 
     /// Yoshi's spawn, `ftYs_Init_OnDeath`: his first model variant and no egg in hand.
@@ -117,14 +117,14 @@ impl Running<'_> {
     #[doc(alias = "ftYs_Init_OnLoad")]
     pub fn ys_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let xc = self.game.fighters[f.0].parts_vis.lookups;
+        let lookups = self.game.fighters[f.0].parts_vis.lookups;
         assert!(
-            xc[0].is_some(),
+            lookups[0].is_some(),
             "the original's assertion failed: yoshi parts_model NULL!!"
         );
         let mut length = 0.0;
-        self.ys_stop_shield_anim(f, xc[0], &mut length);
-        self.ys_stop_shield_anim(f, xc[1], &mut length);
+        self.ys_stop_shield_anim(f, lookups[0], &mut length);
+        self.ys_stop_shield_anim(f, lookups[1], &mut length);
         self.push_attrs(f, attr::SIZE);
         self.ys_patch_shield_length(f, length);
         self.image_ext_attrs(f, &[attr::XC]);
@@ -170,7 +170,8 @@ impl Running<'_> {
 
     /// `ftYs_Init_8012BAC0`: `x120` of his attributes.
     #[doc(alias = "ftYs_Init_8012BAC0")]
-    pub fn ys_attr_x120(&self, f: FighterId) -> f32 {
+    #[doc(alias("ys_attr_x120"))]
+    pub fn ys_swallowed_scale(&self, f: FighterId) -> f32 {
         self.ys_attr_f32(f, attr::X120)
     }
 

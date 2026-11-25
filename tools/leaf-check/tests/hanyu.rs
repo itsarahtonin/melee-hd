@@ -102,7 +102,7 @@ fn hanyu_select_entry() {
         };
         let mut game = Game::default();
         game.game_data.modes.table[VS_MODE_MELEE] = mem(&vs, vs_at);
-        game.game_data.thing.save_data.unlocked_characters = unlocks;
+        game.game_data.card.save_data.unlocked_characters = unlocks;
         let h = &mut game.debug_mode.hanyu_css;
         h.first_port = u16::from_be_bytes([css[0], css[1]]);
         h.match_type = css[2];
@@ -140,7 +140,7 @@ fn hanyu_select_entry() {
             &format!("gm_801BED3C {n}: VS mode's data"),
         );
         assert_eq!(
-            game.game_data.thing.save_data.unlocked_characters,
+            game.game_data.card.save_data.unlocked_characters,
             ctx.read_u16(unlocks_at),
             "gm_801BED3C {n}: the unlocked characters"
         );

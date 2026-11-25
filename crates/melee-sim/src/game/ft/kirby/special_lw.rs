@@ -203,9 +203,9 @@ impl Running<'_> {
         let sign = if reg(n.x) > 0.0 { 1.0 } else { -1.0 };
         let bottom = fp::fsubs(y, speed);
         let ny = fp::fmuls(reg(n.y), speed);
-        let x1 = fp::fmadds(ny, sign, x);
+        let x_out = fp::fmadds(ny, sign, x);
         let g = self.game.geometry.as_mut().expect("no collision geometry");
-        let hit = g.check_all_remap(-1, -1, mem(x), mem(top), mem(x1), mem(bottom));
+        let hit = g.check_all_remap(-1, -1, mem(x), mem(top), mem(x_out), mem(bottom));
         let found = hit.map_or(UP, |h| h.normal);
         let fp = &mut self.game.fighters[f.0];
         let stop = if reg(n.x) > 0.0 {

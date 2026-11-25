@@ -160,7 +160,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D084")]
     pub fn homerun_exit_vs(&mut self) {
         let me = self.game.vs_melee.exit.match_end.clone();
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.one_player_time = (s.one_player_time as u32).wrapping_add(me.frame_count / 60) as i32;
         self.results_add_coins(i32::from(me.player_standings[0].coins));
         self.homerun_store_records();
@@ -181,7 +181,7 @@ impl Running<'_> {
         let best = &mut self
             .game
             .game_data
-            .thing
+            .card
             .save_data
             .trophy_records
             .home_run_best[usize::from(sel)];
@@ -212,7 +212,7 @@ impl Running<'_> {
                 total,
                 self.game
                     .game_data
-                    .thing
+                    .card
                     .save_data
                     .trophy_records
                     .home_run_best[i],
@@ -239,7 +239,7 @@ impl Running<'_> {
         for i in 0..0x1B_u8 {
             let sel = selkind(i);
             let v = self.game.home_run.records[usize::from(sel)].wrapping_mul(10);
-            self.game.game_data.thing.save_data.fighters[usize::from(sel)]
+            self.game.game_data.card.save_data.fighters[usize::from(sel)]
                 .records
                 .home_run_distance = v;
         }

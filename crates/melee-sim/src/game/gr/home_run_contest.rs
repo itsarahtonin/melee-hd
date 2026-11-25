@@ -402,25 +402,25 @@ pub fn proc_field(r: &mut Running, gobj: GObjId) {
     }
     let interest = r.game.camera.interest();
     let s = |r: &Running| fp::fmuls(reg(STRETCH), reg(scale(r.game)));
-    let mut x0 = fp::fctiwz(fp::fsubs(
+    let mut first_shown = fp::fctiwz(fp::fsubs(
         fp::fdivs(fp::fsubs(reg(interest.x), reg(REACH)), s(r)),
         1.0,
     ));
-    if x0 < 0 {
-        x0 = 0;
+    if first_shown < 0 {
+        first_shown = 0;
     }
-    let x1 = fp::fctiwz(fp::fadds(
+    let last_shown = fp::fctiwz(fp::fadds(
         1.0,
         fp::fdivs(fp::fadds(reg(REACH), reg(interest.x)), s(r)),
     ));
     let first = r.game.grounds[g.0].u.homerun().parts[0].expect("the first stretch");
     let first_index = i32::from(part_index(r.game, first));
-    if first_index < x0 {
+    if first_index < first_shown {
         setup::destroy(r, Some(first));
         let parts = &mut r.game.grounds[g.0].u.homerun().parts;
         parts.copy_within(1..PARTS, 0);
         parts[PARTS - 1] = None;
-    } else if first_index > x0 {
+    } else if first_index > first_shown {
         let p = place_part(r, first_index - 1, PROC_PART_FRAME);
         let parts = &mut r.game.grounds[g.0].u.homerun().parts;
         parts.copy_within(0..PARTS - 1, 1);
@@ -433,10 +433,10 @@ pub fn proc_field(r: &mut Running, gobj: GObjId) {
         .expect("the original's assertion failed: gobj2");
     let last = parts[i].expect("a stretch");
     let last_index = i32::from(part_index(r.game, last));
-    if last_index > x1 {
+    if last_index > last_shown {
         r.game.grounds[g.0].u.homerun().parts[i] = None;
         setup::destroy(r, Some(last));
-    } else if last_index < x1 {
+    } else if last_index < last_shown {
         let p = place_part(r, last_index + 1, PROC_PART_FRAME);
         r.game.grounds[g.0].u.homerun().parts[i + 1] = Some(p);
     }

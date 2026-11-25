@@ -273,48 +273,48 @@ impl Running<'_> {
     #[doc(alias = "fn_801654A0")]
     fn results_winners(&mut self) {
         let me = self.results_end();
-        let mut x4 = 0;
+        let mut winner = 0;
         for i in 0..4 {
             let p = &me.player_standings[i];
             if p.pkind != PKIND_NA && p.is_small_loser == 0 {
-                x4 = i as u8;
+                winner = i as u8;
             }
         }
-        let mut x5 = 0;
+        let mut winning_team = 0;
         for i in 0..5 {
             let t = &me.team_standings[i];
             if t.active != 0 && t.is_small_loser == 0 {
-                x5 = i as u8;
+                winning_team = i as u8;
             }
         }
-        let mut x6 = None;
+        let mut team_best = None;
         if me.is_teams == 1 {
             'found: for i in 0..4 {
                 let pi = &me.player_standings[i];
-                if pi.pkind == PKIND_NA || pi.team != x5 {
+                if pi.pkind == PKIND_NA || pi.team != winning_team {
                     continue;
                 }
                 for j in 0..4 {
                     let pj = &me.player_standings[j];
                     if pj.pkind != PKIND_NA
-                        && pj.team == x5
+                        && pj.team == winning_team
                         && i != j
                         && pi.is_small_loser > pj.is_small_loser
                     {
                         continue 'found;
                     }
                 }
-                x6 = Some(i as u8);
+                team_best = Some(i as u8);
                 break;
             }
         } else {
-            x6 = Some(x4);
+            team_best = Some(winner);
         }
         let d = &mut self.game.results.data;
-        d.winner = x4;
-        d.winning_team = x5;
-        if let Some(x6) = x6 {
-            d.team_best = x6;
+        d.winner = winner;
+        d.winning_team = winning_team;
+        if let Some(team_best) = team_best {
+            d.team_best = team_best;
         }
     }
 
@@ -359,11 +359,11 @@ impl Running<'_> {
                 .fill(StatsInfo { mode: 2, count: 0 });
         }
         self.results_winners();
-        let x6 = usize::from(self.game.results.data.team_best);
-        let w = &me.player_standings[x6];
+        let team_best = usize::from(self.game.results.data.team_best);
+        let w = &me.player_standings[team_best];
         if w.pkind == PKIND_HUMAN && !canceled(me.outcome) && w.flags[0] & 0x02 != 0 {
             self.alarm_rumble_catch_up();
-            self.rumble_start(x6 as u8, 3, 0x20, 0);
+            self.rumble_start(team_best as u8, 3, 0x20, 0);
         }
         let coget = self.game.ft.data.files.archive("IfCoGet.dat");
         self.init_coin_counter(coget);
@@ -391,7 +391,8 @@ impl Running<'_> {
         self.results_fighters_setup(costumes);
         self.results_fighters_light();
         if !canceled(me.outcome) {
-            let theme = super::results_stats::victory_theme(me.player_standings[x6].ckind as i32);
+            let theme =
+                super::results_stats::victory_theme(me.player_standings[team_best].ckind as i32);
             self.lb_play_music(theme);
         }
         for i in 0..4 {
@@ -507,7 +508,7 @@ impl Running<'_> {
     fn results_flames(&mut self) {
         let data = self.data;
         let me = self.results_end().clone();
-        let (x4, x6) = (
+        let (winner, team_best) = (
             usize::from(self.game.results.data.winner),
             self.game.results.data.team_best,
         );
@@ -523,7 +524,7 @@ impl Running<'_> {
         g.world.setup_gx_link(gobj, CodeRef(PANEL_RENDER), 0xB, 0);
         crate::lb::anim::add_model_anim(&mut g.objs, data, root, 0, m0);
         jobj::req_anim_all(&mut g.objs, root, 0.0);
-        let ckind = me.player_standings[usize::from(x6)].ckind as u8;
+        let ckind = me.player_standings[usize::from(team_best)].ckind as u8;
         let emblem = self.results_emblem(root, ckind, canceled(me.outcome));
         self.game.results.data.emblem = emblem;
         // A winner with no emblem (Master Hand, Crazy Hand and the other bosses a debug VS
@@ -537,10 +538,10 @@ impl Running<'_> {
         let mobj = dobj.and_then(|d| g.objs.dobjs.pool[d.0].mobj);
         let aobj = mobj.and_then(|m| g.objs.mobjs.pool[m.0].aobj);
         let color = super::vs::player_color(
-            x6,
-            g.player_team(i32::from(x6)) as u8,
+            team_best,
+            g.player_team(i32::from(team_best)) as u8,
             u8::from(me.is_teams == 1),
-            me.player_standings[x4].pkind,
+            me.player_standings[winner].pkind,
         );
         let frame = mem(fp::fadds(1.0, fp::frsp(f64::from(color as u8))));
         crate::hsd::aobj::set_current_frame(&mut g.objs.aobjs, &mut g.objs.fobjs, aobj, frame);

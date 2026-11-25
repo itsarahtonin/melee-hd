@@ -233,7 +233,7 @@ pub fn detonate(r: &mut Running, gobj: GObjId) {
 /// `itBombhei_Logic6_Spawned`.
 #[doc(alias = "itBombhei_Logic6_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let (x4, x8, x10, x14) = (
+    let (turn_frames, fuse_frames, lie_frames, walk_frames) = (
         attr(r, gobj, 4),
         attr(r, gobj, 8),
         attr(r, gobj, 0x10),
@@ -242,9 +242,12 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let scl = reg(item(r.game, gobj).scl);
     let v = vars(r.game, gobj);
     v.exploded.set(0);
-    v.timer.set(to_int(x10));
-    let walk = fp::fadds(reg(x4), fp::fadds(reg(x10), reg(x14)));
-    v.fuse_left.set(mem(fp::fadds(reg(x8), walk)));
+    v.timer.set(to_int(lie_frames));
+    let walk = fp::fadds(
+        reg(turn_frames),
+        fp::fadds(reg(lie_frames), reg(walk_frames)),
+    );
+    v.fuse_left.set(mem(fp::fadds(reg(fuse_frames), walk)));
     v.lit.set(0);
     v.stood_up.set(0);
     v.pose_height.set(mem(fp::fmuls(
@@ -263,11 +266,11 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// explodes when the fuse runs out.
 #[doc(alias = "it_8027D820")]
 pub fn fuse(r: &mut Running, gobj: GObjId) {
-    let (x18, x1c) = (attr(r, gobj, 0x18), attr(r, gobj, 0x1C));
+    let (pulse_frames, pulse_size) = (attr(r, gobj, 0x18), attr(r, gobj, 0x1C));
     let j = jobj_of(r.game, gobj).expect("a bob-omb without a model");
     let v = vars(r.game, gobj);
     v.timer.update(|old| old.wrapping_sub(1));
-    let s = fp::fmuls(reg(x1c), to_f32(v.pulse_dir.get()));
+    let s = fp::fmuls(reg(pulse_size), to_f32(v.pulse_dir.get()));
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
         o.scale.x = mem(fp::fadds(reg(o.scale.x), s));
     });
@@ -279,7 +282,7 @@ pub fn fuse(r: &mut Running, gobj: GObjId) {
     });
     let v = vars(r.game, gobj);
     if v.timer.get() <= 0 {
-        v.timer.set(to_int(x18));
+        v.timer.set(to_int(pulse_frames));
         v.pulse_dir.update(|old| old.wrapping_neg());
     }
     v.fuse.update(|old| mem(fp::fsubs(reg(old), 1.0)));
@@ -330,7 +333,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 /// Readies falling: from lying down or standing up it stops spinning, and from standing up
 /// its timer starts over at `x14` (the file's `itBombhei_UnkMotion1_Setup`).
 fn ready_fall(r: &mut Running, gobj: GObjId) {
-    let x14 = attr(r, gobj, 0x14);
+    let walk_frames = attr(r, gobj, 0x14);
     let msid = item(r.game, gobj).msid;
     if msid == 3 || msid == 0 {
         let f = &mut item_mut(r.game, gobj).flags.flags;
@@ -339,7 +342,7 @@ fn ready_fall(r: &mut Running, gobj: GObjId) {
         lib2725::stop_spin(r.game, r.data, gobj);
     }
     if msid == 3 {
-        vars(r.game, gobj).timer.set(to_int(x14));
+        vars(r.game, gobj).timer.set(to_int(walk_frames));
     }
 }
 
@@ -380,12 +383,12 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Held: lit ones keep burning (state 8), unlit ones wait (state 7).
 fn hold(r: &mut Running, gobj: GObjId, unlit: i32, lit: i32, unlit_flags: u32, lit_flags: u32) {
-    let x0 = attr(r, gobj, 0);
+    let anim_speed = attr(r, gobj, 0);
     let f = &mut item_mut(r.game, gobj).flags.flags;
     f.turns_to_face = true;
     f.spin_axis = 1;
     if vars(r.game, gobj).lit.get() == 0 {
-        item_mut(r.game, gobj).anim_speed = x0;
+        item_mut(r.game, gobj).anim_speed = anim_speed;
         change_keeping_pose(r, gobj, unlit, unlit_flags);
     } else {
         item_mut(r.game, gobj).anim_speed = 1.0;
@@ -421,11 +424,11 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 /// Stands up, turning to face its way over `x4` frames, `it_8027E978`.
 #[doc(alias = "it_8027E978")]
 pub fn stand_up(r: &mut Running, gobj: GObjId) {
-    let x4 = attr(r, gobj, 4);
+    let turn_frames = attr(r, gobj, 4);
     maplib::enter_ground(item_mut(r.game, gobj));
     let facing = reg(item(r.game, gobj).facing_dir);
     let v = vars(r.game, gobj);
-    v.timer.set(to_int(x4));
+    v.timer.set(to_int(turn_frames));
     let turn = fp::fmul(std::f64::consts::FRAC_PI_2, facing);
     v.turn_step
         .set(mem(fp::frsp(fp::fdiv(turn, f64::from(v.timer.get())))));
@@ -442,9 +445,9 @@ pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
         q.y = mem(fp::fadds(reg(q.y), reg(turn)));
     });
     if tick(r, gobj) <= 0 {
-        let x14 = attr(r, gobj, 0x14);
+        let walk_frames = attr(r, gobj, 0x14);
         item_mut(r.game, gobj).flags.flags.turns_to_face = true;
-        vars(r.game, gobj).timer.set(to_int(x14));
+        vars(r.game, gobj).timer.set(to_int(walk_frames));
         walk(r, gobj);
         play_sfx(r, gobj, 0xF0, 0x7F, 0x40);
     }
@@ -463,10 +466,10 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Sets off walking at `xC` (the file's `fn_80280974_inline`).
 fn set_off(r: &mut Running, gobj: GObjId) {
-    let xc = attr(r, gobj, 0xC);
+    let walk_speed = attr(r, gobj, 0xC);
     lib26b1::disable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.vel.x = mem(fp::fmuls(reg(xc), reg(ip.facing_dir)));
+    ip.vel.x = mem(fp::fmuls(reg(walk_speed), reg(ip.facing_dir)));
     ip.skid = 0;
     hitbox::set_hit_ids(r.game, gobj);
 }
@@ -539,15 +542,15 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Stops and lights its fuse in `msid` (lit once: a lit one only changes state).
 fn light_in(r: &mut Running, gobj: GObjId, msid: i32) {
-    let (x8, x18) = (attr(r, gobj, 8), attr(r, gobj, 0x18));
+    let (fuse_frames, pulse_frames) = (attr(r, gobj, 8), attr(r, gobj, 0x18));
     item_mut(r.game, gobj).vel.x = 0.0;
     lib26b1::enable_pickup(r.game, gobj);
     if vars(r.game, gobj).lit.get() == 0 {
         let life = common_data(r.game).u32(r.data, super::super::data::common::LIFETIME);
         let v = vars(r.game, gobj);
-        v.timer.set(to_int(x18));
+        v.timer.set(to_int(pulse_frames));
         v.pulse_dir.set(1);
-        v.fuse.set(x8);
+        v.fuse.set(fuse_frames);
         v.lit.set(1);
         item_mut(r.game, gobj).life_timer = mem(fp::frsp(f64::from(life)));
         change_keeping_pose(r, gobj, msid, change::ANIM_UPDATE);
@@ -596,8 +599,8 @@ pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itBombhei_UnkMotion10_Phys")]
 pub fn phys_spin(r: &mut Running, gobj: GObjId) {
     phys1(r, gobj);
-    let x68 = common_data(r.game).f32(r.data, super::super::data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, super::super::data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }
 
 /// Whether it landed harder than the attributes' `x20` in x or y.
@@ -641,9 +644,9 @@ pub fn coll10(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Thrown (state 9, or 10 lit), at the size it was thrown at.
 fn throw(r: &mut Running, gobj: GObjId) {
-    let x0 = attr(r, gobj, 0);
+    let anim_speed = attr(r, gobj, 0);
     if vars(r.game, gobj).lit.get() == 0 {
-        item_mut(r.game, gobj).anim_speed = x0;
+        item_mut(r.game, gobj).anim_speed = anim_speed;
         change_keeping_pose(r, gobj, 9, 6);
     } else {
         item_mut(r.game, gobj).anim_speed = 1.0;

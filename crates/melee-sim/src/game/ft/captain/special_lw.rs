@@ -73,9 +73,9 @@ impl Running<'_> {
         let limit = self.ca_attr_i32(f, attr::SPECIALLW_UNK2);
         let modifier = reg(self.ca_attr_f32(f, attr::SPECIALLW_ON_HIT_SPD_MODIFIER));
         let fp = &mut self.game.fighters[f.0];
-        let x0 = u16::from_be_bytes(fp.mv[mv::LW_X0..mv::LW_X0 + 2].try_into().unwrap());
-        if i32::from(x0) <= limit {
-            fp.mv[mv::LW_X0..mv::LW_X0 + 2].copy_from_slice(&x0.wrapping_add(1).to_be_bytes());
+        let hits = u16::from_be_bytes(fp.mv[mv::LW_X0..mv::LW_X0 + 2].try_into().unwrap());
+        if i32::from(hits) <= limit {
+            fp.mv[mv::LW_X0..mv::LW_X0 + 2].copy_from_slice(&hits.wrapping_add(1).to_be_bytes());
             let friction = fp::fmuls(reg(fp.mv_f32(mv::LW_FRICTION)), modifier);
             fp.set_mv_f32(mv::LW_FRICTION, friction);
         }

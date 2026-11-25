@@ -281,20 +281,20 @@ pub fn adjusted_count(r: &mut Running, gobj: GObjId, count: i32, standing: i32) 
 pub fn fly_out(r: &mut Running, gobj: GObjId, angle: f32, speed: f32) {
     let pi = std::f64::consts::PI;
     let rng = reg(r.game.objs.rng.draw_f32());
-    let xc = attr_f(r, gobj, A_XC);
+    let spread_x = attr_f(r, gobj, A_XC);
     let side = fp::frsp(fp::fsub(reg(angle), fp::fdiv(pi, 2.0)));
     let third = fp::fdivs(fp::frsp(pi), fp::frsp(3.0));
     let a = reg(angle);
-    let mut vx = fp::fmuls(rng, xc);
+    let mut vx = fp::fmuls(rng, spread_x);
     vx = fp::fmuls(vx, reg(item(r.game, gobj).facing_dir));
     if (a >= third && a <= fp::fmuls(2.0, third))
         || (a >= fp::fmuls(4.0, third) && a <= fp::fmuls(5.0, third))
     {
-        let x10 = attr_f(r, gobj, A_X10);
-        vx = fp::fmadds(x10, reg(math::cos(mem(side))), vx);
+        let side_push = attr_f(r, gobj, A_X10);
+        vx = fp::fmadds(side_push, reg(math::cos(mem(side))), vx);
     }
-    let (x20, x18) = (attr_f(r, gobj, A_X20), attr_f(r, gobj, A_X18));
-    let vy = fp::fadds(x18, fp::fadds(fp::fmuls(rng, x20), reg(speed)));
+    let (spread_y, base_vy) = (attr_f(r, gobj, A_X20), attr_f(r, gobj, A_X18));
+    let vy = fp::fadds(base_vy, fp::fadds(fp::fmuls(rng, spread_y), reg(speed)));
     item_mut(r.game, gobj).vel = Vec3::new(mem(vx), mem(vy), 0.0);
 }
 
@@ -326,7 +326,7 @@ fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
         r.data.f32(a.at(A_OTHERS_WAIT)),
     );
     let td = tier(r, gobj, t);
-    let (xd84, scale) = (r.data.u32(td.at(T_XD84)) as i32, r.data.f32(td.at(T_SCALE)));
+    let (bounce_sfx, scale) = (r.data.u32(td.at(T_XD84)) as i32, r.data.f32(td.at(T_SCALE)));
     let joint = r.data.ptr(td.at(T_JOINT));
     let e = td.at(T_ECB);
     let ecb = _itECB {
@@ -341,7 +341,7 @@ fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
     v.wait_b.set(w8);
     v.pickable.set(s.pickable);
     ip.hit_flags.bits.hits_own_team = true;
-    ip.bounce_sfx = xd84;
+    ip.bounce_sfx = bounce_sfx;
     ip.scl = scale;
     set_model(r, gobj, joint);
     maplib::set_box(r.game, gobj, ecb);
@@ -555,11 +555,11 @@ pub fn lands(r: &mut Running, gobj: GObjId, bounce: bool) -> bool {
         maplib::bounce_effect(r, gobj, 0);
         hitbox::scale_damage(r.game, r.data, gobj, keep);
     }
-    let xd84 = r.data.u32(tier(r, gobj, 0).at(T_XD84)) as i32;
+    let bounce_sfx = r.data.u32(tier(r, gobj, 0).at(T_XD84)) as i32;
     let land_x = attr_f(r, gobj, A_LAND_X);
     let ip = item_mut(r.game, gobj);
     if ip.land_count == 1 {
-        ip.bounce_sfx = xd84;
+        ip.bounce_sfx = bounce_sfx;
     }
     ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), land_x));
     ip.land_count = ip.land_count.wrapping_add(1);

@@ -264,7 +264,7 @@ impl Running<'_> {
 
     /// `Toy_80311960`: every trophy taken, from the save and the screens' table alike.
     fn toy_take_all(&mut self) {
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.trophy_flags = [0; TROPHY_COUNT];
         s.trophy_category_flags = 0;
         s.trophy_count = 0;

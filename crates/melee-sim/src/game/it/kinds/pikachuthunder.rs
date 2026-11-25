@@ -288,8 +288,8 @@ fn anim2(r: &mut Running, gobj: GObjId) -> bool {
     }
     let length = reg(attr_f32(r, gobj, attr::LENGTH));
     let v = item_mut(r.game, gobj).vars.pikachu_thunder();
-    let x10 = fp::fadds(reg(v.length.get()), reg(v.vel.get().y));
-    v.stretch.set(mem(x10));
+    let stretched = fp::fadds(reg(v.length.get()), reg(v.vel.get().y));
+    v.stretch.set(mem(stretched));
     if reg(v.stretch.get()) > 0.0 {
         v.scale.set(mem(stretch(reg(v.stretch.get()), length)));
         if reg(v.scale.get()) <= 0.0 {
@@ -298,8 +298,8 @@ fn anim2(r: &mut Running, gobj: GObjId) -> bool {
         let s = stretch(reg(v.stretch.get()), reg(v.length.get()));
         hitbox::scale_hitbox(r.game, gobj, 0, s);
         let v = item_mut(r.game, gobj).vars.pikachu_thunder();
-        let x10 = v.stretch.get();
-        v.length.set(x10);
+        let stretch = v.stretch.get();
+        v.length.set(stretch);
     }
     let j = jobj_of(r.game, gobj).expect("a bolt without a model");
     let s = item_mut(r.game, gobj).vars.pikachu_thunder().scale.get();

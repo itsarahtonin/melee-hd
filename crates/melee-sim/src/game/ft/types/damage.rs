@@ -145,7 +145,7 @@ pub struct FighterDamage {
     pub attack_record: [u8; 4],
     #[at(0xAC)]
     #[doc(alias("x18d8"))]
-    pub hit_records: ft_800898B4_t,
+    pub hit_records: HitRecord,
     #[at(0xC0)]
     #[doc(alias("x18ec_instancehitby"))]
     pub instance_hit_by: u16,

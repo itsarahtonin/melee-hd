@@ -444,7 +444,7 @@ fn new_effect(r: &mut Running) -> Option<EffectId> {
                 }
             }
             ef.params = super::Params::left(crate::vec::Vec3::new(p[0], p[1], p[2]), unknown);
-            ef.left.x2a = [0x16, 0x17].map(|i| k[i].then_some(b[i]));
+            ef.left.unwritten = [0x16, 0x17].map(|i| k[i].then_some(b[i]));
             // The GPU's pixels the block held there go back as pixels (docs/engine.md).
             let rt = crate::game::leftovers::render_target_runs(addr + 0x14, 0x18);
             let pixel = |lo: u32, hi: u32| rt.iter().any(|&(a, b)| a < hi && lo < b);

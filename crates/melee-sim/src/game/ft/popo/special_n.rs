@@ -182,9 +182,9 @@ impl Running<'_> {
                 let mut pos =
                     crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
                 let fp = &self.game.fighters[f.0];
-                let x2250 = f32::from_bits(fp.u_i32(p.u_air + var::X2250) as u32);
+                let lift = f32::from_bits(fp.u_i32(p.u_air + var::X2250) as u32);
                 pos.x = mem(fp::fmadds(reg(dx), reg(fp.facing_dir), reg(pos.x)));
-                pos.y = mem(fp::fadds(reg(pos.y), fp::fadds(reg(dy), reg(x2250))));
+                pos.y = mem(fp::fadds(reg(pos.y), fp::fadds(reg(dy), reg(lift))));
                 let facing = fp.facing_dir;
                 let ice = climbersice::spawn(self, gobj, pos, p.ice_kind, facing);
                 self.game

@@ -1005,7 +1005,7 @@ impl Running<'_> {
             .enumerate()
             .find(|(_, e)| e.id == id)
             .expect("an Adventure state's stage");
-        let (x4_flag, x5_flag) = if entry.opponents != 0 { (1, 0) } else { (0, 1) };
+        let (with_opponents, alone) = if entry.opponents != 0 { (1, 0) } else { (0, 1) };
         let mut run = self.game.one_player.adventure.base;
         run.stage[0] = entry.flags;
         run.stage[1] = 0;
@@ -1019,8 +1019,8 @@ impl Running<'_> {
             &mut run,
             &chars,
             entry.opponents as u8,
-            x4_flag,
-            x5_flag,
+            with_opponents,
+            alone,
             i32::from(entry.time),
             i32::from(entry.stkind),
             i32::from(vs_count(id)),

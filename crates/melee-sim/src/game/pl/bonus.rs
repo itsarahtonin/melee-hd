@@ -409,7 +409,7 @@ impl Running<'_> {
         let game = &*self.game;
         let fp = game.fighter(g);
         let airborne = fp.ground_or_air == super::super::ft::common::GA_AIR;
-        let (x2072_b1, x2073) = (fp.attack_flags[2] & 0x40 != 0, fp.attack_flags[3]);
+        let (streak_bit, attack_kind) = (fp.attack_flags[2] & 0x40 != 0, fp.attack_flags[3]);
         let slope = (!airborne).then(|| reg(game.ft_ground_slope_angle(g)));
         let nudged = game.ft_is_being_nudged(g);
         let scball = game.ft_holds_item_kind(g, ItKind::ScrewAttack.id());
@@ -434,7 +434,7 @@ impl Running<'_> {
         } else {
             &mut p.ext.ground_frames
         });
-        if x2072_b1 {
+        if streak_bit {
             inc(&mut p.ext.streak);
             if fp::frsp(f64::from(p.ext.streak)) >= reg(streak) {
                 inc(&mut p.ext.long_streak_frames);
@@ -442,7 +442,7 @@ impl Running<'_> {
         } else {
             p.ext.streak = 0;
         }
-        if x2073 == 0x68 {
+        if attack_kind == 0x68 {
             inc(&mut p.ext.attack_0x68_frames);
         }
         if let Some(s) = slope
@@ -522,7 +522,7 @@ impl Running<'_> {
             .wrapping_add(s.more_actions[6]);
         let (hits, attacks) = (s.hits.total, s.attacks.total);
         let p = self.game.player_mut(slot);
-        let (xd70, xd34, xcd8) = (
+        let (crowd_reactions, heavy_frames, powershields) = (
             p.ext.crowd_reactions,
             p.ext.heavy_frames,
             p.stale_moves.powershields,
@@ -545,9 +545,13 @@ impl Running<'_> {
             }),
             (Flag::Hits, 0x18, hits, |e| &mut e.window_hits),
             (Flag::Bonus(0x13), 0x2C, attacks, |e| &mut e.window_attacks),
-            (Flag::Bonus(0x5C), 0xE0, xd70, |e| &mut e.window_crowd),
-            (Flag::Bonus(0x99), 0x130, xd34, |e| &mut e.window_heavy),
-            (Flag::Bonus(0x3D), 0x7C, xcd8 as u32, |e| {
+            (Flag::Bonus(0x5C), 0xE0, crowd_reactions, |e| {
+                &mut e.window_crowd
+            }),
+            (Flag::Bonus(0x99), 0x130, heavy_frames, |e| {
+                &mut e.window_heavy
+            }),
+            (Flag::Bonus(0x3D), 0x7C, powershields as u32, |e| {
                 &mut e.window_powershields
             }),
         ];

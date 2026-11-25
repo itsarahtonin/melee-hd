@@ -52,7 +52,8 @@ pub struct Vars<'v> {
     /// `xDE0`: the fighter whose special it still is.
     pub owner: &'v mut Var<Option<GObjId>>,
     /// `xDE4`: cleared at the spawn, read by nothing.
-    pub xde4: &'v mut Var<i32>,
+    #[doc(alias("xde4"))]
+    pub cleared: &'v mut Var<i32>,
 }
 
 /// One shot's own parts and the settings the shared code reads.
@@ -160,7 +161,7 @@ pub fn spawn(
     v.grown.set(0.0);
     v.reflected.set(0);
     v.owner.set(Some(parent));
-    v.xde4.set(0);
+    v.cleared.set(0);
     start(r, gobj, s);
     Some(gobj)
 }

@@ -217,8 +217,8 @@ pub fn settles(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
         a.f32(data, super::data::attr::X5C),
     );
     if item(game, gobj).land_count <= 1 {
-        let x74 = common_data(game).f32(data, super::data::common::X74);
-        super::lib2725::clamp_fall(game, gobj, x74);
+        let max_fall = common_data(game).f32(data, super::data::common::X74);
+        super::lib2725::clamp_fall(game, gobj, max_fall);
         reset_box(game, gobj);
     }
     let ip = item_mut(game, gobj);

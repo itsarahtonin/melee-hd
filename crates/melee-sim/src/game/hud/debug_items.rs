@@ -69,10 +69,10 @@ impl Running<'_> {
         }
     }
 
-    /// The card data's bytes at `off` (`gmMainLib_8045A6C0.thing`, at its 0x1868, plus `off`),
+    /// The card data's bytes at `off` (`gmMainLib_8045A6C0.card`, at its 0x1868, plus `off`),
     /// as memory holds them.
     fn card_data_bytes_at(&self, off: usize, n: usize) -> Vec<u8> {
-        let bytes = crate::lb::save::card_data_bytes(&self.game.game_data.thing);
+        let bytes = crate::lb::save::card_data_bytes(&self.game.game_data.card);
         if off + n > bytes.len() {
             super::super::code::unported_call(&format!(
                 "the debug menu's Global Data Edit past the card data (offset {off:#x})"
@@ -200,7 +200,7 @@ impl Running<'_> {
                     self.sfx_forward();
                     let addr = (self.game.hud.debug.setting(0xF0) >> 16) as usize;
                     let at = addr;
-                    let mut bytes = crate::lb::save::card_data_bytes(&self.game.game_data.thing);
+                    let mut bytes = crate::lb::save::card_data_bytes(&self.game.game_data.card);
                     if at + 4 > bytes.len() {
                         super::super::code::unported_call(&format!(
                             "the debug menu's Global Data Edit past the card data (offset {at:#x})"
@@ -208,7 +208,7 @@ impl Running<'_> {
                     }
                     let v: [u8; 4] = self.game.hud.debug.settings[0xF4..0xF8].try_into().unwrap();
                     bytes[at..at + 4].copy_from_slice(&v);
-                    self.game.game_data.thing = crate::lb::save::card_data_import(&bytes);
+                    self.game.game_data.card = crate::lb::save::card_data_import(&bytes);
                     self.game.sync_unlocks();
                 }
                 0
@@ -457,14 +457,14 @@ impl Running<'_> {
         let chara = usize::from(self.game.hud.debug.word(0x804D_6DC8) as u8);
         match self.game.debug_mode.records_kind {
             2 => {
-                let v = self.game.game_data.thing.save_data.fighters[chara]
+                let v = self.game.game_data.card.save_data.fighters[chara]
                     .records
                     .home_run_distance as u32;
                 let m = crate::fpu::mem(crate::gekko_fp::frsp(f64::from(v / 100)));
                 self.game.hud.debug.set_word(0x804D_6DD0, m.to_bits());
             }
             3 => {
-                let f = &mut self.game.game_data.thing.save_data.fighters[chara].records;
+                let f = &mut self.game.game_data.card.save_data.fighters[chara].records;
                 let r = i32::from(f.target_cleared);
                 f.target_cleared = r & 1 != 0;
                 self.game.hud.debug.set_word(0x804D_6DCC, r as u32);
@@ -496,14 +496,14 @@ impl Running<'_> {
             }
             0x8030_0C80 => {
                 let n = self.game.hud.debug.word(0x804D_6DDC);
-                self.game.game_data.thing.save_data.coins = n.wrapping_mul(10);
+                self.game.game_data.card.save_data.coins = n.wrapping_mul(10);
                 self.mark_class_two_trophies();
                 GameMode::Menu
             }
             _ => {
                 let n = self.game.hud.debug.word(0x804D_6DF4);
                 self.sfx_forward();
-                self.game.game_data.thing.save_data.total_kos = n as i32;
+                self.game.game_data.card.save_data.total_kos = n as i32;
                 GameMode::Menu
             }
         };
@@ -530,7 +530,7 @@ impl Running<'_> {
         );
         let count = f32::from_bits(w(0x804D_6DD0));
         let clear = w(0x804D_6DCC);
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         match cb {
             0x8030_0CC8 => {
                 s.time_matches = t;

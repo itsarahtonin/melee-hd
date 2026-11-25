@@ -143,7 +143,7 @@ impl Running<'_> {
         for (i, &on) in d.items.iter().enumerate() {
             self.set_item_enabled(ORDER[i], on != 0);
         }
-        self.game.game_data.thing.save_data.prefs.item_freq = d.freq.wrapping_sub(1);
+        self.game.game_data.card.save_data.prefs.item_freq = d.freq.wrapping_sub(1);
     }
 
     /// `mn_8022E978`: an item's bit of the preferences' mask set or cleared. The bit is an
@@ -152,7 +152,7 @@ impl Running<'_> {
     #[doc(alias = "mn_8022E978")]
     pub(crate) fn set_item_enabled(&mut self, item: u8, on: bool) {
         let bit = (1i32 << item) as i64 as u64;
-        let p = &mut self.game.game_data.thing.save_data.prefs;
+        let p = &mut self.game.game_data.card.save_data.prefs;
         if on {
             p.item_mask |= bit;
         } else {
@@ -163,7 +163,7 @@ impl Running<'_> {
     /// `gm_8016403C`: whether the preferences have an item on.
     #[doc(alias = "gm_8016403C")]
     fn item_enabled(&self, item: u8) -> bool {
-        (1u64 << item) & self.game.game_data.thing.save_data.prefs.item_mask != 0
+        (1u64 << item) & self.game.game_data.card.save_data.prefs.item_mask != 0
     }
 
     /// `mnItemSw_80233B68`: up and down within a column and through the frequency, left and
@@ -583,7 +583,7 @@ impl Running<'_> {
             freq: self
                 .game
                 .game_data
-                .thing
+                .card
                 .save_data
                 .prefs
                 .item_freq

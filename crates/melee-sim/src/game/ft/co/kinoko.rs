@@ -302,26 +302,26 @@ impl Running<'_> {
     /// Shrinking back from big on the ground, `ftCo_800D1BA0`: `x8` whether its end starts
     /// the intangibility over.
     #[doc(alias = "ftCo_800D1BA0")]
-    pub fn enter_giant_end(&mut self, gobj: GObjId, x8: bool) {
-        self.enter_kinoko_end(gobj, GIANT_END, false, x8);
+    pub fn enter_giant_end(&mut self, gobj: GObjId, restart_intangible: bool) {
+        self.enter_kinoko_end(gobj, GIANT_END, false, restart_intangible);
     }
 
     /// Shrinking back from big in the air, `ftCo_800D1D10`.
     #[doc(alias = "ftCo_800D1D10")]
-    pub fn enter_giant_end_air(&mut self, gobj: GObjId, x8: bool) {
-        self.enter_kinoko_end(gobj, GIANT_END, true, x8);
+    pub fn enter_giant_end_air(&mut self, gobj: GObjId, restart_intangible: bool) {
+        self.enter_kinoko_end(gobj, GIANT_END, true, restart_intangible);
     }
 
     /// Growing back from small on the ground, `ftCo_800D2490`.
     #[doc(alias = "ftCo_800D2490")]
-    pub fn enter_small_end(&mut self, gobj: GObjId, x8: bool) {
-        self.enter_kinoko_end(gobj, SMALL_END, false, x8);
+    pub fn enter_small_end(&mut self, gobj: GObjId, restart_intangible: bool) {
+        self.enter_kinoko_end(gobj, SMALL_END, false, restart_intangible);
     }
 
     /// Growing back from small in the air, `ftCo_800D2600`.
     #[doc(alias = "ftCo_800D2600")]
-    pub fn enter_small_end_air(&mut self, gobj: GObjId, x8: bool) {
-        self.enter_kinoko_end(gobj, SMALL_END, true, x8);
+    pub fn enter_small_end_air(&mut self, gobj: GObjId, restart_intangible: bool) {
+        self.enter_kinoko_end(gobj, SMALL_END, true, restart_intangible);
     }
 
     /// Into a growth or a shrink, its ground or air version (`ftCo_800D170C` and the like).
@@ -362,7 +362,7 @@ impl Running<'_> {
     }
 
     /// Into a mushroom's end, its ground or air version (`ftCo_800D1BA0` and the like).
-    fn enter_kinoko_end(&mut self, gobj: GObjId, k: Kinoko, air: bool, x8: bool) {
+    fn enter_kinoko_end(&mut self, gobj: GObjId, k: Kinoko, air: bool, restart_intangible: bool) {
         let prev = self.game.fighter(gobj).motion_id;
         self.kinoko_let_go(gobj);
         let msid = if air { k.air } else { k.ground };
@@ -370,7 +370,7 @@ impl Running<'_> {
         self.save_kinoko_speeds(gobj);
         self.set_kinoko_fall(gobj, prev);
         let fp = self.game.fighter_mut(gobj);
-        fp.set_mv_i32(MV_X8, i32::from(x8));
+        fp.set_mv_i32(MV_X8, i32::from(restart_intangible));
         let (from, to) = (fp.scale.y, fp.scale.x);
         let giant = k.end == addr::GIANT_END_DONE;
         self.start_kinoko_scale(gobj, i32::from(giant), from, to);

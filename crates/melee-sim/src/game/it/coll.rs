@@ -275,11 +275,11 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
             continue;
         }
         let f = game.fighter_id(fg);
-        let x134 = game.fighters[f.0].thrown_hitbox.owner;
-        if x134.is_set() && x134.thrower().is_none() {
+        let owner = game.fighters[f.0].thrown_hitbox.owner;
+        if owner.is_set() && owner.thrower().is_none() {
             code::unported_call("a thrown fighter's hitbox word that isn't a thrower");
         }
-        let thrower = x134.thrower();
+        let thrower = owner.thrower();
         if !(thrower.is_none() || thrower != me.owner || any) {
             continue;
         }
@@ -1142,9 +1142,9 @@ pub fn push_from_items(game: &mut Game, data: &Archives, gobj: GObjId, heavy_onl
             let oj = jobj_of(game, g).expect("jobj");
             let opos = game.objs.jobjs[oj].translate;
             if ecbs_overlap(opos.x, opos.y, &me.push_box, &other.push_box, pos) {
-                let (x1b, nudge) = (other.flags.flags.random_push, other.nudge.x);
+                let (random_push, nudge) = (other.flags.flags.random_push, other.nudge.x);
                 let dir = push_dir(game, pos.x, opos.x, |gm| {
-                    if !x1b {
+                    if !random_push {
                         if reg(nudge) < 0.0 { 1.0 } else { fp::fneg(1.0) }
                     } else if gm.objs.rng.below(2) != 0 {
                         1.0

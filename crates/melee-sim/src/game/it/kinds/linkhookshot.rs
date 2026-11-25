@@ -366,9 +366,12 @@ fn make_links(
     w[6] = mem(fp::fmuls(base(r, attr::X28), s));
     let count = f64::from(r.data.u32(a.0.at(attr::COUNT)) as i32);
     let total = if s > 1.0 {
-        let x8 = base(r, attr::BIG_SHARE);
-        let rest = fp::fmuls(fp::fsubs(1.0, x8), fp::fmuls(count, base(r, attr::LENGTH)));
-        fp::fmadds(x8, fp::fmuls(count, reg(link_len)), rest)
+        let big_share = base(r, attr::BIG_SHARE);
+        let rest = fp::fmuls(
+            fp::fsubs(1.0, big_share),
+            fp::fmuls(count, base(r, attr::LENGTH)),
+        );
+        fp::fmadds(big_share, fp::fmuls(count, reg(link_len)), rest)
     } else {
         fp::fmuls(count, reg(link_len))
     };

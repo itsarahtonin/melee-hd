@@ -48,12 +48,12 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.change_motion_state(gobj, ms::SPECIAL_AIR_HI, 0, 0.0, 1.0, 0.0, None);
         self.set_damage_cb(gobj, Some(addr::DAMAGE_CB));
-        let x60 = reg(self.kp_attr_f32(f, attr::X60));
-        let x54 = self.kp_attr_f32(f, attr::X54);
+        let ground_max = reg(self.kp_attr_f32(f, attr::X60));
+        let rise = self.kp_attr_f32(f, attr::X54);
         let fp = &mut self.game.fighters[f.0];
         fp.cmd_vars = [0; 4];
-        Self::clamp_ground_vel(fp, x60);
-        fp.self_vel.y = x54;
+        Self::clamp_ground_vel(fp, ground_max);
+        fp.self_vel.y = rise;
         self.kp_hi_start(gobj);
         self.kp_special_hi_anim(gobj);
     }
@@ -119,9 +119,14 @@ impl Running<'_> {
     pub fn kp_special_hi_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] == 0 {
-            let x68 = reg(self.kp_attr_f32(f, attr::X68));
-            let x60 = reg(self.kp_attr_f32(f, attr::X60));
-            Self::ground_accel_to_stick(&mut self.game.fighters[f.0], 0.0, x68, x60);
+            let ground_accel = reg(self.kp_attr_f32(f, attr::X68));
+            let ground_max = reg(self.kp_attr_f32(f, attr::X60));
+            Self::ground_accel_to_stick(
+                &mut self.game.fighters[f.0],
+                0.0,
+                ground_accel,
+                ground_max,
+            );
             self.self_movement_from_ground(gobj);
         } else {
             self.ground_friction(gobj);
@@ -134,13 +139,13 @@ impl Running<'_> {
     pub fn kp_special_air_hi_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] == 0 {
-            let x58 = reg(self.kp_attr_f32(f, attr::X58));
-            let x5c = reg(self.kp_attr_f32(f, attr::X5C));
-            let x6c = reg(self.kp_attr_f32(f, attr::X6C));
-            let x64 = reg(self.kp_attr_f32(f, attr::X64));
+            let gravity = reg(self.kp_attr_f32(f, attr::X58));
+            let max_fall = reg(self.kp_attr_f32(f, attr::X5C));
+            let drift_accel = reg(self.kp_attr_f32(f, attr::X6C));
+            let air_max = reg(self.kp_attr_f32(f, attr::X64));
             let fp = &mut self.game.fighters[f.0];
-            Self::fall(fp, x58, x5c);
-            Self::drift_simple(fp, 0.0, x6c, x64);
+            Self::fall(fp, gravity, max_fall);
+            Self::drift_simple(fp, 0.0, drift_accel, air_max);
         } else {
             self.air_physics(gobj);
         }
@@ -171,8 +176,8 @@ impl Running<'_> {
             let frame = self.game.fighters[f.0].cur_anim_frame;
             self.change_motion_state(gobj, ms::SPECIAL_AIR_HI, SWITCH, frame, 1.0, 0.0, None);
             self.set_damage_cb(gobj, Some(addr::DAMAGE_CB));
-            let x64 = reg(self.kp_attr_f32(f, attr::X64));
-            Self::clamp_self_vel_x(&mut self.game.fighters[f.0], x64);
+            let air_max = reg(self.kp_attr_f32(f, attr::X64));
+            Self::clamp_self_vel_x(&mut self.game.fighters[f.0], air_max);
             self.set_effect_hitlag_cbs(gobj);
             self.game.fighters[f.0].set_mv_i32(mv::HI_GROUNDED, 0);
         } else {
@@ -188,19 +193,19 @@ impl Running<'_> {
     fn kp_air_hi_land(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.land(gobj);
-        let x70 = self.kp_attr_f32(f, attr::X70);
-        let x78 = reg(self.kp_attr_f32(f, attr::X78));
+        let window = self.kp_attr_f32(f, attr::X70);
+        let frames_before = reg(self.kp_attr_f32(f, attr::X78));
         let fp = &self.game.fighters[f.0];
         let spun = fp.mv_f32(mv::HI_FRAMES);
-        let frame = if x70 < spun && spun < x70 {
-            mem(fp::fsubs(reg(fp.cur_anim_frame), x78))
+        let frame = if window < spun && spun < window {
+            mem(fp::fsubs(reg(fp.cur_anim_frame), frames_before))
         } else {
             fp.cur_anim_frame
         };
         self.change_motion_state(gobj, ms::SPECIAL_HI, SWITCH, frame, 1.0, 0.0, None);
         self.set_damage_cb(gobj, Some(addr::DAMAGE_CB));
-        let x60 = reg(self.kp_attr_f32(f, attr::X60));
-        Self::clamp_ground_vel(&mut self.game.fighters[f.0], x60);
+        let ground_max = reg(self.kp_attr_f32(f, attr::X60));
+        Self::clamp_ground_vel(&mut self.game.fighters[f.0], ground_max);
     }
 
     /// `ftKp_SpecialAirHi_Coll`: rising, landing as the ground's spin; falling, landing (on

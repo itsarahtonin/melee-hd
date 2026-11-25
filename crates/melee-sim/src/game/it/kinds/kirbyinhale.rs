@@ -115,7 +115,7 @@ pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId, facing_dir: f32) {
     v.set_f32(off::X1F4, hold);
     v.set_vec(off::X1E8, scale);
     hitbox::start_blink(r.game, gobj);
-    lib2725::set_xd09(r.game, gobj, true);
+    lib2725::set_no_catch(r.game, gobj, true);
     lib2725::clear_stomp(r.game, gobj);
     lib26b1::clear_dcc_b3(r.game, gobj);
     lib2725::stop_all(r.game, gobj);
@@ -201,7 +201,7 @@ pub fn hold(r: &mut Running, gobj: GObjId) {
     lib26b1::hide(r.game, gobj);
     hitbox::start_blink(r.game, gobj);
     maplib::enter_air(item_mut(r.game, gobj));
-    lib2725::set_xd09(r.game, gobj, true);
+    lib2725::set_no_catch(r.game, gobj, true);
     lib2725::stop_all(r.game, gobj);
 }
 

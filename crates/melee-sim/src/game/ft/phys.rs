@@ -395,7 +395,7 @@ impl Running<'_> {
     #[doc(alias = "ft_80085030")]
     pub fn ground_anim_motion(&mut self, gobj: GObjId, friction: f64, facing: f64) {
         let fp = self.game.fighter_mut(gobj);
-        if super::anim::x594_bit(fp, 0) {
+        if super::anim::anim_bit(fp, 0) {
             fp.ground_accel_1 = mem(fp::fmsubs(reg(fp.trans_n_offset.z), facing, reg(fp.gr_vel)));
         } else {
             Self::ground_accel_deaccel(fp, friction);
@@ -416,7 +416,7 @@ impl Running<'_> {
     #[doc(alias = "ft_800850E0")]
     pub fn ground_anim_speed(&mut self, gobj: GObjId, friction: f64, facing: f64) {
         let fp = self.game.fighter_mut(gobj);
-        if super::anim::x594_bit(fp, 0) {
+        if super::anim::anim_bit(fp, 0) {
             fp.gr_vel = mem(fp::fmuls(reg(fp.trans_n_offset.z), facing));
         } else {
             Self::ground_accel_deaccel(fp, friction);

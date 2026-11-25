@@ -58,22 +58,22 @@ impl Running<'_> {
         // `db_804D4AF8`, which turns the legs' reach on, is 1 on a retail disc.
         let scale_y = reg(fp.scale.y);
         let ft_data = fp.ft_data.expect("a fighter without data");
-        let x58 = self.data.ptr(ft_data.at(0x58)).expect("ftData::x58");
+        let leg_desc = self.data.ptr(ft_data.at(0x58)).expect("ftData::x58");
         // The legs share one `IKState`: the second starts from the lengths the first's reach
         // left.
-        let mut len0 = mem(fp::fmuls(reg(self.data.f32(x58.at(4))), scale_y));
+        let mut len0 = mem(fp::fmuls(reg(self.data.f32(leg_desc.at(4))), scale_y));
         let mut len1 = mem(fp::fmuls(
             scale_y,
             fp::fadds(
-                reg(self.data.f32(x58.at(0xC))),
-                reg(self.data.f32(x58.at(0x18))),
+                reg(self.data.f32(leg_desc.at(0xC))),
+                reg(self.data.f32(leg_desc.at(0x18))),
             ),
         ));
         for (bit, side, turn) in [(2, 0, -1.0f32), (1, 1, 1.0)] {
             if flags & bit == 0 {
                 continue;
             }
-            let part = |at: u32| i32::from(self.data.u8(x58.at(at + side)));
+            let part = |at: u32| i32::from(self.data.u8(leg_desc.at(at + side)));
             let joints = [part(0), part(8), part(0x10)]
                 .map(|p| self.bone(f, p).joint.expect("a leg's part without a joint"));
             let [pos0, pos1, pos2] =

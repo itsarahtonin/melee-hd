@@ -114,7 +114,8 @@ impl Attr {
         self.u8(data, 1) & 0x20 != 0
     }
 
-    pub fn x1_4(self, data: &Archives) -> bool {
+    #[doc(alias("x1_4"))]
+    pub fn keeps_clear(self, data: &Archives) -> bool {
         self.u8(data, 1) & 0x10 != 0
     }
 

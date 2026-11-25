@@ -26,7 +26,7 @@ pub fn clear_attack_record(ip: &mut Item) {
 pub fn copy_fighter_attack(game: &mut Game, gobj: GObjId, fighter: GObjId) {
     let f = super::owner::fighter_of(game, fighter);
     let fp = &game.fighters[f.0];
-    let (id, instance, x2070, x2074) = (
+    let (id, instance, flags, record) = (
         fp.attack_id,
         fp.attack_instance,
         fp.attack_flags,
@@ -35,11 +35,11 @@ pub fn copy_fighter_attack(game: &mut Game, gobj: GObjId, fighter: GObjId) {
     let ip = item_mut(game, gobj);
     ip.attack_id = id;
     ip.attack_instance = instance;
-    ip.attack_flags = x2070;
-    ip.attack_record_a = x2074.percents;
-    ip.attack_record_b = x2074.kb_and_thrower;
-    ip.attack_record_word = u32::from_be_bytes(x2074.flags);
-    ip.attack_record_short = x2074.record_id;
+    ip.attack_flags = flags;
+    ip.attack_record_a = record.percents;
+    ip.attack_record_b = record.kb_and_thrower;
+    ip.attack_record_word = u32::from_be_bytes(record.flags);
+    ip.attack_record_short = record.record_id;
     let i = super::item_of(game, gobj);
     carry_record(game, RenderOf::Fighter(f), i);
 }
@@ -66,7 +66,7 @@ pub fn track_spawn(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
             copy_fighter_attack(game, gobj, p2.unwrap());
         } else {
             let o = item(game, p2.expect("an item made by an item without one"));
-            let (id, inst, x90, x94, x9c, xa4, xa8) = (
+            let (id, inst, flags, record_a, record_b, record_word, record_short) = (
                 o.attack_id,
                 o.attack_instance,
                 o.attack_flags,
@@ -78,11 +78,11 @@ pub fn track_spawn(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
             let ip = item_mut(game, gobj);
             ip.attack_id = id;
             ip.attack_instance = inst;
-            ip.attack_flags = x90;
-            ip.attack_record_a = x94;
-            ip.attack_record_b = x9c;
-            ip.attack_record_word = xa4;
-            ip.attack_record_short = xa8;
+            ip.attack_flags = flags;
+            ip.attack_record_a = record_a;
+            ip.attack_record_b = record_b;
+            ip.attack_record_word = record_word;
+            ip.attack_record_short = record_short;
             let (from, to) = (
                 super::item_of(game, p2.unwrap()),
                 super::item_of(game, gobj),

@@ -821,7 +821,7 @@ pub fn swallowed(r: &mut Running, gobj: GObjId) {
     let victim = item(r.game, gobj).grab_victim;
     set_target(r, gobj, victim);
     super::super::set_flag(&mut item_mut(r.game, gobj).status_flags, 5, false);
-    lib2725::set_xd09(r.game, gobj, true);
+    lib2725::set_no_catch(r.game, gobj, true);
 }
 
 /// Arms the swallow (`it_80274F28`): fighters with `x1A6A`'s first bit pass under it.

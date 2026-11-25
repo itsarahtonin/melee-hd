@@ -311,7 +311,7 @@ impl Running<'_> {
             (0..n as u32).map(|k| data.u8(p.at(k))).collect()
         };
         let req = super::save::SaveRequest {
-            data: super::save::card_data_bytes(&self.game.game_data.thing),
+            data: super::save::card_data_bytes(&self.game.game_data.card),
             banner: bytes(idx, 0x1800),
             icons: bytes(3, 0x600),
         };
@@ -385,7 +385,7 @@ impl Running<'_> {
             .clock_read(self.data, crate::game::session::TB_READ);
         let add = self.game.main_lib.take_power_time(now);
         // `gm_GetPowerTime`.
-        let t = &mut self.game.game_data.thing.save_data.power_time;
+        let t = &mut self.game.game_data.card.save_data.power_time;
         *t = t.wrapping_add(add);
         self.game.card_game.dirty = true;
     }

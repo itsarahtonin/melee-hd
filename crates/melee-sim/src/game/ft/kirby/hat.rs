@@ -91,7 +91,7 @@ impl Running<'_> {
             let addr = self.game.fighter_dobj_lists.addr(l.0);
             let (game, data) = (&*self.game, self.data);
             crate::hsd::export::with_image(|img| {
-                crate::game::export::x2040_list(game, data, img, l)
+                crate::game::export::export_dobj_list(game, data, img, l)
             });
             crate::hsd::heap::obj_free(crate::hsd::heap::Kind::FighterX2040, addr);
             self.game.fighter_dobj_lists.free(l.0);
@@ -655,13 +655,14 @@ impl Running<'_> {
                     continue;
                 }
                 if bone.flags[1] & 0x02 != 0 {
-                    let xd = usize::from(bone.tree[1] >> 1);
+                    let dobj_index = usize::from(bone.tree[1] >> 1);
                     let list = if bone.flags[1] & 0x04 != 0 {
                         second
                     } else {
                         main
                     };
-                    let d = self.game.fighter_dobj_lists[list.expect("a model's DObj list").0][xd];
+                    let d = self.game.fighter_dobj_lists[list.expect("a model's DObj list").0]
+                        [dobj_index];
                     let next = d.and_then(|d| self.game.objs.dobjs[d].next);
                     dobj::remove_all(&mut self.game.objs, next);
                     if let Some(d) = d {
@@ -681,7 +682,7 @@ impl Running<'_> {
                 let addr = self.game.fighter_dobj_lists.addr(list.0);
                 let (game, data) = (&*self.game, self.data);
                 crate::hsd::export::with_image(|img| {
-                    crate::game::export::x2040_list(game, data, img, list)
+                    crate::game::export::export_dobj_list(game, data, img, list)
                 });
                 crate::hsd::heap::obj_free(crate::hsd::heap::Kind::FighterX2040, addr);
                 self.game.fighter_dobj_lists.free(list.0);

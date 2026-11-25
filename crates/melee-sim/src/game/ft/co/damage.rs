@@ -74,8 +74,8 @@ impl Running<'_> {
         }
         if self.jump_input(gobj) != 0 {
             let fp = self.game.fighter_mut(gobj);
-            let x0 = fp.mv_f32(DAMAGE_X0);
-            fp.set_mv_f32(DAMAGE_X14, reg(x0));
+            let hitstun = fp.mv_f32(DAMAGE_X0);
+            fp.set_mv_f32(DAMAGE_X14, reg(hitstun));
             return true;
         }
         false
@@ -118,8 +118,8 @@ impl Running<'_> {
         }
         let window = self.common().f32(0x1D0);
         let fp = self.game.fighter_mut(gobj);
-        let x14 = fp.mv_f32(DAMAGE_X14);
-        if x14 != 0.0 && x14 <= window {
+        let tech_buffer = fp.mv_f32(DAMAGE_X14);
+        if tech_buffer != 0.0 && tech_buffer <= window {
             fp.input.pressed_buttons |= PAD_XY;
         }
         if fp.ground_or_air == GA_AIR {

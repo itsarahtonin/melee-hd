@@ -117,9 +117,9 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let b = fp.camera_box.expect("a fighter without a camera box");
         let ft_data = fp.ft_data.expect("a fighter without data");
-        let x3c = self.data.ptr(ft_data.at(0x3C)).expect("ftData::x3C");
+        let box_desc = self.data.ptr(ft_data.at(0x3C)).expect("ftData::x3C");
         let s = reg(fp.scale.y);
-        let v = |o: u32| mem(fp::fmuls(reg(self.data.f32(x3c.at(o))), s));
+        let v = |o: u32| mem(fp::fmuls(reg(self.data.f32(box_desc.at(o))), s));
         let (x0, y0, z0) = (v(0), v(4), v(8));
         let zoom = reg(self.game.stage_info.camera_settings().cam_fixed_zoom);
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);

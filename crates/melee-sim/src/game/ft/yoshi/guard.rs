@@ -30,8 +30,8 @@ pub(crate) const YS_ROLL_ANIM: u32 = 0x8009_9644;
 impl Running<'_> {
     /// The shield joint's index among the parts (`ftData::x8->x11`).
     fn ys_shield_part(&self, f: FighterId) -> i32 {
-        let x8 = self.ft_model_desc(&self.game.fighters[f.0]);
-        i32::from(self.data.u8(x8.at(0x11)))
+        let model_desc = self.ft_model_desc(&self.game.fighters[f.0]);
+        i32::from(self.data.u8(model_desc.at(0x11)))
     }
 
     /// One hurtbox on the shield's joint, the others intangible, `ftYs_Init_8012BDA0`
@@ -76,11 +76,11 @@ impl Running<'_> {
     fn ys_shield_start(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.set_hurtbox_state(f, HURT_DISABLED);
-        let x268 = self.common().f32(0x268);
+        let min_hold = self.common().f32(0x268);
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_i32(mv::GUARD_XC, 0);
         fp.set_mv_f32(mv::GUARD_X0, 0.0);
-        fp.set_mv_f32(mv::GUARD_X10, reg(x268));
+        fp.set_mv_f32(mv::GUARD_X10, reg(min_hold));
         fp.set_mv_i32(mv::GUARD_X24, 0);
         fp.set_mv_i32(mv::GUARD_X20, 0);
         let part = self.ys_shield_part(f);
@@ -223,19 +223,20 @@ impl Running<'_> {
         }
         self.ys_shield_hurtbox(gobj);
         let c = self.common();
-        let (x28c, x290, x294) = (reg(c.f32(0x28C)), reg(c.f32(0x290)), reg(c.f32(0x294)));
+        let (stun_scale, stun_base, push_scale) =
+            (reg(c.f32(0x28C)), reg(c.f32(0x290)), reg(c.f32(0x294)));
         let fp = &self.game.fighters[f.0];
         let stun = fp::fmadds(
-            x28c,
+            stun_scale,
             fp::fmuls(
                 fp::frsp(f64::from(fp.shield_hit_damage)),
                 fp::fsubs(1.0, reg(fp.lightshield_amount)),
             ),
-            x290,
+            stun_base,
         );
         if !power {
             let fp = &mut self.game.fighters[f.0];
-            fp.gr_vel = mem(fp::fmuls(stun, x294));
+            fp.gr_vel = mem(fp::fmuls(stun, push_scale));
             fp.gr_vel = if fp.specialn_facing_dir < 0.0 {
                 fp.gr_vel
             } else {
@@ -264,14 +265,14 @@ impl Running<'_> {
     /// (`ftYs_Shield_8012CACC`).
     fn ys_powershield_start(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (x2a4, x2b4) = (c.f32(0x2A4), c.f32(0x2B4));
+        let (reflect_frames, window_frames) = (c.f32(0x2A4), c.f32(0x2B4));
         let fp = self.game.fighter_mut(gobj);
         fp.active_timer.trigger = 0xFE;
         fp.powershield_early = true;
         fp.powershield_late = true;
         fp.powershield = true;
-        fp.set_mv_f32(mv::GUARD_X14, reg(x2a4));
-        fp.set_mv_f32(mv::GUARD_X18, reg(x2b4));
+        fp.set_mv_f32(mv::GUARD_X14, reg(reflect_frames));
+        fp.set_mv_f32(mv::GUARD_X18, reg(window_frames));
         self.powershield_reflect_shape(gobj, CodeRef(addr::SHIELD_REFLECT_CB));
     }
 

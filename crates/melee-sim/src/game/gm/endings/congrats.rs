@@ -454,7 +454,7 @@ impl Running<'_> {
                 return CharacterKind::DrMario as u8;
             }
         }
-        let r = &self.game.game_data.thing.save_data.challenger_records;
+        let r = &self.game.game_data.card.save_data.challenger_records;
         let count = (0..0x19)
             .filter(|&i| {
                 (r.classic_cleared | r.adventure_cleared | r.all_star_cleared) & (1 << i) != 0
@@ -502,7 +502,7 @@ impl Running<'_> {
             let t = super::super::unlocks::mode_trophy(ck, major);
             if again {
                 let n = t as u32;
-                r.game.game_data.thing.save_data.trophies[(n / 32) as usize] &= !(1 << (n % 32));
+                r.game.game_data.card.save_data.trophies[(n / 32) as usize] &= !(1 << (n % 32));
             }
             r.give_record_trophy(t);
         };

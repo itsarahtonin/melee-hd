@@ -147,8 +147,8 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         1
     };
     ip.coll.set_facing_dir(dir);
-    let x1c = attr_of(ip).f32(data, super::data::attr::DAMAGE_MUL);
-    ip.coll.weight = x1c;
+    let weight = attr_of(ip).f32(data, super::data::attr::DAMAGE_MUL);
+    ip.coll.weight = weight;
     if spawn.flags[0] & 0x80 != 0 {
         if spawn.ground_or_air == 1 {
             place_air(r, gobj, spawn.pos);
@@ -495,9 +495,9 @@ pub fn set_box(game: &mut Game, gobj: GObjId, b: _itECB) {
 #[doc(alias = "it_80277040")]
 pub fn slides(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
     let c = common_data(game);
-    let x50 = attr_of(item(game, gobj)).f32(data, super::data::attr::X50);
+    let slide_scale = attr_of(item(game, gobj)).f32(data, super::data::attr::X50);
     let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
-    if abs(reg(x50)) < f64::from(1.0e-5_f32) {
+    if abs(reg(slide_scale)) < f64::from(1.0e-5_f32) {
         let ip = item_mut(game, gobj);
         ip.slide_vel.y = 0.0;
         ip.slide_vel.x = 0.0;
@@ -519,11 +519,11 @@ pub fn slides(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
     let down = Vec3::new(0.0, -1.0, 0.0);
     let cross = normal.cross_normalized(down);
     let slope = cross.cross_normalized(normal);
-    let x50 = reg(x50);
-    let was_x = fp::fdivs(reg(ip.last_slide_vel.x), x50);
-    let was_y = fp::fdivs(reg(ip.last_slide_vel.y), x50);
-    ip.slide_vel.x = mem(fp::fmuls(reg(slope.x), x50));
-    ip.slide_vel.y = mem(fp::fmuls(reg(slope.y), x50));
+    let slide_scale = reg(slide_scale);
+    let was_x = fp::fdivs(reg(ip.last_slide_vel.x), slide_scale);
+    let was_y = fp::fdivs(reg(ip.last_slide_vel.y), slide_scale);
+    ip.slide_vel.x = mem(fp::fmuls(reg(slope.x), slide_scale));
+    ip.slide_vel.y = mem(fp::fmuls(reg(slope.y), slide_scale));
     // `checkNormalAngle`: the surface turned far enough from the one it remembers, on the
     // same line.
     let mut turned = reg(normal.angle(ip.surface_normal));
@@ -560,11 +560,11 @@ pub fn slide(game: &mut Game, data: &Archives, gobj: GObjId, pos: &mut Vec3) {
         return;
     }
     let c = common_data(game);
-    let x54 = reg(attr_of(ip).f32(data, super::data::attr::X54));
+    let skid_decay = reg(attr_of(ip).f32(data, super::data::attr::X54));
     let ip = item_mut(game, gobj);
     ip.skid_vel = ip.slide_vel.sdk_add(ip.skid_vel);
-    ip.skid_vel.x = mem(fp::fmuls(reg(ip.skid_vel.x), x54));
-    ip.skid_vel.y = mem(fp::fmuls(reg(ip.skid_vel.y), x54));
+    ip.skid_vel.x = mem(fp::fmuls(reg(ip.skid_vel.x), skid_decay));
+    ip.skid_vel.y = mem(fp::fmuls(reg(ip.skid_vel.y), skid_decay));
     let len2 = |v: Vec3| fp::fadds(fp::fmuls(reg(v.x), reg(v.x)), fp::fmuls(reg(v.y), reg(v.y)));
     let cap = c.f32(data, common::XC8);
     if reg(crate::math::sqrt_accurate(mem(len2(ip.skid_vel)))) > reg(cap) {

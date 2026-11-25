@@ -164,7 +164,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
         user_data: Option<super::super::gr::CollUser>,
         joint_id: i32,
         coll: &mut CollData,
-        x50: i32,
+        weight: i32,
         kind: i32,
         dy: f32,
     ) {
@@ -228,14 +228,18 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                             .yakumono(super::super::gr::GrKind::GreatBay),
                         g,
                         coll,
-                        x50,
+                        weight,
                         kind,
                     );
                 }
             }
             super::super::gr::great_bay::BALLOON_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::great_bay::balloon_touched(&mut self.grounds[g.0], coll, x50);
+                    super::super::gr::great_bay::balloon_touched(
+                        &mut self.grounds[g.0],
+                        coll,
+                        weight,
+                    );
                 }
             }
             super::super::gr::peachs_castle::LIFT_TOUCHED => {
@@ -244,7 +248,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         &mut self.grounds[g.0],
                         joint_id,
                         coll.ecb_flags.b1234.into(),
-                        x50,
+                        weight,
                     );
                 }
             }
@@ -301,7 +305,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         root,
                         g,
                         coll,
-                        x50,
+                        weight,
                     );
                 }
             }
@@ -330,7 +334,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         self.data,
                         g,
                         joint_id,
-                        x50,
+                        weight,
                         kind,
                     );
                 }
@@ -342,7 +346,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         &mut self.grounds[g.0],
                         joint_id,
                         coll,
-                        x50,
+                        weight,
                     );
                 }
             }
@@ -750,8 +754,8 @@ impl Running<'_> {
         if self.no_ledges(f) {
             return self.air_coll(gobj, false, |_| {}, |c, cd| pass(c, cd, 0));
         }
-        let x44 = self.ft_ecb_desc(f);
-        let snap = reg(self.data.f32(x44.at(0x18)));
+        let ecb_desc = self.ft_ecb_desc(f);
+        let snap = reg(self.data.f32(ecb_desc.at(0x18)));
         let scale = reg(fp.scale.y);
         let mul = reg(self.common().f32(0x1CC));
         let scaled = mem(fp::fmuls(mul, fp::fmuls(snap, scale)));
@@ -1393,10 +1397,10 @@ impl Running<'_> {
     /// height, negated.
     #[doc(alias = "ftCo_800D0EC8")]
     pub fn landing_threshold(&self, f: FighterId) -> f64 {
-        let x310 = reg(self.common().f32(0x310));
+        let threshold = reg(self.common().f32(0x310));
         let k = reg(self.data.f32(self.common_ptr(0x30).at(0x30)));
         let scale = reg(self.game.fighters[f.0].scale.y);
-        fp::fneg(scaled_by_height(x310, scale, k))
+        fp::fneg(scaled_by_height(threshold, scale, k))
     }
 
     /// Whether the fighter is airborne.

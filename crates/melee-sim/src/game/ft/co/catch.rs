@@ -343,7 +343,7 @@ impl Running<'_> {
     #[doc(alias = "ftColl_80078754")]
     pub fn grab_landed(&mut self, gobj: GObjId, victim: GObjId) {
         let fp = self.game.fighter(gobj);
-        let (kind, x2070, instance) = (
+        let (kind, attack_flags, instance) = (
             fp.kind,
             u32::from_be_bytes(fp.attack_flags),
             fp.attack_record.record_id,
@@ -353,7 +353,7 @@ impl Running<'_> {
             victim,
             1,
             kind,
-            x2070,
+            attack_flags,
             crate::game::pl::trick::AttackRecord::Fighter(gobj),
             instance,
             false,

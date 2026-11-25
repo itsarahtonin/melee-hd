@@ -28,7 +28,7 @@ pub struct Level {
 #[allow(clippy::too_many_arguments)]
 const fn ce(
     items: u8,
-    _x1: u8,
+    _unused: u8,
     attack: u16,
     defense: u16,
     enemies: [u8; 10],
@@ -1028,19 +1028,19 @@ impl Running<'_> {
         if left == 0 {
             super::one_player::record_target_clear(self.game, sel, frames);
         }
-        let x7c = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
-        if !x7c.target_cleared {
+        let records = &mut self.game.game_data.card.save_data.fighters[usize::from(sel)].records;
+        if !records.target_cleared {
             if left == 0 {
-                x7c.target_cleared = true;
-                x7c.target_record = frames;
+                records.target_cleared = true;
+                records.target_record = frames;
                 return;
             }
             let broken = total.wrapping_sub(left) as u32;
-            if x7c.target_record < broken {
-                x7c.target_record = broken;
+            if records.target_record < broken {
+                records.target_record = broken;
             }
-        } else if left == 0 && x7c.target_record > frames {
-            x7c.target_record = frames;
+        } else if left == 0 && records.target_record > frames {
+            records.target_record = frames;
         }
     }
 }

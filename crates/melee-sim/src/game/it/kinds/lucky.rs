@@ -361,8 +361,8 @@ pub fn spawn_egg(
 pub fn egg_spawned(r: &mut Running, gobj: GObjId) {
     let life = attr_f32(r, gobj, 0);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
-    let x4 = attr_i32(r, gobj, 4);
-    pokemon::vars(r.game, gobj).set_i32(NEXT, x4);
+    let next = attr_i32(r, gobj, 4);
+    pokemon::vars(r.game, gobj).set_i32(NEXT, next);
     egg_fell(r, gobj);
 }
 

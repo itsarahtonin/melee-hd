@@ -193,10 +193,10 @@ impl Running<'_> {
         self.game.fighters[dst_id.0].articles_visible = b4;
         // `dst->ft_data->x8`'s parts: the head's (`x12`) for what's worn, the hand's (`x10`).
         let (head, hand) = {
-            let x8 = self.ft_model_desc(&self.game.fighters[dst_id.0]);
+            let model_desc = self.ft_model_desc(&self.game.fighters[dst_id.0]);
             (
-                i32::from(self.data.u8(x8.at(0x12))),
-                i32::from(self.data.u8(x8.at(0x10))),
+                i32::from(self.data.u8(model_desc.at(0x12))),
+                i32::from(self.data.u8(model_desc.at(0x10))),
             )
         };
         let src = &self.game.fighters[src_id.0];
@@ -281,19 +281,19 @@ impl Running<'_> {
     pub fn scale_ledge_snap(&mut self, gobj: GObjId, scale_y: f32) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let x44 = self
+        let ecb_desc = self
             .data
             .ptr(fp.ft_data.expect("a fighter without data").at(0x44))
             .expect("ftData::x44");
         let scale = reg(scale_y);
-        let at = |o: u32| mem(fp::fmuls(reg(self.data.f32(x44.at(o))), scale));
-        let (x124, sh, sy, sx) = (at(0xC), at(0x18), at(0x14), at(0x10));
+        let at = |o: u32| mem(fp::fmuls(reg(self.data.f32(ecb_desc.at(o))), scale));
+        let (side_lift, sh, sy, sx) = (at(0xC), at(0x18), at(0x14), at(0x10));
         let weight = fp.co_attrs.weight;
         let ten = mem(fp::fmuls(10.0, reg(fp.scale.y)));
         let cd = &mut self.game.fighters[f.0].coll_data;
         let joints = cd.ecb_source.kind == ECB_SOURCE_JOBJ;
         if joints {
-            cd.ecb_source.side_lift = x124;
+            cd.ecb_source.side_lift = side_lift;
             cd.set_ledge_snap(sx, sy, sh);
         }
         cd.weight = weight;

@@ -202,11 +202,11 @@ impl Running<'_> {
 
     /// A thrown fighter's thrower (`x1064_thrownHitbox.x134.owner`, `Fighter::x1198`).
     fn thrower(&self, f: FighterId) -> Option<GObjId> {
-        let x134 = self.game.fighters[f.0].thrown_hitbox.owner;
-        if x134.is_set() && x134.thrower().is_none() {
+        let owner = self.game.fighters[f.0].thrown_hitbox.owner;
+        if owner.is_set() && owner.thrower().is_none() {
             unported_call("a thrown fighter's hitbox word that isn't a thrower");
         }
-        x134.thrower()
+        owner.thrower()
     }
 
     /// The highest of the fighter's invincibility states, `ftColl_8007B868`: 2 makes it
@@ -642,7 +642,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[me.0];
         let (fx, fg) = (fp.cur_pos.x, fp.gobj);
         let over = damage > fp.reflect.max_damage;
-        let (x2070, rec, dmg_mul, speed_mul) = (
+        let (attack_flags, rec, dmg_mul, speed_mul) = (
             i32::from_be_bytes(fp.attack_flags),
             fp.attack_record.clone(),
             fp.reflect.damage_mul,
@@ -660,7 +660,7 @@ impl Running<'_> {
             }
         } else {
             ip.reflector = fg;
-            ip.reflect_attack_flags = x2070;
+            ip.reflect_attack_flags = attack_flags;
             ip.reflect_record_a = rec.percents;
             ip.reflect_record_b = rec.kb_and_thrower;
             ip.reflect_record_word = i32::from_be_bytes(rec.flags);
@@ -723,7 +723,7 @@ impl Running<'_> {
     fn shield_hit(&mut self, v: FighterId, j: usize, me: FighterId) {
         self.hit_group(v, j, 1, victim(me), false);
         let h0 = &self.game.fighters[v.0].hitboxes[j];
-        let (dmg, element, x34, pos) = (
+        let (dmg, element, shield_damage, pos) = (
             whole_damage(reg(h0.damage)),
             h0.element,
             h0.shield_damage,
@@ -773,7 +773,7 @@ impl Running<'_> {
             self.record_powershield(slot);
             self.spawn_effect(27, pos, None);
         } else {
-            let total = dmg.wrapping_add(x34);
+            let total = dmg.wrapping_add(shield_damage);
             mf.shield_damage_taken = mf.shield_damage_taken.wrapping_add(total.max(0));
             mf.shield_hit_slot = i32::from(other_player);
             mf.shield_hit_by_sub = other_sub;
@@ -1580,7 +1580,7 @@ impl Running<'_> {
         };
         self.item_add_victim(g, j, mode, victim(me), false);
         let h = &it::item(self.game, g).hitboxes[j].hit;
-        let (dmg, x34, element, x42_b3, x42_b4, pos) = (
+        let (dmg, shield_damage, element, bounces_off_shield, meets_reflector, pos) = (
             whole_damage(reg(h.damage)),
             h.shield_damage,
             h.element,
@@ -1592,7 +1592,7 @@ impl Running<'_> {
             let slow = reg(it::item::common_data(self.game).f32(self.data, IT_SLOW_FOR_ITEM));
             let angle = self.common().f32(0x2D0);
             let mf = &self.game.fighters[me.0];
-            let (deflects, deflect_off, mx, mg, unk1) = (
+            let (deflects, deflect_off, mx, mg, counter_min_hitlag) = (
                 mf.state_flags.shield_deflects,
                 mf.state_flags.shield_no_entry,
                 mf.cur_pos.x,
@@ -1601,7 +1601,7 @@ impl Running<'_> {
             );
             let ip = it::item_mut(self.game, g);
             ip.shield_damage = dmg;
-            it::set_flag(&mut ip.hurt_flags, 5, !deflect_off && x42_b3);
+            it::set_flag(&mut ip.hurt_flags, 5, !deflect_off && bounces_off_shield);
             ip.met_fighter = mg;
             let vx = reg(ip.vel.x);
             let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
@@ -1631,8 +1631,8 @@ impl Running<'_> {
                     ip.shield_normal = entry.normal;
                 }
             }
-            if unk1 != 0.0 {
-                ip.min_hitlag = unk1;
+            if counter_min_hitlag != 0.0 {
+                ip.min_hitlag = counter_min_hitlag;
             }
         }
         let owner = it::item(self.game, g).owner;
@@ -1649,7 +1649,7 @@ impl Running<'_> {
         let mf = &mut self.game.fighters[me.0];
         mf.shield_damage_taken = mf
             .shield_damage_taken
-            .wrapping_add(dmg.wrapping_add(x34).max(0));
+            .wrapping_add(dmg.wrapping_add(shield_damage).max(0));
         match owner_fighter {
             Some((player, sub)) => {
                 mf.shield_hit_slot = i32::from(player);
@@ -1667,7 +1667,7 @@ impl Running<'_> {
             mf.shield_hit_element = element as i32;
             mf.shield_hit_by = entity;
         }
-        if mf.counter_item_min_hitlag != 0.0 && x42_b4 {
+        if mf.counter_item_min_hitlag != 0.0 && meets_reflector {
             mf.min_hitlag = mf.counter_item_min_hitlag;
         }
         self.spawn_effect(0x41C, pos, None);
@@ -2390,11 +2390,14 @@ impl Running<'_> {
         let w = fp::fmuls(reg(weight), f(0xF4));
         let weight_term = fp::fsubs(f(0xF8), fp::fdivs(fp::fmuls(w, f(0xF8)), fp::fadds(1.0, w)));
         let growth = if h.set_kb != 0 {
-            let x118 = f(0x118);
+            let set_kb_scale = f(0x118);
             fp::fmadds(
-                x118,
+                set_kb_scale,
                 f(0x110),
-                fp::fmuls(f(0x114), fp::fmuls(x118, fp::frsp(f64::from(h.set_kb)))),
+                fp::fmuls(
+                    f(0x114),
+                    fp::fmuls(set_kb_scale, fp::frsp(f64::from(h.set_kb))),
+                ),
             )
         } else {
             let damage = if fp.is_stamina {
@@ -2575,7 +2578,7 @@ impl Running<'_> {
                     .game
                     .fighter_id(e.gobj.expect("a logged hit without its GObj"));
                 let af = &self.game.fighters[a.0];
-                let (a_gobj, kind, x2070, instance) = (
+                let (a_gobj, kind, attack_flags, instance) = (
                     af.gobj.expect("a fighter without its GObj"),
                     af.kind,
                     u32::from_be_bytes(af.attack_flags),
@@ -2586,7 +2589,7 @@ impl Running<'_> {
                     gobj,
                     1,
                     kind,
-                    x2070,
+                    attack_flags,
                     AttackRecord::Fighter(a_gobj),
                     instance,
                     false,
@@ -2739,7 +2742,7 @@ impl Running<'_> {
         gobj: GObjId,
         kind: i32,
         akind: i32,
-        x2070: u32,
+        attack_flags: u32,
         record: AttackRecord,
         instance: u16,
         keep_source: bool,
@@ -2771,7 +2774,7 @@ impl Running<'_> {
         fp.dmg.source_class = kind;
         fp.dmg.source_kind = akind;
         let _ = grounded;
-        self.record_attack(attacker, gobj, x2070, record, instance, prev);
+        self.record_attack(attacker, gobj, attack_flags, record, instance, prev);
     }
 
     /// An item's attack on the fighter, `ftColl_800787B4`: a Bob-omb's counts for the
@@ -2781,7 +2784,7 @@ impl Running<'_> {
     pub fn item_attack_landed(&mut self, item: GObjId, gobj: GObjId, grounded: bool) {
         let me = self.game.fighter_id(gobj);
         let ip = super::super::it::item(self.game, item);
-        let (kind, owner, x2070, instance) = (
+        let (kind, owner, attack_flags, instance) = (
             ip.kind,
             ip.owner,
             u32::from_be_bytes(ip.attack_flags),
@@ -2802,7 +2805,7 @@ impl Running<'_> {
             gobj,
             2,
             kind,
-            x2070,
+            attack_flags,
             AttackRecord::Item(item),
             instance,
             keep,

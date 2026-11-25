@@ -230,8 +230,8 @@ pub fn walk(r: &mut Running, gobj: GObjId) {
     zako::set_coll_facing(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
     if get(r, gobj, off::WALK) == 0 {
-        let x8 = zako::attr_f32(r, gobj, 8);
-        let frames = fp::fctiwz(fp::fdivs(reg(x8), reg(speed)));
+        let walk_dist = zako::attr_f32(r, gobj, 8);
+        let frames = fp::fctiwz(fp::fdivs(reg(walk_dist), reg(speed)));
         set(r, gobj, off::WALK, frames);
     }
     enter(r, gobj, 2, change::ANIM_UPDATE);
@@ -526,7 +526,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 #[doc(alias = "it_802DD7F0")]
 pub fn spawn(
     r: &mut Running,
-    x2: i32,
+    variant: i32,
     pos: Vec3,
     vel: Option<Vec3>,
     facing: i32,
@@ -538,8 +538,8 @@ pub fn spawn(
     zako::set_coll_facing(r.game, gobj);
     let rot = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, reg(f))));
     jobj::set_rotation_y(&mut r.game.objs.jobjs, j, rot);
-    set(r, gobj, off::SHELL, x2);
-    if x2 == 2 {
+    set(r, gobj, off::SHELL, variant);
+    if variant == 2 {
         change_state(r, gobj, 0, change::ANIM_UPDATE);
         jobj::anim_all(
             &mut r.game.objs,

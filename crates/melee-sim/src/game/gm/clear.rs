@@ -460,7 +460,7 @@ impl Running<'_> {
             self.clear_mut().texts[2] = Some(t);
             self.game.sis.text_mut(t).pos.z = -10.0;
             let c = self.clear();
-            let (xd0, xd8, x108) = (
+            let (time_bonus, time_frames, multiplier) = (
                 c.time_bonus,
                 c.time_bonus_frames,
                 i32::from(c.time_multiplier),
@@ -468,18 +468,26 @@ impl Running<'_> {
             if !self.clear_time_shown() {
                 let s = self.game.sis.add_string(t, 0.0, 0.0, Some(MINUS));
                 self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.065));
-                self.clear_mut().time_bonus_shown = xd0;
-            } else if xd8 < 0x3C {
+                self.clear_mut().time_bonus_shown = time_bonus;
+            } else if time_frames < 0x3C {
                 self.game.sis.text_mut(t).default_kerning = 1;
-                let v = [int(xd0 / x108), TIMES.to_vec(), int(x108)].concat();
+                let v = [
+                    int(time_bonus / multiplier),
+                    TIMES.to_vec(),
+                    int(multiplier),
+                ]
+                .concat();
                 let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&v));
                 self.game
                     .sis
                     .set_scale(data, t, s, reg(0.089_999_996), reg(0.065));
             } else {
-                let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&int(xd0)));
+                let s = self
+                    .game
+                    .sis
+                    .add_string(t, 0.0, 0.0, Some(&int(time_bonus)));
                 self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.065));
-                self.clear_mut().time_bonus_shown = xd0;
+                self.clear_mut().time_bonus_shown = time_bonus;
             }
         }
         let c = self.clear();
@@ -488,20 +496,28 @@ impl Running<'_> {
             let t = self.clear_value_text(self.clear().texts[3]);
             self.clear_mut().texts[3] = Some(t);
             let c = self.clear();
-            let (xdc, xe4, x10a) = (
+            let (damage_bonus, damage_frames, multiplier) = (
                 c.damage_bonus,
                 c.damage_bonus_frames,
                 i32::from(c.damage_multiplier),
             );
-            if xe4 < 0x3C {
+            if damage_frames < 0x3C {
                 self.game.sis.text_mut(t).default_kerning = 1;
-                let v = [int(xdc / x10a), TIMES.to_vec(), int(x10a)].concat();
+                let v = [
+                    int(damage_bonus / multiplier),
+                    TIMES.to_vec(),
+                    int(multiplier),
+                ]
+                .concat();
                 let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&v));
                 self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.065));
             } else {
-                let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&int(xdc)));
+                let s = self
+                    .game
+                    .sis
+                    .add_string(t, 0.0, 0.0, Some(&int(damage_bonus)));
                 self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.065));
-                self.clear_mut().damage_bonus_shown = xdc;
+                self.clear_mut().damage_bonus_shown = damage_bonus;
             }
         }
         let j = self.clear().joints[3];
@@ -601,21 +617,21 @@ impl Running<'_> {
         self.clear_mut().texts[4] = Some(t);
         let c = self.clear_mut();
         c.bonus_total_frames = c.bonus_total_frames.wrapping_add(1);
-        let (xf8, xcc, sum, xf0) = (
+        let (frames, match_points, sum, total) = (
             c.bonus_total_frames,
             c.match_points,
             c.damage_bonus.wrapping_add(c.time_bonus),
             c.bonus_total,
         );
         let plus = |v: i32| [PLUS, b" ", &int(v)].concat();
-        let s = if xf8 < 0xC {
-            plus(xcc)
-        } else if xf8 < 0x20 {
+        let s = if frames < 0xC {
+            plus(match_points)
+        } else if frames < 0x20 {
             plus(sum)
-        } else if xf0 >= 0 {
-            plus(xf0)
+        } else if total >= 0 {
+            plus(total)
         } else {
-            int(xf0)
+            int(total)
         };
         let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&s));
         let (scx, scy) = (fp::fmuls(reg(0.1), sx), fp::fmuls(reg(0.065), sy));

@@ -180,7 +180,8 @@ impl Running<'_> {
 
     /// The full bucket's glow, `ftGw_Init_UnkMotionStates4` (`ftData_UnkMotionStates4`).
     #[doc(alias = "ftGw_Init_UnkMotionStates4")]
-    pub fn gw_unk_motion_states4(&mut self, gobj: GObjId) {
+    #[doc(alias("gw_unk_motion_states4"))]
+    pub fn gw_pre_state(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).u_i32(u::PANIC_CHARGE) >= panic::FULL {
             self.start_color_anim(gobj, 5, 0);
         }
@@ -208,7 +209,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::DROP_ITEMS_IN_AIR => g.gw_drop_items_in_air(gobj),
         addr::INIT_ON_ITEM_INVISIBLE => g.gw_on_item_invisible(gobj),
         addr::INIT_ON_ITEM_VISIBLE => g.gw_on_item_visible(gobj),
-        addr::INIT_UNK_MOTION_STATES4 => g.gw_unk_motion_states4(gobj),
+        addr::INIT_UNK_MOTION_STATES4 => g.gw_pre_state(gobj),
         addr::INIT_ON_ABSORB => g.gw_on_absorb(gobj),
         _ => return false,
     }

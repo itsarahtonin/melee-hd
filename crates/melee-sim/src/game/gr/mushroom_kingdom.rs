@@ -612,13 +612,13 @@ pub fn add_hatena(r: &mut Running, gobj: GObjId, ix: usize, frame: u32) {
         "grinishie1.c:926: !mapgp->u.map.block[ix].hatena_gobj"
     );
     blocks(r.game, g)[ix].hatena_gobj = Some(hatena);
-    let (j, x2) = (blocks(r.game, g)[ix].jobj2, blocks(r.game, g)[ix].state);
+    let (j, state) = (blocks(r.game, g)[ix].jobj2, blocks(r.game, g)[ix].state);
     let pos = world_position(&mut r.game.objs, r.data, j, None);
     let hj = jobj_of(r.game, hatena).expect("a ? block's model");
     jobj::set_translate(&mut r.game.objs.jobjs, hj, pos);
     let v = r.game.grounds[hg.0].u.inishie1_hatena();
     v.brick_jobj = j;
-    if x2 == 0 || x2 == 1 {
+    if state == 0 || state == 1 {
         v.hidden = 1;
     }
     block_dobjs(r.game, j, true);
@@ -962,7 +962,7 @@ pub fn lift_touched(
     data: &Archives,
     g: GroundId,
     joint_id: i32,
-    x50: i32,
+    weight: i32,
     kind: i32,
 ) {
     let landing = reg(data.f32(
@@ -971,7 +971,7 @@ pub fn lift_touched(
             .at(p::LIFT_LANDING),
     ));
     let v = grounds[g.0].u.inishie1();
-    let w = fp::frsp(f64::from(x50));
+    let w = fp::frsp(f64::from(weight));
     let add = |acc: f32| {
         if kind == 1 {
             mem(fp::fmadds(w, landing, reg(acc)))

@@ -367,10 +367,10 @@ pub fn stop_holding_still(game: &mut Game, gobj: GObjId) {
 /// Sets the lifetime and the half lifetime it reflects with, `it_80275158`.
 #[doc(alias = "it_80275158")]
 pub fn set_lifetime(game: &mut Game, data: &Archives, gobj: GObjId, lifetime: f32) {
-    let x4c = common_data(game).f32(data, common::X4C);
+    let half_ratio = common_data(game).f32(data, common::X4C);
     let ip = item_mut(game, gobj);
     ip.life_timer = lifetime;
-    ip.half_life = mem(fp::fmuls(reg(lifetime), reg(x4c)));
+    ip.half_life = mem(fp::fmuls(reg(lifetime), reg(half_ratio)));
 }
 
 /// Sets the damage taken and clears the record, `it_802753BC`.
@@ -558,8 +558,8 @@ pub fn reflected_back(game: &mut Game, gobj: GObjId) -> bool {
 /// Sets the half lifetime from `lifetime`, `it_80275174`.
 #[doc(alias = "it_80275174")]
 pub fn set_half_life(game: &mut Game, data: &Archives, gobj: GObjId, lifetime: f32) {
-    let x4c = common_data(game).f32(data, common::X4C);
-    item_mut(game, gobj).half_life = mem(fp::fmuls(reg(lifetime), reg(x4c)));
+    let half_ratio = common_data(game).f32(data, common::X4C);
+    item_mut(game, gobj).half_life = mem(fp::fmuls(reg(lifetime), reg(half_ratio)));
 }
 
 /// Faces the way it moves, unless it has all but stopped (and faces some way),
@@ -628,8 +628,8 @@ pub fn is_animating(game: &Game, gobj: GObjId) -> bool {
 pub fn rescale(game: &mut Game, gobj: GObjId, j: JObjId, scale: f32) {
     item_mut(game, gobj).scl = scale;
     set_uniform_scale(game, j, scale);
-    let x3c = item(game, gobj).hitbox_scale;
-    super::hitbox::set_hit_scale(game, gobj, x3c);
+    let hitbox_scale = item(game, gobj).hitbox_scale;
+    super::hitbox::set_hit_scale(game, gobj, hitbox_scale);
     scale_ranges(game, gobj);
     scale_boxes(game, gobj);
 }
@@ -660,7 +660,8 @@ pub fn scale_boxes(game: &mut Game, gobj: GObjId) {
 
 /// Sets `xD09`, `it_80274ECC`.
 #[doc(alias = "it_80274ECC")]
-pub fn set_xd09(game: &mut Game, gobj: GObjId, on: bool) {
+#[doc(alias("set_xd09"))]
+pub fn set_no_catch(game: &mut Game, gobj: GObjId, on: bool) {
     item_mut(game, gobj).no_catch = u8::from(on);
 }
 
@@ -803,8 +804,8 @@ pub fn scale_by_owner(r: &mut Running, gobj: GObjId) {
     let scl = ip.scl;
     let j = super::jobj_of(r.game, gobj).expect("an item without a model");
     set_uniform_scale(r.game, j, scl);
-    let x3c = item(r.game, gobj).hitbox_scale;
-    super::hitbox::set_hit_scale(r.game, gobj, x3c);
+    let hitbox_scale = item(r.game, gobj).hitbox_scale;
+    super::hitbox::set_hit_scale(r.game, gobj, hitbox_scale);
     scale_ranges(r.game, gobj);
     scale_boxes(r.game, gobj);
 }

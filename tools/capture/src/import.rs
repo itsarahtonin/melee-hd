@@ -682,7 +682,7 @@ impl<'a> Importer<'a> {
                 let costume = melee_sim::game::ft::data::Costume {
                     joint: self.data(joint),
                     matanim: self.data(matanim),
-                    x8: self.u32(e + 8),
+                    cleared: self.u32(e + 8),
                 };
                 self.game.ft.data.costumes[kind as usize][c as usize] = costume;
             }

@@ -576,7 +576,7 @@ impl Importer<'_> {
                             point: self.u16_at(e) as i16,
                             timer: self.u16_at(e + 2) as i16,
                             item: self.import_handle_gobj(item),
-                            x8: Some(cap.u32(e + 8) as i32),
+                            trophy: Some(cap.u32(e + 8) as i32),
                         }
                     })
                     .collect()
@@ -1571,9 +1571,9 @@ impl Comparer<'_> {
                         (o.point, o.timer),
                         (self.u16(e) as i16, self.u16(e + 2) as i16),
                     );
-                    // The trophy word is unknown until written (`Slot::x8`).
-                    if let Some(x8) = o.x8 {
-                        self.check(&format!("zako slot {i}"), "x8", x8, self.u32(e + 8) as i32);
+                    // The trophy word is unknown until written (`Slot::trophy`).
+                    if let Some(trophy) = o.trophy {
+                        self.check(&format!("zako slot {i}"), "x8", trophy, self.u32(e + 8) as i32);
                     }
                     // A slot's GObj can be one freed since (a dangling pointer, compared by
                     // address).
@@ -2250,9 +2250,9 @@ impl Importer<'_> {
                     descs: mem(a),
                     count,
                     callback: melee_sim::game::handles::CodeRef(mem(a + 0xC)),
-                    x10: f32::from_bits(mem(a + 0x10)),
+                    chance: f32::from_bits(mem(a + 0x10)),
                     generator: None,
-                    x18: mem(a + 0x18) as i32,
+                    spare: mem(a + 0x18) as i32,
                     spawns,
                 },
             );
@@ -2416,7 +2416,7 @@ impl Comparer<'_> {
                 continue;
             };
             let spawns_addr = self.u32(a + 4);
-            let ours = (c.descs, c.count, c.callback.0, c.x10.to_bits(), c.x18);
+            let ours = (c.descs, c.count, c.callback.0, c.chance.to_bits(), c.spare);
             let theirs = (
                 self.u32(a),
                 self.u32(a + 8) as i32,

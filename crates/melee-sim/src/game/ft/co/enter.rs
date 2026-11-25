@@ -99,8 +99,8 @@ impl Running<'_> {
         if self.holding_one_handed(gobj) && self.has_anim(gobj, ANIM_WAIT_ITEM) {
             self.play_anim(gobj, ANIM_WAIT_ITEM);
         }
-        let x5f0 = self.common().u32(0x5F0) as u16;
-        self.game.fighters[f.0].name_tag_timer = x5f0;
+        let name_tag_frames = self.common().u32(0x5F0) as u16;
+        self.game.fighters[f.0].name_tag_timer = name_tag_frames;
         match self.game.fighters[f.0].fighter_kind() {
             FighterKind::Link => self.link_shield_absorb(gobj),
             FighterKind::Clink => self.clink_shield_absorb(gobj),

@@ -15,8 +15,8 @@ use crate::hsd::gobj::GObjId;
 const SFX_JUMP: i32 = 290_066;
 
 /// `stickGetDir`: the stick's distance from `x2`.
-fn stick_dir(x1: f64, x2: f64) -> f64 {
-    if x1 < x2 { fp::fneg(x1) } else { x1 }
+fn stick_dir(v: f64, threshold: f64) -> f64 {
+    if v < threshold { fp::fneg(v) } else { v }
 }
 
 impl Running<'_> {

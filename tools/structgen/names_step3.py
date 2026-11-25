@@ -250,6 +250,8 @@ TYPE_NAMES = {
     "gm_801677C0_s": "DebugPause",
     "HSD_ObjAllocUnk": "ItemCounts",
     "lb_00F9_UnkDesc0": "SwingLink",
+    # Task 29: the attack record a hit leaves (`ft_800898B4`'s argument).
+    "ft_800898B4_t": "HitRecord",
 }
 
 STEP_3 = {}

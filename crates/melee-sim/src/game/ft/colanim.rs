@@ -62,7 +62,8 @@ impl Running<'_> {
         clear(self.overlay(gobj, Overlay::Main));
         let fp = self.game.fighter(gobj);
         let (dead, healing, b6) = (fp.stamina_dead, fp.dmg.healing != 0, fp.starman);
-        let x9 = fp.invincible_frames != 0 || fp.intangible_frames != 0 || fp.warp_star_intangible;
+        let invulnerable =
+            fp.invincible_frames != 0 || fp.intangible_frames != 0 || fp.warp_star_intangible;
         if dead {
             self.start_color_anim(gobj, 0x7A, 0);
         }
@@ -72,7 +73,7 @@ impl Running<'_> {
         if b6 {
             self.start_color_anim(gobj, 0x6B, 0);
         }
-        if x9 {
+        if invulnerable {
             self.start_color_anim(gobj, 9, 0);
         }
     }
@@ -104,7 +105,7 @@ impl Running<'_> {
             // `ftDk_Init_UnkMotionStates4`: Donkey Kong's charged punch glows.
             FighterKind::Donkey => self.dk_charged_glow(gobj),
             FighterKind::Mewtwo => self.mt_charged_glow(gobj),
-            FighterKind::GameWatch => self.gw_unk_motion_states4(gobj),
+            FighterKind::GameWatch => self.gw_pre_state(gobj),
             FighterKind::Kirby => self.kb_charged_glow(gobj),
             _ => {}
         }
@@ -148,9 +149,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C0694")]
     pub fn color_anim_id(&self, gobj: GObjId) -> i32 {
         let fp = self.game.fighter(gobj);
-        let x408 = i32::from_be_bytes(fp.main_overlay.colanim);
-        if x408 != 0 {
-            x408
+        let overlay_anim = i32::from_be_bytes(fp.main_overlay.colanim);
+        if overlay_anim != 0 {
+            overlay_anim
         } else {
             i32::from_be_bytes(fp.secondary_overlay.colanim)
         }
@@ -172,14 +173,14 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C0358")]
     pub fn copy_color_anim(&mut self, src: GObjId, dst: GObjId, id: i32) {
         assert!(id < SPYCLOAK_START, "don't reset spycloak colanim!");
-        let x488 = self.color_anim_entry(false, id).2 != 0;
+        let copies_secondary = self.color_anim_entry(false, id).2 != 0;
         let (s, d) = (self.game.fighter_id(src), self.game.fighter_id(dst));
         let [sp, dp] = self
             .game
             .fighters
             .get_disjoint_mut([s.0, d.0])
             .expect("two fighters");
-        if x488 {
+        if copies_secondary {
             dp.secondary_overlay.clone_from(&sp.secondary_overlay);
         } else {
             dp.main_overlay.clone_from(&sp.main_overlay);

@@ -136,10 +136,10 @@ impl Running<'_> {
         self.release_victim(gobj);
         self.game.fighters[f.0].held_in_ice = true;
         self.change_motion_state(gobj, ms::DAMAGE_ICE, 0x40, 0.0, 1.0, 0.0, None);
-        let x790 = reg(self.common().f32(0x790));
+        let grab_scale = reg(self.common().f32(0x790));
         let fp = &mut self.game.fighters[f.0];
         // `ftCommon_InitGrab(fp, 0, timer)`.
-        fp.grab_timer = mem(fp::fmuls(reg(fp.dmg.pending_damage), x790));
+        fp.grab_timer = mem(fp::fmuls(reg(fp.dmg.pending_damage), grab_scale));
         fp.mash_stick_y = 0;
         fp.mash_stick_x = 0;
         fp.can_mash = false;

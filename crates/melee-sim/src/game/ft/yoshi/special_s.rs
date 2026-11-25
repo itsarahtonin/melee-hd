@@ -170,8 +170,8 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         match self.game.fighters[f.0].cmd_vars[0] {
             1 => {
-                let x4 = self.ys_mvi(gobj, mv::X4).wrapping_add(1);
-                self.ys_set_mvi(gobj, mv::X4, x4);
+                let switch_step = self.ys_mvi(gobj, mv::X4).wrapping_add(1);
+                self.ys_set_mvi(gobj, mv::X4, switch_step);
             }
             2 => {
                 self.ys_set_mvi(gobj, mv::X4, 0);
@@ -180,9 +180,9 @@ impl Running<'_> {
             }
             _ => {}
         }
-        let x4 = self.ys_mvi(gobj, mv::X4);
-        if (0..14).contains(&x4) {
-            let egg = EGG_STEPS[x4 as usize];
+        let switch_step = self.ys_mvi(gobj, mv::X4);
+        if (0..14).contains(&switch_step) {
+            let egg = EGG_STEPS[switch_step as usize];
             self.set_model_variant(f, 0, i32::from(egg));
             if egg {
                 self.ys_shield_mend(gobj);
@@ -213,9 +213,9 @@ impl Running<'_> {
         self.ys_set_root_scale(gobj, s);
         self.ys_s_face_model(gobj);
         self.game.part_set_rot_z(f, 2, 0.0);
-        let x24 = self.game.fighters[f.0].mv_f32(mv::X24);
-        if x24 != 0.0 {
-            self.game.fighters[f.0].facing_dir = x24;
+        let turn_facing = self.game.fighters[f.0].mv_f32(mv::X24);
+        if turn_facing != 0.0 {
+            self.game.fighters[f.0].facing_dir = turn_facing;
         }
         self.ys_set_mvf(gobj, mv::X24, 0.0);
         self.set_item_visible(gobj, true);
@@ -266,29 +266,29 @@ impl Running<'_> {
         if motion != ms::SPECIAL_AIR_S_LOOP_3 && motion != ms::SPECIAL_AIR_S_LOOP_0 {
             return;
         }
-        let x50 = self.ys_s_attr_i(gobj, sattr::X50);
-        let x0 = self.ys_mvi(gobj, mv::X0).wrapping_sub(x50);
-        self.ys_set_mvi(gobj, mv::X0, x0);
+        let frames_lost = self.ys_s_attr_i(gobj, sattr::X50);
+        let frames_left = self.ys_mvi(gobj, mv::X0).wrapping_sub(frames_lost);
+        self.ys_set_mvi(gobj, mv::X0, frames_left);
         let cruise = if self.game.fighter(gobj).ground_or_air == GA_AIR {
             self.ys_s_attr(gobj, sattr::X8C)
         } else {
             self.ys_s_attr(gobj, sattr::X7C)
         };
-        let xcc = self.ys_s_attr(gobj, sattr::XCC);
-        let x1c = self.ys_mvf(gobj, mv::X1C);
-        if abs(x1c) > cruise {
-            if x1c > 0.0 {
-                self.ys_set_mvf(gobj, mv::X1C, fp::fsubs(x1c, xcc));
+        let slowdown = self.ys_s_attr(gobj, sattr::XCC);
+        let speed = self.ys_mvf(gobj, mv::X1C);
+        if abs(speed) > cruise {
+            if speed > 0.0 {
+                self.ys_set_mvf(gobj, mv::X1C, fp::fsubs(speed, slowdown));
                 if self.ys_mvf(gobj, mv::X1C) < cruise {
                     self.ys_set_mvf(gobj, mv::X1C, cruise);
                 }
             } else {
-                self.ys_set_mvf(gobj, mv::X1C, fp::fadds(x1c, xcc));
+                self.ys_set_mvf(gobj, mv::X1C, fp::fadds(speed, slowdown));
                 if self.ys_mvf(gobj, mv::X1C) > fp::fneg(cruise) {
                     self.ys_set_mvf(gobj, mv::X1C, fp::fneg(cruise));
                 }
             }
-        } else if x1c == 0.0 {
+        } else if speed == 0.0 {
             let facing = reg(self.game.fighter(gobj).facing_dir);
             self.ys_set_mvf(gobj, mv::X1C, fp::fmuls(facing, cruise));
         }
@@ -310,11 +310,11 @@ impl Running<'_> {
     pub fn ys_s_end(&mut self, gobj: GObjId, air: bool, flags: u32, frame: f32) {
         let f = self.game.fighter_id(gobj);
         self.clear_hitboxes(f);
-        let xd0 = self.ys_s_attr(gobj, sattr::XD0);
+        let end_scale_x = self.ys_s_attr(gobj, sattr::XD0);
         if !air {
             self.change_motion_state(gobj, ms::SPECIAL_AIR_S_END, flags, frame, 1.0, 0.0, None);
             let fp = &mut self.game.fighters[f.0];
-            fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), xd0));
+            fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), end_scale_x));
             fp.anim_vel.y = 0.0;
             fp.self_vel.y = 0.0;
         } else {
@@ -327,10 +327,10 @@ impl Running<'_> {
                 0.0,
                 None,
             );
-            let xd4 = self.ys_s_attr(gobj, sattr::XD4);
+            let end_scale_y = self.ys_s_attr(gobj, sattr::XD4);
             let fp = &mut self.game.fighters[f.0];
-            fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), xd0));
-            fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), xd4));
+            fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), end_scale_x));
+            fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), end_scale_y));
             fp.ground_accel_1 = 0.0;
             fp.gr_vel = 0.0;
         }
@@ -360,13 +360,13 @@ impl Running<'_> {
         };
         self.ys_set_mvf(gobj, mv::X1C, speed);
         if self.ys_s_smashed(gobj) {
-            let x68 = self.ys_s_attr(gobj, sattr::X68);
-            let v = fp::fmuls(self.ys_mvf(gobj, mv::X1C), x68);
+            let smash_scale = self.ys_s_attr(gobj, sattr::X68);
+            let v = fp::fmuls(self.ys_mvf(gobj, mv::X1C), smash_scale);
             self.ys_set_mvf(gobj, mv::X1C, v);
         }
-        let x48 = self.ys_s_attr_i(gobj, sattr::X48);
+        let roll_frames = self.ys_s_attr_i(gobj, sattr::X48);
         let fp = &mut self.game.fighters[f.0];
-        fp.set_mv_i32(mv::X0, x48);
+        fp.set_mv_i32(mv::X0, roll_frames);
         fp.set_mv_i32(mv::X4, -1);
         fp.set_mv_i32(mv::X8, -1);
         fp.set_mv_i32(mv::XC, 0);
@@ -383,9 +383,9 @@ impl Running<'_> {
     /// Whether the stick was smashed sideways (`ftYs_SpecialS_CheckButtonPressure`: its timer
     /// under `x98`), the timer cleared.
     fn ys_s_smashed(&mut self, gobj: GObjId) -> bool {
-        let x98 = self.ys_s_attr(gobj, sattr::X98);
+        let smash_limit = self.ys_s_attr(gobj, sattr::X98);
         let fp = self.game.fighter_mut(gobj);
-        let smashed = fp::frsp(f64::from(fp.active_sticky.lstick.x)) < x98;
+        let smashed = fp::frsp(f64::from(fp.active_sticky.lstick.x)) < smash_limit;
         fp.active_sticky.lstick.x = 0;
         smashed
     }
@@ -414,15 +414,15 @@ impl Running<'_> {
 
     /// The start's speeds: forward at the roll's speed, up at `x5C` with the start's gravity.
     fn ys_s_launch(&mut self, gobj: GObjId) {
-        let (x5c, g) = (
+        let (launch_up, g) = (
             self.ys_s_attr(gobj, sattr::X5C),
             self.ys_s_attr(gobj, sattr::GRAVITY),
         );
-        let x1c = self.ys_mvf(gobj, mv::X1C);
+        let speed = self.ys_mvf(gobj, mv::X1C);
         let fp = self.game.fighter_mut(gobj);
-        fp.self_vel.x = mem(fp::fmuls(x1c, reg(fp.facing_dir)));
+        fp.self_vel.x = mem(fp::fmuls(speed, reg(fp.facing_dir)));
         fp.anim_vel.x = 0.0;
-        fp.self_vel.y = mem(x5c);
+        fp.self_vel.y = mem(launch_up);
         fp.anim_vel.y = mem(g);
     }
 
@@ -457,18 +457,18 @@ impl Running<'_> {
             let f = self.game.fighter_id(gobj);
             self.go_airborne(f);
             self.ys_s_into_loop(gobj);
-            let (x5c, g) = (
+            let (launch_up, g) = (
                 self.ys_s_attr(gobj, sattr::X5C),
                 self.ys_s_attr(gobj, sattr::GRAVITY),
             );
-            let x1c = self.ys_mvf(gobj, mv::X1C);
+            let speed = self.ys_mvf(gobj, mv::X1C);
             let fp = self.game.fighter_mut(gobj);
-            let v = mem(fp::fmuls(x1c, reg(fp.facing_dir)));
+            let v = mem(fp::fmuls(speed, reg(fp.facing_dir)));
             fp.self_vel.x = v;
             fp.gr_vel = v;
             fp.anim_vel.x = 0.0;
             fp.ground_accel_1 = 0.0;
-            fp.self_vel.y = mem(x5c);
+            fp.self_vel.y = mem(launch_up);
             fp.anim_vel.y = mem(g);
         }
     }
@@ -477,16 +477,16 @@ impl Running<'_> {
     /// from the model's scale; then the model's scale.
     fn ys_s_squash(&mut self, gobj: GObjId) {
         let s = self.ys_scale(gobj);
-        let x8 = self.ys_mvi(gobj, mv::X8);
-        if (0..4).contains(&x8) {
-            let i = x8 as usize;
+        let squash_step = self.ys_mvi(gobj, mv::X8);
+        if (0..4).contains(&squash_step) {
+            let i = squash_step as usize;
             let v = Vec3::new(
                 s.x,
                 mem(fp::fmuls(reg(s.y), reg(SQUASH_Y[i]))),
                 mem(fp::fmuls(reg(s.z), reg(SQUASH_Z[i]))),
             );
             self.ys_set_root_scale(gobj, v);
-            self.ys_set_mvi(gobj, mv::X8, x8.wrapping_add(1));
+            self.ys_set_mvi(gobj, mv::X8, squash_step.wrapping_add(1));
         } else {
             self.ys_set_root_scale(gobj, s);
         }
@@ -503,8 +503,8 @@ impl Running<'_> {
             let v = fp::frsp(fp::fsub(self.ys_mvf(gobj, mv::X14), TAU));
             self.ys_set_mvf(gobj, mv::X14, v);
         }
-        let x14 = self.game.fighters[f.0].mv_f32(mv::X14);
-        self.game.part_set_rot_x(f, 3, x14);
+        let spin = self.game.fighters[f.0].mv_f32(mv::X14);
+        self.game.part_set_rot_x(f, 3, spin);
     }
 
     /// The hitbox's renewal and damage by speed (shared by the rolls on the ground and in
@@ -512,18 +512,18 @@ impl Running<'_> {
     /// speed, at least 1.
     fn ys_s_hitbox(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let xdc = self.ys_s_attr_i(gobj, sattr::XDC);
-        let xc = self.ys_mvi(gobj, mv::XC).wrapping_add(1);
-        self.ys_set_mvi(gobj, mv::XC, xc);
+        let renew_every = self.ys_s_attr_i(gobj, sattr::XDC);
+        let since_renew = self.ys_mvi(gobj, mv::XC).wrapping_add(1);
+        self.ys_set_mvi(gobj, mv::XC, since_renew);
         let fp = &mut self.game.fighters[f.0];
-        if xc >= xdc && fp.hitboxes[0].state != 0 {
+        if since_renew >= renew_every && fp.hitboxes[0].state != 0 {
             fp.hitboxes[0].group = fp.hitboxes[0].group.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::XC, 0);
         }
         if self.game.fighters[f.0].hitboxes[0].state == 0 {
             return;
         }
-        let (xc0, xc4) = (
+        let (damage_base, damage_scale) = (
             self.ys_s_attr(gobj, sattr::XC0),
             self.ys_s_attr(gobj, sattr::XC4),
         );
@@ -533,7 +533,7 @@ impl Running<'_> {
         } else {
             reg(fp.gr_vel)
         };
-        let mut rate = fp::fctiwz(fp::fmuls(xc4, fp::fadds(xc0, abs(v))));
+        let mut rate = fp::fctiwz(fp::fmuls(damage_scale, fp::fadds(damage_base, abs(v))));
         if rate < 1 {
             rate = 1;
         }
@@ -542,11 +542,11 @@ impl Running<'_> {
 
     /// The egg spun by its speed (`xD8`).
     fn ys_s_spin_by_speed(&mut self, gobj: GObjId) {
-        let xd8 = self.ys_s_attr(gobj, sattr::XD8);
-        let x1c = abs(self.ys_mvf(gobj, mv::X1C));
+        let spin_scale = self.ys_s_attr(gobj, sattr::XD8);
+        let speed = abs(self.ys_mvf(gobj, mv::X1C));
         let v = fp::frsp(fp::fmadd(
             fp::fdiv(fp::fmul(2.0, std::f64::consts::PI), 25.0),
-            fp::fmuls(xd8, x1c),
+            fp::fmuls(spin_scale, speed),
             self.ys_mvf(gobj, mv::X14),
         ));
         self.ys_set_mvf(gobj, mv::X14, v);
@@ -554,9 +554,9 @@ impl Running<'_> {
 
     /// The roll's frames counted down; at none it ends (`air` for the air's end).
     fn ys_s_count_down(&mut self, gobj: GObjId, air: bool) -> bool {
-        let x0 = self.ys_mvi(gobj, mv::X0).wrapping_sub(1);
-        self.ys_set_mvi(gobj, mv::X0, x0);
-        if x0 <= 0 {
+        let frames_left = self.ys_mvi(gobj, mv::X0).wrapping_sub(1);
+        self.ys_set_mvi(gobj, mv::X0, frames_left);
+        if frames_left <= 0 {
             self.ys_set_mvi(gobj, mv::X0, 0);
             self.ys_s_end(gobj, air, KEEP, 0.0);
             return true;
@@ -585,37 +585,41 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.ys_s_switch(gobj);
         self.ys_s_squash(gobj);
-        let xa0 = self.ys_s_attr(gobj, sattr::XA0);
+        let turn_spin = self.ys_s_attr(gobj, sattr::XA0);
         let v = fp::frsp(fp::fmadd(
             fp::fdiv(fp::fmul(2.0, std::f64::consts::PI), 25.0),
-            xa0,
+            turn_spin,
             self.ys_mvf(gobj, mv::X14),
         ));
         self.ys_set_mvf(gobj, mv::X14, v);
         self.ys_s_wrap_spin(gobj);
         // `ftYs_SpecialS_UpdateLoop1Rotation`.
-        let x10 = self.ys_mvf(gobj, mv::X10);
+        let turn_start_speed = self.ys_mvf(gobj, mv::X10);
         let gr = reg(self.game.fighters[f.0].gr_vel);
-        let xe4 = self.ys_s_attr(gobj, sattr::XE4);
-        let (abs10, absv, abse4) = (abs(x10), abs(gr), abs(xe4));
-        let toward = if x10 > 0.0 { gr > 0.0 } else { gr < 0.0 };
-        let span = if toward {
-            abs10
+        let lean_range = self.ys_s_attr(gobj, sattr::XE4);
+        let (abs_start, absv, abs_lean) = (abs(turn_start_speed), abs(gr), abs(lean_range));
+        let toward = if turn_start_speed > 0.0 {
+            gr > 0.0
         } else {
-            fp::fmuls(abs10, reg(0.7f32))
+            gr < 0.0
         };
-        let lean = fp::fmadds(abse4, fp::fdivs(absv, span), fp::fneg(xe4));
+        let span = if toward {
+            abs_start
+        } else {
+            fp::fmuls(abs_start, reg(0.7f32))
+        };
+        let lean = fp::fmadds(abs_lean, fp::fdivs(absv, span), fp::fneg(lean_range));
         self.ys_set_mvf(gobj, mv::X18, lean);
-        let x18 = self.game.fighters[f.0].mv_f32(mv::X18);
-        self.game.part_set_rot_z(f, 2, x18);
+        let lean = self.game.fighters[f.0].mv_f32(mv::X18);
+        self.game.part_set_rot_z(f, 2, lean);
         // `ftYs_SpecialS_UpdateLoop1Rotation2`.
-        let total = fp::fmadds(reg(0.7f32), abs10, abs10);
+        let total = fp::fmadds(reg(0.7f32), abs_start, abs_start);
         let half_pi = fp::fdiv(std::f64::consts::PI, 2.0);
-        let mut angle = if x10 > 0.0 {
+        let mut angle = if turn_start_speed > 0.0 {
             let delta = if gr > 0.0 {
-                fp::fsubs(abs10, absv)
+                fp::fsubs(abs_start, absv)
             } else {
-                fp::fadds(abs10, absv)
+                fp::fadds(abs_start, absv)
             };
             fp::frsp(fp::fmadd(
                 std::f64::consts::PI,
@@ -624,9 +628,9 @@ impl Running<'_> {
             ))
         } else {
             let delta = if gr < 0.0 {
-                fp::fsubs(abs10, absv)
+                fp::fsubs(abs_start, absv)
             } else {
-                fp::fadds(abs10, absv)
+                fp::fadds(abs_start, absv)
             };
             fp::frsp(fp::fmadd(
                 3.0,
@@ -644,10 +648,10 @@ impl Running<'_> {
         if self.ys_s_count_down(gobj, false) {
             return;
         }
-        let xa4 = self.ys_s_attr_i(gobj, sattr::XA4);
-        let x28 = self.ys_mvi(gobj, mv::X28);
-        if x28
-            .checked_rem(xa4)
+        let dust_every = self.ys_s_attr_i(gobj, sattr::XA4);
+        let turn_frames = self.ys_mvi(gobj, mv::X28);
+        if turn_frames
+            .checked_rem(dust_every)
             .expect("the egg roll's dust every 0 frames")
             == 0
         {
@@ -663,7 +667,7 @@ impl Running<'_> {
                 &[Arg::Vec(pos), Arg::Float(dir), Arg::Float(a)],
             );
         }
-        self.ys_set_mvi(gobj, mv::X28, x28.wrapping_add(1));
+        self.ys_set_mvi(gobj, mv::X28, turn_frames.wrapping_add(1));
     }
 
     /// The shell's effect once the script's second variable says (`cmd_vars[1] == 1`).
@@ -708,10 +712,10 @@ impl Running<'_> {
         self.ys_set_mvi(gobj, mv::X30, 0);
         self.ys_s_switch(gobj);
         self.ys_s_squash(gobj);
-        let x60 = self.ys_s_attr(gobj, sattr::X60);
+        let air_spin = self.ys_s_attr(gobj, sattr::X60);
         let v = fp::frsp(fp::fmadd(
             fp::fdiv(std::f64::consts::PI, 30.0),
-            x60,
+            air_spin,
             self.ys_mvf(gobj, mv::X14),
         ));
         self.ys_set_mvf(gobj, mv::X14, v);
@@ -745,11 +749,11 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) {
             self.ys_s_restore(gobj);
             let f = self.game.fighter_id(gobj);
-            let xe8 = self.ys_attr_f32(f, sattr::XE8);
-            if xe8 == 0.0 {
+            let landing_lag = self.ys_attr_f32(f, sattr::XE8);
+            if landing_lag == 0.0 {
                 self.enter_fall(gobj);
             } else {
-                self.enter_fall_special(gobj, 1, 0, 1, 1.0, xe8, 0.0, true);
+                self.enter_fall_special(gobj, 1, 0, 1, 1.0, landing_lag, 0.0, true);
             }
         }
     }
@@ -761,12 +765,12 @@ impl Running<'_> {
 
     /// The roll ends early with B past its first `x4C` frames.
     fn ys_s_b_end(&self, gobj: GObjId) -> bool {
-        let (x48, x4c) = (
+        let (roll_frames, b_min_frames) = (
             self.ys_s_attr_i(gobj, sattr::X48),
             self.ys_s_attr_i(gobj, sattr::X4C),
         );
         let fp = self.game.fighter(gobj);
-        fp.mv_i32(mv::X0) < x48.wrapping_sub(x4c)
+        fp.mv_i32(mv::X0) < roll_frames.wrapping_sub(b_min_frames)
             && fp.input.pressed_buttons & super::super::co::PAD_B != 0
     }
 
@@ -776,9 +780,9 @@ impl Running<'_> {
     pub fn ys_special_s_loop_iasa(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.ys_mvi(gobj, mv::X30) != 0 {
-            let x9c = self.ys_s_attr(gobj, sattr::X9C);
+            let turn_threshold = self.ys_s_attr(gobj, sattr::X9C);
             let x = reg(self.game.fighters[f.0].input.lstick[0].x);
-            if abs(x) > x9c {
+            if abs(x) > turn_threshold {
                 let way = if x > 0.0 { 1.0 } else { -1.0 };
                 if reg(self.game.fighters[f.0].facing_dir) != way {
                     self.clear_hitboxes(f);
@@ -857,7 +861,7 @@ impl Running<'_> {
     pub fn ys_special_s_loop_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let a = |r: &Self, off| r.ys_s_attr(gobj, off);
-        let (x74, x78, x7c, x80, x94) = (
+        let (accel_by, decel_by, target_speed, max_speed, slope_scale) = (
             a(self, sattr::X74),
             a(self, sattr::X78),
             a(self, sattr::X7C),
@@ -873,7 +877,7 @@ impl Running<'_> {
         let (f5, f6) = if vel > 0.0 {
             if nx > 0.0 {
                 (
-                    fp::fmadds(slope, fp::fmuls(dir, x94), 1.0),
+                    fp::fmadds(slope, fp::fmuls(dir, slope_scale), 1.0),
                     fp::fnmsubs(slope, dir, 1.0),
                 )
             } else {
@@ -883,17 +887,17 @@ impl Running<'_> {
         } else if nx < 0.0 {
             let nd = fp::fneg(dir);
             (
-                fp::fmadds(slope, fp::fmuls(nd, x94), 1.0),
+                fp::fmadds(slope, fp::fmuls(nd, slope_scale), 1.0),
                 fp::fnmsubs(slope, nd, 1.0),
             )
         } else {
             let t = fp::fmuls(slope, fp::fneg(dir));
             (fp::fadds(1.0, t), fp::fsubs(1.0, t))
         };
-        let max = fp::fmuls(x80, f5);
-        let target = fp::fmuls(x7c, f5);
-        let accel = fp::fmuls(x74, f5);
-        let decel = fp::fmuls(x78, f6);
+        let max = fp::fmuls(max_speed, f5);
+        let target = fp::fmuls(target_speed, f5);
+        let accel = fp::fmuls(accel_by, f5);
+        let decel = fp::fmuls(decel_by, f6);
         let av = abs(vel);
         let mut delta = if av >= target {
             let d = fp::fneg(decel);
@@ -932,21 +936,25 @@ impl Running<'_> {
     #[doc(alias = "ftYs_SpecialAirSLoop_1_Phys")]
     pub fn ys_special_s_turn_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x20 = self.ys_mvf(gobj, mv::X20);
+        let turn_decel = self.ys_mvf(gobj, mv::X20);
         let fp = &self.game.fighters[f.0];
         let friction = reg(crate::mp::friction(
             self.game.stage_info.ground_kind_id(),
             fp.coll_data.floor.flags,
         ));
         let fp = &mut self.game.fighters[f.0];
-        fp.gr_vel = mem(fp::fmadds(x20, friction, reg(fp.gr_vel)));
+        fp.gr_vel = mem(fp::fmadds(turn_decel, friction, reg(fp.gr_vel)));
         fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
         self.self_movement_from_ground(gobj);
-        let x10 = self.ys_mvf(gobj, mv::X10);
+        let turn_start_speed = self.ys_mvf(gobj, mv::X10);
         let gr = reg(self.game.fighters[f.0].gr_vel);
-        let reversed = if x10 > 0.0 { gr < 0.0 } else { gr > 0.0 };
-        let past = abs(gr) > fp::fmuls(reg(0.7f32), abs(x10));
+        let reversed = if turn_start_speed > 0.0 {
+            gr < 0.0
+        } else {
+            gr > 0.0
+        };
+        let past = abs(gr) > fp::fmuls(reg(0.7f32), abs(turn_start_speed));
         if !reversed || !past {
             return;
         }
@@ -963,9 +971,9 @@ impl Running<'_> {
         );
         self.play_sfx(gobj, 0x44621, 127, 64);
         self.ys_s_set_cbs(gobj);
-        let x24 = self.game.fighters[f.0].mv_f32(mv::X24);
-        if x24 != 0.0 {
-            self.game.fighters[f.0].facing_dir = x24;
+        let turn_facing = self.game.fighters[f.0].mv_f32(mv::X24);
+        if turn_facing != 0.0 {
+            self.game.fighters[f.0].facing_dir = turn_facing;
         }
         self.ys_set_mvf(gobj, mv::X24, 0.0);
         self.ys_set_mvi(gobj, mv::XC, 0);
@@ -1006,16 +1014,20 @@ impl Running<'_> {
     #[doc(alias = "ftYs_SpecialAirSLoop_3_Phys")]
     pub fn ys_special_air_s_loop_phys(&mut self, gobj: GObjId) {
         self.ys_set_mvi(gobj, mv::X30, 0);
-        let (xe0, x90) = (
+        let (drift_accel, drift_max) = (
             self.ys_s_attr(gobj, sattr::XE0),
             self.ys_s_attr(gobj, sattr::X90),
         );
         let fp = self.game.fighter_mut(gobj);
-        let t = fp::fmuls(reg(fp.input.lstick[0].x), xe0);
+        let t = fp::fmuls(reg(fp.input.lstick[0].x), drift_accel);
         fp.self_vel.x = mem(fp::fadds(reg(fp.self_vel.x), t));
         let v = reg(fp.self_vel.x);
-        if abs(v) > x90 {
-            fp.self_vel.x = mem(if v < 0.0 { fp::fneg(x90) } else { x90 });
+        if abs(v) > drift_max {
+            fp.self_vel.x = mem(if v < 0.0 {
+                fp::fneg(drift_max)
+            } else {
+                drift_max
+            });
         }
         self.ys_s_fall(gobj);
     }
@@ -1071,13 +1083,13 @@ impl Running<'_> {
             self.go_airborne(f);
         }
         self.ys_s_end(gobj, true, KEEP_ALL, 0.0);
-        let (xac, xb0) = (
+        let (bounce_back, bounce_up) = (
             self.ys_s_attr(gobj, sattr::XAC),
             self.ys_s_attr(gobj, sattr::XB0),
         );
         let fp = self.game.fighter_mut(gobj);
-        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), fp::fneg(xac)));
-        fp.self_vel.y = mem(xb0);
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), fp::fneg(bounce_back)));
+        fp.self_vel.y = mem(bounce_up);
     }
 
     /// `ftYs_SpecialAirSLoop_0_Coll`: rolling on the ground with the egg's ECB: a wall ahead
@@ -1104,8 +1116,8 @@ impl Running<'_> {
             self.ys_s_set_cbs(gobj);
             self.ys_s_wrap_spin(gobj);
         }
-        let x30 = self.ys_mvi(gobj, mv::X30).wrapping_add(1);
-        self.ys_set_mvi(gobj, mv::X30, x30);
+        let rolling_frames = self.ys_mvi(gobj, mv::X30).wrapping_add(1);
+        self.ys_set_mvi(gobj, mv::X30, rolling_frames);
     }
 
     /// `ftYs_SpecialAirSLoop_1_Coll`: turning on the ground (fast, through ledges): a wall the
@@ -1114,8 +1126,8 @@ impl Running<'_> {
     #[doc(alias = "ftYs_SpecialAirSLoop_1_Coll")]
     pub fn ys_special_s_turn_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let xa8 = self.ys_s_attr(gobj, sattr::XA8);
-        let grounded = if abs(reg(self.game.fighters[f.0].gr_vel)) > xa8 {
+        let fast_turn_speed = self.ys_s_attr(gobj, sattr::XA8);
+        let grounded = if abs(reg(self.game.fighters[f.0].gr_vel)) > fast_turn_speed {
             self.ground_coll_box(gobj, &roll_box())
         } else {
             self.ground_coll_box_ledges(gobj, &roll_box())
@@ -1136,10 +1148,10 @@ impl Running<'_> {
                 None,
             );
             self.ys_s_set_cbs(gobj);
-            let x24 = self.game.fighters[f.0].mv_f32(mv::X24);
-            if x24 != 0.0 {
+            let turn_facing = self.game.fighters[f.0].mv_f32(mv::X24);
+            if turn_facing != 0.0 {
                 let fp = &mut self.game.fighters[f.0];
-                fp.facing_dir = x24;
+                fp.facing_dir = turn_facing;
                 let vx = reg(fp.self_vel.x);
                 fp.set_mv_f32(mv::X1C, abs(vx));
             }
@@ -1184,16 +1196,16 @@ impl Running<'_> {
         if !grounded {
             return;
         }
-        let (xb4, xb8, x9c, xbc) = (
+        let (bounce_scale, min_bounce, turn_threshold, turn_scale) = (
             self.ys_s_attr(gobj, sattr::XB4),
             self.ys_s_attr(gobj, sattr::XB8),
             self.ys_s_attr(gobj, sattr::X9C),
             self.ys_s_attr(gobj, sattr::XBC),
         );
         let fp = &mut self.game.fighters[f.0];
-        let up = abs(fp::fmuls(reg(fp.self_vel.y), xb4));
+        let up = abs(fp::fmuls(reg(fp.self_vel.y), bounce_scale));
         fp.self_vel.y = mem(up);
-        if up < xb8 {
+        if up < min_bounce {
             self.land(gobj);
             let frame = self.game.fighters[f.0].cur_anim_frame;
             let flags = if rolling { COLL_HIT } else { KEEP };
@@ -1204,9 +1216,9 @@ impl Running<'_> {
                 if abs(self.ys_mvf(gobj, mv::X1C)) < reg(0.01f32) {
                     self.ys_set_mvf(gobj, mv::X1C, reg(0.01f32));
                 }
-                let x1c = self.ys_mvf(gobj, mv::X1C);
+                let speed = self.ys_mvf(gobj, mv::X1C);
                 let fp = &mut self.game.fighters[f.0];
-                let v = mem(fp::fmuls(x1c, reg(fp.facing_dir)));
+                let v = mem(fp::fmuls(speed, reg(fp.facing_dir)));
                 fp.gr_vel = v;
                 fp.self_vel.x = v;
                 fp.self_vel.z = 0.0;
@@ -1224,11 +1236,11 @@ impl Running<'_> {
                 let vx = fp.self_vel.x;
                 fp.gr_vel = vx;
                 fp.set_mv_f32(mv::X1C, abs(reg(vx)));
-                self.ys_s_stick_turn(gobj, x9c, xbc, false);
+                self.ys_s_stick_turn(gobj, turn_threshold, turn_scale, false);
                 self.start_rumble(f, 1, 0);
             }
         } else if rolling {
-            self.ys_s_stick_turn(gobj, x9c, xbc, true);
+            self.ys_s_stick_turn(gobj, turn_threshold, turn_scale, true);
             self.ys_s_wrap_spin(gobj);
         } else {
             let frame = self.game.fighters[f.0].cur_anim_frame;
@@ -1237,31 +1249,31 @@ impl Running<'_> {
             self.ys_s_wrap_spin(gobj);
         }
         if !rolling {
-            let x64 = self.ys_s_attr(gobj, sattr::X64);
-            self.ys_set_mvf(gobj, mv::X1C, x64);
+            let restart_speed = self.ys_s_attr(gobj, sattr::X64);
+            self.ys_set_mvf(gobj, mv::X1C, restart_speed);
             if self.ys_s_smashed(gobj) {
-                let x68 = self.ys_s_attr(gobj, sattr::X68);
-                let v = fp::fmuls(self.ys_mvf(gobj, mv::X1C), x68);
+                let smash_scale = self.ys_s_attr(gobj, sattr::X68);
+                let v = fp::fmuls(self.ys_mvf(gobj, mv::X1C), smash_scale);
                 self.ys_set_mvf(gobj, mv::X1C, v);
             }
-            let x1c = self.ys_mvf(gobj, mv::X1C);
+            let speed = self.ys_mvf(gobj, mv::X1C);
             let fp = &mut self.game.fighters[f.0];
-            fp.self_vel.x = mem(fp::fmuls(x1c, reg(fp.facing_dir)));
+            fp.self_vel.x = mem(fp::fmuls(speed, reg(fp.facing_dir)));
         }
         self.ys_set_mvi(gobj, mv::X8, 0);
     }
 
     /// The stick pushed past `x9C` turns the egg its way at `xBC` times its push (and its
     /// model with it when `face`).
-    fn ys_s_stick_turn(&mut self, gobj: GObjId, x9c: f64, xbc: f64, face: bool) {
+    fn ys_s_stick_turn(&mut self, gobj: GObjId, threshold: f64, push_scale: f64, face: bool) {
         let f = self.game.fighter_id(gobj);
         let x = reg(self.game.fighters[f.0].input.lstick[0].x);
-        if abs(x) > x9c {
+        if abs(x) > threshold {
             let fp = &mut self.game.fighters[f.0];
             fp.facing_dir = if x > 0.0 { 1.0 } else { -1.0 };
-            fp.set_mv_f32(mv::X1C, fp::fmuls(xbc, abs(x)));
-            let x1c = reg(fp.mv_f32(mv::X1C));
-            let v = mem(fp::fmuls(x1c, reg(fp.facing_dir)));
+            fp.set_mv_f32(mv::X1C, fp::fmuls(push_scale, abs(x)));
+            let speed = reg(fp.mv_f32(mv::X1C));
+            let v = mem(fp::fmuls(speed, reg(fp.facing_dir)));
             fp.gr_vel = v;
             fp.self_vel.x = v;
             if face {

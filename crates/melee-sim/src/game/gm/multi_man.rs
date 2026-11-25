@@ -264,7 +264,7 @@ impl Running<'_> {
 
     fn mm_record_1p(&mut self, ckind: i8) -> &mut crate::game::structs::FighterRecords {
         let sel = selkind(ckind as u8);
-        &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records
+        &mut self.game.game_data.card.save_data.fighters[usize::from(sel)].records
     }
 
     /// `gm_Mode_10ManVs_OnLoad`, the six modes' load: the confirming port, the count, and
@@ -371,7 +371,7 @@ impl Running<'_> {
     /// Melee's own copy): the mode's six, the human from the mode's port with one stock,
     /// the others on the other team (Cruel's `xD_b4` set), `xC_b1` cleared but in 10-Man,
     /// and the rumble setting.
-    fn multi_man_players(&mut self, cruel: bool, clear_xc_b1: bool) {
+    fn multi_man_players(&mut self, cruel: bool, clear_enters: bool) {
         let vs = self.multi_man_data().start.players.clone();
         let slot = self.game.multi_man.slot;
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
@@ -394,7 +394,7 @@ impl Running<'_> {
             if cruel {
                 p.dies_up = true;
             }
-            if clear_xc_b1 {
+            if clear_enters {
                 p.enters = false;
             }
         }
@@ -529,7 +529,7 @@ impl Running<'_> {
             self.set_next_game_mode_state_id(1);
             return;
         }
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
         self.results_add_coins(i32::from(end.player_standings[0].coins));
         self.multi_man_store_result();
@@ -676,11 +676,11 @@ impl Running<'_> {
         let mm_mode = mode as u8;
         if mm_mode == GameMode::TenMan || mm_mode == GameMode::HundredMan {
             let sel = usize::from(selkind(idx as u8));
-            let x7c = &self.game.game_data.thing.save_data.fighters[sel].records;
+            let records = &self.game.game_data.card.save_data.fighters[sel].records;
             let cleared = if mm_mode == GameMode::TenMan {
-                x7c.ten_man_cleared
+                records.ten_man_cleared
             } else {
-                x7c.hundred_man_cleared
+                records.hundred_man_cleared
             };
             let blk = &mut self.game.multi_man.blocks[b];
             if r.won != 0 {
@@ -783,9 +783,9 @@ impl Running<'_> {
             let data = self.data;
             for i in 0..ENTRIES {
                 let e = t.at(0x10 * i as u32);
-                let x0 = data.u32(e) as i32;
+                let wait = data.u32(e) as i32;
                 let entry = SpawnEntry {
-                    wait_for: x0,
+                    wait_for: wait,
                     at_once: data.u8(e.at(4)),
                     ckind: data.u8(e.at(5)),
                     level: data.u8(e.at(6)),
@@ -794,7 +794,7 @@ impl Running<'_> {
                     defense_ratio: f32::from_bits(data.u32(e.at(0xC))),
                 };
                 self.game.multi_man.table[i] = entry;
-                if x0 == TABLE_END {
+                if wait == TABLE_END {
                     break;
                 }
             }

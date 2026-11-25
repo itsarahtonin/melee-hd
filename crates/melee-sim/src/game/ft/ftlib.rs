@@ -322,8 +322,8 @@ impl Running<'_> {
     pub fn ft_set_cpu_level(&mut self, gobj: GObjId, level: i32) {
         let f = self.game.fighter_id(gobj);
         let c = &self.game.fighters[f.0].cpu;
-        let (kind, x14) = (c.kind, c.spawn_arg);
-        self.init_cpu(f, kind, level, x14);
+        let (kind, spawn_arg) = (c.kind, c.spawn_arg);
+        self.init_cpu(f, kind, level, spawn_arg);
     }
 
     /// Sets the computer player's kind, its state started afresh, `ft_80087BC0`.
@@ -331,8 +331,8 @@ impl Running<'_> {
     pub fn ft_set_cpu_type(&mut self, gobj: GObjId, kind: i32) {
         let f = self.game.fighter_id(gobj);
         let c = &self.game.fighters[f.0].cpu;
-        let (level, x14) = (c.level, c.spawn_arg);
-        self.init_cpu(f, kind, level, x14);
+        let (level, spawn_arg) = (c.level, c.spawn_arg);
+        self.init_cpu(f, kind, level, spawn_arg);
     }
 
     /// How high above the fighter its name tag goes: its character's own height while

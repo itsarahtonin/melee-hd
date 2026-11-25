@@ -158,10 +158,10 @@ pub fn spawn(
     r.game.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(model));
     super::super::coll::init_hurtboxes(r, gobj);
     let scale = crate::game::gr::ground::scale(r.game);
-    let x44 = attr(r, gobj, 0x44);
+    let size = attr(r, gobj, 0x44);
     let ip = item_mut(r.game, gobj);
     ip.scl = scale;
-    ip.scl = mem(fp::fmuls(reg(ip.scl), reg(x44)));
+    ip.scl = mem(fp::fmuls(reg(ip.scl), reg(size)));
     let s = ip.scl;
     jobj::set_scale(&mut r.game.objs.jobjs, model, Vec3::new(s, s, s));
     Some(gobj)
@@ -308,30 +308,38 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), minus));
     }
     let damage = fp::frsp(f64::from(item(r.game, gobj).damage_taken));
-    let (x24, x28) = (a(r, 0x24), a(r, 0x28));
-    let (x2c, x30, x38) = (a(r, 0x2C), a(r, 0x30), a(r, 0x38));
-    let (x3c, x40) = (a(r, 0x3C), a(r, 0x40));
+    let (base_x, base_y) = (a(r, 0x24), a(r, 0x28));
+    let (scale_ahead, scale_behind, scale_y) = (a(r, 0x2C), a(r, 0x30), a(r, 0x38));
+    let (max_vx, max_vy) = (a(r, 0x3C), a(r, 0x40));
     let ip = item_mut(r.game, gobj);
-    let scaled = |m: f64| fp::fmuls(m, fp::fadds(x24, damage));
+    let scaled = |m: f64| fp::fmuls(m, fp::fadds(base_x, damage));
     if x > zero {
-        let m = if dir == minus { x30 } else { x2c };
+        let m = if dir == minus {
+            scale_behind
+        } else {
+            scale_ahead
+        };
         ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), scaled(m)));
-        if reg(ip.vel.x) <= fp::fneg(x3c) {
-            ip.vel.x = mem(fp::fneg(x3c));
+        if reg(ip.vel.x) <= fp::fneg(max_vx) {
+            ip.vel.x = mem(fp::fneg(max_vx));
         }
     } else {
-        let m = if minus == dir { x2c } else { x30 };
+        let m = if minus == dir {
+            scale_ahead
+        } else {
+            scale_behind
+        };
         ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), scaled(m)));
-        if reg(ip.vel.x) >= x3c {
-            ip.vel.x = mem(x3c);
+        if reg(ip.vel.x) >= max_vx {
+            ip.vel.x = mem(max_vx);
         }
     }
     ip.vel.y = mem(fp::fmuls(
         reg(ip.vel.y),
-        fp::fmuls(x38, fp::fadds(x28, damage)),
+        fp::fmuls(scale_y, fp::fadds(base_y, damage)),
     ));
-    if reg(ip.vel.y) >= x40 {
-        ip.vel.y = mem(x40);
+    if reg(ip.vel.y) >= max_vy {
+        ip.vel.y = mem(max_vy);
     }
     ip.vel.z = mem(zero);
     ip.damage_taken = 0;
@@ -342,8 +350,8 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     };
     let add = a(r, off);
     let v = item_mut(r.game, gobj).vars.trophy_coin();
-    let x8 = reg(v.spin.get());
-    v.spin.set(mem(fp::fadds(x8, add)));
+    let spin = reg(v.spin.get());
+    v.spin.set(mem(fp::fadds(spin, add)));
     change_state(r, gobj, 3, UNK_0X1);
     false
 }
@@ -443,7 +451,7 @@ impl Running<'_> {
     /// (`grFigureGet_80219C50`).
     #[doc(alias = "it_802F13B4")]
     pub fn render_trophy_coin(&mut self, gobj: GObjId, pass: i32) {
-        let x48 = reg(attr(self, gobj, 0x48));
+        let min_zoom = reg(attr(self, gobj, 0x48));
         let kind = item_mut(self.game, gobj)
             .vars
             .trophy_coin()
@@ -454,12 +462,12 @@ impl Running<'_> {
             // The question mark while the stand's coins aren't all snagged or gone.
             let stand = item_mut(self.game, gobj).vars.trophy_coin().stand.get();
             let zoom = reg(self.game.camera.zoom());
-            (self.game.db_pause_flag(1) || zoom < x48)
+            (self.game.db_pause_flag(1) || zoom < min_zoom)
                 && !crate::game::gr::snag_the_trophies::done(self.game, stand)
         } else {
             let zoom = reg(self.game.camera.zoom());
             (self.game.db_pause_flag(1) && crate::game::gr::ground::flags(self.game, 0x330) == 0)
-                || zoom < x48
+                || zoom < min_zoom
         };
         let next = j.and_then(|j| self.game.objs.jobjs[j].next);
         let jobjs = &mut self.game.objs.jobjs;

@@ -57,7 +57,8 @@ pub trait Vars {
     fn speed(&mut self) -> f32;
     fn set_speed(&mut self, v: f32);
     /// `xC`: cleared as it's fired (the Shadow Ball's thrown ball sets it).
-    fn set_xc(&mut self, v: f32);
+    #[doc(alias("set_xc"))]
+    fn set_unread_c(&mut self, v: f32);
     /// `x10`: its size as fired.
     fn size(&mut self) -> f32;
     fn set_size(&mut self, v: f32);
@@ -94,7 +95,7 @@ impl Vars for itSamusChargeshot_ItemVars {
     fn set_speed(&mut self, v: f32) {
         self.speed.set(v);
     }
-    fn set_xc(&mut self, v: f32) {
+    fn set_unread_c(&mut self, v: f32) {
         self.unread_e0.set(v);
     }
     fn size(&mut self) -> f32 {
@@ -154,7 +155,7 @@ impl Vars for itMewtwoShadowball_ItemVars {
     fn set_speed(&mut self, v: f32) {
         self.motion.set_y(v);
     }
-    fn set_xc(&mut self, v: f32) {
+    fn set_unread_c(&mut self, v: f32) {
         self.motion.set_z(v);
     }
     fn size(&mut self) -> f32 {
@@ -404,7 +405,7 @@ pub fn fire(
     let v = vars(r, gobj, s);
     v.set_speed(mem(speed));
     v.set_damage(crate::ppc::cvt_fp2unsigned(damage));
-    v.set_xc(0.0);
+    v.set_unread_c(0.0);
     let (level, levels) = (v.charge(), v.levels());
     let size = mem(lerp_int(
         r,

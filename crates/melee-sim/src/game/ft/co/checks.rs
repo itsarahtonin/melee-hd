@@ -470,19 +470,19 @@ impl Running<'_> {
             let it_y = mem(fp::fadds(reg(ip.pos.y), reg(ip.grab_offset.y)));
             let (xr, yr) = (reg(ip.grab_range.x), reg(ip.grab_range.y));
             let v = if heavy { &p.gr_heavy_offset } else { light };
-            let x1 = reg(v.z);
-            let x0 = mem(fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x)));
-            let y0 = mem(fp::fadds(reg(fp.cur_pos.y), reg(v.y)));
-            let y1 = reg(v.w);
-            let (x0, y0) = (reg(x0), reg(y0));
+            let half_w = reg(v.z);
+            let cx = mem(fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x)));
+            let cy = mem(fp::fadds(reg(fp.cur_pos.y), reg(v.y)));
+            let half_h = reg(v.w);
+            let (cx, cy) = (reg(cx), reg(cy));
             let (ix, iy) = (reg(it_x), reg(it_y));
-            if fp::fsubs(fp::fsubs(x0, x1), xr) < ix
-                && fp::fadds(xr, fp::fadds(x0, x1)) > ix
-                && fp::fsubs(fp::fsubs(y0, y1), yr) < iy
-                && fp::fadds(yr, fp::fadds(y0, y1)) > iy
+            if fp::fsubs(fp::fsubs(cx, half_w), xr) < ix
+                && fp::fadds(xr, fp::fadds(cx, half_w)) > ix
+                && fp::fsubs(fp::fsubs(cy, half_h), yr) < iy
+                && fp::fadds(yr, fp::fadds(cy, half_h)) > iy
             {
-                let dy = fp::fsubs(iy, y0);
-                let dx = fp::fsubs(ix, x0);
+                let dy = fp::fsubs(iy, cy);
+                let dx = fp::fsubs(ix, cx);
                 let d = fp::fmadds(dx, dx, fp::fmuls(dy, dy));
                 if d < min {
                     found = Some(g);
@@ -533,15 +533,15 @@ impl Running<'_> {
         let (xr, yr) = lib26b1::grab_range(self.game, item);
         let (xr, yr) = (reg(xr), reg(yr));
         let v = if heavy { &p.gr_heavy_offset } else { light };
-        let x1 = reg(v.z);
-        let x0 = fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x));
-        let y0 = fp::fadds(reg(fp.cur_pos.y), reg(v.y));
-        let y1 = reg(v.w);
+        let half_w = reg(v.z);
+        let cx = fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x));
+        let cy = fp::fadds(reg(fp.cur_pos.y), reg(v.y));
+        let half_h = reg(v.w);
         let (ix, iy) = (reg(at.x), reg(at.y));
-        fp::fsubs(fp::fsubs(x0, x1), xr) < ix
-            && fp::fadds(xr, fp::fadds(x0, x1)) > ix
-            && fp::fsubs(fp::fsubs(y0, y1), yr) < iy
-            && fp::fadds(yr, fp::fadds(y0, y1)) > iy
+        fp::fsubs(fp::fsubs(cx, half_w), xr) < ix
+            && fp::fadds(xr, fp::fadds(cx, half_w)) > ix
+            && fp::fsubs(fp::fsubs(cy, half_h), yr) < iy
+            && fp::fadds(yr, fp::fadds(cy, half_h)) > iy
     }
 
     /// Whether the held item is the hammer, `ftCo_800C5240`.
@@ -637,25 +637,32 @@ impl Running<'_> {
         false
     }
 
-    /// [`Self::guard_check`] that keeps `x20` in the shield's variables, `ftCo_80091AD8`.
+    /// [`Self::guard_check`] that keeps the dash throw's window (`mv` x20) in the shield's
+    /// variables, `ftCo_80091AD8`.
     #[doc(alias = "ftCo_80091AD8")]
-    pub fn guard_check_keep(&mut self, gobj: GObjId, x20: i32) -> bool {
+    pub fn guard_check_keep(&mut self, gobj: GObjId, dash_throw_window: i32) -> bool {
         if self.guard_check(gobj) {
-            self.game.fighter_mut(gobj).set_mv_i32(0x20, x20);
+            self.game
+                .fighter_mut(gobj)
+                .set_mv_i32(0x20, dash_throw_window);
             return true;
         }
         false
     }
 
-    /// `ftCo_80091B90`: the shield's `x20`.
+    /// `ftCo_80091B90`: the shield's dash throw window (`mv` x20), the frames an item throw
+    /// out of it is still a dash throw.
     #[doc(alias = "ftCo_80091B90")]
-    pub fn guard_set_x20(&mut self, gobj: GObjId, x20: i32) {
-        self.game.fighter_mut(gobj).set_mv_i32(0x20, x20);
+    #[doc(alias("guard_set_x20"))]
+    pub fn guard_set_dash_throw_window(&mut self, gobj: GObjId, window: i32) {
+        self.game.fighter_mut(gobj).set_mv_i32(0x20, window);
     }
 
-    /// `ftCo_80091B9C`: the shield's `x24` from `ftCommonData` x68.
+    /// `ftCo_80091B9C`: the shield's dash grab window (`mv` x24), the frames a grab out of it
+    /// is still a dash grab, from `ftCommonData` x68.
     #[doc(alias = "ftCo_80091B9C")]
-    pub fn guard_set_x24(&mut self, gobj: GObjId) {
+    #[doc(alias("guard_set_x24"))]
+    pub fn guard_set_dash_grab_window(&mut self, gobj: GObjId) {
         let v = gekko_fp::fctiwz(reg(self.common().f32(0x68)));
         self.game.fighter_mut(gobj).set_mv_i32(0x24, v);
     }
@@ -682,8 +689,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80099A58")]
     pub fn escape_air_check(&mut self, gobj: GObjId) -> bool {
         if self.game.fighter(gobj).input.pressed_buttons & PAD_L_R != 0 {
-            let x334 = self.common().i32(0x334);
-            self.enter_escape_air(gobj, x334);
+            let timer = self.common().i32(0x334);
+            self.enter_escape_air(gobj, timer);
             return true;
         }
         false

@@ -276,8 +276,8 @@ impl Running<'_> {
                 count += 1;
             }
             let bone = &mut self.game.fighter_parts[parts][part as usize];
-            let xd = if count != 0 { (count - 1) as u8 } else { 0 };
-            set_bone_last_dobj(bone, xd);
+            let last_dobj = if count != 0 { (count - 1) as u8 } else { 0 };
+            set_bone_last_dobj(bone, last_dobj);
             set_bone_bit(bone, 1, 6, own != 0);
             part += 1;
             let (next, dd) = next_in_tree(&self.game.objs.jobjs, cur);
@@ -335,14 +335,14 @@ impl Running<'_> {
             "the original's assertion failed: fighter parts model num over!"
         );
         let table = self.data.ptr(desc.at(4)).expect("FtPartsDesc::vis_table");
-        let mut xc = [None; 5];
+        let mut vis_tables = [None; 5];
         for k in 0..4u32 {
             let mine = self.data.ptr(table.at(0x10 * costume + 4 * k));
-            xc[k as usize] = mine.or_else(|| self.data.ptr(table.at(4 * k)));
+            vis_tables[k as usize] = mine.or_else(|| self.data.ptr(table.at(4 * k)));
         }
         let fp = &mut self.game.fighters[f.0];
         fp.parts_vis.model_num = model_num;
-        fp.parts_vis.lookups = xc;
+        fp.parts_vis.lookups = vis_tables;
         fp.parts_vis.cleared = [1; 5];
         let (main, second) = (fp.dobj_list.data, fp.second_dobjs.data);
         for (idx, list) in [(0, main), (1, main), (2, second), (3, main), (4, main)] {

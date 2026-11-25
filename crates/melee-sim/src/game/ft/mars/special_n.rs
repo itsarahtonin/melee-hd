@@ -417,12 +417,12 @@ impl Running<'_> {
     pub(crate) fn mars_special_n_swing_anim(&mut self, gobj: GObjId, p: &ShieldBreaker, air: bool) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] == 0 {
-            let x4 = self.mars_n_attr_i32(gobj, p, attr::X4);
-            let x8 = self.mars_n_attr_i32(gobj, p, attr::X8);
+            let base_damage = self.mars_n_attr_i32(gobj, p, attr::X4);
+            let damage_per_step = self.mars_n_attr_i32(gobj, p, attr::X8);
             for i in 0..4 {
                 if self.game.fighters[f.0].hitboxes[i].state == hitcapsule::ENABLED {
                     let n = self.game.fighters[f.0].mv_i32(mv::N_CUR_FRAME);
-                    let d = x4.wrapping_add((n / 30).wrapping_mul(x8));
+                    let d = base_damage.wrapping_add((n / 30).wrapping_mul(damage_per_step));
                     let d = crate::ppc::cvt_fp2unsigned(fp::frsp(f64::from(d)));
                     self.hitbox_damage(f, i, false, d);
                 }

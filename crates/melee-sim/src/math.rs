@@ -238,15 +238,15 @@ fn rsqrt(x: f64) -> f64 {
 pub fn atan(x: f32) -> f32 {
     let negative = sign(x);
     let bits = x.to_bits() & 0x7FFF_FFFF;
-    let xa = reg_bits(bits);
+    let abs_x = reg_bits(bits);
     let t = |i: i32| reg_bits(ATAN[i as usize]);
     let mut index = -1;
     let mut reciprocal = false;
-    let mut r = if xa >= reg_bits(SILVER_RATIO) {
+    let mut r = if abs_x >= reg_bits(SILVER_RATIO) {
         reciprocal = true;
-        fp::fdivs(1.0, xa)
-    } else if !(reg_bits(SILVER_RATIO_CONJUGATE) < xa) {
-        xa
+        fp::fdivs(1.0, abs_x)
+    } else if !(reg_bits(SILVER_RATIO_CONJUGATE) < abs_x) {
+        abs_x
     } else {
         let b = bits as i32;
         index = match bits & 0x7F80_0000 {
@@ -258,7 +258,7 @@ pub fn atan(x: f32) -> f32 {
             _ => 0,
         };
         let (a, c) = (t(index + 39), t(index + 33));
-        let r = spill(fp::fdivs(1.0, fp::fadds(c, fp::fadds(xa, a))));
+        let r = spill(fp::fdivs(1.0, fp::fadds(c, fp::fadds(abs_x, a))));
         fp::fadds(
             fp::fnmsubs(r, t(index + 7), c),
             fp::fnmsubs(r, t(index + 13), a),

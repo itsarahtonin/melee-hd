@@ -58,7 +58,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::YOYO_CURRENT_FRAME).wrapping_add(1);
         fp.set_mv_i32(mv::YOYO_CURRENT_FRAME, n);
-        self.ness_yoyo_set_unk_rate(gobj);
+        self.ness_yoyo_set_spin_rate(gobj);
         self.ness_yoyo_check_timed_rehit(gobj);
         let duration = reg(self.ness_attr_f32(f, attr::YOYO_CHARGE_DURATION));
         let frame = fp::frsp(f64::from(

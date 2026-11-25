@@ -212,12 +212,12 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
         if v.coin_wait == 0 {
             v.coins_out += 1;
             let coins_out = v.coins_out;
-            let (xc, x10, x14) = (
+            let (left, right, height) = (
                 r.data.f32(p.at(0xC)),
                 r.data.f32(p.at(0x10)),
                 r.data.f32(p.at(0x14)),
             );
-            let mut w = fp::fsubs(reg(x10), reg(xc));
+            let mut w = fp::fsubs(reg(right), reg(left));
             if w < 0.0 {
                 w = fp::fneg(w);
             }
@@ -228,7 +228,7 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
             if r.game.objs.rng.below(2) == 0 {
                 x = mem(fp::fmuls(reg(x), fp::fneg(1.0)));
             }
-            let y = mem(fp::fadds(reg(x14), reg(stage::cam_top(r.game))));
+            let y = mem(fp::fadds(reg(height), reg(stage::cam_top(r.game))));
             let trophy = r.game.grounds[g.0].u.figureget().coin_trophies[(coins_out - 1) as usize];
             let coin = super::super::it::kinds::trophycoin::spawn(
                 r,

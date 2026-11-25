@@ -35,12 +35,12 @@ impl Running<'_> {
     pub fn ca_special_hi_on_change(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let air_var = self.ca_attr_i32(f, attr::SPECIALHI_AIR_VAR);
-        let unk2 = reg(self.ca_attr_f32(f, attr::SPECIALHI_UNK2));
+        let cmd_var1 = reg(self.ca_attr_f32(f, attr::SPECIALHI_UNK2));
         let fp = &mut self.game.fighters[f.0];
         fp.jumps_used = fp.co_attrs.max_jumps as u8;
         fp.mv[mv::HI_X0..mv::HI_X0 + 2].copy_from_slice(&(air_var as u16).to_be_bytes());
         fp.cmd_vars[0] = 0;
-        fp.cmd_vars[1] = cvt_fp2unsigned(unk2);
+        fp.cmd_vars[1] = cvt_fp2unsigned(cmd_var1);
         fp.set_mv_f32(mv::HI_VEL_X, 0.0);
         fp.set_mv_f32(mv::HI_VEL_Y, 0.0);
         self.ca_set_hi_flag(gobj, HI_B0, false);

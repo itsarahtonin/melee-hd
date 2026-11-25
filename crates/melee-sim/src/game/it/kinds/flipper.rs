@@ -393,8 +393,8 @@ pub fn inflight_phys(r: &mut Running, gobj: GObjId) {
         ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), k()));
         ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), k()));
     }
-    let x68 = common_data(r.game).f32(r.data, data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }
 
 /// `itFlipper_Inflight_Coll`: bounces off walls, ceilings and floors.
@@ -551,10 +551,10 @@ fn bounce(r: &mut Running, gobj: GObjId) {
     if item_mut(r.game, gobj).vars.flipper().flight_timer.get() >= 6 {
         lib2725::bounce_off_victim(r.game, r.data, gobj);
     } else {
-        let x60 = reg(common_data(r.game).f32(r.data, data::common::X60));
+        let bounce_up = reg(common_data(r.game).f32(r.data, data::common::X60));
         let ip = item_mut(r.game, gobj);
         ip.vel.x = mem(fp::fmuls(fp::fneg(1.0), reg(ip.vel.x)));
-        ip.vel.y = mem(fp::fmadds(fp::fneg(1.0), reg(ip.vel.y), x60));
+        ip.vel.y = mem(fp::fmadds(fp::fneg(1.0), reg(ip.vel.y), bounce_up));
     }
 }
 

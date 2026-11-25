@@ -274,7 +274,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015CCF0")]
     #[doc(alias = "gmMainLib_8015CCFC")]
     pub(crate) fn results_add_coins(&mut self, n: i32) -> i32 {
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         let current = s.coins as i32;
         // The original's test (`total > (u32)-1`) can never hold: the sums wrap.
         s.most_coins = (s.most_coins as u32).wrapping_add(n as u32) as i32;
@@ -324,7 +324,7 @@ impl Running<'_> {
         let t = self
             .game
             .game_data
-            .thing
+            .card
             .save_data
             .challenger_records
             .combined_vs_play_time;
@@ -345,13 +345,7 @@ impl Running<'_> {
     #[doc(alias = "gm_80172E74")]
     #[doc(alias = "gmMainLib_8015CFCC")]
     pub(super) fn challenger_by_characters(&self) -> u8 {
-        let mask = self
-            .game
-            .game_data
-            .thing
-            .save_data
-            .challenger_records
-            .played as u32;
+        let mask = self.game.game_data.card.save_data.challenger_records.played as u32;
         let count = (0..25u8)
             .filter(|&i| {
                 super::super::gm::unlock_index(super::unlocks::selkind_to_ckind(i)).is_none()
@@ -409,7 +403,7 @@ impl Running<'_> {
     /// (`x10`, a million).
     #[doc(alias = "gm_80173DE4")]
     fn results_record_trophies(&mut self, end: &MatchEnd) {
-        let r = self.game.game_data.thing.save_data.trophy_records.clone();
+        let r = self.game.game_data.card.save_data.trophy_records.clone();
         for &(n, t) in &KO_TROPHIES {
             if r.vs_matches as u32 >= n {
                 self.give_record_trophy(t);
@@ -476,7 +470,7 @@ impl Running<'_> {
                 let played = self
                     .game
                     .game_data
-                    .thing
+                    .card
                     .save_data
                     .challenger_records
                     .vs_matches;
@@ -495,7 +489,7 @@ impl Running<'_> {
                 let one_p = self
                     .game
                     .game_data
-                    .thing
+                    .card
                     .save_data
                     .stage_unlock_records
                     .vs_matches as u32;

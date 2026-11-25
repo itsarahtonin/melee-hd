@@ -772,7 +772,7 @@ impl Running<'_> {
         } else {
             (reg(tg.cpu.hurt_ahead), reg(tg.cpu.hurt_behind))
         };
-        let x568 = reg(tg.cpu.hurt_top);
+        let hurt_top = reg(tg.cpu.hurt_top);
         let target_air = tg.ground_or_air == GA_AIR;
         let scale = reg(me.scale.y);
         let facing_right = f64::from(me.facing_dir) > 0.0;
@@ -850,29 +850,29 @@ impl Running<'_> {
             } else {
                 fp::fsubs(fp::fmadds(tgt_vy, t, tgt_y), fp_pred_y)
             };
-            let (x08, x0c) = (
+            let (reach0_x, reach1_x) = (
                 reg(self.data.f32(entry.at(8))),
                 reg(self.data.f32(entry.at(0xC))),
             );
             let (mut dirx, mut diry) = match (facing_right, reach) {
-                (true, None) => (fp::fmuls(x08, scale), fp::fmuls(x0c, scale)),
+                (true, None) => (fp::fmuls(reach0_x, scale), fp::fmuls(reach1_x, scale)),
                 (false, None) => (
-                    fp::fmuls(fp::fneg(x0c), scale),
-                    fp::fmuls(fp::fneg(x08), scale),
+                    fp::fmuls(fp::fneg(reach1_x), scale),
+                    fp::fmuls(fp::fneg(reach0_x), scale),
                 ),
-                (true, Some(r)) => (fp::fmuls(x08, scale), fp::fmadds(x0c, scale, r)),
+                (true, Some(r)) => (fp::fmuls(reach0_x, scale), fp::fmadds(reach1_x, scale, r)),
                 (false, Some(r)) => (
-                    fp::fmsubs(fp::fneg(x0c), scale, r),
-                    fp::fmuls(fp::fneg(x08), scale),
+                    fp::fmsubs(fp::fneg(reach1_x), scale, r),
+                    fp::fmuls(fp::fneg(reach0_x), scale),
                 ),
             };
             dirx = fp::fmuls(dirx, half_range);
             diry = fp::fmuls(diry, half_range);
-            let x14 = reg(self.data.f32(entry.at(0x14)));
+            let reach1_y = reg(self.data.f32(entry.at(0x14)));
             let upper = fp::fmuls(
                 match reach {
-                    None => fp::fmuls(x14, scale),
-                    Some(r) => fp::fmadds(x14, scale, r),
+                    None => fp::fmuls(reach1_y, scale),
+                    Some(r) => fp::fmadds(reach1_y, scale, r),
                 },
                 half_range,
             );
@@ -881,7 +881,7 @@ impl Running<'_> {
                 half_range,
             );
             if upper > rel_pred_y
-                && lower < fp::fadds(rel_pred_y, x568)
+                && lower < fp::fadds(rel_pred_y, hurt_top)
                 && dirx < fp::fadds(relx, range_f)
                 && diry > fp::fsubs(relx, range_b)
             {
@@ -919,13 +919,13 @@ impl Running<'_> {
                 // `ftCo_CpuSelectAttack`.
                 let e = p.unwrap();
                 let scale = reg(self.game.fighters[f.0].scale.y);
-                let (x08, x0c) = (self.data.f32(e.at(8)), self.data.f32(e.at(0xC)));
-                let (x10, x14) = (self.data.f32(e.at(0x10)), self.data.f32(e.at(0x14)));
+                let (reach0_x, reach1_x) = (self.data.f32(e.at(8)), self.data.f32(e.at(0xC)));
+                let (reach0_y, reach1_y) = (self.data.f32(e.at(0x10)), self.data.f32(e.at(0x14)));
                 let c = &mut self.game.fighters[f.0].cpu;
-                c.attack_reach_0.x = mem(fp::fmuls(scale, reg(x08)));
-                c.attack_reach_0.y = mem(fp::fmuls(scale, reg(x10)));
-                c.attack_reach_1.x = mem(fp::fmuls(scale, reg(x0c)));
-                c.attack_reach_1.y = mem(fp::fmuls(scale, reg(x14)));
+                c.attack_reach_0.x = mem(fp::fmuls(scale, reg(reach0_x)));
+                c.attack_reach_0.y = mem(fp::fmuls(scale, reg(reach0_y)));
+                c.attack_reach_1.x = mem(fp::fmuls(scale, reg(reach1_x)));
+                c.attack_reach_1.y = mem(fp::fmuls(scale, reg(reach1_y)));
                 return self.data.u32(e) as i32;
             }
         }
@@ -1041,16 +1041,16 @@ impl Running<'_> {
             };
             let me = &self.game.fighters[f.0];
             let scale = reg(me.scale.y);
-            let (x08, x0c) = (
+            let (reach0_x, reach1_x) = (
                 reg(self.data.f32(entry.at(8))),
                 reg(self.data.f32(entry.at(0xC))),
             );
             let (dirx, diry) = if f64::from(me.facing_dir) > 0.0 {
-                (fp::fmuls(x08, scale), fp::fmuls(x0c, scale))
+                (fp::fmuls(reach0_x, scale), fp::fmuls(reach1_x, scale))
             } else {
                 (
-                    fp::fmuls(fp::fneg(x0c), scale),
-                    fp::fmuls(fp::fneg(x08), scale),
+                    fp::fmuls(fp::fneg(reach1_x), scale),
+                    fp::fmuls(fp::fneg(reach0_x), scale),
                 )
             };
             let upper = fp::fmuls(reg(self.data.f32(entry.at(0x14))), scale);
@@ -2151,8 +2151,8 @@ impl Running<'_> {
             return;
         }
         let r = reg(self.game.objs.rng.draw_f32());
-        let x94 = self.game.fighters[f.0].cpu.hold_choice;
-        if fp::frsp(fp::fmul(r, fp::fadd(1.0, f64::from(x94)))) < 0.5 {
+        let hold_choice = self.game.fighters[f.0].cpu.hold_choice;
+        if fp::frsp(fp::fmul(r, fp::fadd(1.0, f64::from(hold_choice)))) < 0.5 {
             self.cpu_data_script(f, if klaw { 0x11 } else { 2 });
             let cpu = &mut self.game.fighters[f.0].cpu;
             cpu.hold_choice = cpu.hold_choice.wrapping_add(1);

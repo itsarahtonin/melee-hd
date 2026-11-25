@@ -171,15 +171,15 @@ pub fn choose_target(r: &mut Running, gobj: GObjId) {
     let own = item(r.game, gobj).owner;
     let target = owner::lowest_percent_opponent(r.game, own).or(own);
     pokemon::vars(r.game, gobj).set_gobj(TARGET, target);
-    let (x4, x8) = (attr_f32(r, gobj, 4), attr_f32(r, gobj, 8));
+    let (max_x, min_x) = (attr_f32(r, gobj, 4), attr_f32(r, gobj, 8));
     let randf = reg(r.game.objs.rng.draw_f32());
-    let diff = fp::fsubs(reg(x4), reg(x8));
-    let x = mem(fp::fmadds(diff, randf, reg(x8)));
+    let diff = fp::fsubs(reg(max_x), reg(min_x));
+    let x = mem(fp::fmadds(diff, randf, reg(min_x)));
     pokemon::vars(r.game, gobj).set_f32(OFFSET_X, x);
-    let (xc, x10) = (attr_f32(r, gobj, 0xC), attr_f32(r, gobj, 0x10));
+    let (max_y, min_y) = (attr_f32(r, gobj, 0xC), attr_f32(r, gobj, 0x10));
     let randf = reg(r.game.objs.rng.draw_f32());
-    let diff = fp::fsubs(reg(xc), reg(x10));
-    let y = mem(fp::fmadds(diff, randf, reg(x10)));
+    let diff = fp::fsubs(reg(max_y), reg(min_y));
+    let y = mem(fp::fmadds(diff, randf, reg(min_y)));
     pokemon::vars(r.game, gobj).set_f32(OFFSET_Y, y);
     if r.game.objs.rng.below(2) != 0 {
         let v = pokemon::vars(r.game, gobj);
@@ -191,19 +191,19 @@ pub fn choose_target(r: &mut Running, gobj: GObjId) {
 /// How long it follows, `it_802D4494`: `x18` frames and up to `x14 - x18` more.
 #[doc(alias = "it_802D4494")]
 pub fn choose_follow_frames(r: &mut Running, gobj: GObjId) {
-    let (x14, x18) = (attr_f32(r, gobj, 0x14), attr_f32(r, gobj, 0x18));
-    let n = fp::fctiwz(fp::fsubs(reg(x14), reg(x18)));
+    let (max_frames, min_frames) = (attr_f32(r, gobj, 0x14), attr_f32(r, gobj, 0x18));
+    let n = fp::fctiwz(fp::fsubs(reg(max_frames), reg(min_frames)));
     let more = r.game.objs.rng.below(n);
-    let frames = mem(fp::fadds(reg(x18), fp::frsp(f64::from(more))));
+    let frames = mem(fp::fadds(reg(min_frames), fp::frsp(f64::from(more))));
     pokemon::vars(r.game, gobj).set_f32(FOLLOW_FRAMES, frames);
 }
 
 /// How many shots it fires, `it_802D4510`: `x44` and up to `x40 - x44` more.
 #[doc(alias = "it_802D4510")]
 pub fn choose_shots(r: &mut Running, gobj: GObjId) {
-    let (x40, x44) = (attr_i32(r, gobj, 0x40), attr_i32(r, gobj, 0x44));
-    let more = r.game.objs.rng.below(x40.wrapping_sub(x44));
-    pokemon::vars(r.game, gobj).set_i32(SHOTS, x44.wrapping_add(more));
+    let (max_shots, min_shots) = (attr_i32(r, gobj, 0x40), attr_i32(r, gobj, 0x44));
+    let more = r.game.objs.rng.below(max_shots.wrapping_sub(min_shots));
+    pokemon::vars(r.game, gobj).set_i32(SHOTS, min_shots.wrapping_add(more));
 }
 
 /// `it_802D4564`, following: gone once told to; its animation looping; when its frames to

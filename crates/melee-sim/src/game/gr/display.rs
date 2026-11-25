@@ -169,8 +169,8 @@ impl Running<'_> {
             .rendering_camera
             .expect("the drawing camera");
         let rendering_obj = self.game.world.gobj(rendering).obj;
-        let (x18, follows) = (gp.camera, gp.flags.follows_camera);
-        match x18 {
+        let (camera, follows) = (gp.camera, gp.flags.follows_camera);
+        match camera {
             Some(cam) => {
                 if self.game.world.gobj(cam).obj != rendering_obj {
                     if !follows {

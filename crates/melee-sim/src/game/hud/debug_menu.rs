@@ -997,7 +997,7 @@ impl Running<'_> {
             .expect("the debug menus' pool");
         // The slot as `HSD_ObjAlloc` hands it out: `x14` keeps what the block held.
         let m = pool.alloc_stale(DebugMenu::default());
-        let x14 = if crate::game::leftovers::pool_grew() {
+        let leftover = if crate::game::leftovers::pool_grew() {
             crate::game::leftovers::bytes_known(self.data, pool.addr(m) + 0x14, 4)
                 .filter(|(_, k)| k.iter().all(|&k| k))
                 .map(|(b, _)| u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
@@ -1016,7 +1016,7 @@ impl Running<'_> {
             .as_mut()
             .expect("the debug menus' pool");
         pool[m] = DebugMenu {
-            submenu_leftover: x14,
+            submenu_leftover: leftover,
             ..DebugMenu::default()
         };
         let cursor = self.menu(parent).cursor;
@@ -1209,13 +1209,13 @@ impl Running<'_> {
     /// trophy's record and trophy taken (`gm_80174238`, `Toy_80311960`).
     #[doc(alias = "gmMainLib_8015FB68")]
     pub fn debug_relock_all(&mut self) {
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.unlocked_features = 0;
         s.unlocked_characters = 0;
         s.unlocked_stages = 0;
         self.game.sync_unlocks();
         self.relock_messages();
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         for i in 0..300 {
             s.trophies[i / 32] &= !(1 << (i % 32));
         }
@@ -1386,7 +1386,7 @@ impl Running<'_> {
             .vs_table(crate::game::gm::vs_melee::VS_MODE_MELEE)
             .clone();
         self.game.debug_mode.hanyu_css.vs.clone_from(&vs);
-        self.game.game_data.thing.save_data.unlocked_characters |= (1 << 11) - 1;
+        self.game.game_data.card.save_data.unlocked_characters |= (1 << 11) - 1;
         assert!(
             self.game.debug_mode.hanyu_css.match_type & 1 == 0,
             "the Hanyu select entered in an odd match type, which its crash on every entry rules out"

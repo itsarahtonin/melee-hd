@@ -749,7 +749,7 @@ impl Running<'_> {
         fp.dmg.element = hit.element;
         // `ftColl_80078710(holder, held, &facing_dir_1)`.
         let af = self.game.fighter(holder);
-        let (akind, x2070, instance) = (
+        let (akind, attack_flags, instance) = (
             af.kind,
             u32::from_be_bytes(af.attack_flags),
             af.attack_record.record_id,
@@ -759,7 +759,7 @@ impl Running<'_> {
             held,
             1,
             akind,
-            x2070,
+            attack_flags,
             super::super::super::pl::trick::AttackRecord::Fighter(holder),
             instance,
             true,
@@ -793,12 +793,12 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Shouldered_Anim")]
     pub fn co_shouldered_anim(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (x4a8, x4ac) = (reg(c.f32(0x4A8)), reg(c.f32(0x4AC)));
+        let (mash_amount, air_mash_scale) = (reg(c.f32(0x4A8)), reg(c.f32(0x4AC)));
         let holder = self.cargo_victim(gobj);
         let amount = if self.is_airborne(holder) {
-            fp::fmuls(x4a8, x4ac)
+            fp::fmuls(mash_amount, air_mash_scale)
         } else {
-            x4a8
+            mash_amount
         };
         let mashed = self.grab_mash(gobj, mem(amount));
         self.game
@@ -810,7 +810,7 @@ impl Running<'_> {
             self.shouldered_break_free(gobj);
             return;
         }
-        let (x3b0, rate) = (c.f32(0x3B0), c.f32(0x3B4));
+        let (sped_frames, rate) = (c.f32(0x3B0), c.f32(0x3B4));
         let fp = self.game.fighter_mut(gobj);
         if fp.mv_f32(SHOULDERED_TIMER) != 0.0 {
             let t = fp::fsubs(reg(fp.mv_f32(SHOULDERED_TIMER)), 1.0);
@@ -827,7 +827,7 @@ impl Running<'_> {
             && fp.mv_i32(SHOULDERED_MASHED) != 0
             && fp.motion_id == ms::SHOULDERED_WAIT
         {
-            fp.set_mv_f32(SHOULDERED_TIMER, reg(x3b0));
+            fp.set_mv_f32(SHOULDERED_TIMER, reg(sped_frames));
             self.set_anim_rate(gobj, rate);
         }
     }

@@ -32,7 +32,7 @@ pub fn gx_project(p: [f64; 3], m: &Mtx34, pm: &[f32; 7], vp: &[f32; 6]) -> Vec3 
     let pm = pm.map(reg);
     let vp = vp.map(reg);
     let (ex, ey, ez) = (reg(eye.x), reg(eye.y), reg(eye.z));
-    let (xc, yc, zc, wc) = if pm[0] == 0.0 {
+    let (cx, cy, cz, cw) = if pm[0] == 0.0 {
         (
             fp::fadds(fp::fmuls(ex, pm[1]), fp::fmuls(ez, pm[2])),
             fp::fadds(fp::fmuls(ey, pm[3]), fp::fmuls(ez, pm[4])),
@@ -49,16 +49,16 @@ pub fn gx_project(p: [f64; 3], m: &Mtx34, pm: &[f32; 7], vp: &[f32; 6]) -> Vec3 
     };
     let sx = fp::fadds(
         fp::fdivs(vp[2], 2.0),
-        fp::fadds(vp[0], fp::fmuls(wc, fp::fdivs(fp::fmuls(xc, vp[2]), 2.0))),
+        fp::fadds(vp[0], fp::fmuls(cw, fp::fdivs(fp::fmuls(cx, vp[2]), 2.0))),
     );
     let sy = fp::fadds(
         fp::fdivs(vp[3], 2.0),
         fp::fadds(
             vp[1],
-            fp::fmuls(wc, fp::fdivs(fp::fmuls(fp::fneg(yc), vp[3]), 2.0)),
+            fp::fmuls(cw, fp::fdivs(fp::fmuls(fp::fneg(cy), vp[3]), 2.0)),
         ),
     );
-    let sz = fp::fadds(vp[5], fp::fmuls(wc, fp::fmuls(zc, fp::fsubs(vp[5], vp[4]))));
+    let sz = fp::fadds(vp[5], fp::fmuls(cw, fp::fmuls(cz, fp::fsubs(vp[5], vp[4]))));
     Vec3::new(mem(sx), mem(sy), mem(sz))
 }
 

@@ -670,12 +670,12 @@ impl Mirror for HurtCapsule {
     }
 }
 
-impl Mirror for ft_800898B4_t {
+impl Mirror for HitRecord {
     const SIZE: u32 = 0x14;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
-        ft_800898B4_t {
+        HitRecord {
             attacker_percent: m.u32(at + 0x0) as i32,
             victim_percent: m.u32(at + 0x4) as i32,
             kb_applied1: f32::from_bits(m.u32(at + 0x8)),
@@ -9200,7 +9200,7 @@ impl LayOut for HurtCapsule {
     }
 }
 
-impl LayOut for ft_800898B4_t {
+impl LayOut for HitRecord {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
         l.put_u32(at + 0x0, self.attacker_percent as u32);

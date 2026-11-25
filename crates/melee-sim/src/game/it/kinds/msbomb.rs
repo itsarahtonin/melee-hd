@@ -202,13 +202,13 @@ pub fn settle(r: &mut Running, gobj: GObjId) {
             ));
         } else {
             let wall = maplib::touched_wall(r.game, gobj);
-            let x4 = reg(r.data.f32(a.at(4)));
+            let offset_x = reg(r.data.f32(a.at(4)));
             let ip = item_mut(r.game, gobj);
             if wall == 8 {
-                ip.pos.x = mem(fp::fadds(reg(ip.pos.x), x4));
+                ip.pos.x = mem(fp::fadds(reg(ip.pos.x), offset_x));
             }
             if wall == 4 {
-                ip.pos.x = mem(fp::fsubs(reg(ip.pos.x), x4));
+                ip.pos.x = mem(fp::fsubs(reg(ip.pos.x), offset_x));
             }
         }
     }

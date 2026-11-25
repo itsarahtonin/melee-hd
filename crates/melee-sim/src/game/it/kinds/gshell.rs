@@ -138,7 +138,7 @@ fn shared(v: &mut ItemVars) -> shell::Vars<'_> {
 /// Counts down how long a hit shell can't hurt its owner, `it_8028B988`.
 #[doc(alias = "it_8028B988")]
 pub fn count_owner_grace(r: &mut Running, gobj: GObjId) {
-    let x28 = attr(r, gobj, 0x28);
+    let owner_grace = attr(r, gobj, 0x28);
     let v = vars(r.game, gobj);
     if !v.grace_counting.get() {
         return;
@@ -146,7 +146,7 @@ pub fn count_owner_grace(r: &mut Running, gobj: GObjId) {
     v.owner_grace.update(|old| mem(fp::fsubs(reg(old), 1.0)));
     if reg(v.owner_grace.get()) <= 0.0 {
         v.grace_counting.set(false);
-        v.owner_grace.set(x28);
+        v.owner_grace.set(owner_grace);
         let blinking = v.blinking.get();
         hitbox::set_hit_flag0(r.game, gobj, 0, true);
         if blinking {
@@ -159,10 +159,10 @@ pub fn count_owner_grace(r: &mut Running, gobj: GObjId) {
 /// slides on.
 #[doc(alias = "it_8028BA2C")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    let x8 = attr(r, gobj, 8);
+    let stop_speed = attr(r, gobj, 8);
     let b = item(r.game, gobj).kind_coll_box.clone();
     maplib::set_box(r.game, gobj, b);
-    if reg(item(r.game, gobj).vel.x).abs() < reg(x8) {
+    if reg(item(r.game, gobj).vel.x).abs() < reg(stop_speed) {
         item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
         if !maplib::slides(r.game, r.data, gobj) {
             stopped(r, gobj);
@@ -177,9 +177,9 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
 /// Sent sliding the way the hit pushed it, `it_8028BAD8`.
 #[doc(alias = "it_8028BAD8")]
 pub fn knocked(r: &mut Running, gobj: GObjId) {
-    let x14 = attr(r, gobj, 0x14);
+    let push_scale = attr(r, gobj, 0x14);
     let ip = item_mut(r.game, gobj);
-    let push = fp::fmuls(to_f32(ip.hit_damage), reg(x14));
+    let push = fp::fmuls(to_f32(ip.hit_damage), reg(push_scale));
     let away = -reg(ip.damage_dir);
     match ip.msid {
         0 | 1 | 3 | 4 | 9 => {
@@ -206,20 +206,21 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
 /// Bounces up off a fighter who hit a sliding shell (the file's inline `shellHit`, and the
 /// sliding half of `it_8028BC2C`), up to `fell` (state 1).
 fn pop_up(r: &mut Running, gobj: GObjId) {
-    let (xc, x10, x2c) = (attr(r, gobj, 0xC), attr(r, gobj, 0x10), attr(r, gobj, 0x2C));
+    let (bounce_back, pop_up_vel, pop_timer) =
+        (attr(r, gobj, 0xC), attr(r, gobj, 0x10), attr(r, gobj, 0x2C));
     hitbox::start_blink(r.game, gobj);
     hitbox::set_hit_ids(r.game, gobj);
     let f = r.game.objs.rng.draw_f32();
     let ip = item_mut(r.game, gobj);
-    let vx = fp::fmuls(-reg(ip.vel.x), reg(xc));
+    let vx = fp::fmuls(-reg(ip.vel.x), reg(bounce_back));
     ip.vel.x = mem(fp::fmuls(vx, reg(f)));
-    ip.vel.y = x10;
+    ip.vel.y = pop_up_vel;
     shell::draw_landings(r, gobj, &GREEN);
     maplib::enter_air(item_mut(r.game, gobj));
     fell(r, gobj);
     let v = vars(r.game, gobj);
     v.popped.set(true);
-    v.pop_timer.set(x2c);
+    v.pop_timer.set(pop_timer);
 }
 
 /// Jumped on: a sliding shell pops up, a still one is kicked away from the jumper,
@@ -232,9 +233,9 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
             vars(r.game, gobj).blinking.set(true);
         }
         0 | 1 | 3 | 4 | 9 => {
-            let x1c = attr(r, gobj, 0x1C);
+            let kick_speed = attr(r, gobj, 0x1C);
             let ip = item_mut(r.game, gobj);
-            ip.vel.x = mem(fp::fmuls(reg(x1c), -reg(ip.stomp_dir)));
+            ip.vel.x = mem(fp::fmuls(reg(kick_speed), -reg(ip.stomp_dir)));
             coll::take_stomper(r.game, gobj);
             vars(r.game, gobj).blinking.set(true);
             if item(r.game, gobj).ground_or_air == 1 {
@@ -253,15 +254,15 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
 /// `itGShell_Logic14_Spawned`.
 #[doc(alias = "itGShell_Logic14_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let (x28, x2c) = (attr(r, gobj, 0x28), attr(r, gobj, 0x2C));
+    let (owner_grace, pop_timer) = (attr(r, gobj, 0x28), attr(r, gobj, 0x2C));
     shell::start_life(r, gobj, &GREEN);
     let v = vars(r.game, gobj);
     v.landings.set(1);
     v.bounced.set(false);
     v.grace_counting.set(false);
-    v.owner_grace.set(x28);
+    v.owner_grace.set(owner_grace);
     v.popped.set(false);
-    v.pop_timer.set(x2c);
+    v.pop_timer.set(pop_timer);
     v.blinking.set(true);
     fell(r, gobj);
 }
@@ -314,7 +315,7 @@ pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
 /// Starts sliding: the speed capped, its time and hit delays set, then sliding (`slow` when
 /// all but stopped, `fast` else).
 fn start_slide(r: &mut Running, gobj: GObjId, fast: i32, slow: i32, ground: bool) {
-    let (x4, x8, x24, x30) = (
+    let (max_speed, stop_speed, hit_delay, trail) = (
         attr(r, gobj, 4),
         attr(r, gobj, 8),
         attr(r, gobj, 0x24),
@@ -327,16 +328,16 @@ fn start_slide(r: &mut Running, gobj: GObjId, fast: i32, slow: i32, ground: bool
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
     item_mut(r.game, gobj).skid = 0;
     let v = vars(r.game, gobj);
-    v.hit_delay.set(x24);
-    v.trail.set(x30);
+    v.hit_delay.set(hit_delay);
+    v.trail.set(trail);
     v.popped.set(false);
     let ip = item_mut(r.game, gobj);
-    if reg(ip.vel.x).abs() > reg(x4) {
+    if reg(ip.vel.x).abs() > reg(max_speed) {
         let dir = if reg(ip.vel.x) < 0.0 { -1.0 } else { 1.0 };
-        ip.vel.x = mem(fp::fmuls(dir, reg(x4)));
+        ip.vel.x = mem(fp::fmuls(dir, reg(max_speed)));
     }
     lib2725::face_motion(r.game, gobj);
-    if reg(item(r.game, gobj).vel.x).abs() < reg(x8) {
+    if reg(item(r.game, gobj).vel.x).abs() < reg(stop_speed) {
         change_state(r, gobj, slow, change::ANIM_UPDATE);
         lib26b1::enable_pickup(r.game, gobj);
         if ground {
@@ -375,9 +376,9 @@ pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
 /// `itGshell_UnkMotion6_Phys`: when all but stopped (and not held), it can be picked up.
 #[doc(alias = "itGshell_UnkMotion6_Phys")]
 pub fn phys6(r: &mut Running, gobj: GObjId) {
-    let x8 = attr(r, gobj, 8);
+    let stop_speed = attr(r, gobj, 8);
     let ip = item(r.game, gobj);
-    if reg(ip.vel.x).abs() < reg(x8) && !ip.flags.flags.pickup {
+    if reg(ip.vel.x).abs() < reg(stop_speed) && !ip.flags.flags.pickup {
         lib26b1::enable_pickup(r.game, gobj);
         lib2725::clear_hitboxes(r.game, r.data, gobj);
         hitbox::set_hit_ids2(r.game, gobj);

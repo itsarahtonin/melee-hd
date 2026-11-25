@@ -55,10 +55,10 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialAirS_Enter")]
     pub fn mars_special_air_s_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x14 = reg(self.mars_attr_f32(f, attr::X14));
+        let cut_x = reg(self.mars_attr_f32(f, attr::X14));
         let lift = self.mars_attr_f32(f, attr::X1C);
         let fp = &mut self.game.fighters[f.0];
-        fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), x14));
+        fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), cut_x));
         if fp.u_i32(U_AIR_S_USED) == 0 {
             fp.set_u_i32(U_AIR_S_USED, 1);
             fp.self_vel.y = lift;

@@ -105,10 +105,10 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialNZd_80105BA8")]
     pub fn zelda_special_air_n_enter(&mut self, gobj: GObjId, z: &NayrusLove) {
         let f = self.game.fighter_id(gobj);
-        let x8 = reg(self.zelda_attr_f32(f, z.attrs + attr::X8));
+        let cut_x = reg(self.zelda_attr_f32(f, z.attrs + attr::X8));
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.y = 0.0;
-        fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), x8));
+        fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), cut_x));
         self.change_motion_state(gobj, z.air, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         self.zelda_special_n_start(gobj, z);

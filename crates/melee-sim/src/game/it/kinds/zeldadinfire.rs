@@ -74,7 +74,7 @@ fn shared(v: &mut ItemVars) -> Vars<'_> {
         grown: &mut v.scale,
         reflected: &mut v.frames,
         owner: &mut v.zelda,
-        xde4: &mut v.unread_e4,
+        cleared: &mut v.unread_e4,
     }
 }
 

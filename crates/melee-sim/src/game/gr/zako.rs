@@ -28,7 +28,8 @@ pub struct Slot {
     /// leaves it as the heap block held it (the heap's image's word, none where it doesn't
     /// know it), and it's read only for a trophy point's slot, which
     /// `grZakoGenerator_801CAEB0` writes first (engine.md).
-    pub x8: Option<i32>,
+    #[doc(alias("x8"))]
+    pub trophy: Option<i32>,
 }
 
 /// The spawner's globals (`lbl_8049F030`).
@@ -61,7 +62,7 @@ pub fn new_slots(game: &mut Game, data: &DataArchives) -> Vec<Slot> {
     game.gr.zako.addr = at;
     // Each slot's trophy word as the block held it, where the heap's image knows it.
     let left = crate::game::leftovers::bytes_known(data, at, 0x3CC);
-    let x8 = |i: usize| {
+    let trophy_left = |i: usize| {
         let (b, k) = left.as_ref()?;
         let r = 0xC * i + 8..0xC * i + 0xC;
         k[r.clone()]
@@ -72,13 +73,13 @@ pub fn new_slots(game: &mut Game, data: &DataArchives) -> Vec<Slot> {
     let mut slots: Vec<Slot> = (0..80)
         .map(|i| Slot {
             point: i + 0x20,
-            x8: x8(i as usize),
+            trophy: trophy_left(i as usize),
             ..Slot::default()
         })
         .collect();
     slots.push(Slot {
         point: -1,
-        x8: x8(80),
+        trophy: trophy_left(80),
         ..Slot::default()
     });
     game.gr.zako.flags |= 0x80;
@@ -142,7 +143,7 @@ pub fn scan(r: &mut Running, anywhere: bool) {
                     let k = slot.point;
                     if (0xDC..=0xFB).contains(&k) {
                         let trophy = slot
-                            .x8
+                            .trophy
                             .expect("stale read: a spawner slot's trophy (x8) before it's written");
                         if trophy != -1
                             && let Some(item) = trophy_at_point(r, trophy, k.into())
@@ -152,8 +153,8 @@ pub fn scan(r: &mut Running, anywhere: bool) {
                     } else if let Some(spawns) = game.gr.zako.spawns {
                         let desc = spawns.at(4 * u32::from((k - 0x20) as u16));
                         let kind = i32::from(data.u16(desc));
-                        let x2 = i32::from(data.u8(desc.at(2)));
-                        if let Some(item) = spawn_enemy(r, kind, x2, pos) {
+                        let variant = i32::from(data.u8(desc.at(2)));
+                        if let Some(item) = spawn_enemy(r, kind, variant, pos) {
                             r.game.gr.zako.slots.as_mut().unwrap()[idx as usize].item = Some(item);
                             crate::game::it::zako::common(r.game, item).set_idx(idx);
                         }
@@ -186,16 +187,16 @@ fn trophy_at_point(r: &mut Running, trophy: i32, point: i32) -> Option<GObjId> {
 
 /// One of the spawner's enemies at `pos`, by its table's kind and number (`x2`), as
 /// `grZakoGenerator_801CA8B4` spawns them: none for a kind the switch doesn't name.
-fn spawn_enemy(r: &mut Running, kind: i32, x2: i32, pos: crate::vec::Vec3) -> Option<GObjId> {
+fn spawn_enemy(r: &mut Running, kind: i32, variant: i32, pos: crate::vec::Vec3) -> Option<GObjId> {
     use crate::game::it::{kinds, zako as itzako};
     match ItKind::of(kind) {
         ItKind::Goomba | ItKind::Octorok | ItKind::Topi | ItKind::PolarBear => {
             itzako::spawn(r, kind, Some(pos), None, None, true)
         }
         ItKind::ReDead => kinds::redead::spawn(r, pos, -1),
-        ItKind::KoopaTroopa => kinds::koopa_troopa::spawn(r, x2, pos, None, -1),
-        ItKind::KoopaParatroopa => kinds::koopa_paratroopa::spawn(r, x2, pos, -1),
-        ItKind::LikeLike => kinds::like_like::spawn(r, x2, pos),
+        ItKind::KoopaTroopa => kinds::koopa_troopa::spawn(r, variant, pos, None, -1),
+        ItKind::KoopaParatroopa => kinds::koopa_paratroopa::spawn(r, variant, pos, -1),
+        ItKind::LikeLike => kinds::like_like::spawn(r, variant, pos),
         _ => None,
     }
 }
@@ -219,7 +220,7 @@ pub fn set_trophy_slot(game: &mut Game, trophy: i32, point: i32) {
     for slot in &mut slots[80..] {
         if slot.point == -1 {
             slot.point = point as i16;
-            slot.x8 = Some(trophy);
+            slot.trophy = Some(trophy);
             slot.item = None;
         }
     }
@@ -312,9 +313,13 @@ pub struct SpawnConfig {
     pub descs: u32,
     pub count: i32,
     pub callback: super::super::handles::CodeRef,
-    pub x10: f32,
+    /// The chance a line calls back (`x10`): always when negative, keeping one generator there.
+    #[doc(alias("x10"))]
+    pub chance: f32,
     pub generator: Option<crate::hsd::generator::GeneratorId>,
-    pub x18: i32,
+    /// `x18`: set to 0, read by nothing.
+    #[doc(alias("x18"))]
+    pub spare: i32,
     /// Each line's ends in the world, last placed.
     pub spawns: Vec<[crate::vec::Vec3; 2]>,
 }
@@ -330,7 +335,7 @@ pub fn new_config(
     descs: u32,
     count: i32,
     callback: super::super::handles::CodeRef,
-    x10: f32,
+    chance: f32,
 ) -> u32 {
     let addr = crate::hsd::heap::mem_alloc(0x1C);
     let spawns_addr = crate::hsd::heap::mem_alloc((count * 0x18) as u32);
@@ -365,9 +370,9 @@ pub fn new_config(
         descs,
         count,
         callback,
-        x10,
+        chance,
         generator: None,
-        x18: 0,
+        spare: 0,
         spawns,
     });
     addr
@@ -422,10 +427,10 @@ pub fn run_config(
     for i in 0..count {
         let c = config(r.game, addr);
         let [p0, p1] = c.spawns[i as usize];
-        let (x10, cb) = (reg(c.x10), c.callback);
+        let (chance, cb) = (reg(c.chance), c.callback);
         let (y0, y1) = (reg(p0.y), reg(p1.y));
         if !(y0 > h && y1 > h || y0 < h && y1 < h) {
-            if x10 < 0.0 || reg(r.game.objs.rng.draw_f32()) < x10 {
+            if chance < 0.0 || reg(r.game.objs.rng.draw_f32()) < chance {
                 let dy = fp::fsubs(y1, y0);
                 let t = if (if dy < 0.0 { fp::fneg(dy) } else { dy }) > reg(0.0001) {
                     fp::fdivs(fp::fsubs(h, y0), dy)
@@ -436,7 +441,7 @@ pub fn run_config(
                     crate::fpu::mem(fp::fmadds(t, fp::fsubs(reg(b), reg(a)), reg(a)))
                 };
                 let pos = crate::vec::Vec3::new(lerp(p0.x, p1.x), height, lerp(p0.z, p1.z));
-                if x10 < 0.0 {
+                if chance < 0.0 {
                     unimplemented!("a spawn configuration that keeps its generator");
                 }
                 match cb.0 {
@@ -447,7 +452,7 @@ pub fn run_config(
                 }
                 spawned += 1;
             }
-        } else if x10 < 0.0 {
+        } else if chance < 0.0 {
             unimplemented!("a spawn configuration that keeps its generator");
         }
     }

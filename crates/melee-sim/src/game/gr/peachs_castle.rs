@@ -1381,11 +1381,11 @@ pub fn proc_switch(r: &mut Running, gobj: GObjId) {
 /// A lift's collision joint's callback, `grCastle_801CF750`: a fighter (collision kind 1) on
 /// lift 4's joint or the other's adds its weight (`x50`) to that lift's.
 #[doc(alias = "grCastle_801CF750")]
-pub fn lift_touched(gp: &mut super::super::structs::Ground, joint_id: i32, kind: u32, x50: i32) {
+pub fn lift_touched(gp: &mut super::super::structs::Ground, joint_id: i32, kind: u32, weight: i32) {
     let i = if joint_id == 4 { 0 } else { 1 };
     if kind == 1 {
         let l = &mut gp.u.castle_lifts().plat[i];
-        l.wind = mem(fp::fadds(reg(l.wind), fp::frsp(f64::from(x50))));
+        l.wind = mem(fp::fadds(reg(l.wind), fp::frsp(f64::from(weight))));
     }
 }
 
