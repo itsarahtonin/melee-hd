@@ -876,6 +876,17 @@ pub fn create_from_callbacks(
     cb: &StageCallbacks,
     frame: u32,
 ) -> Option<GObjId> {
+    create_from_callbacks_at(r, map_id, cb, frame, 4)
+}
+
+/// [`create_from_callbacks`] with its process at `priority` (Great Bay runs Tingle's at 5).
+pub fn create_from_callbacks_at(
+    r: &mut Running,
+    map_id: i32,
+    cb: &StageCallbacks,
+    frame: u32,
+    priority: u8,
+) -> Option<GObjId> {
     let gobj = stage_gobj(r, map_id, frame)?;
     let g = ground_of(r.game, gobj);
     let gp = &mut r.game.grounds[g.0];
@@ -890,7 +901,9 @@ pub fn create_from_callbacks(
         super::super::code::run_proc(r, gobj, CodeRef(cb.on_init));
     }
     if cb.gobj_proc != 0 {
-        r.game.world.setup_proc(gobj, CodeRef(cb.gobj_proc), 4);
+        r.game
+            .world
+            .setup_proc(gobj, CodeRef(cb.gobj_proc), priority);
     }
     Some(gobj)
 }

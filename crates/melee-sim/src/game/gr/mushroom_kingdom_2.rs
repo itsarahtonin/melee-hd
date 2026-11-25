@@ -13,12 +13,12 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use gekko_fp as fp;
-use melee_data::archive::{Archives, DataRef};
 
 use super::super::state::{Game, Running};
-use super::data::{INISHIE2_CALLBACKS, StageCallbacks};
+use super::data::INISHIE2_CALLBACKS;
 use super::ground::{ground_of, jobj_of, nth_joint, update_map_coll};
-use super::{anime, setup, stage, zako};
+use super::skeleton::{self, Param, Setup, StageObjects, map_id};
+use super::{anime, setup, stage};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -82,32 +82,36 @@ mod p {
     pub const PIDGIT_TURN: u32 = 0x4A;
 }
 
-/// The fields of `grInishie2_YakumonoParam` the code reads, by offset.
-#[derive(Clone, Copy)]
-struct Param(DataRef);
-
-impl Param {
-    fn f(self, data: &Archives, off: u32) -> f32 {
-        data.f32(self.0.at(off))
-    }
-    fn h(self, data: &Archives, off: u32) -> i16 {
-        data.u16(self.0.at(off)) as i16
-    }
-    fn v(self, data: &Archives, off: u32) -> Vec3 {
-        Vec3::new(
-            self.f(data, off),
-            self.f(data, off + 4),
-            self.f(data, off + 8),
-        )
-    }
+/// `grInishie2_YakumonoParam`.
+fn param(game: &Game) -> Param {
+    Param::of(game.gr.inishie2_yakumono, "grinishie2.c: yakumono_param")
 }
 
-fn param(game: &Game) -> Param {
-    Param(
-        game.gr
-            .inishie2_yakumono
-            .expect("grinishie2.c: yakumono_param"),
-    )
+/// Mushroom Kingdom II's objects (`grI2_StageCallbacks`).
+pub const OBJECTS: StageObjects = StageObjects {
+    callbacks: &INISHIE2_CALLBACKS,
+    late: None,
+};
+
+/// Mushroom Kingdom II's setup, `grInishie2_801FCBC4`: its parameters; the scenery and the
+/// stage; the moving parts' joints out of the search ([`joints_off`]); camera limits and blast
+/// zones; the camera's near and far planes (`mushroom_kingdom::clip_planes`).
+pub const SETUP: Setup = Setup {
+    objects: &OBJECTS,
+    param: |gr| &mut gr.inishie2_yakumono,
+    own_entry_points: false,
+    keeps_spawn_point: true,
+    maps: &[0, MAP_STAGE],
+    then: Some(joints_off),
+    after: Some(super::mushroom_kingdom::clip_planes),
+};
+
+/// The logs', Birdo's, Pidgit's and the other moving parts' collision joints out of the search,
+/// in the setup.
+fn joints_off(r: &mut Running) {
+    for joint in [0, 0xC, 0xD, 0xE, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 2] {
+        r.game.geometry_mut().disable_joint(joint);
+    }
 }
 
 /// A base plus a random draw below `spread` (none when it's 0), as a halfword (`test_random`).
@@ -126,9 +130,9 @@ fn wait(r: &mut Running, base: i16, spread: i16) -> i16 {
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_CDFC | 0x801F_CE00 | 0x801F_D014 | 0x801F_D364 | 0x801F_D740 | 0x801F_DFE4 => {
-            empty(r, gobj)
+            skeleton::empty(r, gobj)
         }
-        0x801F_CDC8 => init_back(r, gobj),
+        0x801F_CDC8 => skeleton::animate(r, gobj),
         0x801F_CE04 => init_stage(r, gobj),
         0x801F_CFCC => proc_stage(r, gobj),
         0x801F_D198 => init_log(r, gobj),
@@ -140,70 +144,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         _ => return false,
     }
     true
-}
-
-/// The objects' processes and destroy callbacks that do nothing.
-#[doc(alias = "grInishie2_801FCDFC")]
-#[doc(alias = "grInishie2_801FCE00")]
-#[doc(alias = "grInishie2_801FD014")]
-#[doc(alias = "grInishie2_801FD364")]
-#[doc(alias = "grInishie2_801FD740")]
-#[doc(alias = "grInishie2_801FDFE4")]
-pub fn empty(_r: &mut Running, _gobj: GObjId) {}
-
-/// Creates one of the stage's objects and sets it up, `grInishie2_801FCCDC`.
-#[doc(alias = "grInishie2_801FCCDC")]
-pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
-}
-
-/// The stage's objects' setup functions and processes, by map id (`grI2_StageCallbacks`).
-pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
-    &INISHIE2_CALLBACKS[map_id as usize]
-}
-
-/// Mushroom Kingdom II's setup, `grInishie2_801FCBC4`: its parameters; the scenery and the
-/// stage; the logs', Birdo's, Pidgit's and the other moving parts' collision joints out of the
-/// search; camera limits and blast zones; the camera's near plane at 1 and far plane at 4000.
-#[doc(alias = "grInishie2_801FCBC4")]
-pub fn on_init(r: &mut Running) {
-    r.game.gr.inishie2_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.bits.own_entry_points = false;
-    r.game.stage_info.bits.keeps_spawn_point = true;
-    create(r, 0, setup::SETUP_FRAME);
-    create(r, MAP_STAGE, setup::SETUP_FRAME);
-    for joint in [0, 0xC, 0xD, 0xE, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 2] {
-        r.game.geometry_mut().disable_joint(joint);
-    }
-    setup::measure_cam_bounds(r.game, r.data);
-    setup::measure_blast_zones(r.game, r.data);
-    r.game.camera.set_near(1.0);
-    r.game.camera.set_far(4000.0);
-}
-
-/// `grInishie2_801FCBC0` does nothing (only a demo runs it).
-#[doc(alias = "grInishie2_801FCBC0")]
-pub fn on_demo_init(_r: &mut Running) {}
-
-/// `grInishie2_801FCCAC` does nothing.
-#[doc(alias = "grInishie2_801FCCAC")]
-pub fn on_load(_r: &mut Running) {}
-
-/// Mushroom Kingdom II's start, `grInishie2_801FCCB0`: the enemy spawner, without enemies.
-#[doc(alias = "grInishie2_801FCCB0")]
-pub fn on_start(r: &mut Running) {
-    zako::start(r.game, r.data, None);
-}
-
-fn map_id(game: &Game, gobj: GObjId) -> i32 {
-    game.grounds[ground_of(game, gobj).0].map_id
-}
-
-/// The scenery's setup (map 0), `stageGObj0_OnInit`: its animation.
-#[doc(alias = "stageGObj0_OnInit@801FCDC8")]
-pub fn init_back(r: &mut Running, gobj: GObjId) {
-    let m = map_id(r.game, gobj);
-    anime::start_map(r.game, r.data, gobj, m, 0);
 }
 
 /// The stage's setup (map 2), `grInishie2_801FCE04`: the waterfall's three animations (parts
@@ -289,7 +229,7 @@ pub fn send_logs(r: &mut Running, gobj: GObjId) {
         let timer = *w;
         *w = timer.wrapping_sub(1);
         if timer < 0 {
-            let log = create(r, MAP_LOGS[k], LOG_FRAME);
+            let log = skeleton::create(r, &OBJECTS, MAP_LOGS[k], LOG_FRAME);
             r.game.geometry_mut().disable_joint(LOG_JOINTS[k]);
             r.game.grounds[g.0].u.inishie2().flags &= !LOG_WAITS[k];
             if let Some(log) = log {
@@ -380,7 +320,7 @@ pub fn send_birdo(r: &mut Running, gobj: GObjId) {
     let counter = v.birdo_wait;
     v.birdo_wait = counter.wrapping_sub(1);
     if counter < 0 {
-        let platform = create(r, MAP_BIRDO, SEND_FRAME);
+        let platform = skeleton::create(r, &OBJECTS, MAP_BIRDO, SEND_FRAME);
         r.game.grounds[g.0].u.inishie2().flags &= !BIRDO_WAIT;
         if let Some(platform) = platform {
             let pg = ground_of(r.game, platform);
@@ -486,7 +426,7 @@ pub fn send_pidgit(r: &mut Running, gobj: GObjId) {
     let counter = v.pidgit_wait;
     v.pidgit_wait = counter.wrapping_sub(1);
     if counter < 0 {
-        let carpet = create(r, MAP_PIDGIT, SEND_FRAME);
+        let carpet = skeleton::create(r, &OBJECTS, MAP_PIDGIT, SEND_FRAME);
         r.game.grounds[g.0].u.inishie2().flags &= !PIDGIT_WAIT;
         if let Some(carpet) = carpet {
             let cg = ground_of(r.game, carpet);

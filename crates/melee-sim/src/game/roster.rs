@@ -204,6 +204,7 @@ pub(crate) mod tests {
         "gr/mod",
         "gr/registry",
         "gr/setup",
+        "gr/skeleton",
         "gr/stage",
         "gr/vars",
         "gr/zako",
