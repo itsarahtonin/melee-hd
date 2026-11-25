@@ -13,6 +13,7 @@ const PER_FOLDER: usize = 8;
 
 fn slp_files(dir: &Path, limit: usize) -> Vec<PathBuf> {
     let Ok(entries) = std::fs::read_dir(dir) else {
+        melee_local_data::skip!("no replays at {:?}: skipping", dir);
         return Vec::new();
     };
     let mut files: Vec<PathBuf> = entries

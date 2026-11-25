@@ -981,7 +981,9 @@ pub fn session(args: &[&str]) -> ExitCode {
     if (rollback > 0 || shortcut)
         && (from.is_some() || past_end > 0 || after_handback != After::No || mutation.is_some())
     {
-        eprintln!("--rollback and --shortcut run from power-on, without --from, --past, --after-handback or --mutate");
+        eprintln!(
+            "--rollback and --shortcut run from power-on, without --from, --past, --after-handback or --mutate"
+        );
         return ExitCode::from(2);
     }
     // A session from power-on news its objects in a heap the earlier scenes used.
@@ -1398,7 +1400,9 @@ impl Run<'_> {
                     rb_stop = Some(why);
                     break None;
                 }
-                rb.before(&s, console.next);
+                if !rb.read_out(console.next, console.reads.len()) {
+                    rb.before(&s, console.next);
+                }
             }
             let stepped = catch_unwind(AssertUnwindSafe(|| {
                 if render_due {
@@ -1410,7 +1414,10 @@ impl Run<'_> {
                 Ok((f, due)) => {
                     render_due = due;
                     let ended = f.ended;
-                    if rb.is_some() {
+                    if rb
+                        .as_mut()
+                        .is_some_and(|rb| !rb.read_out(console.next, usize::MAX))
+                    {
                         pending = Some(f);
                     }
                     ended
@@ -1870,11 +1877,7 @@ fn rollback_on(
         if let Err(why) = rollback_after(rb, s, render_due, pending, console) {
             return Some(why);
         }
-        if console.next > console.reads.len() {
-            println!(
-                "the recording's last read was taken before tick {}",
-                rb.played()
-            );
+        if rb.read_out(console.next, console.reads.len()) {
             return None;
         }
         rb.before(s, console.next);

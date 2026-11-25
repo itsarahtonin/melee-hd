@@ -69,6 +69,10 @@ impl Character {
     /// The functions by name, from the list in the capture directory.
     fn functions(&self) -> Vec<(u32, String)> {
         let Ok(text) = std::fs::read_to_string(format!("{}/{}", self.base(), self.funcs)) else {
+            melee_local_data::skip!(
+                "no function list at {:?}: skipping",
+                format!("{}/{}", self.base(), self.funcs)
+            );
             return Vec::new();
         };
         text.lines()

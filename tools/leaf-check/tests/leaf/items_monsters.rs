@@ -61,6 +61,7 @@ fn base() -> String {
 /// The capture sets, one per run.
 fn dirs() -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(base()) else {
+        melee_local_data::skip!("no captures at {:?}: skipping", base());
         return Vec::new();
     };
     let mut v: Vec<String> = entries
@@ -88,6 +89,7 @@ fn stubs() -> Vec<Stub> {
 /// ([`UNPORTED`]) and those other checks cover ([`ELSEWHERE`]).
 fn functions() -> Vec<(u32, String)> {
     let Ok(entries) = std::fs::read_dir(base()) else {
+        melee_local_data::skip!("no captures at {:?}: skipping", base());
         return Vec::new();
     };
     let mut text = String::new();

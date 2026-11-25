@@ -106,7 +106,6 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     let mut time_ticks: Vec<u64> = Vec::new();
     let mut probe = false;
     let mut shortcut = false;
-    let mut shortcut_failed = false;
     let mut card_path: Option<PathBuf> = None;
     let mut card_out: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
@@ -314,7 +313,11 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     }
     let (line, ok) = rb.summary(failure.as_deref(), tick);
     println!("{line}");
-    if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+    if ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
 }
 
 /// The rollback check of a session's straight run, tick by tick: what `session-sync` runs, and
@@ -349,6 +352,9 @@ pub(crate) struct Rollbacks {
     /// `--shortcut`: the launcher's shortcut checked at each VS match's first tick.
     shortcut: bool,
     shortcut_failed: bool,
+    /// Whether the straight run has played past the recording's last read, where session-sync's
+    /// run stops: no tick after it is rolled back.
+    read_out: bool,
     /// `--perturb TICK`: the rollback after tick TICK starts from a state off by a bit.
     pub(crate) perturb: Option<u64>,
     started: Instant,
@@ -383,6 +389,7 @@ impl Rollbacks {
             matches: 0,
             shortcut,
             shortcut_failed: false,
+            read_out: false,
             perturb: None,
             started: Instant::now(),
         }
@@ -516,6 +523,20 @@ impl Rollbacks {
         self.tick
     }
 
+    /// Whether the straight run has played past the recording's last read (`next`, the
+    /// console's next read, of `len`): session-sync's run ends there, and saying so the first
+    /// time, so does this check.
+    pub(crate) fn read_out(&mut self, next: usize, len: usize) -> bool {
+        if !self.read_out && next > len {
+            self.read_out = true;
+            println!(
+                "the recording's last read was taken before tick {}",
+                self.tick
+            );
+        }
+        self.read_out
+    }
+
     /// Whether a VS match's shortcut check failed (it printed why).
     pub(crate) fn shortcut_failed(&self) -> bool {
         self.shortcut_failed
@@ -534,7 +555,9 @@ impl Rollbacks {
                 true,
             ),
             Some(why) => (
-                format!("{checked} ticks checked in {matches} matches, rolled back {n} each: {why}"),
+                format!(
+                    "{checked} ticks checked in {matches} matches, rolled back {n} each: {why}"
+                ),
                 false,
             ),
         }

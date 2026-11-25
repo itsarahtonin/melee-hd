@@ -70,6 +70,7 @@ impl Character {
 /// The capture sets, one per run.
 fn dirs(c: &Character) -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(c.base()) else {
+        melee_local_data::skip!("no captures at {:?}: skipping", c.base());
         return Vec::new();
     };
     let mut v: Vec<String> = entries
@@ -95,6 +96,10 @@ fn stubs() -> Vec<Stub> {
 /// The functions by address and name, from the list in the capture directory.
 fn functions(c: &Character) -> Vec<(u32, String)> {
     let Ok(text) = std::fs::read_to_string(format!("{}/{}", c.base(), c.funcs)) else {
+        melee_local_data::skip!(
+            "no function list at {:?}: skipping",
+            format!("{}/{}", c.base(), c.funcs)
+        );
         return Vec::new();
     };
     text.lines()

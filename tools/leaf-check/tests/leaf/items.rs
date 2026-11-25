@@ -112,6 +112,7 @@ fn corpora() -> &'static [(String, Corpus)] {
     static CORPORA: OnceLock<Vec<(String, Corpus)>> = OnceLock::new();
     CORPORA.get_or_init(|| {
         let Ok(files) = std::fs::read_dir(calls_dir()) else {
+            melee_local_data::skip!("no captures at {:?}: skipping", calls_dir());
             return Vec::new();
         };
         let mut out: Vec<(String, Corpus)> = files

@@ -52,6 +52,7 @@ fn base() -> String {
 /// The capture sets, one per run.
 fn dirs() -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(base()) else {
+        melee_local_data::skip!("no captures at {:?}: skipping", base());
         return Vec::new();
     };
     let mut v: Vec<String> = entries
@@ -77,6 +78,10 @@ fn stubs() -> Vec<Stub> {
 /// units ported (`UNITS`); Ditto and Celebi, whom no VS match releases, aren't.
 fn functions() -> Vec<(u32, String)> {
     let Ok(text) = std::fs::read_to_string(format!("{}/items-pokemon-funcs.txt", base())) else {
+        melee_local_data::skip!(
+            "no function list at {:?}: skipping",
+            format!("{}/items-pokemon-funcs.txt", base())
+        );
         return Vec::new();
     };
     let mut v: Vec<(u32, String)> = text

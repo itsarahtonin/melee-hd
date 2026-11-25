@@ -52,6 +52,7 @@ fn base() -> String {
 /// The capture sets, one per run.
 fn dirs() -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(base()) else {
+        melee_local_data::skip!("no captures at {:?}: skipping", base());
         return Vec::new();
     };
     let mut v: Vec<String> = entries
@@ -90,6 +91,10 @@ fn stubs(yes: bool) -> Vec<Stub> {
 /// Samus's functions by name, from the unit lists in the capture directory.
 fn functions() -> Vec<(u32, String)> {
     let Ok(text) = std::fs::read_to_string(format!("{}/samus-funcs.txt", base())) else {
+        melee_local_data::skip!(
+            "no function list at {:?}: skipping",
+            format!("{}/samus-funcs.txt", base())
+        );
         return Vec::new();
     };
     text.lines()

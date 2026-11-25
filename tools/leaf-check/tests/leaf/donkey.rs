@@ -103,6 +103,7 @@ fn trace() -> bool {
 /// The capture sets, one per run.
 fn dirs(set: Set) -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(base(set)) else {
+        melee_local_data::skip!("no captures at {:?}: skipping", base(set));
         return Vec::new();
     };
     let mut v: Vec<String> = entries
@@ -117,6 +118,10 @@ fn dirs(set: Set) -> Vec<String> {
 /// The functions by address and name, from the list in the capture directory.
 fn functions(set: Set) -> Vec<(u32, String)> {
     let Ok(text) = std::fs::read_to_string(format!("{}/{}", base(set), set.funcs)) else {
+        melee_local_data::skip!(
+            "no function list at {:?}: skipping",
+            format!("{}/{}", base(set), set.funcs)
+        );
         return Vec::new();
     };
     text.lines()
