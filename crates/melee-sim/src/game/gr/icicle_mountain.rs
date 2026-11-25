@@ -14,13 +14,14 @@
 //! for a while (`grIceMt_801FA6D8`).
 
 use gekko_fp as fp;
-use melee_data::archive::{Archives, DataRef};
+use melee_data::archive::Archives;
 
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
 use super::super::structs::CollData;
-use super::data::{ICEMT_CALLBACKS, StageCallbacks};
+use super::data::ICEMT_CALLBACKS;
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, set_point_joint, update_map_coll};
+use super::skeleton::{self, Param, Setup, StageObjects, map_id};
 use super::vars::{IceMtClimbVars, IceMtFieldVars};
 use super::{CollUser, anime, datfiles, material, setup, zako};
 use crate::fpu::{mem, reg};
@@ -158,21 +159,10 @@ mod p {
     pub const SPAWNS: u32 = 0xBC;
 }
 
-#[derive(Clone, Copy)]
-struct Param(DataRef);
-
-impl Param {
-    fn f(self, data: &Archives, off: u32) -> f32 {
-        data.f32(self.0.at(off))
-    }
-    fn h(self, data: &Archives, off: u32) -> i16 {
-        data.u16(self.0.at(off)) as i16
-    }
-    /// Entry `k` of the list the pointer at `off` names.
-    fn list(self, data: &Archives, off: u32, k: i32) -> i32 {
-        let p = data.ptr(self.0.at(off)).expect("gricemt.c: a list");
-        i32::from(data.u16(p.at((2 * k) as u32)) as i16)
-    }
+/// Entry `k` of the list the parameters' pointer at `off` names.
+fn list(data: &Archives, prm: Param, off: u32, k: i32) -> i32 {
+    let p = prm.ptr(data, off).expect("gricemt.c: a list");
+    i32::from(data.u16(p.at((2 * k) as u32)) as i16)
 }
 
 /// The map id of `icemt_field[i]`: the adventure's code indexes the table with its lists'
@@ -278,19 +268,19 @@ fn climb10(game: &mut Game, g: GroundId) -> &mut IceMtClimbVars {
 }
 
 fn param(game: &Game) -> Param {
-    Param(game.gr.icemt_yakumono.expect("gricemt.c: yakumono_param"))
+    Param::of(game.gr.icemt_yakumono, "gricemt.c: yakumono_param")
 }
 
 /// A stage object's process or callback, by address: Icicle Mountain's.
 #[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        0x801F_75E4 | 0x801F_75E8 | 0x801F_77AC | 0x801F_8C60 => empty(r, gobj),
+        0x801F_75E4 | 0x801F_75E8 | 0x801F_77AC | 0x801F_8C60 => skeleton::empty(r, gobj),
         0x801F_72D4 => init_scenery(r, gobj),
         START_HOOK => on_climb_start(r, gobj),
         0x801F_75FC => init_climb(r, gobj),
         0x801F_7728 => proc_climb(r, gobj),
-        0x801F_7D90 => empty(r, gobj),
+        0x801F_7D90 => skeleton::empty(r, gobj),
         0x801F_785C => init_climb10(r, gobj),
         CLIMB10_START_HOOK => on_climb10_start(r, gobj),
         0x801F_7A2C => proc_climb10(r, gobj),
@@ -316,28 +306,14 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The objects' processes and destroy callbacks that do nothing: the scenery's, the climbs'
-/// destroy callbacks and the background's.
-#[doc(alias = "stageGObj0_GObjProc@801F75E4")]
-#[doc(alias = "stageGObj0_Callback3@801F75E8")]
-#[doc(alias = "stageGObj9_Callback3")]
-#[doc(alias = "stageGObj8_Callback3")]
-// Ports stageGObj10_Callback3; aliased once a check reaches it.
-pub fn empty(_r: &mut Running, _gobj: GObjId) {}
-
-/// Creates one of the stage's objects and sets it up, `setupStageCallbacks`.
-#[doc(alias = "setupStageCallbacks@801F71E8")]
-pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
-}
-
-/// The stage's objects' setup functions and processes, by map id (`stage_callbacks`).
-pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
-    &ICEMT_CALLBACKS[map_id as usize]
-}
+/// Icicle Mountain's objects (`stage_callbacks`).
+pub const OBJECTS: StageObjects = StageObjects {
+    callbacks: &ICEMT_CALLBACKS,
+    late: None,
+};
 
 /// The frames the stage's objects are made from (the stack address of the scale joint's
-/// descriptor, [`setup::create_from_callbacks`]): the setup's own; the climb's setup's, through
+/// descriptor, [`skeleton::create`]): the setup's own; the climb's setup's, through
 /// `stageGObj9_OnInit` and `grIceMt_801FA0BC` (0x88 below, with `setupStageCallbacks`' 0x20);
 /// and the climb's process's, 0xD8 below the process loop's (`corneria::PROC_LOOP`; its own
 /// frame 0x20, `grIceMt_801F9ACC`'s 0x98 and `setupStageCallbacks`' 0x20).
@@ -351,24 +327,29 @@ pub const CLIMB10_INIT_FRAME: u32 = SETUP_FRAME - 0x78;
 pub const CLIMB10_PROC_FRAME: u32 = super::corneria::PROC_LOOP - 0x108;
 
 /// Icicle Mountain's setup, `grIceMt_801F686C`: its parameters; the scenery and the background;
-/// the six fields' collision off; in VS mode the climb; in the adventure (stage kind 76) the
-/// fields its list puts third to fifth, each a field's height above the last over the first two
-/// (whose ids it compares with the list's indices, and then indexes the fields' table with), and
-/// its own climb; camera limits and blast zones over them all.
-#[doc(alias = "grIceMt_801F686C")]
-pub fn on_init(r: &mut Running) {
-    r.game.gr.icemt_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.bits.own_entry_points = true;
-    r.game.stage_info.bits.keeps_spawn_point = false;
-    create(r, 0, SETUP_FRAME);
-    create(r, 8, SETUP_FRAME);
+/// the climb ([`make_climb`]); camera limits and blast zones over them all.
+pub const SETUP: Setup = Setup {
+    objects: &OBJECTS,
+    param: |gr| &mut gr.icemt_yakumono,
+    own_entry_points: true,
+    keeps_spawn_point: false,
+    maps: &[0, 8],
+    then: Some(make_climb),
+    after: None,
+};
+
+/// The climb, in the setup: the six fields' collision off; in VS mode the climb; in the
+/// adventure (stage kind 76) the fields its list puts third to fifth, each a field's height
+/// above the last over the first two (whose ids it compares with the list's indices, and then
+/// indexes the fields' table with), and its own climb.
+fn make_climb(r: &mut Running) {
     for m in 1..=6 {
         setup::switch_off(r.game, r.data, m);
     }
     if super::stage::stkind(r.game) == ADVENTURE {
         let prm = param(r.game);
         let data = r.data;
-        let ixs = |k: i32| prm.list(data, p::FIELD_IXS, k);
+        let ixs = |k: i32| list(data, prm, p::FIELD_IXS, k);
         let pick = |skip: &[i32], line: u32| {
             for f in FIELDS {
                 let id = f.0;
@@ -390,7 +371,7 @@ pub fn on_init(r: &mut Running) {
         let y4 = fp::fadds(y3, gap(f29, f28));
         let mut fields = [None; 3];
         for (k, (y, line)) in [(y2, 636), (y3, 641), (y4, 646)].into_iter().enumerate() {
-            let gobj = create(r, field_id_at(ixs(2 + k as i32)), SETUP_FRAME);
+            let gobj = skeleton::create(r, &OBJECTS, field_id_at(ixs(2 + k as i32)), SETUP_FRAME);
             assert!(gobj.is_some(), "gricemt.c: {line}: gobj");
             let j = jobj_of(r.game, gobj.unwrap());
             assert!(j.is_some(), "gricemt.c: {}: jobj", line + 1);
@@ -400,18 +381,12 @@ pub fn on_init(r: &mut Running) {
             fields[k] = gobj;
         }
         r.game.gr.icemt_fields = fields;
-        create(r, 10, SETUP_FRAME);
+        skeleton::create(r, &OBJECTS, 10, SETUP_FRAME);
     } else {
-        create(r, 9, SETUP_FRAME);
+        skeleton::create(r, &OBJECTS, 9, SETUP_FRAME);
         r.game.gr.icemt_fields = [None; 3];
     }
-    setup::measure_cam_bounds(r.game, r.data);
-    setup::measure_blast_zones(r.game, r.data);
 }
-
-/// `grIceMt_801F6868` does nothing (only a demo runs it).
-#[doc(alias = "grIceMt_801F6868")]
-pub fn on_demo_init(_r: &mut Running) {}
 
 /// Icicle Mountain's load, `grIceMt_801F7080`: the adventure's first fields gone, the fields'
 /// collision where their models stand, the enemy spawner (with no enemies in VS mode; in the
@@ -445,14 +420,6 @@ pub fn on_load(r: &mut Running) {
         zako::start(r.game, r.data, None);
     }
     super::grlib::generator_at(r.game, r.data, 0x7530, 0x1E, Vec3::ZERO);
-}
-
-/// `grIceMt_801F71DC` does nothing.
-#[doc(alias = "grIceMt_801F71DC")]
-pub fn on_start(_r: &mut Running) {}
-
-fn map_id(game: &Game, gobj: GObjId) -> i32 {
-    game.grounds[ground_of(game, gobj).0].map_id
 }
 
 /// The scenery's setup (map 0), `stageGObj0_OnInit`: its animation, four parts placed, and the
@@ -606,8 +573,8 @@ pub fn next_speed(r: &mut Running, g: GroundId) -> (i32, i32) {
     let prm = param(r.game);
     loop {
         let k = i32::from(climb10(r.game, g).speed_cursor);
-        let a = prm.list(r.data, p::SPEED_IXS, k);
-        let out = prm.list(r.data, p::SPEED_WAITS, k);
+        let a = list(r.data, prm, p::SPEED_IXS, k);
+        let out = list(r.data, prm, p::SPEED_WAITS, k);
         if a != -1 && out != -1 {
             let v = climb10(r.game, g);
             v.speed_cursor = v.speed_cursor.wrapping_add(1);
@@ -623,7 +590,7 @@ pub fn next_speed(r: &mut Running, g: GroundId) -> (i32, i32) {
 pub fn next_climb_field(r: &mut Running, g: GroundId) -> i32 {
     let prm = param(r.game);
     let k = i32::from(climb10(r.game, g).field_cursor);
-    let index = prm.list(r.data, p::FIELD_IXS, k);
+    let index = list(r.data, prm, p::FIELD_IXS, k);
     if index == -1 {
         return -1;
     }
@@ -772,7 +739,7 @@ fn bring_field(r: &mut Running, id: i16, y: f32, c: Climb) {
         Climb::Vs => CLIMB_PROC_FRAME,
         Climb::Adventure => CLIMB10_PROC_FRAME,
     };
-    let gobj = create(r, i32::from(id), frame);
+    let gobj = skeleton::create(r, &OBJECTS, i32::from(id), frame);
     assert!(gobj.is_some(), "gricemt.c: mgobj");
     let gobj = gobj.unwrap();
     let j = jobj_of(r.game, gobj).expect("gricemt.c: jobj");
@@ -911,7 +878,7 @@ pub fn place_climb_fields(r: &mut Running, g: GroundId, c: Climb) {
     ));
     let s = reg(super::ground::scale(r.game));
     if under != -1 {
-        let gobj = create(r, i32::from(under), frame_at);
+        let gobj = skeleton::create(r, &OBJECTS, i32::from(under), frame_at);
         assert!(gobj.is_some(), "gricemt.c: 2884: mgobj");
         let gobj = gobj.unwrap();
         let j = jobj_of(r.game, gobj).expect("gricemt.c: 2886: jobj");
@@ -922,7 +889,7 @@ pub fn place_climb_fields(r: &mut Running, g: GroundId, c: Climb) {
         setup::settle_map_coll(r.game, r.data, i32::from(under));
     }
     if upper != -1 {
-        let gobj = create(r, i32::from(upper), frame_at);
+        let gobj = skeleton::create(r, &OBJECTS, i32::from(upper), frame_at);
         assert!(gobj.is_some(), "gricemt.c: 2896: mgobj");
         let gobj = gobj.unwrap();
         let j = jobj_of(r.game, gobj).expect("gricemt.c: 2898: jobj");
@@ -1214,8 +1181,8 @@ impl ClimbTouch {
 pub fn init_climb10(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let prm = param(r.game);
-    let under = field_id_at(prm.list(r.data, p::FIELD_IXS, 1)) as i16;
-    let upper = field_id_at(prm.list(r.data, p::FIELD_IXS, 0)) as i16;
+    let under = field_id_at(list(r.data, prm, p::FIELD_IXS, 1)) as i16;
+    let upper = field_id_at(list(r.data, prm, p::FIELD_IXS, 0)) as i16;
     set_ids(r.game, g, Climb::Adventure, under, upper);
     place_climb_fields(r, g, Climb::Adventure);
     let v = climb10(r.game, g);

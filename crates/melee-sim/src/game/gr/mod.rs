@@ -76,6 +76,7 @@ pub mod registry;
 #[doc(alias("heal"))]
 pub mod rest_area;
 pub mod setup;
+pub mod skeleton;
 #[doc(alias("figureget"))]
 pub mod snag_the_trophies;
 pub mod stage;

@@ -29,7 +29,7 @@ use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
 use melee_sim::game::ft::co::barrel_wait;
 use melee_sim::game::gr::{
     hyrule_temple, icicle_mountain, jungle_japes, kongo_jungle, kongo_jungle_64, mushroom_kingdom,
-    mushroom_kingdom_2, peachs_castle, poke_floats, rainbow_cruise, yoshis_island,
+    mushroom_kingdom_2, peachs_castle, poke_floats, rainbow_cruise, skeleton, yoshis_island,
     yoshis_island_64,
 };
 use melee_sim::game::handles::CodeRef;
@@ -712,8 +712,9 @@ fn fourside_setup() {
     check_hazard(&d, "grFourside_801F2D10", 1, &as_saved, &by_event);
     check_hazard(&d, "grFourside_801F2DA4", 1, &as_saved, &by_event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = fourside::create(
+        let _ = skeleton::create(
             r,
+            &fourside::OBJECTS,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
         );
@@ -1092,8 +1093,9 @@ fn greatbay_setup() {
     check_hazard(&d, "grGreatBay_801F4240", 1, &as_saved, &by_event);
     check_hazard(&d, "grGreatBay_801F42D4", 1, &as_saved, &by_event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = great_bay::create(
+        let _ = skeleton::create(
             r,
+            &great_bay::OBJECTS,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
         );
@@ -2563,8 +2565,9 @@ fn rcruise_setup() {
     check_calls_with(&d, "grRCruise_801FF168", 1, &as_saved, &event);
     check_calls_with(&d, "grRCruise_801FF29C", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        rainbow_cruise::create(
+        skeleton::create(
             r,
+            &rainbow_cruise::OBJECTS,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
         );
@@ -7037,8 +7040,9 @@ fn inishie1_setup() {
     check_calls_with(&d, "grInishie1_801FA90C", 1, &as_saved, &event);
     check_calls_with(&d, "grInishie1_801FA988", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        mushroom_kingdom::create(
+        skeleton::create(
             r,
+            &mushroom_kingdom::OBJECTS,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
         );
@@ -7426,8 +7430,9 @@ fn inishie2_setup() {
     check_calls_with(&d, "grInishie2_801FCBC4", 1, &as_saved, &event);
     check_calls_with(&d, "grInishie2_801FCCB0", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        mushroom_kingdom_2::create(
+        skeleton::create(
             r,
+            &mushroom_kingdom_2::OBJECTS,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
         );
@@ -7963,7 +7968,7 @@ fn icemt_setup() {
         } else {
             icicle_mountain::SETUP_FRAME
         };
-        icicle_mountain::create(r, call.regs.gpr[3] as i32, frame);
+        skeleton::create(r, &icicle_mountain::OBJECTS, call.regs.gpr[3] as i32, frame);
         Ret::Nothing
     };
     check_calls_with(&d, "setupStageCallbacks", 1, &as_saved, &create);
@@ -10666,8 +10671,9 @@ fn mutecity_setup() {
         check_calls_with(&d, f, 1, &as_saved, &event);
     }
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = mute_city::create(
+        let _ = skeleton::create(
             r,
+            &mute_city::OBJECTS,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
         );

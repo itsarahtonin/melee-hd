@@ -18,10 +18,11 @@ use melee_data::archive::{Archives, DataRef};
 
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
-use super::data::{INISHIE1_CALLBACKS, StageCallbacks};
+use super::data::INISHIE1_CALLBACKS;
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, update_map_coll};
+use super::skeleton::{self, Param, Setup, StageObjects, map_id};
 use super::vars::Inishie1Block;
-use super::{CollUser, anime, grlib, material, setup, zako};
+use super::{CollUser, anime, grlib, material, setup};
 use crate::fpu::{mem, reg};
 use crate::game::it::ItKind;
 use crate::hsd::dobj;
@@ -124,32 +125,34 @@ mod p {
     pub const RETURN_SPEED: u32 = 0x50;
 }
 
-/// The fields of `grInishie1_YakumonoParam` the code reads, by offset.
-#[derive(Clone, Copy)]
-struct Param(DataRef);
-
-impl Param {
-    fn f(self, data: &Archives, off: u32) -> f32 {
-        data.f32(self.0.at(off))
-    }
-    fn h(self, data: &Archives, off: u32) -> i16 {
-        data.u16(self.0.at(off)) as i16
-    }
-    fn hu(self, data: &Archives, off: u32) -> u16 {
-        data.u16(self.0.at(off))
-    }
-    /// A float field taken as an integer (`fctiwz`).
-    fn fi(self, data: &Archives, off: u32) -> i32 {
-        fp::fctiwz(reg(self.f(data, off)))
-    }
+/// `grInishie1_YakumonoParam`.
+fn param(game: &Game) -> Param {
+    Param::of(game.gr.inishie1_yakumono, "grinishie1.c: yakumono_param")
 }
 
-fn param(game: &Game) -> Param {
-    Param(
-        game.gr
-            .inishie1_yakumono
-            .expect("grinishie1.c: yakumono_param"),
-    )
+/// Mushroom Kingdom's objects (`grI1_StageCallbacks`).
+pub const OBJECTS: StageObjects = StageObjects {
+    callbacks: &INISHIE1_CALLBACKS,
+    late: None,
+};
+
+/// Mushroom Kingdom's setup, `grInishie1_801FA90C`: its parameters; the scenery and the stage;
+/// camera limits and blast zones; the camera's near and far planes ([`clip_planes`]).
+pub const SETUP: Setup = Setup {
+    objects: &OBJECTS,
+    param: |gr| &mut gr.inishie1_yakumono,
+    own_entry_points: false,
+    keeps_spawn_point: true,
+    maps: &[0, MAP_STAGE],
+    then: None,
+    after: Some(clip_planes),
+};
+
+/// The end of both Mushroom Kingdoms' setups: the camera's near plane at 1 and far plane at
+/// 4000.
+pub fn clip_planes(r: &mut Running) {
+    r.game.camera.set_near(1.0);
+    r.game.camera.set_far(4000.0);
 }
 
 /// A stage object's process or callback, by address: Mushroom Kingdom's.
@@ -157,9 +160,9 @@ fn param(game: &Game) -> Param {
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_AAD4 | 0x801F_AAD8 | 0x801F_ABB0 | 0x801F_ABFC | 0x801F_AC00 | 0x801F_AD80 => {
-            empty(r, gobj)
+            skeleton::empty(r, gobj)
         }
-        0x801F_AAA0 => init_back(r, gobj),
+        0x801F_AAA0 => skeleton::animate(r, gobj),
         0x801F_AADC => init_stage(r, gobj),
         0x801F_AB68 => proc_stage(r, gobj),
         0x801F_ABB4 => init_map1(r, gobj),
@@ -168,66 +171,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         _ => return false,
     }
     true
-}
-
-/// The objects' processes and destroy callbacks that do nothing.
-#[doc(alias = "grInishie1_801FAAD4")]
-#[doc(alias = "grInishie1_801FAAD8")]
-#[doc(alias = "grInishie1_801FABB0")]
-#[doc(alias = "grInishie1_801FABFC")]
-#[doc(alias = "grInishie1_801FAC00")]
-#[doc(alias = "grInishie1_801FAD80")]
-pub fn empty(_r: &mut Running, _gobj: GObjId) {}
-
-/// Creates one of the stage's objects and sets it up, `setupStageCallbacks`.
-#[doc(alias = "setupStageCallbacks@801FA9B4")]
-pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
-}
-
-/// The stage's objects' setup functions and processes, by map id (`grI1_StageCallbacks`).
-pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
-    &INISHIE1_CALLBACKS[map_id as usize]
-}
-
-/// Mushroom Kingdom's setup, `grInishie1_801FA90C`: its parameters; the scenery and the stage;
-/// camera limits and blast zones; the camera's near plane at 1 and far plane at 4000.
-#[doc(alias = "grInishie1_801FA90C")]
-pub fn on_init(r: &mut Running) {
-    r.game.gr.inishie1_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.bits.own_entry_points = false;
-    r.game.stage_info.bits.keeps_spawn_point = true;
-    create(r, 0, setup::SETUP_FRAME);
-    create(r, MAP_STAGE, setup::SETUP_FRAME);
-    setup::measure_cam_bounds(r.game, r.data);
-    setup::measure_blast_zones(r.game, r.data);
-    r.game.camera.set_near(1.0);
-    r.game.camera.set_far(4000.0);
-}
-
-/// `grInishie1_801FA908` does nothing (only a demo runs it).
-#[doc(alias = "grInishie1_801FA908")]
-pub fn on_demo_init(_r: &mut Running) {}
-
-/// `grInishie1_801FA984` does nothing.
-#[doc(alias = "grInishie1_801FA984")]
-pub fn on_load(_r: &mut Running) {}
-
-/// Mushroom Kingdom's start, `grInishie1_801FA988`: the enemy spawner, without enemies.
-#[doc(alias = "grInishie1_801FA988")]
-pub fn on_start(r: &mut Running) {
-    zako::start(r.game, r.data, None);
-}
-
-fn map_id(game: &Game, gobj: GObjId) -> i32 {
-    game.grounds[ground_of(game, gobj).0].map_id
-}
-
-/// The scenery's setup (map 0), `stageGObj0_OnInit`: its animation.
-#[doc(alias = "stageGObj0_OnInit@801FAAA0")]
-pub fn init_back(r: &mut Running, gobj: GObjId) {
-    let m = map_id(r.game, gobj);
-    anime::start_map(r.game, r.data, gobj, m, 0);
 }
 
 /// Map 1's setup, `grInishie1_801FABB4`: its animation, and no callbacks. Nothing makes a map 1
@@ -660,7 +603,7 @@ pub fn pop_item(r: &mut Running, j: Option<JObjId>) {
 #[doc(alias = "grInishie1_801FBAA0")]
 pub fn add_hatena(r: &mut Running, gobj: GObjId, ix: usize, frame: u32) {
     let g = ground_of(r.game, gobj);
-    let Some(hatena) = create(r, MAP_HATENA, frame) else {
+    let Some(hatena) = skeleton::create(r, &OBJECTS, MAP_HATENA, frame) else {
         return;
     };
     let hg = ground_of(r.game, hatena);

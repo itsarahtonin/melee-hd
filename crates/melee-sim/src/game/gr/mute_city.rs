@@ -21,9 +21,10 @@ use melee_data::archive::{Archives, DataRef};
 
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Obj, Running};
-use super::data::{MUTECITY_CALLBACKS, StageCallbacks};
+use super::data::MUTECITY_CALLBACKS;
 use super::ground::{ground_of, jobj_of, nth_joint, update_map_coll};
-use super::{anime, grlib, material, setup, zako};
+use super::skeleton::{self, Param, Setup, StageObjects, map_id};
+use super::{anime, grlib, material, setup};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -69,24 +70,8 @@ mod p {
     pub const BRAKE: u32 = 0x4C;
 }
 
-#[derive(Clone, Copy)]
-struct Param(DataRef);
-
-impl Param {
-    fn f(self, data: &Archives, off: u32) -> f32 {
-        data.f32(self.0.at(off))
-    }
-    fn ptr(self, data: &Archives, off: u32) -> Option<DataRef> {
-        data.ptr(self.0.at(off))
-    }
-}
-
 fn param(game: &Game) -> Param {
-    Param(
-        game.gr
-            .mutecity_yakumono
-            .expect("grmutecity.c: yakumono_param"),
-    )
+    Param::of(game.gr.mutecity_yakumono, "grmutecity.c: yakumono_param")
 }
 
 /// One car (`grMc_CarEntry`, 0x2C bytes).
@@ -166,72 +151,47 @@ impl Default for Globals {
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_01B0 | 0x801F_040C | 0x801F_0444 | 0x801F_0448 | 0x801F_04B0 | 0x801F_04B4
-        | 0x801F_0948 => empty(r, gobj),
+        | 0x801F_0948 => skeleton::empty(r, gobj),
         0x801E_FDF8 => init_course(r, gobj),
         0x801F_0120 => proc_course(r, gobj),
         0x801F_01B4 => init_platform(r, gobj),
         0x801F_0290 => proc_platform(r, gobj),
-        0x801F_0410 => init_scenery(r, gobj),
+        0x801F_0410 => skeleton::animate(r, gobj),
         0x801F_044C => init_cars(r, gobj),
         _ => return false,
     }
     true
 }
 
-/// The objects' processes and destroy callbacks that do nothing.
-#[doc(alias = "grMuteCity_801F01B0")]
-#[doc(alias = "grMuteCity_801F040C")]
-#[doc(alias = "grMuteCity_801F0444")]
-#[doc(alias = "grMuteCity_801F0448")]
-#[doc(alias = "grMuteCity_801F04B0")]
-#[doc(alias = "grMuteCity_801F04B4")]
-#[doc(alias = "grMuteCity_801F0948")]
-pub fn empty(_r: &mut Running, _gobj: GObjId) {}
-
-/// Creates one of the stage's objects and sets it up, `grMuteCity_801EFD0C`.
-#[doc(alias = "grMuteCity_801EFD0C")]
-pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
-}
-
-/// The stage's objects' setup functions and processes, by map id (`grMc_StageCallbacks`).
-pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
-    &MUTECITY_CALLBACKS[map_id as usize]
-}
+/// Mute City's objects (`grMc_StageCallbacks`).
+pub const OBJECTS: StageObjects = StageObjects {
+    callbacks: &MUTECITY_CALLBACKS,
+    late: None,
+};
 
 /// Where the course's setup makes the platform and the cars: a frame below the stage's
 /// setup's ([`setup::SETUP_FRAME`]), less `grMuteCity_801EFD0C`'s and the course's setup's.
 pub const COURSE_FRAME: u32 = setup::SETUP_FRAME - 0x30 - 0x48;
 
-/// Mute City's setup, `grMuteCity_801EFC6C`: its parameters, maps 0 and 30 (which makes 29 and
-/// 2), the camera limits and blast zones measured between them, and the hazard sign's model,
-/// hidden.
-#[doc(alias = "grMuteCity_801EFC6C")]
-pub fn on_init(r: &mut Running) {
-    r.game.gr.mutecity_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.bits.own_entry_points = false;
-    r.game.stage_info.bits.keeps_spawn_point = false;
-    create(r, 0, setup::SETUP_FRAME);
-    setup::measure_cam_bounds(r.game, r.data);
-    setup::measure_blast_zones(r.game, r.data);
-    create(r, 0x1E, setup::SETUP_FRAME);
+/// Mute City's setup, `grMuteCity_801EFC6C`: its parameters, map 0, the camera limits and blast
+/// zones, then the course ([`make_course`]).
+pub const SETUP: Setup = Setup {
+    objects: &OBJECTS,
+    param: |gr| &mut gr.mutecity_yakumono,
+    own_entry_points: false,
+    keeps_spawn_point: false,
+    maps: &[0],
+    then: None,
+    after: Some(make_course),
+};
+
+/// The end of Mute City's setup: map 30 (which makes 29 and 2), after the camera limits and
+/// blast zones are measured, and the hazard sign's model, hidden.
+fn make_course(r: &mut Running) {
+    skeleton::create(r, &OBJECTS, 0x1E, setup::SETUP_FRAME);
     let desc = sign_model(r);
     r.create_fzero_hazard(desc.expect("un_802FD708: a model"));
     r.game.hide_hazard();
-}
-
-/// `grMuteCity_801EFC68` does nothing (only a demo runs it).
-#[doc(alias = "grMuteCity_801EFC68")]
-pub fn on_demo_init(_r: &mut Running) {}
-
-/// `grMuteCity_801EFCDC` does nothing.
-#[doc(alias = "grMuteCity_801EFCDC")]
-pub fn on_load(_r: &mut Running) {}
-
-/// Mute City's start, `grMuteCity_801EFCE0`: the enemy spawner, without enemies.
-#[doc(alias = "grMuteCity_801EFCE0")]
-pub fn on_start(r: &mut Running) {
-    zako::start(r.game, r.data, None);
 }
 
 /// The hazard sign's model, `grMuteCity_801F28A8`: map 38's entry in its archive.
@@ -241,10 +201,6 @@ pub fn sign_model(r: &Running) -> Option<DataRef> {
     let head = head.expect("grmutecity.c: 2135: archive");
     r.data.ptr(head.0.at(8))?;
     Some(head.entry(r.data, 38).0)
-}
-
-fn map_id(game: &Game, gobj: GObjId) -> i32 {
-    game.grounds[ground_of(game, gobj).0].map_id
 }
 
 /// A joint's spline (`jobj->u.spline`).
@@ -318,9 +274,9 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
         v.bounds = bounds;
     }
     r.game.grounds[g.0].flags.shadowed = true;
-    let platform = create(r, 0x1D, COURSE_FRAME);
+    let platform = skeleton::create(r, &OBJECTS, 0x1D, COURSE_FRAME);
     r.game.grounds[g.0].u.mute_city().platform = platform;
-    let cars = create(r, 2, COURSE_FRAME);
+    let cars = skeleton::create(r, &OBJECTS, 2, COURSE_FRAME);
     r.game.grounds[g.0].u.mute_city().cars = cars;
     move_cars(r, cars.expect("grmutecity.c: the cars"), gobj);
     for k in [0xC, 0xC, 0xD, 0xE, 0xF, 0x10] {
@@ -368,7 +324,7 @@ pub fn proc_course(r: &mut Running, gobj: GObjId) {
         );
     }
     run_script(r, gobj);
-    empty(r, gobj);
+    skeleton::empty(r, gobj);
     if r.game.grounds[g.0].u.mute_city().track_on() {
         follow_track(r, gobj);
     }
@@ -435,14 +391,6 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
     jobj::set_rotation_z(&mut r.game.objs.jobjs, sway, mem(fp::fmuls(reg(z), reg(k))));
     platform_lights(r, gobj);
     update_map_coll(r.game, r.data, gobj);
-}
-
-/// Maps 36 and 37 start their map animation, `stageGObj36_37_OnInit` (the inline
-/// `Ground_StartMapAnim`).
-#[doc(alias = "stageGObj36_37_OnInit")]
-pub fn init_scenery(r: &mut Running, gobj: GObjId) {
-    let m = map_id(r.game, gobj);
-    anime::start_map(r.game, r.data, gobj, m, 0);
 }
 
 /// `grMc_803E34A4`: the cars' models' map ids (the first, the cars' object's own, unused).
