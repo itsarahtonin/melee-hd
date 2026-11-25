@@ -7,9 +7,10 @@
 use gekko_fp as fp;
 
 use super::super::state::{Obj, Running};
-use super::results_scene::{PKIND_HUMAN, canceled};
+use super::results_scene::canceled;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -28,7 +29,7 @@ impl Running<'_> {
         if canceled(me.outcome) {
             for i in 0..4 {
                 let s = &self.game.pads.copy[i];
-                if me.player_standings[i].pkind == PKIND_HUMAN
+                if me.player_standings[i].pkind == PlayerKind::Human
                     && self.game.pads.master[i].err == 0
                     && s.trigger & 0x1000 != 0
                 {

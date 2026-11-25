@@ -9,6 +9,7 @@
 
 use melee_local_data::bench_replay;
 use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules};
+use melee_sim::game::pl::player::PlayerKind;
 use melee_sim::game::vs_match::{Player, Settings};
 
 #[test]
@@ -32,7 +33,7 @@ fn vs_start_data_matches_the_recorded() {
             .unwrap()
             .start;
         let players: Vec<Player> = (0..4)
-            .filter(|&i| rec.players[i].slot_type != 3)
+            .filter(|&i| rec.players[i].slot_type != PlayerKind::None)
             .map(|i| {
                 let p = &rec.players[i];
                 Player {
@@ -48,7 +49,7 @@ fn vs_start_data_matches_the_recorded() {
         let ours = Settings::vs_with(rec.rules.stkind, &players, &rules, &prefs).start;
         assert_eq!(ours.rules, rec.rules, "{name}: rules");
         for (i, (o, r)) in ours.players.iter().zip(&rec.players).enumerate() {
-            if r.slot_type == 3 {
+            if r.slot_type == PlayerKind::None {
                 assert_eq!(o.slot_type, 3, "{name}: player {i}");
                 continue;
             }

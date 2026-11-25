@@ -7,11 +7,8 @@ use super::super::structs::{MatchEnd, PlayerInitData, StartMeleeData};
 use super::vs_melee::CssData;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::pl::player::PlayerKind;
 
-/// `Gm_PKind_Human`, `Gm_PKind_Cpu`, `Gm_PKind_NA`.
-const PKIND_HUMAN: u8 = 0;
-const PKIND_CPU: u8 = 1;
-const PKIND_NONE: u8 = 3;
 /// `OUTCOME_TIMEOUT`.
 const OUTCOME_TIMEOUT: u8 = 1;
 
@@ -25,7 +22,7 @@ pub fn setup_sudden_death(start: &mut StartMeleeData, end: &MatchEnd) {
     r.timer_enabled = false;
     r.damage_display_kos = false;
     for i in 0..6 {
-        if start.players[i].slot_type == PKIND_NONE {
+        if start.players[i].slot_type == PlayerKind::None {
             continue;
         }
         let ps = &end.player_standings[i];
@@ -64,7 +61,7 @@ pub fn setup_sudden_death(start: &mut StartMeleeData, end: &MatchEnd) {
             p.stocks = 1;
             p.damage1 = 300;
         } else {
-            p.slot_type = PKIND_NONE;
+            p.slot_type = PlayerKind::None.into();
         }
     }
 }
@@ -84,7 +81,7 @@ pub fn set_slot(player: &mut PlayerInitData, slot: i32) {
 /// A human player's block, `gm_SetupHumanPlayer`.
 #[doc(alias = "gm_SetupHumanPlayer")]
 pub fn setup_human(player: &mut PlayerInitData, ckind: u8, color: u8, stocks: u8, slot: u8) {
-    player.slot_type = PKIND_HUMAN;
+    player.slot_type = PlayerKind::Human.into();
     player.ckind = ckind as i8;
     player.color = color;
     player.stocks = stocks as i8;
@@ -94,7 +91,7 @@ pub fn setup_human(player: &mut PlayerInitData, ckind: u8, color: u8, stocks: u8
 /// A computer player's block, on team 4, `gm_SetupCpuPlayer`.
 #[doc(alias = "gm_SetupCpuPlayer")]
 pub fn setup_cpu(player: &mut PlayerInitData, ckind: u8, color: u8, stocks: u8, slot: u8) {
-    player.slot_type = PKIND_CPU;
+    player.slot_type = PlayerKind::Cpu.into();
     player.ckind = ckind as i8;
     player.color = color;
     player.stocks = stocks as i8;

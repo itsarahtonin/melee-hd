@@ -12,6 +12,7 @@ use super::super::structs::_GXColor;
 use super::types::{CoinCounter, OffscreenArrows, ScoreDisplays};
 use super::{CAMERA_RENDER, Draw, HIDDEN, JOBJ_RENDER, LIGHT_RENDER};
 use crate::fpu::{mem, reg};
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::sis::TextId;
 use crate::hsd::{cobj, jobj};
@@ -116,7 +117,7 @@ impl Game {
         if slot >= 4 {
             return;
         }
-        let human = self.player_pkind(i32::from(slot)) != super::super::pl::player::PKIND_CPU;
+        let human = self.player_pkind(i32::from(slot)) != PlayerKind::Cpu;
         let p = &mut self.hud.arrows;
         for i in 0..4 {
             if !human || p.sides[i] != 0 || p.shown[usize::from(slot)] != 0 {

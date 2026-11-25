@@ -4,7 +4,8 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::Running;
-use super::one_player::{CLASSIC_STAGES, OnePlayerRun, Opponent, matchup};
+use super::intro::IntroKind;
+use super::one_player::{CLASSIC_LIST_END, CLASSIC_STAGES, OnePlayerRun, Opponent, matchup};
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
 
@@ -778,19 +779,19 @@ impl Running<'_> {
         let mut sd = self.game.one_player.classic_intro;
         sd[d::STAGE] = entry.stage.wrapping_add(1);
         sd[d::SLOT] = run.player.slot;
-        let kind: i32 = if entry.flags & 0x80 != 0 {
-            3
+        let kind = if entry.flags & 0x80 != 0 {
+            IntroKind::Bonus
         } else if entry.flags & 8 != 0 {
-            4
+            IntroKind::Horde
         } else if entry.flags & 0x10 != 0 {
-            1
+            IntroKind::Team
         } else if entry.flags & 2 != 0 {
-            2
+            IntroKind::Giant
         } else {
-            0
+            IntroKind::Single
         };
-        sd[d::KIND..d::KIND + 4].copy_from_slice(&kind.to_be_bytes());
-        if kind == 3 {
+        sd[d::KIND..d::KIND + 4].copy_from_slice(&kind.id().to_be_bytes());
+        if kind == IntroKind::Bonus {
             if let 1..=3 = entry.bonus {
                 sd[d::GAME_TYPE..d::GAME_TYPE + 4]
                     .copy_from_slice(&i32::from(entry.bonus).to_be_bytes());
@@ -1000,7 +1001,7 @@ impl Running<'_> {
         if on
             && CLASSIC_STAGES
                 .get(round + 1)
-                .is_some_and(|e| e.stage == 0xD)
+                .is_some_and(|e| e.stage == CLASSIC_LIST_END)
         {
             // `gm_8017CBAC` with Classic's run and stocks (`gmMainLib_8015CDC8`).
             let stocks = self.game.game_data.vs.classic.stocks;

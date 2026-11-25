@@ -7,7 +7,7 @@
 
 use gekko_fp as fp;
 
-use super::item::{apply_scale, attr_of, release_from, stop_sfx2};
+use super::item::{HoldKind, apply_scale, attr_of, release_from, stop_sfx2};
 use super::{hitbox, item, item_mut, jobj_of, lib26b1, lib279c, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::state::Running;
@@ -29,17 +29,20 @@ pub fn let_go_model(r: &mut Running, gobj: GObjId, vel: Vec3) {
     let (owner, attach, root) = let_go_start(r, gobj, vel);
     let ip = item(r.game, gobj);
     let heavy = lib26b1::is_heavy(r.game, data, gobj);
-    let offset = if (heavy && ip.hold_kind != 4 && ip.hold_kind != 6) || ip.hold_kind == 8 {
-        let j = lib2725::bone(r.game, data, gobj, attach).expect("the item's attach bone");
-        let t = r.game.objs.jobjs[j].translate;
-        Vec3::new(
-            mem(fp::fneg(reg(t.x))),
-            mem(fp::fneg(reg(t.y))),
-            mem(fp::fneg(reg(t.z))),
-        )
-    } else {
-        Vec3::new(0.0, 0.0, 0.0)
-    };
+    let offset =
+        if (heavy && ip.hold_kind != HoldKind::StageItem && ip.hold_kind != HoldKind::Monster)
+            || ip.hold_kind == HoldKind::FighterArticle
+        {
+            let j = lib2725::bone(r.game, data, gobj, attach).expect("the item's attach bone");
+            let t = r.game.objs.jobjs[j].translate;
+            Vec3::new(
+                mem(fp::fneg(reg(t.x))),
+                mem(fp::fneg(reg(t.y))),
+                mem(fp::fneg(reg(t.z))),
+            )
+        } else {
+            Vec3::new(0.0, 0.0, 0.0)
+        };
     // `getOwnerJointPosition`.
     let owner = owner.expect("a held item without a holder");
     let part = item(r.game, gobj).hold_part;
@@ -63,27 +66,30 @@ pub fn let_go_model_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3) {
     let (owner, attach, root) = let_go_start(r, gobj, vel);
     let ip = item(r.game, gobj);
     let heavy = lib26b1::is_heavy(r.game, data, gobj);
-    let offset = if (heavy && ip.hold_kind != 4 && ip.hold_kind != 6) || ip.hold_kind == 8 {
-        let j = lib2725::bone(r.game, data, gobj, attach).expect("the item's attach bone");
-        let t = r.game.objs.jobjs[j].translate;
-        let back = Vec3::new(
-            mem(fp::fneg(reg(t.x))),
-            mem(fp::fneg(reg(t.y))),
-            mem(fp::fneg(reg(t.z))),
-        );
-        let owner = owner.expect("a held item without a holder");
-        let part = item(r.game, gobj).hold_part;
-        let hand = r.bone_joint(owner, part as i32);
-        let a = crate::lb::joint::world_position(&mut r.game.objs, data, hand, Some(back));
-        let b = crate::lb::joint::world_position(&mut r.game.objs, data, hand, None);
-        Vec3::new(
-            mem(fp::fsubs(reg(a.x), reg(b.x))),
-            mem(fp::fsubs(reg(a.y), reg(b.y))),
-            0.0,
-        )
-    } else {
-        Vec3::new(0.0, 0.0, 0.0)
-    };
+    let offset =
+        if (heavy && ip.hold_kind != HoldKind::StageItem && ip.hold_kind != HoldKind::Monster)
+            || ip.hold_kind == HoldKind::FighterArticle
+        {
+            let j = lib2725::bone(r.game, data, gobj, attach).expect("the item's attach bone");
+            let t = r.game.objs.jobjs[j].translate;
+            let back = Vec3::new(
+                mem(fp::fneg(reg(t.x))),
+                mem(fp::fneg(reg(t.y))),
+                mem(fp::fneg(reg(t.z))),
+            );
+            let owner = owner.expect("a held item without a holder");
+            let part = item(r.game, gobj).hold_part;
+            let hand = r.bone_joint(owner, part as i32);
+            let a = crate::lb::joint::world_position(&mut r.game.objs, data, hand, Some(back));
+            let b = crate::lb::joint::world_position(&mut r.game.objs, data, hand, None);
+            Vec3::new(
+                mem(fp::fsubs(reg(a.x), reg(b.x))),
+                mem(fp::fsubs(reg(a.y), reg(b.y))),
+                0.0,
+            )
+        } else {
+            Vec3::new(0.0, 0.0, 0.0)
+        };
     let ip = item_mut(r.game, gobj);
     ip.pos.x = mem(fp::fadds(reg(pos.x), reg(offset.x)));
     ip.pos.y = mem(fp::fadds(reg(pos.y), reg(offset.y)));

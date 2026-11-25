@@ -8,6 +8,7 @@
 
 use super::*;
 use crate::game::ft::CharacterKind;
+use crate::game::pl::player::PlayerKind;
 
 /// `mnCharSel_CursorThink`.
 pub const CURSOR_THINK: u32 = 0x8026_02A0;
@@ -250,7 +251,7 @@ impl Running<'_> {
         let p = usize::from(self.cursor(me).port);
         if self.game.charsel.tokens[p].expect("a coin").held_by == 0
             && self.css().vs.start.rules.is_teams == 0
-            && self.game.charsel.doors[p].p_kind != PKIND_NONE
+            && self.game.charsel.doors[p].p_kind != PlayerKind::None
         {
             self.charsel_costume_change(p, trigger);
         }
@@ -284,16 +285,16 @@ impl Running<'_> {
         } else {
             let d = self.game.charsel.doors[port];
             if d.sel_icon >= NO_ICON
-                && d.p_kind != PKIND_NONE
+                && d.p_kind != PlayerKind::None
                 && self.charsel_coin_back(port as u8) != 0
             {
                 self.charsel_random_pick(port as u8, true);
             }
         }
-        if self.game.charsel.doors[port].p_kind == PKIND_HUMAN {
-            self.game.charsel.doors[port].p_kind = PKIND_CPU;
+        if self.game.charsel.doors[port].p_kind == PlayerKind::Human {
+            self.game.charsel.doors[port].p_kind = PlayerKind::Cpu.into();
             let p = &mut self.css_start().players[port];
-            p.slot_type = PKIND_CPU;
+            p.slot_type = PlayerKind::Cpu.into();
             p.nametag = NO_TAG;
             self.game.charsel.tags[port]
                 .as_mut()
@@ -319,7 +320,7 @@ impl Running<'_> {
             0..=3 => {
                 let d = usize::from(door);
                 if reg(c.y) < reg(0.2) {
-                    if port != door || self.game.charsel.doors[d].p_kind == PKIND_NONE {
+                    if port != door || self.game.charsel.doors[d].p_kind == PlayerKind::None {
                         self.charsel_coin_back(door);
                         self.sfx_play(0xB8, 0x7F, 0x40);
                     } else {
@@ -502,21 +503,23 @@ impl Running<'_> {
                     {
                         self.cursor_mut(me).y = -2.2;
                         let dd = &mut self.game.charsel.doors[door];
+                        // The toggle steps human, computer, none: past the demo kind, and from
+                        // the boss kind back to a human (a computer with no controller).
                         dd.p_kind = dd.p_kind.wrapping_add(1);
-                        match dd.p_kind {
-                            2 => dd.p_kind = 3,
-                            4 => {
+                        match PlayerKind::from_id(i32::from(dd.p_kind)) {
+                            Some(PlayerKind::Demo) => dd.p_kind = PlayerKind::None.into(),
+                            Some(PlayerKind::Boss) => {
                                 dd.p_kind = if self.game.pads.copy[door].err != 0 {
-                                    PKIND_CPU
+                                    PlayerKind::Cpu.into()
                                 } else {
-                                    PKIND_HUMAN
+                                    PlayerKind::Human.into()
                                 };
                             }
                             _ => {}
                         }
                         let kind = self.game.charsel.doors[door].p_kind;
                         self.css_start().players[door].slot_type = kind;
-                        if kind == PKIND_CPU {
+                        if kind == PlayerKind::Cpu {
                             self.css_start().players[door].nametag = NO_TAG;
                             self.game.charsel.tags[door]
                                 .as_mut()
@@ -534,7 +537,7 @@ impl Running<'_> {
                     }
                 }
                 let d = self.game.charsel.doors[door];
-                if self.css().vs.start.rules.is_teams == 1 && d.p_kind != PKIND_NONE {
+                if self.css().vs.start.rules.is_teams == 1 && d.p_kind != PlayerKind::None {
                     let c = self.cursor(me);
                     if reg(c.x) > reg(DOORS[door].team_l) && reg(c.x) < reg(DOORS[door].team_r) {
                         let cy = reg(c.y);
@@ -550,7 +553,7 @@ impl Running<'_> {
                     }
                 }
                 let d = self.game.charsel.doors[door];
-                if d.hold_cpu_slider == 0 && d.p_kind == PKIND_CPU {
+                if d.hold_cpu_slider == 0 && d.p_kind == PlayerKind::Cpu {
                     let joint = if self.game.game_data.rules.handicap != 0 {
                         DOORS[door].cpu_slider2
                     } else {
@@ -564,8 +567,8 @@ impl Running<'_> {
                 let d = self.game.charsel.doors[door];
                 if d.hold_handicap_slider == 0 && self.game.game_data.rules.handicap == 2 {
                     let pk = d.p_kind;
-                    if pk != PKIND_NONE
-                        && (pk == PKIND_CPU || door == usize::from(self.cursor(me).port))
+                    if pk != PlayerKind::None
+                        && (pk == PlayerKind::Cpu || door == usize::from(self.cursor(me).port))
                         && self.cursor_grab(me, DOORS[door].cpu_slider, door as u8 + 8)
                     {
                         self.game.charsel.doors[door].hold_handicap_slider = 1;
@@ -575,7 +578,7 @@ impl Running<'_> {
             }
             let port = usize::from(self.cursor(me).port);
             if (port != 3 || match_type != VS_CAMERA)
-                && self.game.charsel.doors[port].p_kind == PKIND_HUMAN
+                && self.game.charsel.doors[port].p_kind == PlayerKind::Human
             {
                 let nj = self.tag_box_node(port);
                 let p = self.css_world(nj);
@@ -601,9 +604,9 @@ impl Running<'_> {
                 let cy = reg(c.y);
                 if !(cy < reg(0.2)) && !(cy > reg(22.0)) {
                     let d = self.game.charsel.doors[ci];
-                    if d.p_kind != PKIND_NONE
+                    if d.p_kind != PlayerKind::None
                         && d.sel_icon < NO_ICON
-                        && (d.p_kind != PKIND_HUMAN || usize::from(c.port) == ci)
+                        && (d.p_kind != PlayerKind::Human || usize::from(c.port) == ci)
                     {
                         let m = self.game.charsel.tokens[ci].expect("a coin");
                         if m.held_by == 0 {
@@ -630,7 +633,7 @@ impl Running<'_> {
         } else if trigger & PAD_B != 0 {
             let port = usize::from(self.cursor(me).port);
             let d = self.game.charsel.doors[port];
-            if d.p_kind != PKIND_NONE && d.sel_icon < NO_ICON {
+            if d.p_kind != PlayerKind::None && d.sel_icon < NO_ICON {
                 let cy = reg(self.cursor(me).y);
                 if cy > reg(0.2)
                     && cy < reg(22.0)
@@ -645,9 +648,9 @@ impl Running<'_> {
         if cy > reg(0.2) && cy < reg(22.0) {
             let port = usize::from(c.port);
             if port != 3 || match_type != VS_CAMERA {
-                if self.game.charsel.doors[port].p_kind == PKIND_NONE {
-                    self.game.charsel.doors[port].p_kind = PKIND_HUMAN;
-                    self.css_start().players[port].slot_type = PKIND_HUMAN;
+                if self.game.charsel.doors[port].p_kind == PlayerKind::None {
+                    self.game.charsel.doors[port].p_kind = PlayerKind::Human.into();
+                    self.css_start().players[port].slot_type = PlayerKind::Human.into();
                     self.charsel_door(port as u8);
                     self.lb_audio_call(2);
                 }

@@ -8,13 +8,11 @@ use super::super::structs::MatchEnd;
 use super::decisions::{COUNT, decision_kind};
 use crate::game::ft::CharacterKind;
 use crate::game::gm::{GameMode, GameScene};
+use crate::game::pl::player::PlayerKind;
 
 /// `OUTCOME_NO_CONTEST`, `OUTCOME_RETRY`.
 pub const OUTCOME_NO_CONTEST: u8 = 7;
 pub const OUTCOME_RETRY: u8 = 8;
-/// `Gm_PKind_Human`, `Gm_PKind_NA`.
-const PKIND_HUMAN: i32 = 0;
-const PKIND_NA: u8 = 3;
 
 /// `MatchExitInfo` (`EndMeleeData`): a match scene's exit data, what the mode's states read
 /// once it ends: the single-player run's value or the rules' `x18`, the timer's seconds,
@@ -71,7 +69,7 @@ impl Game {
             return Vec::new();
         }
         (0..6)
-            .filter(|&i| self.player_pkind(i) == PKIND_HUMAN)
+            .filter(|&i| self.player_pkind(i) == PlayerKind::Human)
             .map(|i| selkind(self.player_ckind(i) as u8))
             .collect()
     }
@@ -306,8 +304,7 @@ impl Running<'_> {
             .id;
         let cpu_luigi = |g: &super::super::state::Game| {
             (0..6).any(|i| {
-                g.player_pkind(i) == super::super::pl::player::PKIND_CPU
-                    && g.player_ckind(i) == CharacterKind::Luigi
+                g.player_pkind(i) == PlayerKind::Cpu && g.player_ckind(i) == CharacterKind::Luigi
             })
         };
         if id == 0x03 && cpu_luigi(g) {
@@ -378,7 +375,7 @@ impl Running<'_> {
             }
         }
         for i in 0..6 {
-            if self.game.player_pkind(i) == super::super::pl::player::PKIND_CPU
+            if self.game.player_pkind(i) == PlayerKind::Cpu
                 && self.game.player_ckind(i) == CharacterKind::CrazyHand
             {
                 r.mode_bonuses[0] |= 0x01;
@@ -393,7 +390,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8016C4F4")]
     pub(crate) fn match_bonuses(&mut self, r: &mut MatchEnd) {
         for i in 0..6 {
-            if r.player_standings[i].pkind == PKIND_NA {
+            if r.player_standings[i].pkind == PlayerKind::None {
                 continue;
             }
             self.tally_bonuses(i as i32);
@@ -415,7 +412,6 @@ impl Running<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::pl::player::PKIND_CPU;
 
     /// The flag `x448[0].b0` Classic's results give a match with a computer Crazy Hand
     /// (`fn_8017EDDC`'s arrival, `fn_8017C0C8`'s slot 1), by his character kind, and not for
@@ -424,14 +420,14 @@ mod tests {
     fn classic_results_mark_a_computer_crazy_hand() {
         let data = melee_data::archive::Archives::default();
         for (ckind, pkind, flag) in [
-            (0x1E, PKIND_CPU, 1),
-            (0x1B, PKIND_CPU, 0),
-            (0x1A, PKIND_CPU, 0),
-            (0x1E, PKIND_HUMAN, 0),
+            (0x1E, PlayerKind::Cpu, 1),
+            (0x1B, PlayerKind::Cpu, 0),
+            (0x1A, PlayerKind::Cpu, 0),
+            (0x1E, PlayerKind::Human, 0),
         ] {
             let mut game = Game::default();
             game.players[1].ckind = ckind;
-            game.players[1].pkind = pkind;
+            game.players[1].pkind = pkind.into();
             let mut r = MatchEnd::default();
             Running {
                 game: &mut game,
@@ -441,7 +437,7 @@ mod tests {
             assert_eq!(
                 r.mode_bonuses[0] & 1,
                 flag,
-                "character kind {ckind:#x}, kind {pkind}"
+                "character kind {ckind:#x}, kind {pkind:?}"
             );
         }
     }

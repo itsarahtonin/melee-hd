@@ -7,7 +7,7 @@ use melee_data::archive::DataRef;
 
 use super::super::gm::vs::{hud_color, player_color, stock_icon_frame};
 use super::super::handles::CodeRef;
-use super::super::pl::player::{PKIND_CPU, PKIND_HUMAN, PKIND_NONE};
+use super::super::pl::player::PlayerKind;
 use super::super::state::{Game, OBJ_JOBJ, Obj, Running};
 use super::{Draw, HIDDEN};
 use crate::fpu::{mem, reg};
@@ -570,7 +570,7 @@ impl Running<'_> {
     #[doc(alias = "ifStatus_802F6508")]
     pub fn show_damage_display(&mut self, slot: i32) {
         let g = &mut *self.game;
-        if g.player_pkind(slot) == PKIND_NONE
+        if g.player_pkind(slot) == PlayerKind::None
             || i32::from(g.hud.status_count) <= slot
             || !g.vs.start.damage_displays_on
         {
@@ -677,7 +677,7 @@ impl Running<'_> {
         self.game.explode_damage_display(slot);
         let k = self.game.player_pkind(slot);
         if self.game.vs.start.is_stock
-            && (k == PKIND_HUMAN || k == PKIND_CPU)
+            && (k == PlayerKind::Human || k == PlayerKind::Cpu)
             && self.game.player_stocks(slot) == 0
         {
             self.vs_announce_entry(slot, k as u8);

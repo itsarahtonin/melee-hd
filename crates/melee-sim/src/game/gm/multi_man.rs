@@ -15,10 +15,10 @@ use crate::game::structs::{PlayerInitData, StartMeleeData};
 use crate::hsd::gobj::GObjId;
 use melee_data::archive::DataRef;
 
-use super::results_scene::PKIND_NA;
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
+use crate::game::pl::player::PlayerKind;
 
 /// The Multi-Man stage.
 pub const STKIND: StKind = StKind::MultiMan;
@@ -589,7 +589,7 @@ impl Running<'_> {
         let won = rec.won != 0;
         if won && mode == GameMode::FifteenMinute {
             let stage = self.multi_man_15min_stage();
-            if stage != 0x148 {
+            if stage != StKind::Unk328 {
                 self.unlock_stage(stage);
             }
         }
@@ -627,10 +627,10 @@ impl Running<'_> {
     /// none (0x148).
     #[doc(alias = "gm_80173498")]
     fn multi_man_15min_stage(&self) -> u16 {
-        if !self.stage_unlocked(0x1E) {
-            0x1E
+        if !self.stage_unlocked(StKind::OldKongo.id()) {
+            StKind::OldKongo.id()
         } else {
-            0x148
+            StKind::Unk328.id()
         }
     }
 
@@ -817,7 +817,9 @@ impl Running<'_> {
         let mut count = 0;
         let mut free = None;
         for i in 1..6 {
-            if self.game.player_falls(i) == 0 && self.game.player_pkind(i) != i32::from(PKIND_NA) {
+            if self.game.player_falls(i) == 0
+                && self.game.player_pkind(i) != i32::from(PlayerKind::None)
+            {
                 count += 1;
             } else {
                 free = Some(i);
@@ -839,7 +841,7 @@ impl Running<'_> {
         }
         // `sp38` is written for every slot not counted, so with fewer than five in it's set.
         let slot = free.expect("a free slot (fn_80181C80's sp38 unwritten)");
-        if self.game.player_pkind(slot) != i32::from(PKIND_NA) {
+        if self.game.player_pkind(slot) != i32::from(PlayerKind::None) {
             self.game.set_player_falls(slot, 0);
             self.game.set_player_self_destructs(slot, 0);
             self.vs_remove_player(slot);

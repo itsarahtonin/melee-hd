@@ -7,10 +7,11 @@
 use super::super::state::Running;
 use super::super::structs::MatchEnd;
 use super::records::any_human;
-use super::results_scene::{PKIND_HUMAN, PKIND_NA, canceled};
+use super::results_scene::canceled;
 use super::results_tie::{TieFrame, TieStack};
 use super::unlocks::ChallengerData;
 use crate::game::ft::CharacterKind;
+use crate::game::pl::player::PlayerKind;
 
 const NO_NAMETAG: u8 = 0x78;
 
@@ -81,7 +82,7 @@ pub fn add_u32_saturating(a: u32, b: u32) -> u32 {
 #[doc(alias = "gmVsMelee_UpdateKOCounts")]
 pub fn update_ko_counts(ko: &mut [u8; 6], end: &MatchEnd) {
     for (i, k) in ko.iter_mut().enumerate() {
-        if end.player_standings[i].pkind == PKIND_HUMAN {
+        if end.player_standings[i].pkind == PlayerKind::Human {
             *k = add_u8_saturating(u32::from(*k), end.player_standings[i].kos as i32) as u8;
         }
     }
@@ -92,7 +93,7 @@ pub fn update_ko_counts(ko: &mut [u8; 6], end: &MatchEnd) {
 pub fn human_kos(end: &MatchEnd) -> i32 {
     let mut sum = 0u32;
     for p in &end.player_standings {
-        if p.pkind == PKIND_HUMAN {
+        if p.pkind == PlayerKind::Human {
             sum = sum.wrapping_add(u32::from(p.coins));
         }
     }
@@ -116,7 +117,7 @@ fn smallest_loser(end: &MatchEnd) -> usize {
     let mut loser = 0xFFFF;
     let mut idx = None;
     for i in 0..6 {
-        if end.player_standings[i].pkind == PKIND_HUMAN && losers[i] < loser {
+        if end.player_standings[i].pkind == PlayerKind::Human && losers[i] < loser {
             loser = losers[i];
             idx = Some(i);
         }
@@ -136,7 +137,7 @@ pub(crate) fn move_handicaps(end: &MatchEnd, h: &mut [u8; 4], stack: &mut TieSta
     // `positions`, a stack array: a place no player took stays as the stack held it.
     let mut positions: [Option<u8>; 4] = [None; 4];
     for i in 0..4 {
-        if end.player_standings[i].pkind != PKIND_NA {
+        if end.player_standings[i].pkind != PlayerKind::None {
             count += 1;
             let at = usize::from(end.player_standings[i].is_small_loser);
             *positions.get_mut(at).unwrap_or_else(|| {
@@ -209,7 +210,7 @@ impl Running<'_> {
             self.game.gm.main_regs = regs;
         }
         for (i, &v) in h.iter().enumerate() {
-            if end.player_standings[i].pkind != PKIND_NA {
+            if end.player_standings[i].pkind != PlayerKind::None {
                 *self.auto_handicap(i, end.player_standings[i].nametag) = v as i8;
             }
         }
@@ -248,14 +249,14 @@ impl Running<'_> {
     pub(super) fn results_draw_winner(&mut self, end: &MatchEnd, table: usize) {
         let mut best = -1;
         for p in &end.player_standings[..4] {
-            if p.pkind == PKIND_HUMAN && i32::from(p.is_big_loser) > best {
+            if p.pkind == PlayerKind::Human && i32::from(p.is_big_loser) > best {
                 best = i32::from(p.is_big_loser);
             }
         }
         let mut buf = [0u8; 4];
         let mut count = 0;
         for (j, p) in end.player_standings[..4].iter().enumerate() {
-            if p.pkind == PKIND_HUMAN && i32::from(p.is_big_loser) == best {
+            if p.pkind == PlayerKind::Human && i32::from(p.is_big_loser) == best {
                 buf[count] = j as u8;
                 count += 1;
             }
@@ -423,7 +424,7 @@ impl Running<'_> {
         }
         let mut sum = 0u32;
         for p in &end.player_standings {
-            if p.pkind == PKIND_HUMAN {
+            if p.pkind == PlayerKind::Human {
                 sum = add_u32_saturating(sum, p.walk_distance);
             }
         }

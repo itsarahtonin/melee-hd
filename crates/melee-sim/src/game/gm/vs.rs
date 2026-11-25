@@ -14,7 +14,7 @@ use melee_data::archive::{Archives, DataRef};
 use super::super::code::{self, Val};
 use super::super::ft::data::MAIN_MEMORY;
 use super::super::handles::CodeRef;
-use super::super::pl::player::{PKIND_HUMAN, PKIND_NONE};
+use super::super::pl::player::PlayerKind;
 use super::super::state::{Event, Game, Running};
 use super::super::structs::{MatchEnd, PlayerInitData, StartMeleeData};
 use crate::fpu::{mem, reg};
@@ -344,7 +344,7 @@ impl Game {
     #[doc(alias = "gm_8016B558")]
     pub fn player_count(&self) -> i32 {
         (0..6)
-            .filter(|&i| self.player_pkind(i) != PKIND_NONE)
+            .filter(|&i| self.player_pkind(i) != PlayerKind::None)
             .count() as i32
     }
 
@@ -411,7 +411,7 @@ impl Game {
                 continue;
             }
             for slot in 0..6 {
-                if self.player_pkind(slot) != PKIND_NONE
+                if self.player_pkind(slot) != PlayerKind::None
                     && self.player_entity(slot).is_some()
                     && !self.player_asleep(slot)
                     && port as i32 == self.player_port(slot)
@@ -433,7 +433,7 @@ impl Game {
     /// The slot a pausing port plays, or -1 (the inline `gm_GetSlotByPlayerId`).
     fn slot_of_port(&self, port: i32) -> i8 {
         (0..6)
-            .find(|&s| port == self.player_port(s) && self.player_pkind(s) == PKIND_HUMAN)
+            .find(|&s| port == self.player_port(s) && self.player_pkind(s) == PlayerKind::Human)
             .map_or(-1, |s| s as i8)
     }
 
@@ -454,7 +454,7 @@ impl Game {
         {
             let (mut out, mut playing) = (0, 0);
             for i in 0..6 {
-                if self.player_pkind(i) != PKIND_NONE {
+                if self.player_pkind(i) != PlayerKind::None {
                     if self.player_stocks(i) == 0 {
                         out += 1;
                     }
@@ -484,7 +484,7 @@ impl Game {
                 let (mut enemy_stocks, mut enemies) = (0, 0);
                 for slot in 0..6 {
                     if !self.player_flags_bit1(slot)
-                        && self.player_pkind(slot) != PKIND_NONE
+                        && self.player_pkind(slot) != PlayerKind::None
                         && self.player_entity(slot).is_some()
                         && self.player_team(slot) != self.player_team(0)
                     {
@@ -501,7 +501,7 @@ impl Game {
             let mut teams = 0;
             let mut stocks = [-1i16; 5];
             for slot in 0..6 {
-                if self.player_pkind(slot) == PKIND_NONE {
+                if self.player_pkind(slot) == PlayerKind::None {
                     continue;
                 }
                 let t = self.player_team(slot) as usize;
@@ -573,7 +573,7 @@ impl Game {
             return;
         }
         let k = self.player_pkind(slot.into());
-        if (k == PKIND_HUMAN || k == super::super::pl::player::PKIND_CPU)
+        if (k == PlayerKind::Human || k == PlayerKind::Cpu)
             && self.player_entity(slot.into()).is_some()
         {
             super::super::camera::set_up_pause(self, slot, port as i8, 0);
@@ -615,9 +615,9 @@ impl Game {
     pub fn rank_players(&mut self, is_teams: u8, sd_penalty: i8) -> i32 {
         let mut scores = [0i32; 6];
         self.gm.ranks.rank = [0; 6];
-        self.gm.ranks.lowest = PKIND_HUMAN;
+        self.gm.ranks.lowest = 0;
         for p in 0..6 {
-            if self.player_pkind(p) == PKIND_NONE {
+            if self.player_pkind(p) == PlayerKind::None {
                 continue;
             }
             let mut kos = 0u32;
@@ -625,7 +625,7 @@ impl Game {
             let mut sds = self.player_self_destructs(p);
             let team = self.player_team(p);
             for j in 0..6 {
-                if self.player_pkind(j) == PKIND_NONE {
+                if self.player_pkind(j) == PlayerKind::None {
                     continue;
                 }
                 let k = self.player_kos(p, j);
@@ -651,11 +651,11 @@ impl Game {
         let mut result = 0;
         for p in 0..6 {
             result = self.player_pkind(p);
-            if result == PKIND_NONE {
+            if result == PlayerKind::None {
                 continue;
             }
             for j in 0..6 {
-                if self.player_pkind(j) != PKIND_NONE
+                if self.player_pkind(j) != PlayerKind::None
                     && p != j
                     && scores[p as usize] < scores[j as usize]
                 {
@@ -828,7 +828,7 @@ impl Running<'_> {
             }
             f.entry_timer -= 1;
             let left = f.entry_timer;
-            let human = i32::from(f.slot_type) == PKIND_HUMAN;
+            let human = i32::from(f.slot_type) == PlayerKind::Human;
             if left == 0x50 {
                 let id = if human {
                     assert_eq!(
@@ -1225,7 +1225,7 @@ impl Running<'_> {
         }
         for i in 0..6 {
             let g = &*self.game;
-            let out = g.player_pkind(i) != PKIND_NONE
+            let out = g.player_pkind(i) != PlayerKind::None
                 && g.player_entity(i).is_some()
                 && g.player_asleep(i)
                 && g.player_stocks(i) == 0;
@@ -1243,7 +1243,7 @@ impl Running<'_> {
             let team = g.player_team(i);
             let donor = (0..6)
                 .find(|&k| {
-                    g.player_pkind(k) != PKIND_NONE
+                    g.player_pkind(k) != PlayerKind::None
                         && i != k
                         && team == g.player_team(k)
                         && g.player_stocks(k) > 1
@@ -1302,7 +1302,7 @@ impl Running<'_> {
         if self.game.player_flags_bit1(slot) {
             if !sub {
                 self.player_free_fighters(slot);
-                self.game.set_player_pkind(slot, 3);
+                self.game.set_player_pkind(slot, PlayerKind::None);
                 let o = &mut self.game.gm.opponents;
                 let idx = o.slot_index[slot as usize];
                 *o.costumes
@@ -1390,7 +1390,7 @@ impl Running<'_> {
 /// (humans brighter than computers), by port otherwise, 4 for computers outside teams.
 #[doc(alias = "gm_80160854")]
 pub fn player_color(port: u8, team: u8, is_teams: u8, pkind: u8) -> u32 {
-    let human = i32::from(pkind) == PKIND_HUMAN;
+    let human = i32::from(pkind) == PlayerKind::Human;
     if is_teams != 0 {
         return match team {
             0 => {
@@ -1546,7 +1546,7 @@ impl Running<'_> {
     pub fn face_opponents(&mut self, stale: Option<f64>) {
         let mut xs = [0.0f32; 6];
         for i in 0..6 {
-            if self.game.player_pkind(i) != PKIND_NONE {
+            if self.game.player_pkind(i) != PlayerKind::None {
                 xs[i as usize] = self.slot_spawn_point(i).x;
             }
         }
@@ -1555,14 +1555,14 @@ impl Running<'_> {
         // Whether `d` is still the caller's `f26`, no distance measured yet.
         let mut d_stale = true;
         for i in 0..6 {
-            if g.player_pkind(i) == 3 || g.player_facing(i) != 0.0 {
+            if g.player_pkind(i) == PlayerKind::None || g.player_facing(i) != 0.0 {
                 continue;
             }
             let mut far: i32 = -1;
             let mut far_dist = 0.0;
             let mut far_stale = false;
             for j in 0..6 {
-                if j == i || g.player_pkind(j) == PKIND_NONE {
+                if j == i || g.player_pkind(j) == PlayerKind::None {
                     continue;
                 }
                 if g.vs.start.is_teams == 1 && g.player_team(i) == g.player_team(j) {
@@ -1717,7 +1717,7 @@ impl Running<'_> {
         let mut costumes: Vec<i32> = Vec::new();
         for i in 0..6 {
             let g = &*self.game;
-            if g.player_pkind(i) != 3 && g.player_ckind(i) == CharacterKind::Kirby {
+            if g.player_pkind(i) != PlayerKind::None && g.player_ckind(i) == CharacterKind::Kirby {
                 let c = g.player_costume(i) as i8 as i32;
                 if !costumes.contains(&c) {
                     costumes.push(c);
@@ -1728,7 +1728,7 @@ impl Running<'_> {
             return;
         }
         for i in 0..6 {
-            if self.game.player_pkind(i) == PKIND_NONE {
+            if self.game.player_pkind(i) == PlayerKind::None {
                 continue;
             }
             for sub in 0..2 {
@@ -1758,7 +1758,7 @@ impl Running<'_> {
         }
         self.face_opponents(f26);
         for i in 0..6 {
-            if self.game.player_pkind(i) == PKIND_NONE {
+            if self.game.player_pkind(i) == PlayerKind::None {
                 continue;
             }
             let pos = self.slot_spawn_point(i);
@@ -1819,7 +1819,7 @@ impl Game {
         );
         let port = usize::from(self.player_port(slot) as u8);
         let ck = self.player_ckind(slot);
-        if i32::from(d.slot_type) == PKIND_HUMAN
+        if i32::from(d.slot_type) == PlayerKind::Human
             && self.pads.copy[port].button & 0x100 != 0
             && (ck == CharacterKind::Zelda || ck == CharacterKind::Seak)
         {
@@ -1941,7 +1941,7 @@ impl Game {
             1 => {
                 self.init_vs_player(0, &d.players[0]);
                 for i in 1..6 {
-                    self.set_player_pkind(i, super::super::pl::player::PKIND_NONE);
+                    self.set_player_pkind(i, PlayerKind::None);
                 }
                 if self.gm.opponents.flags & super::opponents::JOINING != 0 {
                     self.mark_opponent_slots();
@@ -1967,7 +1967,7 @@ impl Game {
         }
         let mut human = false;
         for (i, p) in d.players.iter().enumerate() {
-            if i32::from(p.slot_type) == PKIND_HUMAN {
+            if i32::from(p.slot_type) == PlayerKind::Human {
                 human = true;
                 if self.pads.copy[i].button & (0x40 | 0x20) == 0 {
                     return 0;
@@ -2190,7 +2190,7 @@ mod c_stick_rule_tests {
         g.game_mode = mode.id();
         g.rules = g.rules.clone().with_c_stick_1p(c_stick);
         for p in &mut g.players[3..] {
-            p.pkind = crate::game::pl::player::PKIND_NONE;
+            p.pkind = crate::game::pl::player::PlayerKind::None.into();
         }
         let c = g.camera.raw_parts_mut().cam;
         c.zoom_distance = 1.0;

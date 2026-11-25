@@ -3,6 +3,7 @@
 
 use super::super::state::Running;
 use super::super::structs::MatchEnd;
+use crate::game::pl::player::PlayerKind;
 
 /// `lbl_803D53A8`: each character kind's results file (`gm_80160438`).
 const RESULT_FILES: [(u8, &str); 26] = [
@@ -127,7 +128,7 @@ fn kos(me: &MatchEnd, slot: usize, killer: usize, victim: usize) -> i32 {
     if killer == victim {
         return -1;
     }
-    if me.player_standings[slot].pkind != 3 {
+    if me.player_standings[slot].pkind != PlayerKind::None {
         let k = if victim < 4 {
             me.player_standings[killer].kills[victim]
         } else {

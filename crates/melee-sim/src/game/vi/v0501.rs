@@ -10,6 +10,7 @@ use super::Loaded;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
 use crate::game::gr::StKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -69,8 +70,7 @@ impl Running<'_> {
             self.game.set_player_ckind(slot, CharacterKind::Kirby.id());
             self.game.set_player_costume(slot, kirby_costume);
             self.game.set_player_port(slot, 0);
-            self.game
-                .set_player_pkind(slot, super::super::pl::player::PKIND_DEMO);
+            self.game.set_player_pkind(slot, PlayerKind::Demo);
             self.game.set_player_facing(slot, 1.0);
             self.game.set_player_pos(slot, Vec3::ZERO);
             self.game.set_player_kirby_copy_kind(slot, count as i8);

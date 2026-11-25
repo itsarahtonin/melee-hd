@@ -17,6 +17,7 @@ use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
 use crate::game::it::ItKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::cobj;
 use crate::hsd::gobj::GObjId;
 use crate::input::pad::{
@@ -639,7 +640,7 @@ impl Running<'_> {
                 }
             }
             if self.game.db_pressed(port) & u32::from(BUTTON_RIGHT) != 0
-                && self.game.player_pkind(port) != 3
+                && self.game.player_pkind(port) != PlayerKind::None
             {
                 let g = self.game.player_entity(port).expect("the port's fighter");
                 let f = self.game.fighter_id(g);
@@ -668,7 +669,7 @@ impl Running<'_> {
         if self.game.db_down(port) & u32::from(BUTTON_Y) != 0 {
             let a = self.game.db_down(port) & u32::from(BUTTON_A) != 0;
             if self.game.db_pressed(port) & u32::from(BUTTON_LEFT) != 0
-                && self.game.player_pkind(port) != 3
+                && self.game.player_pkind(port) != PlayerKind::None
             {
                 let g = self.game.player_entity(port).expect("the port's fighter");
                 if a {
@@ -678,7 +679,7 @@ impl Running<'_> {
                 }
             }
             if self.game.db_pressed(port) & u32::from(BUTTON_RIGHT) != 0
-                && self.game.player_pkind(port) != 3
+                && self.game.player_pkind(port) != PlayerKind::None
             {
                 let g = self.game.player_entity(port).expect("the port's fighter");
                 if a {

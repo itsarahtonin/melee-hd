@@ -14,6 +14,7 @@ use super::TmData;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::cobj;
 use crate::hsd::display::{Draw, Quad};
 use crate::hsd::gobj::{self, GObjId};
@@ -179,9 +180,9 @@ pub fn step_towards_int(x: &mut i32, target: i32, dx: i32) -> i32 {
 /// Bowser's Bowser's).
 #[doc(alias = "fn_8018F6DC")]
 pub fn icon_of(ckind: i32) -> i32 {
-    if ckind >= 0x13 {
+    if ckind >= CharacterKind::Seak.id() {
         if ckind == CharacterKind::GKoopa {
-            return 5;
+            return CharacterKind::Koopa.id();
         }
         return ckind - 1;
     }
@@ -191,9 +192,10 @@ pub fn icon_of(ckind: i32) -> i32 {
 /// `fn_8018F6FC`: an icon's character kind.
 #[doc(alias = "fn_8018F6FC")]
 pub fn ckind_of(icon: i32) -> i32 {
-    if icon >= 0x13 {
-        if icon == 0x1D {
-            return 5;
+    // From Sheik's number on, an icon is the next character's; Giga Bowser's number, Bowser's.
+    if icon >= CharacterKind::Seak.id() {
+        if icon == CharacterKind::GKoopa {
+            return CharacterKind::Koopa.id();
         }
         return icon + 1;
     }
@@ -1109,7 +1111,7 @@ impl Running<'_> {
         let mut count = 0;
         let mut last = None;
         for (k, s) in b.slots.iter().enumerate() {
-            if s.slot_type != 3 {
+            if s.slot_type != PlayerKind::None {
                 last = Some(k as i32);
                 count += 1;
             }
@@ -1194,7 +1196,7 @@ impl Running<'_> {
             m.icon = s.icon;
             let ckind = ckind_of(i32::from(m.icon));
             m.slot_type = s.slot_type;
-            if m.slot_type != 3 {
+            if m.slot_type != PlayerKind::None {
                 count += 1;
             }
             let (slot_type, color) = (m.slot_type, s.color);
@@ -1501,7 +1503,7 @@ impl Running<'_> {
                 p.stocks = rules.stock_count as i8;
                 p.sub_color = 0;
                 p.team = 0xFF;
-                p.rumble_enabled = rumble && m.slot_type != 1;
+                p.rumble_enabled = rumble && m.slot_type != PlayerKind::Cpu;
                 p.cpu_kind = 4;
                 p.cpu_level = m.level;
                 p.damage1 = 0;
@@ -1517,7 +1519,7 @@ impl Running<'_> {
                     p.defense_ratio = 1.0;
                 }
             } else {
-                d.players[i].slot_type = super::super::super::pl::player::PKIND_NONE as u8;
+                d.players[i].slot_type = PlayerKind::None as u8;
             }
         }
         let stkind = i32::from(d.rules.stkind);
@@ -1543,7 +1545,7 @@ impl Running<'_> {
             let take = if alt {
                 i < n
             } else {
-                i32::from(slot_type) != super::super::super::pl::player::PKIND_NONE
+                i32::from(slot_type) != PlayerKind::None
             };
             if take {
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;

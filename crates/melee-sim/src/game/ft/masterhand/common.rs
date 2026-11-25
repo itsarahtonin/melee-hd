@@ -3,6 +3,7 @@
 
 use super::super::super::state::Running;
 use super::{HAND, Hand, addr};
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -89,7 +90,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_TagFail_IASA")]
     pub fn hand_human_nop(&mut self, gobj: GObjId) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
-        if self.game.player_pkind(slot) == 0 {
+        if self.game.player_pkind(slot) == PlayerKind::Human {
             self.boss_nop(gobj);
         }
     }

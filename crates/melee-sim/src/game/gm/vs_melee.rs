@@ -7,6 +7,7 @@ use super::super::state::Running;
 use super::super::structs::{StartMeleeData, VsModeData};
 use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
+use crate::game::pl::player::PlayerKind;
 
 /// `CSSData` (`gmVsMelee_CssData`): the select screen's port for one-player modes, the
 /// type, the change the screen asks for, and its copy of the mode's VS data. Its
@@ -254,7 +255,7 @@ impl Running<'_> {
         self.vs_melee_exit_vs(STATE_RESULTS, STATE_SUDDEN_DEATH);
         let standings = self.game.vs_melee.exit.match_end.player_standings.clone();
         for p in &standings {
-            if p.pkind != 3 {
+            if p.pkind != PlayerKind::None {
                 self.game.add_kos(p.kos as i32);
                 self.game.add_self_destructs(i32::from(p.self_destructs));
                 self.game.add_damage(p.damage_taken as i32);
@@ -269,7 +270,7 @@ impl Running<'_> {
     pub fn vs_melee_exit_vs(&mut self, one: u8, several: u8) {
         let end = self.game.vs_melee.exit.match_end.clone();
         for p in &end.player_standings {
-            if p.pkind == 0 {
+            if p.pkind == PlayerKind::Human {
                 self.game.count_character_play(p.ckind as u8, end.outcome);
             }
         }
@@ -430,7 +431,7 @@ impl Running<'_> {
         for i in 0..5 {
             let j = ((base + i) % 4) as usize;
             if self.game.pads.master[j].err == 0
-                && sss.vs.start.players[j].slot_type == super::results_scene::PKIND_HUMAN
+                && sss.vs.start.players[j].slot_type == PlayerKind::Human
             {
                 return j as i32;
             }

@@ -5,6 +5,7 @@ use super::setup::counts_kos;
 use super::*;
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 
 /// `mnCharSel_804DC560`, `804DC564`: a name list's white and the gray of names taken.
 const WHITE: [u8; 3] = [255, 255, 255];
@@ -131,7 +132,7 @@ impl Running<'_> {
         let kind = self.game.charsel.doors[i].p_kind;
         let level = f32::from(self.css().vs.start.players[i].cpu_level);
         if handicap != 0 {
-            let f = match (kind == PKIND_CPU, handicap == 1) {
+            let f = match (kind == PlayerKind::Cpu, handicap == 1) {
                 (true, true) => 0x5A,
                 (true, false) => 0x1E,
                 (false, true) => 0x50,
@@ -142,7 +143,7 @@ impl Running<'_> {
             self.css_animate(menu, DOORS[i].cpu_slider, TOBJ_MASK, h as f32);
             self.css_animate(menu, DOORS[i].cpu_slider2, TOBJ_MASK, level);
         } else {
-            let f = if kind == PKIND_CPU { 50.0 } else { 40.0 };
+            let f = if kind == PlayerKind::Cpu { 50.0 } else { 40.0 };
             self.css_animate(menu, DOORS[i].slider_name, ALL_MASK, f);
             self.css_animate(menu, DOORS[i].cpu_slider, TOBJ_MASK, level);
         }
@@ -338,7 +339,7 @@ impl Running<'_> {
         let n_doors = self.css_door_count();
         let door = usize::from(tok.door);
         let ds = self.game.charsel.doors[door];
-        if ds.p_kind == PKIND_NONE || ds.sel_icon >= NO_ICON {
+        if ds.p_kind == PlayerKind::None || ds.sel_icon >= NO_ICON {
             jobj::set_flags_all(&mut self.game.objs.jobjs, j, HIDDEN);
             return;
         }
@@ -349,12 +350,12 @@ impl Running<'_> {
                 self.game.charsel.port0 as u8
             }
         } else if self.css().vs.start.rules.is_teams == 0 {
-            if ds.p_kind == PKIND_CPU {
+            if ds.p_kind == PlayerKind::Cpu {
                 8
             } else {
                 door as u8
             }
-        } else if ds.p_kind == PKIND_CPU {
+        } else if ds.p_kind == PlayerKind::Cpu {
             TEAM_COLOR[usize::from(ds.team)] + 4
         } else {
             TEAM_COLOR[usize::from(ds.team)]
@@ -389,7 +390,7 @@ impl Running<'_> {
                     let od = self.game.charsel.doors[k];
                     if k == door
                         || other.held_by != 0
-                        || od.p_kind == PKIND_NONE
+                        || od.p_kind == PlayerKind::None
                         || od.sel_icon >= NO_ICON
                     {
                         continue;
@@ -523,7 +524,7 @@ impl Running<'_> {
         let mut valid = 0;
         let mut ok = true;
         for door in d.iter().take(n) {
-            if door.p_kind != PKIND_NONE {
+            if door.p_kind != PlayerKind::None {
                 if door.sel_icon >= NO_ICON {
                     ok = false;
                     break;
@@ -534,8 +535,8 @@ impl Running<'_> {
         if ok && valid >= 2 {
             if self.css().vs.start.rules.is_teams == 1 {
                 let two_teams = (0..n - 1).any(|i| {
-                    d[i].p_kind != PKIND_NONE
-                        && (i..n).any(|k| d[k].p_kind != PKIND_NONE && d[i].team != d[k].team)
+                    d[i].p_kind != PlayerKind::None
+                        && (i..n).any(|k| d[k].p_kind != PlayerKind::None && d[i].team != d[k].team)
                 });
                 ok = two_teams;
             }
@@ -606,7 +607,7 @@ impl Running<'_> {
             }
             for i in 0..usize::from(c.doors_used) {
                 let tag = self.css().vs.start.players[i].nametag;
-                if self.game.charsel.doors[i].p_kind == PKIND_HUMAN
+                if self.game.charsel.doors[i].p_kind == PlayerKind::Human
                     && self.rumble_enabled_for(i, tag)
                 {
                     self.rumble_start(i as u8, 0, 0xB, 0x1E);
@@ -899,7 +900,7 @@ impl Running<'_> {
             for (i, port) in [(0, port0), (1, port1)] {
                 let p = &self.css().vs.start.players[port];
                 let (slot, ckind, color) = (p.slot_type, p.ckind, p.color);
-                let in_play = slot == PKIND_HUMAN || slot == PKIND_CPU;
+                let in_play = slot == PlayerKind::Human || slot == PlayerKind::Cpu;
                 if i == 1 && !in_play {
                     continue;
                 }
@@ -924,7 +925,7 @@ impl Running<'_> {
                 let (slot, ckind, color) = (p.slot_type, p.ckind, p.color);
                 let up = self.game.charsel.tokens[i].expect("a coin").held_by != 0;
                 let e = &mut self.dvd_mut().cache.scene.game_cache.entries[i];
-                if (slot == PKIND_HUMAN || slot == PKIND_CPU) && !up {
+                if (slot == PlayerKind::Human || slot == PlayerKind::Cpu) && !up {
                     e.char_id = i32::from(ckind);
                     e.color = color;
                 } else {
@@ -951,7 +952,7 @@ impl Running<'_> {
             1 => {
                 for i in 0..4 {
                     let up = self.game.charsel.tokens[0].expect("a coin").held_by != 0;
-                    if self.game.charsel.doors[i].p_kind != PKIND_NONE && up {
+                    if self.game.charsel.doors[i].p_kind != PlayerKind::None && up {
                         self.game.charsel.pending = 0;
                     }
                 }
@@ -1021,7 +1022,9 @@ impl Running<'_> {
         for (i, port) in doors {
             let p = &self.css().vs.start.players[port];
             let (slot, ckind) = (p.slot_type, p.ckind);
-            if (slot == PKIND_HUMAN || slot == PKIND_CPU) && !self.charsel_exit_coin_up(i) {
+            if (slot == PlayerKind::Human || slot == PlayerKind::Cpu)
+                && !self.charsel_exit_coin_up(i)
+            {
                 mask |= crate::lb::audio::character_banks(i32::from(ckind));
             }
         }

@@ -36,6 +36,7 @@ use gekko_fp as fp;
 
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 pub use cursor::CURSOR_THINK;
 
 /// The scene's entry, frame and exit (`mnCharSel_Scene_OnEnter`, `_OnFrame`, `_OnExit`).
@@ -70,10 +71,6 @@ pub const TRAINING_MODE: u8 = 0x17;
 
 /// The icons past the last: a door with no character (`sel_icon` 0x19).
 pub const NO_ICON: u8 = 0x19;
-/// `Gm_PKind_Human`, `Gm_PKind_Cpu`, `Gm_PKind_NA`.
-const PKIND_HUMAN: u8 = 0;
-const PKIND_CPU: u8 = 1;
-const PKIND_NONE: u8 = 3;
 /// No name tag.
 const NO_TAG: u8 = 0x78;
 
@@ -968,7 +965,7 @@ impl Running<'_> {
         let d = &self.game.charsel.doors;
         (0..n).any(|j| {
             door != j
-                && d[j].p_kind != PKIND_NONE
+                && d[j].p_kind != PlayerKind::None
                 && d[j].sel_icon < NO_ICON
                 && d[j].sel_icon == d[door].sel_icon
                 && d[door].costume == d[j].costume
@@ -1453,8 +1450,8 @@ impl Running<'_> {
             if found >= 25 {
                 let p = &mut self.css_start().players[player];
                 p.ckind = CharacterKind::PLAYABLE as i8;
-                if p.slot_type == PKIND_CPU {
-                    p.slot_type = PKIND_NONE;
+                if p.slot_type == PlayerKind::Cpu {
+                    p.slot_type = PlayerKind::None.into();
                 }
             }
             self.game.charsel.doors[i].sel_icon = found as u8;

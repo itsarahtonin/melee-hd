@@ -11,6 +11,7 @@ use super::super::state::{OBJ_CAMERA, OBJ_LIGHT, Obj, Running};
 use super::super::structs::{HSD_ImageDesc, MatchEnd};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::vec::Vec3;
@@ -197,7 +198,7 @@ impl Running<'_> {
     pub fn results_winner_count(&self) -> usize {
         let me = &self.game.results.fighters.state.match_end;
         let n = (0..4)
-            .filter(|&i| me.player_standings[i].pkind != 3 && place(me, i) == 0)
+            .filter(|&i| me.player_standings[i].pkind != PlayerKind::None && place(me, i) == 0)
             .count();
         n.saturating_sub(1)
     }
@@ -208,7 +209,7 @@ impl Running<'_> {
         let me = &self.game.results.fighters.state.match_end;
         let mut n = 0;
         for i in 0..4 {
-            if me.player_standings[i].pkind != 3 && place(me, i) == 0 {
+            if me.player_standings[i].pkind != PlayerKind::None && place(me, i) == 0 {
                 if i == slot {
                     return n;
                 }
@@ -517,7 +518,7 @@ impl Running<'_> {
         g.set_player_ckind(slot, kind);
         g.set_player_costume(slot, costume);
         g.set_player_port(slot, slot);
-        g.set_player_pkind(slot, super::super::pl::player::PKIND_DEMO);
+        g.set_player_pkind(slot, PlayerKind::Demo);
         g.set_player_facing(slot, if kind == 3 { -1.0 } else { 0.0 });
         let mut variant: i32 = if k == 0 {
             let b = self.game.pads.copy[slot as usize].button;
@@ -703,7 +704,7 @@ impl Running<'_> {
         for i in 0..4 {
             let s = &self.game.results.fighters.state;
             let me = &s.match_end;
-            if me.player_standings[i].pkind != 3 && place(me, i) != 0 {
+            if me.player_standings[i].pkind != PlayerKind::None && place(me, i) != 0 {
                 let gobj = self.game.results.fighters.gobjs[i];
                 if let Some(Obj::JObj(j)) = gobj.and_then(|g| self.game.world.gobj(g).obj) {
                     let mut t = self.game.objs.jobjs[j].translate;

@@ -13,6 +13,7 @@ use super::super::state::{OBJ_CAMERA, Obj, Running};
 use super::endings::toy_fall::{FMT_COLOR, FMT_DEPTH, Frame};
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::sobj::{self, OBJ_SOBJ};
 use crate::vec::Vec3;
@@ -196,7 +197,7 @@ impl Running<'_> {
             let g = &mut *self.game;
             g.set_player_ckind(slot, i32::from(kind));
             g.set_player_port(slot, 0);
-            g.set_player_pkind(slot, super::super::pl::player::PKIND_DEMO);
+            g.set_player_pkind(slot, PlayerKind::Demo);
             g.set_player_facing(slot, 0.0);
             g.set_player_costume(slot, i);
             let [x, y] = OFFSET[usize::from(kind)];

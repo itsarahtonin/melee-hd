@@ -15,6 +15,7 @@ use super::super::structs::{PlayerInitData, StartMeleeData};
 use super::match_exit::MatchExitInfo;
 use crate::fpu::{mem, reg};
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -37,9 +38,6 @@ pub fn on_pause() {}
 
 /// `GmVsMode_Training`, Training's entry of the modes table.
 const TABLE: usize = 6;
-/// `Gm_PKind_Cpu`, `Gm_PKind_NA`.
-const PKIND_CPU: u8 = 1;
-const PKIND_NA: u8 = 3;
 /// `HSD_GObj_JObjCallback`, `JOBJ_HIDDEN`.
 const JOBJ_RENDER: u32 = 0x8039_1070;
 const HIDDEN: u32 = jobj::HIDDEN;
@@ -192,7 +190,7 @@ impl Running<'_> {
                 p.slot.wrapping_sub(1),
             );
             if i - 1 != 0 {
-                data.players[i].slot_type = PKIND_NA;
+                data.players[i].slot_type = PlayerKind::None.into();
             }
         }
         super::vs_mode::load_rumble_enabled_with(&mut data, &prefs, &tags);
@@ -898,7 +896,7 @@ impl Running<'_> {
             let mut remaining = n - current;
             for i in 1..4 {
                 if skip == 0 {
-                    self.game.training.players[i].slot_type = PKIND_CPU;
+                    self.game.training.players[i].slot_type = PlayerKind::Cpu.into();
                     let p = self.game.training.players[i].clone();
                     self.vs_add_player(i as i32, &p);
                     remaining -= 1;
@@ -941,7 +939,7 @@ impl Running<'_> {
             if i <= saved {
                 self.vs_remove_player(i);
                 if i == 1 {
-                    self.game.training.players[1].slot_type = PKIND_CPU;
+                    self.game.training.players[1].slot_type = PlayerKind::Cpu.into();
                     let p = self.game.training.players[1].clone();
                     self.vs_add_player(1, &p);
                 }
@@ -960,7 +958,7 @@ impl Running<'_> {
     pub fn vs_add_player(&mut self, slot: i32, p: &PlayerInitData) -> bool {
         let g = &*self.game;
         if g.vs.state.is_singleplayer != 0
-            || g.player_pkind(slot) != i32::from(PKIND_NA)
+            || g.player_pkind(slot) != i32::from(PlayerKind::None)
             || g.player_entity(slot).is_some()
         {
             return false;
@@ -1010,7 +1008,8 @@ impl Running<'_> {
         }
         self.free_damage_display(slot as u8);
         self.player_free_fighters(slot);
-        self.game.set_player_pkind(slot, i32::from(PKIND_NA));
+        self.game
+            .set_player_pkind(slot, i32::from(PlayerKind::None));
         true
     }
 }

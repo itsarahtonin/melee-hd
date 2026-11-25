@@ -16,6 +16,7 @@ use super::super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sobj::{self, OBJ_SOBJ};
@@ -436,8 +437,7 @@ impl Running<'_> {
         self.game.set_player_ckind(0, i32::from(ckind));
         self.game.set_player_costume(0, i32::from(costume));
         self.game.set_player_port(0, 0);
-        self.game
-            .set_player_pkind(0, super::super::super::pl::player::PKIND_DEMO);
+        self.game.set_player_pkind(0, PlayerKind::Demo);
         self.game.set_player_facing(0, 1.0);
         self.game.set_player_pos(0, START);
         self.player_create_demo(0, 7);

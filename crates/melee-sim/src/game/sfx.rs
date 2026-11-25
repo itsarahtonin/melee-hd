@@ -14,6 +14,7 @@ use super::handles::CodeRef;
 use super::state::Running;
 use crate::fpu::reg;
 use crate::game::ft::FighterKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::audio::SFX_NONE;
 
@@ -376,7 +377,7 @@ impl Running<'_> {
             return false;
         };
         let (slot, sub) = self.fighter_slot(g);
-        if self.game.player_kind(slot, sub) == 1 {
+        if self.game.player_kind(slot, sub) == PlayerKind::Cpu {
             return false;
         }
         let percent = fp::fctiwz(reg(self.game.fighter(g).dmg.percent));

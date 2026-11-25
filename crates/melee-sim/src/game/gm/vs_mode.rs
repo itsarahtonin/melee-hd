@@ -11,7 +11,7 @@ use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
 use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
-use crate::game::pl::player::{PKIND_HUMAN, PKIND_NONE};
+use crate::game::pl::player::PlayerKind;
 use crate::game::structs::{PlayerInitData, StartMeleeData, StartMeleeRules};
 
 /// `GM_NAMETAG_COUNT`: no name tag.
@@ -182,7 +182,7 @@ pub(crate) const HANDICAP_RATIOS: [(f32, f32); 9] = [
 pub fn player_defaults() -> PlayerInitData {
     PlayerInitData {
         ckind: CharacterKind::NONE as i8,
-        slot_type: PKIND_NONE as u8,
+        slot_type: PlayerKind::None as u8,
         spawn_pos: -1,
         handicap: 9,
         nametag: NO_NAMETAG,
@@ -376,7 +376,7 @@ pub fn load_rumble_enabled(start: &mut StartMeleeData, prefs: &GamePrefs) {
 /// [`load_rumble_enabled`] with the save's name tags' settings.
 pub fn load_rumble_enabled_with(start: &mut StartMeleeData, prefs: &GamePrefs, tags: &[bool]) {
     for (i, p) in start.players.iter_mut().enumerate() {
-        p.rumble_enabled = if i32::from(p.slot_type) == PKIND_HUMAN && i < 4 {
+        p.rumble_enabled = if i32::from(p.slot_type) == PlayerKind::Human && i < 4 {
             let port = if p.slot == 0 {
                 i
             } else {

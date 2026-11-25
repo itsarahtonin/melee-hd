@@ -14,11 +14,41 @@ use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
-/// `Gm_PKind`: who plays a slot.
-pub const PKIND_HUMAN: i32 = 0;
-pub const PKIND_CPU: i32 = 1;
-pub const PKIND_DEMO: i32 = 2;
-pub const PKIND_NONE: i32 = 3;
+crate::game::ft::registry::kind_enum! {
+    /// Who plays a slot (`Gm_PKind`): the player blocks' `pkind`, the start rules' and the
+    /// character select's `slot_type`, the results' standings. The game's own numbers. The
+    /// state keeps the number (a `u8` or an `i32` by struct); code compares it with these
+    /// (`p.slot_type == PlayerKind::Human`), writes them with `into()` and matches on
+    /// [`PlayerKind::from_id`].
+    PlayerKind:
+    /// `Gm_PKind_Human`: a person at the controller.
+    #[doc(alias("Gm_PKind_Human", "PKIND_HUMAN"))]
+    Human = 0,
+    /// `Gm_PKind_Cpu`: a computer player.
+    #[doc(alias("Gm_PKind_Cpu", "PKIND_CPU", "GM_PKIND_CPU"))]
+    Cpu = 1,
+    /// `Gm_PKind_Demo`: a scene's or a demo's fighter, which nobody plays.
+    #[doc(alias("Gm_PKind_Demo", "PKIND_DEMO"))]
+    Demo = 2,
+    /// `Gm_PKind_NA`: nobody; the slot is empty.
+    #[doc(alias("Gm_PKind_NA", "PKIND_NA", "PKIND_NONE"))]
+    None = 3,
+    /// `Gm_PKind_Boss`: a boss (Master Hand's and Crazy Hand's own kind).
+    #[doc(alias("Gm_PKind_Boss", "PKIND_BOSS"))]
+    Boss = 4,
+}
+
+impl From<PlayerKind> for i32 {
+    fn from(k: PlayerKind) -> i32 {
+        k.id()
+    }
+}
+
+impl From<PlayerKind> for u8 {
+    fn from(k: PlayerKind) -> u8 {
+        k as u8
+    }
+}
 
 /// A character's fighters (`ftMapping`): its fighter kind, its second fighter's (the Ice
 /// Climbers' Nana, Zelda's Sheik and Sheik's Zelda), and whether the second is a
@@ -105,7 +135,7 @@ impl _StaticPlayer {
     }
 
     fn is_playing(&self) -> bool {
-        self.pkind == PKIND_HUMAN || self.pkind == PKIND_CPU
+        self.pkind == PlayerKind::Human || self.pkind == PlayerKind::Cpu
     }
 }
 
@@ -173,14 +203,14 @@ impl Game {
     pub fn player_kind(&self, slot: i32, sub: i32) -> i32 {
         let p = self.player(slot);
         if sub == 1 && mapping(p.ckind).has_transformation == 0 && p.is_playing() {
-            return PKIND_CPU;
+            return PlayerKind::Cpu.into();
         }
         p.pkind
     }
 
     #[doc(alias = "Player_SetSlottype")]
-    pub fn set_player_pkind(&mut self, slot: i32, pkind: i32) {
-        self.player_mut(slot).pkind = pkind;
+    pub fn set_player_pkind(&mut self, slot: i32, pkind: impl Into<i32>) {
+        self.player_mut(slot).pkind = pkind.into();
     }
 
     /// The slot's entity's fighter kind (0: its fighter, 1: its second), `Player_80032610`.
@@ -829,7 +859,7 @@ impl Game {
     #[doc(alias = "Player_GetUnk45")]
     pub fn player_effect_color(&self, slot: i32) -> u32 {
         let p = self.player(slot);
-        if p.pkind == PKIND_HUMAN {
+        if p.pkind == PlayerKind::Human {
             u32::from(p.effect_color)
         } else {
             4
@@ -884,7 +914,7 @@ impl Game {
             p.set_pose(i, Vec3::new(0.0, 0.0, 0.0));
         }
         p.costume_id = 0;
-        p.pkind = PKIND_NONE;
+        p.pkind = PlayerKind::None.into();
         p.transformed = [0, 1];
         p.effect_color = 0;
         p.sub_color = 0;

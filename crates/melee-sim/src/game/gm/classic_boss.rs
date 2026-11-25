@@ -7,12 +7,12 @@ use super::super::state::Running;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 
 /// `fn_8017C1A4`, the controller's process.
 pub const PROC: u32 = 0x8017_C1A4;
 
 /// `Gm_PKind_Cpu`, `CKind_CrezyH`.
-const PKIND_CPU: u8 = 1;
 /// Master Hand's and Crazy Hand's slots, and the player's.
 const SLOT_PLAYER: i32 = 0;
 const SLOT_CRAZY: i32 = 1;
@@ -64,7 +64,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8017C0C8")]
     fn classic_crazy_hand_joins(&mut self) {
         let mut p = super::vs_mode::player_defaults();
-        p.slot_type = PKIND_CPU;
+        p.slot_type = PlayerKind::Cpu.into();
         p.stocks = 1;
         p.cpu_kind = 4;
         p.cpu_level = self.game.player_cpu_level(SLOT_MASTER) as u8;

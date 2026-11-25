@@ -22,8 +22,9 @@ use super::super::it::kinds::{arwinglaser, greatfoxlaser};
 use super::super::state::{Game, Running};
 use super::data::{CORNERIA_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, scale, update_map_coll};
-use super::{GrKind, anime, grlib, material, setup, stage, zako};
+use super::{GrKind, StKind, anime, grlib, material, setup, stage, zako};
 use crate::fpu::{mem, reg};
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::lb::joint::world_position;
@@ -425,7 +426,7 @@ pub fn reset_arwings(r: &mut Running) {
     c.types = [0; 3];
     c.groups = [0; 3];
     let stage = stage::stkind(r.game);
-    g(r.game).demo = i32::from(matches!(stage, 0xE9 | 0x47));
+    g(r.game).demo = i32::from(stage == StKind::Corneria233 || stage == StKind::AdventureCorneria2);
     if g(r.game).demo == 1 {
         g(r.game).wait = 0x78;
         return;
@@ -1565,7 +1566,7 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
             for tries in 0..4 {
                 player = player.wrapping_add(tries) & 3;
                 // Gm_PKind_NA.
-                if r.game.player_pkind(player) != 3 {
+                if r.game.player_pkind(player) != PlayerKind::None {
                     break;
                 }
             }

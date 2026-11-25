@@ -8,8 +8,8 @@ use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::Running;
 use super::super::structs::Vec2;
 use crate::fpu::{mem, reg};
-use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
+use crate::game::ft::{CpuBehavior, CpuKind};
 use crate::game::gr::GrKind;
 use crate::vec::Vec3;
 
@@ -72,12 +72,14 @@ impl Running<'_> {
         }
         c.level = level;
         c.spawn_arg = x14;
-        (c.behavior, c.default_behavior, c.alt_behavior) = match CpuKind::from_id(c.kind) {
-            Some(CpuKind::Walk | CpuKind::EnemyAgain) => (12, 12, 0),
-            Some(CpuKind::Jump) => (1, 1, 11),
-            Some(CpuKind::NoAct) => (0, 0, 0),
-            _ => (1, 1, 10),
+        use CpuBehavior as B;
+        let (behavior, default, alt) = match CpuKind::from_id(c.kind) {
+            Some(CpuKind::Walk | CpuKind::EnemyAgain) => (B::Pace, B::Pace, B::Idle),
+            Some(CpuKind::Jump) => (B::Walk, B::Walk, B::Hop),
+            Some(CpuKind::NoAct) => (B::Idle, B::Idle, B::Idle),
+            _ => (B::Walk, B::Walk, B::Stand),
         };
+        (c.behavior, c.default_behavior, c.alt_behavior) = (behavior.id(), default.id(), alt.id());
         c.unread_24 = 0x12C;
         c.unread_28 = 0;
         c.item_worth_min = 5;

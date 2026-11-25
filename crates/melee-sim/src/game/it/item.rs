@@ -113,35 +113,102 @@ pub fn apply_facing(game: &mut Game, gobj: GObjId, j: Option<JObjId>) {
     }
 }
 
+crate::game::ft::registry::kind_enum! {
+    /// An item's hold kind (`Item_HoldKinds`, `Item::hold_kind`, the spawn's `hold_kind`):
+    /// the class of item kinds [`hold_kind_of`] gives, which picks the count it keeps
+    /// (`Item_804A0C64`, [`ItemCounts`](super::super::structs::ItemCounts)) and its limit, and
+    /// which the items' blink, damage scale, homing targets and hand offsets test. The game's
+    /// own numbers; the decomp names them only by number (`ITEM_HOLD_0` to `_12`), so these
+    /// are the counts' names. The state keeps the number; code compares it with these and
+    /// matches on [`HoldKind::from_id`].
+    HoldKind:
+    /// `ITEM_HOLD_0`: the common items but food.
+    #[doc(alias("ITEM_HOLD_0"))]
+    Common = 0,
+    /// `ITEM_HOLD_1`: what the common items shoot or leave.
+    #[doc(alias("ITEM_HOLD_1"))]
+    CommonShot = 1,
+    /// `ITEM_HOLD_2`: food.
+    #[doc(alias("ITEM_HOLD_2"))]
+    Food = 2,
+    /// `ITEM_HOLD_3`: the stages' hurtboxes.
+    #[doc(alias("ITEM_HOLD_3"))]
+    StageHurtbox = 3,
+    /// `ITEM_HOLD_4`: the stages' items (`ITEM_UNK_MATO` among the missiles' targets).
+    #[doc(alias("ITEM_HOLD_4"))]
+    StageItem = 4,
+    /// `ITEM_HOLD_5`: what the stages shoot (the Arwings' and the Great Fox's lasers, Birdo's
+    /// egg).
+    #[doc(alias("ITEM_HOLD_5"))]
+    StageShot = 5,
+    /// `ITEM_HOLD_6`: the enemies (`ITEM_UNK_ENEMY`).
+    #[doc(alias("ITEM_HOLD_6"))]
+    Monster = 6,
+    /// `ITEM_HOLD_7`: what the enemies shoot (the Octorok's stone).
+    #[doc(alias("ITEM_HOLD_7"))]
+    MonsterShot = 7,
+    /// `ITEM_HOLD_8`: the characters' items (a held one is the fighter's special item).
+    #[doc(alias("ITEM_HOLD_8"))]
+    FighterArticle = 8,
+    /// `ITEM_HOLD_9`: the Poké Balls' Pokémon.
+    #[doc(alias("ITEM_HOLD_9"))]
+    Pokemon = 9,
+    /// `ITEM_HOLD_10`: what the Pokémon shoot or leave.
+    #[doc(alias("ITEM_HOLD_10"))]
+    PokemonShot = 10,
+    /// `ITEM_HOLD_11`: the kinds between the coin and the stages' hurtboxes.
+    #[doc(alias("ITEM_HOLD_11"))]
+    Trophy = 11,
+    /// `ITEM_HOLD_12`: the VS coin.
+    #[doc(alias("ITEM_HOLD_12"))]
+    Coin = 12,
+}
+
+impl HoldKind {
+    /// The items the missiles home in on and that take the single-player modes' damage scale:
+    /// the stages' and the enemies' and what they shoot (`Item_UnkKinds`, 4 to 7).
+    pub fn is_stage_or_enemy(kind: i32) -> bool {
+        matches!(
+            HoldKind::from_id(kind),
+            Some(
+                HoldKind::StageItem
+                    | HoldKind::StageShot
+                    | HoldKind::Monster
+                    | HoldKind::MonsterShot
+            )
+        )
+    }
+}
+
 /// The hold kind `Item_802674AC` gives an item kind.
 #[doc(alias = "Item_802674AC")]
-pub fn hold_kind_of(kind: i32) -> i32 {
+pub fn hold_kind_of(kind: i32) -> HoldKind {
     if kind == ItKind::Food {
-        2
+        HoldKind::Food
     } else if kind == ItKind::StageHurtbox {
-        3
+        HoldKind::StageHurtbox
     } else if kind < ItKind::COMMON_END {
-        0
+        HoldKind::Common
     } else if kind < ItKind::Goomba {
-        1
+        HoldKind::CommonShot
     } else if kind < ItKind::OctorokStone {
-        6
+        HoldKind::Monster
     } else if kind < ItKind::MarioFireball {
-        7
+        HoldKind::MonsterShot
     } else if kind < ItKind::VsCoin {
-        8
+        HoldKind::FighterArticle
     } else if kind == ItKind::VsCoin {
-        12
+        HoldKind::Coin
     } else if kind < ItKind::StageHurtbox {
-        11
+        HoldKind::Trophy
     } else if kind < ItKind::POKEMON_END {
-        9
+        HoldKind::Pokemon
     } else if kind < ItKind::OldGoomba {
-        10
+        HoldKind::PokemonShot
     } else if kind < ItKind::ArwingLaser {
-        4
+        HoldKind::StageItem
     } else {
-        5
+        HoldKind::StageShot
     }
 }
 
@@ -149,21 +216,24 @@ pub fn hold_kind_of(kind: i32) -> i32 {
 /// and `Item_802676F4` pick it.
 pub fn bump_count(n: &mut super::super::structs::ItemCounts, hold_kind: i32, delta: i32) {
     let add = |c: &mut i32| *c = c.wrapping_add(delta);
-    match hold_kind {
-        0 => add(&mut n.common),
-        1 => add(&mut n.common_shots),
-        2 => add(&mut n.food),
-        3 => add(&mut n.stage_hurtboxes),
-        4 => add(&mut n.stage_items),
-        5 => add(&mut n.stage_shots),
-        6 => add(&mut n.monsters),
-        7 => add(&mut n.monster_shots),
-        8 => n.fighter_articles = n.fighter_articles.wrapping_add(delta as u32),
-        9 => add(&mut n.pokemon),
-        10 => add(&mut n.pokemon_shots),
-        11 => add(&mut n.trophies),
-        12 => add(&mut n.coins),
-        _ => {}
+    use HoldKind as H;
+    match HoldKind::from_id(hold_kind) {
+        Some(H::Common) => add(&mut n.common),
+        Some(H::CommonShot) => add(&mut n.common_shots),
+        Some(H::Food) => add(&mut n.food),
+        Some(H::StageHurtbox) => add(&mut n.stage_hurtboxes),
+        Some(H::StageItem) => add(&mut n.stage_items),
+        Some(H::StageShot) => add(&mut n.stage_shots),
+        Some(H::Monster) => add(&mut n.monsters),
+        Some(H::MonsterShot) => add(&mut n.monster_shots),
+        Some(H::FighterArticle) => {
+            n.fighter_articles = n.fighter_articles.wrapping_add(delta as u32)
+        }
+        Some(H::Pokemon) => add(&mut n.pokemon),
+        Some(H::PokemonShot) => add(&mut n.pokemon_shots),
+        Some(H::Trophy) => add(&mut n.trophies),
+        Some(H::Coin) => add(&mut n.coins),
+        None => {}
     }
 }
 
@@ -180,21 +250,21 @@ pub fn uncount(game: &mut Game, gobj: GObjId) {
     }
 }
 
-/// Counts a new item in, `Item_802676F4` (hold kind 9 isn't counted here).
+/// Counts a new item in, `Item_802676F4` (the Pokémon aren't counted here).
 #[doc(alias = "Item_802676F4")]
 pub fn count(game: &mut Game, gobj: GObjId) {
     let (hold_kind, kind, x18) = {
         let ip = super::item(game, gobj);
         (ip.hold_kind, ip.kind, ip.spawn_origin)
     };
-    if hold_kind != 9 {
+    if hold_kind != HoldKind::Pokemon {
         bump_count(&mut game.it.counts, hold_kind, 1);
     }
-    match hold_kind {
-        0 if kind == ItKind::PokeBall => {
+    match HoldKind::from_id(hold_kind) {
+        Some(HoldKind::Common) if kind == ItKind::PokeBall => {
             game.it.counts.pokemon = game.it.counts.pokemon.wrapping_add(1)
         }
-        2 => super::lib2725::count_food(game),
+        Some(HoldKind::Food) => super::lib2725::count_food(game),
         _ => {}
     }
     if super::super::gm::is_training(game) && x18 == 1 {
@@ -202,19 +272,20 @@ pub fn count(game: &mut Game, gobj: GObjId) {
     }
 }
 
-/// Whether a hold kind's items are at their limit, `Item_8026784C`. For Poké Balls (9) the
+/// Whether a hold kind's items are at their limit, `Item_8026784C`. For the Pokémon the
 /// count drops by one when over.
 #[doc(alias = "Item_8026784C")]
 pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
     let n = &mut game.it.counts;
-    match hold_kind {
-        0 => n.common >= n.common_limit,
-        1 => n.common_shots >= n.common_shots_limit,
-        2 => n.food >= n.food_limit,
-        3 => n.stage_hurtboxes >= n.stage_hurtboxes_limit,
-        5 => n.stage_shots >= n.stage_shots_limit,
-        7 => n.monster_shots >= n.monster_shots_limit,
-        9 => {
+    use HoldKind as H;
+    match HoldKind::from_id(hold_kind) {
+        Some(H::Common) => n.common >= n.common_limit,
+        Some(H::CommonShot) => n.common_shots >= n.common_shots_limit,
+        Some(H::Food) => n.food >= n.food_limit,
+        Some(H::StageHurtbox) => n.stage_hurtboxes >= n.stage_hurtboxes_limit,
+        Some(H::StageShot) => n.stage_shots >= n.stage_shots_limit,
+        Some(H::MonsterShot) => n.monster_shots >= n.monster_shots_limit,
+        Some(H::Pokemon) => {
             if n.pokemon > n.pokemon_limit {
                 n.pokemon = n.pokemon.wrapping_sub(1);
                 true
@@ -222,9 +293,10 @@ pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
                 false
             }
         }
-        10 => n.pokemon_shots >= n.pokemon_shots_limit,
-        11 => n.trophies >= n.trophies_limit,
-        12 => n.coins >= n.coins_limit,
+        Some(H::PokemonShot) => n.pokemon_shots >= n.pokemon_shots_limit,
+        Some(H::Trophy) => n.trophies >= n.trophies_limit,
+        Some(H::Coin) => n.coins >= n.coins_limit,
+        // The stages' items, the enemies and the characters' items have no limit.
         _ => false,
     }
 }
@@ -672,8 +744,8 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     init_position(r, gobj, spawn);
     on_spawned(r, gobj);
     // `foobar`: common items and enemies blink as they appear.
-    match super::item(r.game, gobj).hold_kind {
-        0 | 6 => {
+    match HoldKind::from_id(super::item(r.game, gobj).hold_kind) {
+        Some(HoldKind::Common | HoldKind::Monster) => {
             let data = r.data;
             let t = common_data(r.game).i32(data, common::X2C);
             let ip = item_mut(r.game, gobj);
@@ -801,7 +873,7 @@ pub fn one_player_cpu_level(r: &Running) -> i32 {
 /// Enemies and stage items take the common data's damage scale for the single-player mode's
 /// CPU level (`ItUnkHoldKind`).
 fn hold_kind_scale(r: &mut Running, gobj: GObjId) {
-    if matches!(super::item(r.game, gobj).hold_kind, 4..=7) {
+    if HoldKind::is_stage_or_enemy(super::item(r.game, gobj).hold_kind) {
         let level = one_player_cpu_level(r);
         if level >= 0 {
             let c = common_data(r.game).f32(r.data, common::X80 + 4 * level as u32);
@@ -853,7 +925,7 @@ pub fn logic(game: &Game, gobj: GObjId) -> &'static tables::ItemLogic {
 pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
     spawn.ground_or_air = 1;
     spawn.origin = 0;
-    spawn.hold_kind = hold_kind_of(spawn.kind);
+    spawn.hold_kind = hold_kind_of(spawn.kind).id();
     create(r, spawn)
 }
 
@@ -862,7 +934,7 @@ pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
 pub fn spawn_ground(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
     spawn.ground_or_air = 0;
     spawn.origin = 0;
-    spawn.hold_kind = hold_kind_of(spawn.kind);
+    spawn.hold_kind = hold_kind_of(spawn.kind).id();
     create(r, spawn)
 }
 
@@ -894,7 +966,7 @@ pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
 pub fn spawn_ground_marked(r: &mut Running, spawn: &mut SpawnItem) {
     spawn.ground_or_air = 0;
     spawn.origin = 1;
-    spawn.hold_kind = hold_kind_of(spawn.kind);
+    spawn.hold_kind = hold_kind_of(spawn.kind).id();
     create(r, spawn);
 }
 
@@ -1737,7 +1809,7 @@ pub fn exit_hitlag(r: &mut Running, gobj: GObjId) {
 /// a held item (`DestroyItemInline` and `Item_8026A848`).
 #[doc(alias = "Item_8026A848")]
 pub fn is_special_held(ip: &Item) -> bool {
-    ip.hold_kind == 8
+    ip.hold_kind == HoldKind::FighterArticle
         && ip.kind != ItKind::LinkBomb
         && ip.kind != ItKind::YoungLinkBomb
         && ip.kind != ItKind::PeachTurnip

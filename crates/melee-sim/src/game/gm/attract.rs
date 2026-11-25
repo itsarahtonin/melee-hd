@@ -9,7 +9,7 @@ use super::super::state::Running;
 use super::vs_mode::{GamePrefs, GameRules};
 use crate::game::camera;
 use crate::game::gm::GameMode;
-use crate::game::pl::player::PKIND_CPU;
+use crate::game::pl::player::PlayerKind;
 use crate::game::structs::StartMeleeData;
 use crate::hsd::gobj::GObjId;
 
@@ -94,7 +94,7 @@ impl Running<'_> {
             let p = &mut start.players[i];
             p.ckind = d.ckinds[i] as i8;
             p.color = d.colors[i];
-            p.slot_type = PKIND_CPU as u8;
+            p.slot_type = PlayerKind::Cpu as u8;
             p.cpu_level = 9;
             p.cpu_kind = 4;
             p.enters = false;

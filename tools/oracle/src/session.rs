@@ -17,6 +17,7 @@ use melee_sim::input::pad::{ERR_NONE, PadStatus};
 
 use crate::diff::{Files, StaleReads, Stop, compare, import_tick, panic_text};
 use crate::trace::{Image, Reader};
+use melee_sim::game::pl::player::PlayerKind;
 
 pub use melee_sim::game::inputs::Recording;
 
@@ -1768,13 +1769,13 @@ impl Run<'_> {
         let describe = |s: &Session| {
             let d = &s.game.vs.start;
             let players: Vec<String> = (0..4)
-                .filter(|&i| s.game.player_pkind(i) != 3)
+                .filter(|&i| s.game.player_pkind(i) != PlayerKind::None)
                 .map(|i| {
                     format!(
                         "port {} character {:#x}{}",
                         i + 1,
                         s.game.player_ckind(i),
-                        if s.game.player_pkind(i) == 1 {
+                        if s.game.player_pkind(i) == PlayerKind::Cpu {
                             " (computer)"
                         } else {
                             ""

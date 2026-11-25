@@ -16,6 +16,7 @@ use super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
 use crate::game::gm::{GameMode, GameScene};
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -63,12 +64,29 @@ const SCENE_SYMBOL: &str = "ScItrAllstar_scene_data";
 const TABLE_ARCHIVE: &str = "GmIntEz.dat";
 const TABLE_SYMBOL: &str = "gmIntroEasyTable";
 
+crate::game::ft::registry::kind_enum! {
+    /// What a Classic stage's intro shows (`model_scale_kind`, [`EasyData::kind`]): the
+    /// stage's opponents by how they come. The game's own numbers; Classic's stage list's
+    /// flags pick it (`gmClassic`'s enter data). The state keeps the number; code compares it
+    /// with these and matches on [`IntroKind::from_id`].
+    IntroKind:
+    /// One opponent.
+    Single = 0,
+    /// A team stage: the player with an ally against a team.
+    Team = 1,
+    /// A giant opponent.
+    Giant = 2,
+    /// A bonus stage: its title alone.
+    Bonus = 3,
+    /// A horde: many of one opponent, named as a team.
+    Horde = 4,
+}
+
 /// The intro's enter data and what it shows (`lbl_8047368C`, `gm_1832_8047368C_t`): the
 /// 0x20 bytes of `ClassicModeEnterData` the entry copies over its first, then padding.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct EasyData {
-    /// `model_scale_kind`: 0 one opponent, 1 a team stage, 2 a giant's, 3 a bonus stage,
-    /// 4 a horde.
+    /// `model_scale_kind`: an [`IntroKind`].
     pub kind: i32,
     /// `game_type`: the bonus stage (1 Target Test, 2 the race, 3 Snag the Trophies).
     pub game_type: i32,
@@ -407,30 +425,30 @@ impl Running<'_> {
         s.map_scene = Some(map_scene);
         self.intro_easy_light(scene);
         let kind = self.game.intros.easy.data.kind;
-        if kind != 3 {
+        if kind != IntroKind::Bonus {
             self.game.intros.easy.data.game_type = 0;
         }
-        if (0..=4).contains(&kind) {
-            self.intro_easy_cameras(scene, map_scene, kind == 4);
+        if IntroKind::from_id(kind).is_some() {
+            self.intro_easy_cameras(scene, map_scene, kind == IntroKind::Horde);
             self.intro_easy_model(scene);
             self.intro_easy_map(map_scene);
             self.intro_easy_fog(scene);
         }
-        match kind {
-            3 => self.intro_easy_title(),
-            0..=2 => {
+        match IntroKind::from_id(kind) {
+            Some(IntroKind::Bonus) => self.intro_easy_title(),
+            Some(IntroKind::Single | IntroKind::Team | IntroKind::Giant) => {
                 self.intro_easy_names();
                 self.intro_easy_demo_files();
                 let next = self.intro_easy_allies();
                 self.intro_easy_enemies(next);
             }
-            4 => {
+            Some(IntroKind::Horde) => {
                 self.intro_easy_names();
                 self.intro_easy_demo_files();
                 self.intro_easy_horde();
                 self.intro_easy_allies();
             }
-            _ => {}
+            None => {}
         }
         self.lb_play_music(0x2D);
     }
@@ -514,7 +532,7 @@ impl Running<'_> {
         super::vs::add_model_anim(&mut g.objs, data, Some(j), m, 0);
         jobj::req_anim_all(&mut g.objs, Some(j), 0.0);
         self.anim_all(j);
-        if self.game.intros.easy.data.kind != 3 {
+        if self.game.intros.easy.data.kind != IntroKind::Bonus {
             let jobjs = &mut self.game.objs.jobjs;
             for (k, index) in [(0, 4), (1, 5), (2, 0x3A), (3, 0x3B)] {
                 self.game.intros.easy.joints[k] =
@@ -609,14 +627,18 @@ impl Running<'_> {
         }
         for i in 0..usize::from(d.enemies) {
             let t = self.intro_easy_name_text(10 + i);
-            let (row, k) = if d.kind == 4 { (1, 0) } else { (d.enemies, i) };
+            let (row, k) = if d.kind == IntroKind::Horde {
+                (1, 0)
+            } else {
+                (d.enemies, i)
+            };
             let x = fp::fadds(340.0, reg(self.easy_row(row, 0, k)));
             let y = self.easy_row(row, 0xC, k);
             let sx = fp::fadds(340.0, reg(self.easy_row(row, 0x18, k)));
             let sy = self.easy_row(row, 0x24, k);
             self.game.sis.add_string(t, x, f64::from(y), Some(b" \0"));
             self.game.sis.set_scale(self.data, t, 0, sx, f64::from(sy));
-            if d.kind == 4 {
+            if d.kind == IntroKind::Horde {
                 return;
             }
         }
@@ -668,8 +690,7 @@ impl Running<'_> {
         self.game.set_player_ckind(slot, i32::from(ckind));
         self.game.set_player_costume(slot, i32::from(costume));
         self.game.set_player_port(slot, 0);
-        self.game
-            .set_player_pkind(slot, super::super::pl::player::PKIND_DEMO);
+        self.game.set_player_pkind(slot, PlayerKind::Demo);
         self.game.set_player_facing(slot, 0.0);
         self.game.set_player_model_scale(slot, 1.0);
         self.game.set_player_is_metal(slot, metal);
@@ -781,7 +802,7 @@ impl Running<'_> {
         let d = s.data;
         let ck = d.ally_kinds[i];
         let count = i32::from(d.allies);
-        let (layout, xs, ys, scales, xrow) = if d.kind == 2 {
+        let (layout, xs, ys, scales, xrow) = if d.kind == IntroKind::Giant {
             (table::X6A8, table::X630, table::X654, table::X678, count)
         } else {
             (table::X6C, table::X00, table::X18, table::X3C, count - 1)
@@ -821,7 +842,7 @@ impl Running<'_> {
         jobj::set_srt(jobjs, root, |o| o.translate = t);
         let d = s.data;
         let ck = d.enemy_kinds[i];
-        let giant = d.kind == 2;
+        let giant = d.kind == IntroKind::Giant;
         let giant_f =
             |r: &Self, field: u32| r.easy_table_f32(table::X37C + 0x14 * u32::from(ck) + field);
         let scl = if giant { giant_f(self, 8) } else { 1.0 };
@@ -892,7 +913,7 @@ impl Running<'_> {
             return;
         }
         let d = s.data;
-        if d.kind == 3 {
+        if d.kind == IntroKind::Bonus {
             return;
         }
         let digits = if d.stage < 10 {
@@ -913,9 +934,9 @@ impl Running<'_> {
                 self.sfx_play(0x9C4A, 0x7F, 0x40);
             }
             0x46 => {
-                let id = match d.kind {
-                    4 | 1 => Some(0x7C863),
-                    2 => Some(0x7C837),
+                let id = match IntroKind::from_id(d.kind) {
+                    Some(IntroKind::Horde | IntroKind::Team) => Some(0x7C863),
+                    Some(IntroKind::Giant) => Some(0x7C837),
                     _ if d.enemy_metal[0] != 0 => Some(0x7C847),
                     _ => None,
                 };
@@ -953,7 +974,7 @@ impl Running<'_> {
                 }
             }
             6 => {
-                if d.kind == 4 {
+                if d.kind == IntroKind::Horde {
                     // A horde's title: "Ｔｅａｍ" and its name in English (`lbl_803D9414`),
                     // its name and "軍団" in Japanese (`lbl_804D40A0`), at 0.8 of its name's
                     // width scale (`fn_80160F58`) times the single row's.
@@ -1017,7 +1038,7 @@ impl Running<'_> {
         jobj::anim_all(objs, self.data, &mut ParticleHooks, j5);
         jobj::req_anim_all(objs, j4, f4);
         jobj::anim_all(objs, self.data, &mut ParticleHooks, j4);
-        if tick == 0x2D && kind == 3 {
+        if tick == 0x2D && kind == IntroKind::Bonus {
             let id = match game_type {
                 1 => Some(0x7C864),
                 2 => Some(0x9C49),
@@ -1490,7 +1511,7 @@ impl Running<'_> {
             "SdIntro.dat".to_owned(),
         ];
         f.songs.push(0x2D);
-        if !(0..=4).contains(&d.kind) || d.kind == 3 {
+        if IntroKind::from_id(d.kind).is_none_or(|k| k == IntroKind::Bonus) {
             return Some(f);
         }
         let mut slot = 0;
@@ -1498,7 +1519,7 @@ impl Running<'_> {
             let p = &mut f.players.players[slot];
             p.ckind = ckind as i8;
             p.color = costume;
-            p.slot_type = super::super::pl::player::PKIND_DEMO as u8;
+            p.slot_type = PlayerKind::Demo as u8;
             slot += 1;
             let m = super::super::pl::player::mapping(i32::from(ckind));
             for kind in [m.internal_id, m.extra_internal_id] {
@@ -1513,7 +1534,7 @@ impl Running<'_> {
                 add(&mut f, d.ally_kinds[i], d.ally_colors[i]);
             }
         }
-        if d.kind == 4 {
+        if d.kind == IntroKind::Horde {
             // A horde stage's: its opponent in each of its first costumes, up to three.
             let c = d.enemy_kinds[0];
             for i in 0..crate::game::playback::costume_count(c).min(3) {

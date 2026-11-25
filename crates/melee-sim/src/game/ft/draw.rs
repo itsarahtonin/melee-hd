@@ -11,6 +11,7 @@ use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::game::handles::FighterId;
 use crate::game::it::ItKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::display::{self, FighterFlags, FighterMaterial};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -397,17 +398,18 @@ impl Running<'_> {
         let kind = self
             .game
             .player_kind(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-        if kind != crate::game::pl::player::PKIND_CPU {
+        if kind != PlayerKind::Cpu {
             return false;
         }
         let cpu = &fp.cpu;
-        let c = match cpu.behavior {
-            2 | 3 => [0xFF, 0, 0, 0x60],
-            7 => [0, 0, 0xFF, 0x60],
-            4 => [0xFF, 0xFF, 0xFF, 0xFF],
-            10 => [0xFF, 0, 0xFF, 0x60],
-            1 => [0, 0xFF, 0, 0x60],
-            18 => [0, 0, 0, 0x60],
+        use crate::game::ft::CpuBehavior as B;
+        let c = match B::from_id(cpu.behavior) {
+            Some(B::Attack | B::Ranged) => [0xFF, 0, 0, 0x60],
+            Some(B::Shield) => [0, 0, 0xFF, 0x60],
+            Some(B::Recover) => [0xFF, 0xFF, 0xFF, 0xFF],
+            Some(B::Stand) => [0xFF, 0, 0xFF, 0x60],
+            Some(B::Walk) => [0, 0xFF, 0, 0x60],
+            Some(B::Di) => [0, 0, 0, 0x60],
             _ => [0xFF, 0xFF, 0, 0x60],
         };
         let target = Vec3::new(cpu.destination.x, cpu.destination.y, 0.0);

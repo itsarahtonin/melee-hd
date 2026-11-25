@@ -602,7 +602,7 @@ pub fn nearest_target_item(game: &Game, pos: Vec3, facing_dir: f32) -> Option<GO
         cur = game.world.gobjs[g.0].next;
         let ip = item(game, g);
         let k = ip.hold_kind;
-        if !matches!(k, 4..=7)
+        if !super::item::HoldKind::is_stage_or_enemy(k)
             || ip.grab_victim.is_some()
             || (ip.flags.flags.held && ip.owner.is_some())
             || (facing_dir == -1.0 && ip.pos.x > pos.x)

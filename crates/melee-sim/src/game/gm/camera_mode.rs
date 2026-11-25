@@ -9,6 +9,7 @@ use super::super::handles::CodeRef;
 use super::super::state::{OBJ_JOBJ, Obj, Running};
 use super::vs_mode;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::{SisPtr, TextId};
@@ -1006,7 +1007,7 @@ impl crate::game::state::Game {
             }
             for slot in 0..6 {
                 if port as i32 == self.player_port(slot)
-                    && self.player_pkind(slot) != super::super::pl::player::PKIND_NONE
+                    && self.player_pkind(slot) != PlayerKind::None
                 {
                     return port as i32;
                 }

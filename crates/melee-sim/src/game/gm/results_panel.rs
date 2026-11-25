@@ -11,10 +11,11 @@ use melee_data::archive::DataRef;
 use super::super::handles::CodeRef;
 use super::super::state::{OBJ_JOBJ, Obj, Running};
 use super::results_scene::{
-    COLUMNS, DASHES, MINUS, NO_TIME, PANEL_RENDER, PKIND_CPU, PKIND_HUMAN, PKIND_NA, PLUS,
-    STATS_TEXT_RENDER, TITLE_OFFSET, canceled, column_color,
+    COLUMNS, DASHES, MINUS, NO_TIME, PANEL_RENDER, PLUS, STATS_TEXT_RENDER, TITLE_OFFSET, canceled,
+    column_color,
 };
 use crate::fpu::mem;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::{FmtArg, TextId};
@@ -257,10 +258,10 @@ impl Running<'_> {
             let d6 = js[6].and_then(|j| self.game.objs.jobjs[j].dobj());
             crate::lb::anim::dobj_set_rate_all(&mut self.game.objs, d6, 0.0);
             let p = &me.player_standings[i];
-            if p.pkind == PKIND_HUMAN {
+            if p.pkind == PlayerKind::Human {
                 ko_count = ko_count.wrapping_add(i32::from(p.coins));
             }
-            if p.pkind == PKIND_NA {
+            if p.pkind == PlayerKind::None {
                 self.rp_hide(js[1]);
                 jobj::remove_anim_all(&mut self.game.objs, js[1]);
                 self.rp_hide(js[5]);
@@ -501,7 +502,7 @@ impl Running<'_> {
         tx.default_kerning = 1;
         let rows = [0.0, mem(-first), mem(fp::fsubs(-first, second))];
         let (sx, sy) = (0.11_f32, 0.08_f32);
-        if me.player_standings[slot].pkind != PKIND_NA {
+        if me.player_standings[slot].pkind != PlayerKind::None {
             let values = [
                 super::results_stats::stat_value(&me, self.saved_us(), 0x8017_AE0C, slot),
                 super::results_stats::stat_value(&me, self.saved_us(), 0x8017_B010, slot),
@@ -540,7 +541,7 @@ impl Running<'_> {
         match me.match_kind {
             2 => {
                 let mut c = column_color(&me, slot);
-                let line = if me.player_standings[slot].pkind != PKIND_NA {
+                let line = if me.player_standings[slot].pkind != PlayerKind::None {
                     let coins = super::results_stats::stat_value(&me, false, 0x8017_ADA8, slot);
                     let v = super::results_stats::clamp5(coins);
                     (b"%d\0".as_slice(), FmtArg::Int(v))
@@ -592,7 +593,7 @@ impl Running<'_> {
         let t = self.game.results.data.players[slot]
             .ko_time
             .expect("a column's time text");
-        if me.player_standings[slot].pkind != PKIND_NA {
+        if me.player_standings[slot].pkind != PlayerKind::None {
             let v = super::results_stats::clamp4(me.player_standings[slot].score);
             self.rp_signed(t, v, 0.11, c);
         } else {
@@ -609,7 +610,7 @@ impl Running<'_> {
         let t = self.game.results.data.players[slot]
             .ko_time
             .expect("a column's time text");
-        if me.player_standings[slot].pkind != PKIND_NA && !canceled(me.outcome) {
+        if me.player_standings[slot].pkind != PlayerKind::None && !canceled(me.outcome) {
             let v = super::results_stats::clamp7(me.player_standings[slot].score);
             self.rp_signed(t, v, 0.08, c);
         } else {
@@ -631,7 +632,7 @@ impl Running<'_> {
         let x6 = usize::from(self.game.results.data.team_best);
         let p = &me.player_standings[slot];
         let w = &me.player_standings[x6];
-        if p.pkind != PKIND_NA {
+        if p.pkind != PlayerKind::None {
             let dashes = x6 == slot
                 || (me.is_teams == 1
                     && me.team_standings[usize::from(p.team)].is_big_loser == 0
@@ -665,7 +666,7 @@ impl Running<'_> {
         let mut place: Option<i32> = None;
         for i in 0..4 {
             let p = &me.player_standings[i];
-            if p.pkind == PKIND_NA {
+            if p.pkind == PlayerKind::None {
                 continue;
             }
             let js = self.game.results.data.players[i].jobjs;
@@ -707,7 +708,7 @@ impl Running<'_> {
         let pads = &self.game.pads;
         let mut humans = 0;
         for i in 0..4 {
-            if me.player_standings[i].pkind == PKIND_HUMAN && pads.master[i].err == 0 {
+            if me.player_standings[i].pkind == PlayerKind::Human && pads.master[i].err == 0 {
                 humans += 1;
                 if pads.copy[i].trigger != 0 {
                     self.game.results.data.state = 3;
@@ -791,7 +792,7 @@ impl Running<'_> {
             g => panic!("no results label getter {g:#010x}"),
         };
         let me = self.results_end();
-        let v = if slot == target || me.player_standings[target].pkind == PKIND_NA {
+        let v = if slot == target || me.player_standings[target].pkind == PlayerKind::None {
             -1
         } else {
             super::results_stats::clamp_to(
@@ -1219,7 +1220,7 @@ impl Running<'_> {
         if frame >= 50.0 && self.game.results.data.phase == 0 {
             crate::lb::anim::set_framerate(&mut self.game.objs, j, 0.0);
             self.game.results.data.phase = 1;
-            let no_human = !(0..4).any(|i| me.player_standings[i].pkind == PKIND_HUMAN);
+            let no_human = !(0..4).any(|i| me.player_standings[i].pkind == PlayerKind::Human);
             self.game.results.no_human = i32::from(no_human);
             self.game.results.data.end_frames = if no_human { 0x14 } else { 0x0A };
         }
@@ -1231,10 +1232,10 @@ impl Running<'_> {
         if phase == 1 {
             self.game.results.data.phase = 2;
             for k in 0..4 {
-                match me.player_standings[k].pkind {
-                    PKIND_NA => self.game.results.data.players[k].done = true,
-                    PKIND_HUMAN => self.stats_page(k),
-                    PKIND_CPU => {
+                match PlayerKind::from_id(i32::from(me.player_standings[k].pkind)) {
+                    Some(PlayerKind::None) => self.game.results.data.players[k].done = true,
+                    Some(PlayerKind::Human) => self.stats_page(k),
+                    Some(PlayerKind::Cpu) => {
                         self.stats_page(k);
                         self.game.results.data.players[k].done = true;
                     }
@@ -1246,7 +1247,7 @@ impl Running<'_> {
         for k in 0..4 {
             let kind = me.player_standings[k].pkind;
             let s = self.game.pads.copy[k];
-            if kind == PKIND_HUMAN {
+            if kind == PlayerKind::Human {
                 if !self.game.results.data.players[k].done {
                     if self.stats_input(k) {
                         self.stats_page(k);
@@ -1276,7 +1277,7 @@ impl Running<'_> {
                     self.rp_show(js[4]);
                     self.lb_audio_call(0);
                 }
-            } else if kind == PKIND_CPU {
+            } else if kind == PlayerKind::Cpu {
                 if self.stats_cpu(k) {
                     self.stats_page(k);
                 }
@@ -1288,13 +1289,17 @@ impl Running<'_> {
                         end = true;
                     }
                 }
-            } else if kind == PKIND_NA && no_human && s.err == 0 && s.trigger & PAD_START != 0 {
+            } else if kind == PlayerKind::None
+                && no_human
+                && s.err == 0
+                && s.trigger & PAD_START != 0
+            {
                 self.lb_audio_call(1);
                 end = true;
             }
         }
         for k in 0..4 {
-            if me.player_standings[k].pkind == PKIND_NA {
+            if me.player_standings[k].pkind == PlayerKind::None {
                 continue;
             }
             let p = self.game.results.data.players[k];

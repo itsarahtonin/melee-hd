@@ -2,6 +2,7 @@
 //! display (`mnCharSel_8025DB34` and what it calls).
 
 use super::*;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::sis::SisPtr;
 
 /// `mnCharSel_804DC580`: the name lists' yellow.
@@ -199,21 +200,21 @@ impl Running<'_> {
                 self.game.charsel.port1 as usize,
             );
             for p in &mut self.css_start().players[..4] {
-                p.slot_type = PKIND_NONE;
+                p.slot_type = PlayerKind::None.into();
             }
-            self.css_start().players[port0].slot_type = PKIND_HUMAN;
+            self.css_start().players[port0].slot_type = PlayerKind::Human.into();
             let color = self.css().vs.start.players[port0].color;
             let d = &mut self.game.charsel.doors[0];
-            d.p_kind = PKIND_HUMAN;
+            d.p_kind = PlayerKind::Human.into();
             d.costume = color;
             d.sel_icon_prev = d.sel_icon;
             if self.css().match_type != TRAINING_MODE {
                 return;
             }
-            self.css_start().players[port1].slot_type = PKIND_CPU;
+            self.css_start().players[port1].slot_type = PlayerKind::Cpu.into();
             let color = self.css().vs.start.players[port1].color;
             let d = &mut self.game.charsel.doors[1];
-            d.p_kind = PKIND_CPU;
+            d.p_kind = PlayerKind::Cpu.into();
             d.costume = color;
             d.sel_icon_prev = d.sel_icon;
             return;
@@ -224,7 +225,7 @@ impl Running<'_> {
             let d = &mut self.game.charsel.doors[i];
             d.p_kind = kind;
             d.costume = color;
-            d.p_kind_prev = PKIND_NONE;
+            d.p_kind_prev = PlayerKind::None.into();
             d.slider_timer = 0;
             d.door_timer = 0;
             d.hold_handicap_slider = 0;
@@ -354,10 +355,10 @@ impl Running<'_> {
         let j = self.menu_node(DOORS[d].door);
         let door_state = self.game.charsel.doors[d];
         let pending = self.game.charsel.pending;
-        if door_state.p_kind_prev == PKIND_NONE {
+        if door_state.p_kind_prev == PlayerKind::None {
             self.css_req(j, ALL_MASK, 0.0);
             self.css_anim_all(j);
-            if door_state.p_kind == PKIND_NONE {
+            if door_state.p_kind == PlayerKind::None {
                 self.css_stop(j, ALL_MASK);
             } else {
                 self.charsel_ko_stars(d, 2);
@@ -370,7 +371,7 @@ impl Running<'_> {
         } else {
             self.css_req(j, ALL_MASK, 40.0);
             self.css_anim_all(j);
-            if door_state.p_kind == PKIND_NONE {
+            if door_state.p_kind == PlayerKind::None {
                 self.charsel_ko_stars(d, 0);
                 self.game.charsel.doors[d].door_timer = 0x1E;
                 if pending != 3 && pending != 4 {
@@ -385,19 +386,19 @@ impl Running<'_> {
             let sp90 = self.menu_node(DOORS[d].slider_name);
             let handicap = self.game.game_data.rules.handicap;
             let level = f32::from(self.css().vs.start.players[d].cpu_level);
-            match ds.p_kind {
-                PKIND_HUMAN => {
+            match PlayerKind::from_id(i32::from(ds.p_kind)) {
+                Some(PlayerKind::Human) => {
                     if handicap != 0 {
                         let f = if handicap == 2 { 0.0 } else { 60.0 };
                         self.css_req(sp90, ALL_MASK, f);
                         self.css_animate(menu, DOORS[d].cpu_slider, TOBJ_MASK, level);
                     }
                 }
-                PKIND_CPU | PKIND_NONE => {
+                Some(kind @ (PlayerKind::Cpu | PlayerKind::None)) => {
                     if handicap != 0 {
-                        let f = match (ds.p_kind, handicap == 2) {
-                            (PKIND_CPU, true) => 20.0,
-                            (PKIND_CPU, false) => 80.0,
+                        let f = match (kind, handicap == 2) {
+                            (PlayerKind::Cpu, true) => 20.0,
+                            (PlayerKind::Cpu, false) => 80.0,
                             (_, true) => 30.0,
                             (_, false) => 90.0,
                         };
@@ -409,7 +410,11 @@ impl Running<'_> {
                         self.css_translate_x(j, x);
                         self.css_animate(menu, DOORS[d].cpu_slider2, TOBJ_MASK, level);
                     } else {
-                        let f = if ds.p_kind == PKIND_CPU { 40.0 } else { 50.0 };
+                        let f = if ds.p_kind == PlayerKind::Cpu {
+                            40.0
+                        } else {
+                            50.0
+                        };
                         self.css_req(sp90, ALL_MASK, f);
                         self.css_animate(menu, DOORS[d].cpu_slider, TOBJ_MASK, level);
                     }
@@ -430,7 +435,7 @@ impl Running<'_> {
         let j = self.menu_node(DOORS[d].team);
         if self.css().vs.start.rules.is_teams == 0 {
             jobj::set_flags(&mut self.game.objs.jobjs, j, HIDDEN);
-            let idx = d + if ds.p_kind != 0 { 4 } else { 0 };
+            let idx = d + if ds.p_kind != PlayerKind::Human { 4 } else { 0 };
             let f = f32::from(PORT_FRAME[idx]);
             self.css_animate(menu, DOORS[d].bg, TOBJ_MASK, f);
             self.css_animate(menu, DOORS[d].emblem, MOBJ_MASK, f);
@@ -438,7 +443,7 @@ impl Running<'_> {
             jobj::clear_flags(&mut self.game.objs.jobjs, j, HIDDEN);
             let mut team = usize::from(ds.team);
             self.css_animate(menu, DOORS[d].team, TOBJ_MASK, f32::from(TEAM_FRAME[team]));
-            if ds.p_kind != 0 {
+            if ds.p_kind != PlayerKind::Human {
                 team += 4;
             }
             let f = f32::from(TEAM_FRAME[team]);
@@ -447,7 +452,7 @@ impl Running<'_> {
             self.css_start().players[d].team = ds.team;
         }
         let tag = self.game.charsel.tags[d].expect("a door's tag");
-        let hide = ds.p_kind == PKIND_NONE || (tag.use_tag == 0 && ds.sel_icon >= NO_ICON);
+        let hide = ds.p_kind == PlayerKind::None || (tag.use_tag == 0 && ds.sel_icon >= NO_ICON);
         self.game.sis.text_mut(tag.text).hidden = u8::from(hide);
         self.charsel_door_costume(door, hud);
     }

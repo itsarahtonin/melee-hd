@@ -6,6 +6,7 @@
 //! (`ifprize`) before the character select.
 
 use crate::game::gm::GameMode;
+use crate::game::gr::StKind;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
@@ -60,7 +61,7 @@ const CHALLENGER_STAGES: [u16; 11] = [
 ];
 
 /// `St_Kind_Unk328`, no stage.
-const NO_STAGE: u16 = 0x148;
+const NO_STAGE: u16 = StKind::Unk328.id();
 
 /// `gm_80480D98`, the screen's statics, and `gmVsMelee_ApproachData`, its enter and exit
 /// data.
