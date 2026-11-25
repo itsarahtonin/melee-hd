@@ -17,6 +17,7 @@ pub mod climbersice;
 pub mod climbersstring;
 pub mod clinkmilk;
 pub mod coin;
+pub mod container;
 pub mod crate_box;
 pub mod crazyhandbomb;
 pub mod dosei;
@@ -133,6 +134,7 @@ pub mod pippi;
 #[doc(alias("whitebea"))]
 pub mod polar_bear;
 pub mod porygon2;
+pub mod powerup;
 pub mod rabbitc;
 pub mod raikou;
 #[doc(alias("leadead"))]

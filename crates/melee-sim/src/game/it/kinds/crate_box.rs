@@ -1,12 +1,14 @@
 //! The box (crate), `melee/it/kinds/itbox.c`: a container that breaks open when thrown hard
 //! enough, hit for enough damage or when it hits something, dropping items or nothing. Kongo
-//! Jungle's barrels carry floating ones (`it_80286088`).
+//! Jungle's barrels carry floating ones (`it_80286088`). Its rest, falls, pickup, throw and drop,
+//! its breaking and its opening are the containers' ([`container`]).
 
 use gekko_fp as fp;
 
-use super::super::ground::{air, fall, ground_or_fall, ground_skid};
-use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
-use super::super::{drop, effect, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
+use super::super::item::{change, change_state};
+use super::super::vars::ItemVars;
+use super::super::{drop, item, item_mut, jobj_of, lib26b1, maplib};
+use super::container::{self, Container, Opening};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
@@ -54,21 +56,52 @@ pub const PHYS8: u32 = 0x8028_710C;
 pub const COLL8: u32 = 0x8028_7334;
 pub const FOLLOW: u32 = 0x8028_733C;
 
+/// The box: resting, it tilts with the floor; held in 2, thrown into 3 and dropped into 4.
+pub const CRATE: Container = Container {
+    fell: container::fell,
+    landed: container::landed,
+    tilts: true,
+    held: 2,
+    thrown: 3,
+    dropped: 4,
+    let_go_disables_pickup: true,
+};
+
+/// The box's opening: it breaks on a hit, a smash or `x14` damage, a drop past `x1C` smashing
+/// it; empty (by its weights, `x0` to `xC`) it bursts in state 6 with the wind, else it opens
+/// in 7 with a crash (0xF6), spilling its items by its weights.
+pub const OPENING: Opening = Opening {
+    name: "box",
+    vars: shared,
+    breaks: break_open,
+    smashes: break_open,
+    damage_limit: 0x14,
+    drop_limit: 0x1C,
+    settles: container::landed,
+    has_items,
+    burst_state: 6,
+    burst_wind: true,
+    open_sfx: 0xF6,
+    spills: Some(spill),
+    open_frames: 40,
+    open_state: 7,
+};
+
 /// Runs one of the box's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 => anim0(r, gobj),
-        COLL0 => coll0(r, gobj),
-        ANIM4 | ANIM2 | ANIM5 | ANIM8 | COLL6 | COLL7 | COLL8 => no(r, gobj),
-        COLL1 => coll1(r, gobj),
-        COLL3 => coll3(r, gobj),
-        COLL4 => coll4(r, gobj),
-        ANIM6 => anim6(r, gobj),
-        ANIM7 => anim7(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD | REFLECTED => hit(r, gobj),
-        DMG_RECEIVED => dmg_received(r, gobj),
-        COLL5 => coll5(r, gobj),
+        ANIM0 => container::smokes(r, gobj),
+        COLL0 => container::rests(r, gobj, &CRATE),
+        ANIM4 | ANIM2 | ANIM5 | ANIM8 | COLL6 | COLL7 | COLL8 => container::still(r, gobj),
+        COLL1 => container::lands(r, gobj, &CRATE),
+        COLL3 => container::flies(r, gobj, &OPENING),
+        COLL4 => container::drops(r, gobj, &OPENING),
+        ANIM6 => container::blast_lasts(r, gobj),
+        ANIM7 => container::gone_after(r, gobj, &OPENING),
+        DMG_DEALT | CLANKED | HIT_SHIELD | REFLECTED => container::hit(r, gobj, &OPENING),
+        DMG_RECEIVED => container::damaged(r, gobj, &OPENING),
+        COLL5 => container::skids(r, gobj, &CRATE),
         _ => return None,
     })
 }
@@ -79,14 +112,14 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
         DESTROYED => destroyed(r, gobj),
-        LANDED => landed(r, gobj),
-        PHYS0 | PHYS2 | PHYS6 | PHYS7 | PHYS5 => idle(r, gobj),
-        FELL => fell(r, gobj),
+        LANDED => container::landed(r, gobj),
+        PHYS0 | PHYS2 | PHYS6 | PHYS7 | PHYS5 => container::idle(r, gobj),
+        FELL => container::fell(r, gobj),
         PHYS1 => phys1(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        THROWN => thrown(r, gobj),
-        PHYS4 => phys4(r, gobj),
-        DROPPED => dropped(r, gobj),
+        PICKED_UP => container::picked_up(r, gobj, &CRATE),
+        THROWN => container::thrown(r, gobj, &CRATE),
+        PHYS4 => container::thrown_phys(r, gobj),
+        DROPPED => container::dropped(r, gobj, &CRATE),
         ENTERED_AIR => entered_air(r, gobj),
         PHYS8 => phys8(r, gobj),
         FOLLOW => follow(r, gobj),
@@ -100,20 +133,18 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut itBox_ItemVars {
     item_mut(game, gobj).vars.crate_box()
 }
 
-/// `itBoxAttributes`' word at `off`.
-fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
-    article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a box without attributes")
-        .at(off)
+/// The fields the barrel and the party ball have too.
+fn shared(v: &mut ItemVars) -> container::Vars<'_> {
+    let b = v.crate_box();
+    container::Vars {
+        opened: &mut b.opened,
+        timer: &mut b.despawn_timer,
+    }
 }
 
-fn attr_i(r: &Running, gobj: GObjId, off: u32) -> i32 {
-    r.data.u32(attr(r, gobj, off)) as i32
-}
-
+/// `itBoxAttributes`' float at `off`.
 fn attr_f(r: &Running, gobj: GObjId, off: u32) -> f32 {
-    r.data.f32(attr(r, gobj, off))
+    container::attr_f(r, gobj, &OPENING, off)
 }
 
 /// Makes a box floating with a barrel (`parent`), `it_80286088`: it spins at a random rate
@@ -161,7 +192,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let v = vars(r.game, gobj);
     v.opened.set(0);
     v.spawned_gobj.set(None);
-    fell(r, gobj);
+    container::fell(r, gobj);
 }
 
 /// `itBox_Logic1_Destroyed`: a barrel's box lets go of it.
@@ -197,14 +228,24 @@ pub fn drop_items(r: &mut Running, gobj: GObjId, w1: i32, w2: i32, w3: i32, spec
     drop::drop_contents(r, gobj, n, same);
 }
 
-/// Whether a box breaks with items in it, `it_80286340`: a draw over the weights and the
-/// empty weight lands below the three item weights.
-#[doc(alias = "it_80286340")]
-pub fn has_items(r: &mut Running, w1: i32, w2: i32, w3: i32, empty: i32) -> bool {
-    let sum1 = w1.wrapping_add(w2);
-    let sum2 = w3.wrapping_add(sum1);
-    let roll = r.game.objs.rng.below(empty.wrapping_add(sum2));
-    roll < w1 || roll < sum1 || roll < sum2
+/// Its items as it opens (`it_80286248` over the attributes' weights `x0`, `x4`, `x8` and the
+/// all-one-kind draw `x10`).
+fn spill(r: &mut Running, gobj: GObjId) {
+    let w = [0, 4, 8, 0x10].map(|o| container::attr_i(r, gobj, &OPENING, o));
+    drop_items(r, gobj, w[0], w[1], w[2], w[3]);
+}
+
+/// Whether it breaks with items in it: [`container::has_items`] over the attributes' weights
+/// `x0` to `x8` and the empty one `xC`.
+fn has_items(r: &mut Running, gobj: GObjId) -> bool {
+    let w: [i32; 4] = std::array::from_fn(|i| container::attr_i(r, gobj, &OPENING, 4 * i as u32));
+    container::has_items(r, w[0], w[1], w[2], w[3])
+}
+
+/// Breaks: its splinters, then opens with items or empty (the file's inline
+/// `itBox_TryOpen_inline`).
+fn break_open(r: &mut Running, gobj: GObjId) {
+    container::break_open(r, gobj, &OPENING);
 }
 
 /// Whether it landed on a floor near enough upright to stop, `it_802863BC`, stopping its
@@ -227,58 +268,6 @@ pub fn lands_upright(r: &mut Running, gobj: GObjId) -> bool {
         return true;
     }
     false
-}
-
-/// Lands, stopped, `fn_80286480`.
-#[doc(alias = "fn_80286480")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib26b1::enable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// `itBox_UnkMotion0_Anim`: smokes as its time runs out.
-#[doc(alias = "itBox_UnkMotion0_Anim")]
-pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    if reg(item(r.game, gobj).life_timer) <= 1.0 {
-        effect::spawn_simple(r, gobj, 0x421);
-    }
-    false
-}
-
-/// The callbacks that do nothing and answer false.
-#[doc(alias = "itBox_UnkMotion4_Anim")]
-#[doc(alias = "itBox_UnkMotion2_Anim")]
-#[doc(alias = "itBox_UnkMotion5_Anim")]
-#[doc(alias = "itBox_UnkMotion8_Anim")]
-#[doc(alias = "itBox_UnkMotion6_Coll")]
-#[doc(alias = "itBox_UnkMotion7_Coll")]
-#[doc(alias = "itBox_UnkMotion8_Coll")]
-pub fn no(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing.
-#[doc(alias = "itBox_UnkMotion0_Phys")]
-#[doc(alias = "itBox_UnkMotion2_Phys")]
-#[doc(alias = "itBox_UnkMotion6_Phys")]
-#[doc(alias = "itBox_UnkMotion7_Phys")]
-#[doc(alias = "itBox_UnkMotion5_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itBox_UnkMotion0_Coll`.
-#[doc(alias = "itBox_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    maplib::tilt_on_floor(r.game, r.data, gobj);
-    false
-}
-
-/// Falls (state 1), `it_8028655C`.
-#[doc(alias = "it_8028655C")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    lib26b1::disable_pickup(r.game, gobj);
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
 }
 
 /// Wraps a rotation past a turn either way.
@@ -309,189 +298,12 @@ fn spin(r: &mut Running, gobj: GObjId) {
 /// `itBox_UnkMotion1_Phys`: gravity, and a barrel's box tumbles.
 #[doc(alias = "itBox_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
-    let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
+    super::gravity(r, gobj);
     if vars(r.game, gobj).spawned_gobj.get().is_some() {
         let ip = item_mut(r.game, gobj);
         ip.vel.z = mem(fp::fmuls(reg(ip.vel.z), f64::from(0.95_f32)));
         spin(r, gobj);
     }
-}
-
-/// `itBox_UnkMotion1_Coll`.
-#[doc(alias = "itBox_UnkMotion1_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
-    false
-}
-
-/// `itBox_Logic1_PickedUp`.
-#[doc(alias = "itBox_Logic1_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-}
-
-/// `itBox_Logic1_Thrown`.
-#[doc(alias = "itBox_Logic1_Thrown")]
-pub fn thrown(r: &mut Running, gobj: GObjId) {
-    lib26b1::disable_pickup(r.game, gobj);
-    change_state(r, gobj, 3, change::ANIM_UPDATE | change::DROP_UPDATE);
-}
-
-/// Gravity and spin, `itBox_UnkMotion4_Phys` (`Item_ApplyFallingPhysics`).
-#[doc(alias = "itBox_UnkMotion4_Phys")]
-pub fn phys4(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
-    let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
-    let x68 = common_data(r.game).f32(r.data, super::super::data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
-}
-
-/// Breaks: its splinters (effect 0x427), then opens with items or empty (the file's inline
-/// `itBox_TryOpen_inline`).
-fn break_open(r: &mut Running, gobj: GObjId) {
-    let pos = item(r.game, gobj).pos;
-    crate::game::ef::spawn(r, 0x427, Some(gobj), &[crate::game::ef::Arg::Vec(pos)]);
-    let w: [i32; 4] = std::array::from_fn(|i| attr_i(r, gobj, 4 * i as u32));
-    if has_items(r, w[0], w[1], w[2], w[3]) {
-        open(r, gobj);
-    } else {
-        open_empty(r, gobj);
-    }
-}
-
-/// `itBox_UnkMotion3_Coll`: thrown, it breaks on what it hits, and stops rising at ceilings.
-#[doc(alias = "itBox_UnkMotion3_Coll")]
-pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
-    if air(r, gobj) {
-        break_open(r, gobj);
-    } else if maplib::touched_ceiling(r.game, gobj) != 0 {
-        let ip = item_mut(r.game, gobj);
-        if reg(ip.vel.y) > 0.0 {
-            ip.vel.y = 0.0;
-        }
-    } else if maplib::touched_wall(r.game, gobj) != 0 {
-        break_open(r, gobj);
-    }
-    false
-}
-
-/// `itBox_Logic1_Dropped`.
-#[doc(alias = "itBox_Logic1_Dropped")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    lib26b1::disable_pickup(r.game, gobj);
-    change_state(r, gobj, 4, change::ANIM_UPDATE | change::DROP_UPDATE);
-}
-
-/// `itBox_UnkMotion4_Coll`: dropped, it breaks on a hard landing, else stops.
-#[doc(alias = "itBox_UnkMotion4_Coll")]
-pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    let limit = attr_f(r, gobj, 0x1C);
-    if air(r, gobj) {
-        if reg(item(r.game, gobj).vel.y).abs() > reg(limit) {
-            break_open(r, gobj);
-        } else {
-            maplib::enter_ground(item_mut(r.game, gobj));
-            lib26b1::enable_pickup(r.game, gobj);
-            item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
-            change_state(r, gobj, 0, change::ANIM_UPDATE);
-        }
-    }
-    false
-}
-
-/// Breaks open empty, `it_80286AA4`: hidden, it blasts a moment, pushing the wind.
-#[doc(alias = "it_80286AA4")]
-pub fn open_empty(r: &mut Running, gobj: GObjId) {
-    lib26b1::hide(r.game, gobj);
-    lib2725::blast_effect(r, gobj);
-    hitbox::start_blink(r.game, gobj);
-    lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::freeze_lifetime(r.game, gobj);
-    lib2725::start_vanishing(r.game, r.data, gobj);
-    let ip = item_mut(r.game, gobj);
-    ip.vel.x = 0.0;
-    ip.vel.y = 0.0;
-    super::super::set_flag(&mut ip.draw_flags, 2, true);
-    let v = vars(r.game, gobj);
-    v.opened.set(1);
-    v.despawn_timer.set(40);
-    hitbox::set_hit_ids(r.game, gobj);
-    let pos = item(r.game, gobj).pos;
-    crate::lb::wind::blast(
-        &mut r.game.gr.winds,
-        pos,
-        0x78,
-        1.0,
-        0.02,
-        std::f32::consts::FRAC_PI_3,
-    );
-    change_state(r, gobj, 6, 2);
-}
-
-/// `itBox_UnkMotion6_Anim`: the blast lasts its lifetime.
-#[doc(alias = "itBox_UnkMotion6_Anim")]
-pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::tick_life(r.game, gobj)
-}
-
-/// Breaks open with items, `it_80286BA0`: a crash, a small quake, the items, and gone.
-#[doc(alias = "it_80286BA0")]
-pub fn open(r: &mut Running, gobj: GObjId) {
-    play_sfx(r, gobj, 0xF6, 0x7F, 0x40);
-    let pos = item(r.game, gobj).pos;
-    crate::game::camera::request_quake(r, 2, Some(pos));
-    let w = [0, 4, 8, 0x10].map(|o| attr_i(r, gobj, o));
-    drop_items(r, gobj, w[0], w[1], w[2], w[3]);
-    let j = jobj_of(r.game, gobj);
-    jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    hitbox::start_blink(r.game, gobj);
-    let ip = item_mut(r.game, gobj);
-    ip.vel.x = 0.0;
-    ip.vel.y = 0.0;
-    super::super::set_flag(&mut ip.draw_flags, 2, true);
-    let v = vars(r.game, gobj);
-    v.opened.set(1);
-    v.despawn_timer.set(40);
-    lib26b1::disable_pickup(r.game, gobj);
-    change_state(r, gobj, 7, 2);
-}
-
-/// `itBox_UnkMotion7_Anim`: gone after 40 frames.
-#[doc(alias = "itBox_UnkMotion7_Anim")]
-pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
-    let v = vars(r.game, gobj);
-    v.despawn_timer.update(|old| old.wrapping_sub(1));
-    v.despawn_timer.get() <= 0
-}
-
-/// Hitting something (or being reflected), an unopened box breaks, `itBox_Logic1_DmgDealt`
-/// and the rest.
-#[doc(alias = "itBox_Logic1_DmgDealt")]
-#[doc(alias = "itBox_Logic1_Clanked")]
-#[doc(alias = "itBox_Logic1_HitShield")]
-#[doc(alias = "itBox_Logic1_Reflected")]
-pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).opened.get() == 0 {
-        break_open(r, gobj);
-    }
-    false
-}
-
-/// `itBox_Logic1_DmgReceived`: breaks once its damage reaches the threshold.
-#[doc(alias = "itBox_Logic1_DmgReceived")]
-pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
-    let limit = attr_f(r, gobj, 0x14);
-    if vars(r.game, gobj).opened.get() == 0
-        && fp::frsp(f64::from(item(r.game, gobj).damage_taken)) >= reg(limit)
-    {
-        break_open(r, gobj);
-    }
-    false
 }
 
 /// `itBox_Logic1_EnteredAir`: stops if it lands upright, else skids (state 5).
@@ -504,19 +316,6 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
     } else {
         change_state(r, gobj, 5, 2);
     }
-}
-
-/// `itBox_UnkMotion5_Coll`.
-#[doc(alias = "itBox_UnkMotion5_Coll")]
-pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
-}
-
-/// Forgets a GObj the box points to, `itBox_Logic1_EvtUnk` (`it_8026B894`).
-#[doc(alias = "itBox_Logic1_EvtUnk")]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
 }
 
 /// Floats with its barrel (state 8), `it_802870A4`.

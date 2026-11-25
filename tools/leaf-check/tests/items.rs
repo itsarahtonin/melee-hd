@@ -544,7 +544,7 @@ fn vec_words(v: Vec3) -> Vec<u32> {
     vec![v.x.to_bits(), v.y.to_bits(), v.z.to_bits()]
 }
 
-use melee_sim::game::it::kinds::capsule;
+use melee_sim::game::it::kinds::{capsule, container};
 use melee_sim::game::it::kinds::{foxblaster, foxlaser};
 use melee_sim::game::it::owner as it_owner;
 use melee_sim::game::it::spawn;
@@ -2551,7 +2551,7 @@ fn capsule_landed() {
         "it_8027D0B8",
         &prep,
         &|r, a| {
-            capsule::landed(r, a.gobj(0));
+            container::landed(r, a.gobj(0));
             Ret::None
         },
     );
@@ -2618,12 +2618,16 @@ fn capsule_states() {
     check_proc("itCapsule_UnkMotion0_Phys", |r, g| {
         assert!(melee_sim::game::code::try_proc(r, g, capsule::PHYS0));
     });
-    check_pred("itCapsule_UnkMotion0_Coll", capsule::coll0);
+    check_pred("itCapsule_UnkMotion0_Coll", |r, g| {
+        container::rests(r, g, &capsule::CAPSULE)
+    });
     check_pred("itCapsule_UnkMotion4_Anim", |r, g| {
         melee_sim::game::code::try_pred(r, g, capsule::ANIM4).unwrap()
     });
-    check_proc("itCapsule_UnkMotion4_Phys", capsule::phys4);
-    check_pred("itCapsule_UnkMotion4_Coll", capsule::coll4);
+    check_proc("itCapsule_UnkMotion4_Phys", container::gravity);
+    check_pred("itCapsule_UnkMotion4_Coll", |r, g| {
+        container::lands(r, g, &capsule::CAPSULE)
+    });
 }
 
 /// The capsules' standing captures.
@@ -2644,18 +2648,25 @@ fn on_capsules(target: &str, air: bool, ours: &Ours) {
 #[test]
 fn capsule_callbacks() {
     leaf_check::shard_test!();
+    fn skids(r: &mut Running, g: GObjId) -> bool {
+        container::skids(r, g, &capsule::CAPSULE)
+    }
     for (target, f) in [
         (
             "itCapsule_Logic0_PickedUp",
-            capsule::picked_up as fn(&mut Running, GObjId),
+            (|r, g| container::picked_up(r, g, &capsule::CAPSULE)) as fn(&mut Running, GObjId),
         ),
-        ("itCapsule_Logic0_Dropped", capsule::dropped),
-        ("itCapsule_Logic0_Thrown", capsule::thrown),
+        ("itCapsule_Logic0_Dropped", |r, g| {
+            container::dropped(r, g, &capsule::CAPSULE)
+        }),
+        ("itCapsule_Logic0_Thrown", |r, g| {
+            container::thrown(r, g, &capsule::CAPSULE)
+        }),
         ("itCapsule_Logic0_EnteredAir", capsule::entered_air),
-        ("itCapsule_UnkMotion3_Phys", capsule::phys3),
-        ("itCapsule_UnkMotion2_Phys", capsule::idle_phys),
-        ("itCapsule_UnkMotion5_Phys", capsule::idle_phys),
-        ("itCapsule_UnkMotion6_Phys", capsule::idle_phys),
+        ("itCapsule_UnkMotion3_Phys", container::thrown_phys),
+        ("itCapsule_UnkMotion2_Phys", container::idle),
+        ("itCapsule_UnkMotion5_Phys", container::idle),
+        ("itCapsule_UnkMotion6_Phys", container::idle),
     ] {
         on_capsules(target, false, &move |r, a| {
             f(r, a.gobj(0));
@@ -2665,15 +2676,15 @@ fn capsule_callbacks() {
     for (target, f, air) in [
         (
             "itCapsule_UnkMotion2_Anim",
-            capsule::idle_anim as fn(&mut Running, GObjId) -> bool,
+            container::still as fn(&mut Running, GObjId) -> bool,
             false,
         ),
-        ("itCapsule_UnkMotion6_Anim", capsule::idle_anim, false),
-        ("itCapsule_UnkMotion5_Coll", capsule::idle_anim, false),
-        ("itCapsule_UnkMotion5_Anim", capsule::vanishing, false),
-        ("itCapsule_UnkMotion6_Coll", capsule::coll6, false),
+        ("itCapsule_UnkMotion6_Anim", container::still, false),
+        ("itCapsule_UnkMotion5_Coll", container::still, false),
+        ("itCapsule_UnkMotion5_Anim", container::blast_lasts, false),
+        ("itCapsule_UnkMotion6_Coll", skids, false),
         ("itCapsule_UnkMotion3_Coll", capsule::coll3, true),
-        ("itCapsule_UnkMotion6_Coll", capsule::coll6, true),
+        ("itCapsule_UnkMotion6_Coll", skids, true),
     ] {
         on_capsules(target, air, &move |r, a| Ret::Bool(f(r, a.gobj(0))));
     }
@@ -4016,53 +4027,95 @@ fn effect_router() {
 #[test]
 fn crate_box() {
     leaf_check::shard_test!();
-    use melee_sim::game::it::kinds::crate_box as b;
+    use melee_sim::game::it::kinds::{container as c, crate_box as b};
     kind_direct(&[
         ("itBox_Logic1_Spawned", Cb::Event(b::spawned)),
         ("itBox_Logic1_Destroyed", Cb::Event(b::destroyed)),
-        ("itBox_UnkMotion0_Anim", Cb::Pred(b::anim0)),
-        ("itBox_UnkMotion0_Phys", Cb::Event(b::idle)),
-        ("itBox_UnkMotion0_Coll", Cb::Pred(b::coll0)),
-        ("itBox_UnkMotion4_Anim", Cb::Pred(b::no)),
+        ("itBox_UnkMotion0_Anim", Cb::Pred(c::smokes)),
+        ("itBox_UnkMotion0_Phys", Cb::Event(c::idle)),
+        (
+            "itBox_UnkMotion0_Coll",
+            Cb::Pred(|r, g| c::rests(r, g, &b::CRATE)),
+        ),
+        ("itBox_UnkMotion4_Anim", Cb::Pred(c::still)),
         ("itBox_UnkMotion1_Phys", Cb::Event(b::phys1)),
-        ("itBox_UnkMotion1_Coll", Cb::Pred(b::coll1)),
-        ("itBox_UnkMotion7_Anim", Cb::Pred(b::anim7)),
-        ("itBox_UnkMotion7_Phys", Cb::Event(b::idle)),
-        ("itBox_UnkMotion7_Coll", Cb::Pred(b::no)),
-        ("itBox_Logic1_DmgReceived", Cb::Pred(b::dmg_received)),
+        (
+            "itBox_UnkMotion1_Coll",
+            Cb::Pred(|r, g| c::lands(r, g, &b::CRATE)),
+        ),
+        (
+            "itBox_UnkMotion7_Anim",
+            Cb::Pred(|r, g| c::gone_after(r, g, &b::OPENING)),
+        ),
+        ("itBox_UnkMotion7_Phys", Cb::Event(c::idle)),
+        ("itBox_UnkMotion7_Coll", Cb::Pred(c::still)),
+        (
+            "itBox_Logic1_DmgReceived",
+            Cb::Pred(|r, g| c::damaged(r, g, &b::OPENING)),
+        ),
     ]);
     for source in ["itBox_UnkMotion0_Anim", "itBox_UnkMotion4_Anim"] {
         kind_perturbed(
             source,
             1,
             &[
-                ("fn_80286480", Cb::Event(b::landed)),
-                ("it_8028655C", Cb::Event(b::fell)),
-                ("itBox_Logic1_PickedUp", Cb::Event(b::picked_up)),
-                ("itBox_UnkMotion2_Anim", Cb::Pred(b::no)),
-                ("itBox_UnkMotion2_Phys", Cb::Event(b::idle)),
-                ("itBox_Logic1_Thrown", Cb::Event(b::thrown)),
-                ("itBox_UnkMotion4_Phys", Cb::Event(b::phys4)),
-                ("itBox_UnkMotion3_Coll", Cb::Pred(b::coll3)),
-                ("itBox_Logic1_Dropped", Cb::Event(b::dropped)),
-                ("itBox_UnkMotion4_Coll", Cb::Pred(b::coll4)),
-                ("it_80286AA4", Cb::Event(b::open_empty)),
-                ("itBox_UnkMotion6_Anim", Cb::Pred(b::anim6)),
-                ("itBox_UnkMotion6_Phys", Cb::Event(b::idle)),
-                ("itBox_UnkMotion6_Coll", Cb::Pred(b::no)),
-                ("it_80286BA0", Cb::Event(b::open)),
-                ("itBox_Logic1_DmgDealt", Cb::Pred(b::hit)),
-                ("itBox_Logic1_Clanked", Cb::Pred(b::hit)),
-                ("itBox_Logic1_HitShield", Cb::Pred(b::hit)),
-                ("itBox_Logic1_Reflected", Cb::Pred(b::hit)),
+                ("fn_80286480", Cb::Event(c::landed)),
+                ("it_8028655C", Cb::Event(c::fell)),
+                (
+                    "itBox_Logic1_PickedUp",
+                    Cb::Event(|r, g| c::picked_up(r, g, &b::CRATE)),
+                ),
+                ("itBox_UnkMotion2_Anim", Cb::Pred(c::still)),
+                ("itBox_UnkMotion2_Phys", Cb::Event(c::idle)),
+                (
+                    "itBox_Logic1_Thrown",
+                    Cb::Event(|r, g| c::thrown(r, g, &b::CRATE)),
+                ),
+                ("itBox_UnkMotion4_Phys", Cb::Event(c::thrown_phys)),
+                (
+                    "itBox_UnkMotion3_Coll",
+                    Cb::Pred(|r, g| c::flies(r, g, &b::OPENING)),
+                ),
+                (
+                    "itBox_Logic1_Dropped",
+                    Cb::Event(|r, g| c::dropped(r, g, &b::CRATE)),
+                ),
+                (
+                    "itBox_UnkMotion4_Coll",
+                    Cb::Pred(|r, g| c::drops(r, g, &b::OPENING)),
+                ),
+                ("it_80286AA4", Cb::Event(|r, g| c::burst(r, g, &b::OPENING))),
+                ("itBox_UnkMotion6_Anim", Cb::Pred(c::blast_lasts)),
+                ("itBox_UnkMotion6_Phys", Cb::Event(c::idle)),
+                ("itBox_UnkMotion6_Coll", Cb::Pred(c::still)),
+                ("it_80286BA0", Cb::Event(|r, g| c::open(r, g, &b::OPENING))),
+                (
+                    "itBox_Logic1_DmgDealt",
+                    Cb::Pred(|r, g| c::hit(r, g, &b::OPENING)),
+                ),
+                (
+                    "itBox_Logic1_Clanked",
+                    Cb::Pred(|r, g| c::hit(r, g, &b::OPENING)),
+                ),
+                (
+                    "itBox_Logic1_HitShield",
+                    Cb::Pred(|r, g| c::hit(r, g, &b::OPENING)),
+                ),
+                (
+                    "itBox_Logic1_Reflected",
+                    Cb::Pred(|r, g| c::hit(r, g, &b::OPENING)),
+                ),
                 ("itBox_Logic1_EnteredAir", Cb::Event(b::entered_air)),
-                ("itBox_UnkMotion5_Anim", Cb::Pred(b::no)),
-                ("itBox_UnkMotion5_Phys", Cb::Event(b::idle)),
-                ("itBox_UnkMotion5_Coll", Cb::Pred(b::coll5)),
+                ("itBox_UnkMotion5_Anim", Cb::Pred(c::still)),
+                ("itBox_UnkMotion5_Phys", Cb::Event(c::idle)),
+                (
+                    "itBox_UnkMotion5_Coll",
+                    Cb::Pred(|r, g| c::skids(r, g, &b::CRATE)),
+                ),
                 ("it_802870A4", Cb::Event(b::float)),
-                ("itBox_UnkMotion8_Anim", Cb::Pred(b::no)),
+                ("itBox_UnkMotion8_Anim", Cb::Pred(c::still)),
                 ("itBox_UnkMotion8_Phys", Cb::Event(b::phys8)),
-                ("itBox_UnkMotion8_Coll", Cb::Pred(b::no)),
+                ("itBox_UnkMotion8_Coll", Cb::Pred(c::still)),
                 ("it_8028733C", Cb::Event(b::follow)),
                 ("it_802863BC", Cb::Pred(b::lands_upright)),
             ],
@@ -4077,7 +4130,7 @@ fn crate_box() {
         "itBox_UnkMotion0_Anim",
         "itBox_Logic1_DmgReceived",
         &prep,
-        &|r, a| Ret::Bool(b::dmg_received(r, a.gobj(0))),
+        &|r, a| Ret::Bool(c::damaged(r, a.gobj(0), &b::OPENING)),
     );
     // The weighted draws, from the boxes' states (capsules the only kind to drop).
     for seed in seeds() {
@@ -4087,7 +4140,7 @@ fn crate_box() {
             item_kind(c) == ItKind::Crate
         };
         check_on("itBox_UnkMotion0_Anim", "it_80286340", &prep, &|r, a| {
-            Ret::Bool(b::has_items(
+            Ret::Bool(c::has_items(
                 r,
                 a.int(1) as i32,
                 a.int(2) as i32,
@@ -4117,7 +4170,7 @@ fn crate_box() {
         "itBox_Logic1_EvtUnk",
         &pass_owner,
         &|r, a| {
-            b::forget(r, a.gobj(0), a.opt_gobj(1));
+            c::forget(r, a.gobj(0), a.opt_gobj(1));
             Ret::None
         },
     );
@@ -4126,14 +4179,14 @@ fn crate_box() {
 #[test]
 fn barrel() {
     leaf_check::shard_test!();
-    use melee_sim::game::it::kinds::taru as t;
+    use melee_sim::game::it::kinds::{container as c, taru as t};
     kind_direct(&[
         ("it_3F14_Logic2_Spawned", Cb::Event(t::spawned)),
-        ("itTaru_UnkMotion0_Anim", Cb::Pred(t::anim0)),
-        ("itTaru_UnkMotion0_Phys", Cb::Event(t::idle)),
+        ("itTaru_UnkMotion0_Anim", Cb::Pred(c::smokes)),
+        ("itTaru_UnkMotion0_Phys", Cb::Event(c::idle)),
         ("itTaru_UnkMotion0_Coll", Cb::Pred(t::coll0)),
-        ("itTaru_UnkMotion1_Anim", Cb::Pred(t::no)),
-        ("itTaru_UnkMotion1_Phys", Cb::Event(t::phys1)),
+        ("itTaru_UnkMotion1_Anim", Cb::Pred(c::still)),
+        ("itTaru_UnkMotion1_Phys", Cb::Event(c::gravity)),
         ("itTaru_UnkMotion1_Coll", Cb::Pred(t::coll1)),
     ]);
     for source in ["itTaru_UnkMotion0_Anim", "itTaru_UnkMotion1_Anim"] {
@@ -4143,10 +4196,10 @@ fn barrel() {
             &[
                 ("it_802874F0", Cb::Event(t::roll)),
                 ("it_80287690", Cb::Event(t::turn)),
-                ("it_80287D0C", Cb::Event(t::fell)),
+                ("it_80287D0C", Cb::Event(c::fell)),
                 ("itTaru_Logic2_PickedUp", Cb::Event(t::picked_up)),
-                ("itTaru_UnkMotion2_Anim", Cb::Pred(t::no)),
-                ("itTaru_UnkMotion2_Phys", Cb::Event(t::idle)),
+                ("itTaru_UnkMotion2_Anim", Cb::Pred(c::still)),
+                ("itTaru_UnkMotion2_Phys", Cb::Event(c::idle)),
                 ("itTaru_Logic2_Dropped", Cb::Event(t::let_go)),
                 ("itTaru_Logic2_Thrown", Cb::Event(t::thrown)),
                 ("it_80287F20", Cb::Event(t::let_go)),
@@ -4162,18 +4215,33 @@ fn barrel() {
                 ("itTaru_UnkMotion4_Anim", Cb::Pred(t::tick)),
                 ("itTaru_UnkMotion4_Phys", Cb::Event(t::phys4)),
                 ("itTaru_UnkMotion4_Coll", Cb::Pred(t::coll5)),
-                ("it_802885C8", Cb::Event(t::open_empty)),
-                ("itTaru_UnkMotion6_Anim", Cb::Pred(t::anim6)),
-                ("itTaru_UnkMotion6_Phys", Cb::Event(t::idle)),
-                ("itTaru_UnkMotion6_Coll", Cb::Pred(t::no)),
-                ("it_802886C4", Cb::Event(t::open)),
-                ("itTaru_UnkMotion7_Anim", Cb::Pred(t::anim7)),
-                ("itTaru_UnkMotion7_Phys", Cb::Event(t::idle)),
-                ("itTaru_UnkMotion7_Coll", Cb::Pred(t::no)),
-                ("it_3F14_Logic2_DmgDealt", Cb::Pred(t::hit)),
-                ("it_3F14_Logic2_Clanked", Cb::Pred(t::hit)),
-                ("it_3F14_Logic2_HitShield", Cb::Pred(t::hit)),
-                ("it_3F14_Logic2_Reflected", Cb::Pred(t::hit)),
+                ("it_802885C8", Cb::Event(|r, g| c::burst(r, g, &t::OPENING))),
+                ("itTaru_UnkMotion6_Anim", Cb::Pred(c::blast_lasts)),
+                ("itTaru_UnkMotion6_Phys", Cb::Event(c::idle)),
+                ("itTaru_UnkMotion6_Coll", Cb::Pred(c::still)),
+                ("it_802886C4", Cb::Event(|r, g| c::open(r, g, &t::OPENING))),
+                (
+                    "itTaru_UnkMotion7_Anim",
+                    Cb::Pred(|r, g| c::gone_after(r, g, &t::OPENING)),
+                ),
+                ("itTaru_UnkMotion7_Phys", Cb::Event(c::idle)),
+                ("itTaru_UnkMotion7_Coll", Cb::Pred(c::still)),
+                (
+                    "it_3F14_Logic2_DmgDealt",
+                    Cb::Pred(|r, g| c::hit(r, g, &t::OPENING)),
+                ),
+                (
+                    "it_3F14_Logic2_Clanked",
+                    Cb::Pred(|r, g| c::hit(r, g, &t::OPENING)),
+                ),
+                (
+                    "it_3F14_Logic2_HitShield",
+                    Cb::Pred(|r, g| c::hit(r, g, &t::OPENING)),
+                ),
+                (
+                    "it_3F14_Logic2_Reflected",
+                    Cb::Pred(|r, g| c::hit(r, g, &t::OPENING)),
+                ),
                 ("it_3F14_Logic2_DmgReceived", Cb::Pred(t::dmg_received)),
             ],
         );
@@ -4228,7 +4296,7 @@ fn barrel() {
         "itTaru_Logic2_EvtUnk",
         &pass_owner,
         &|r, a| {
-            t::forget(r, a.gobj(0), a.opt_gobj(1));
+            c::forget(r, a.gobj(0), a.opt_gobj(1));
             Ret::None
         },
     );
@@ -4279,29 +4347,44 @@ fn winds() {
 #[test]
 fn party_ball() {
     leaf_check::shard_test!();
-    use melee_sim::game::it::kinds::kusudama as k;
+    use melee_sim::game::it::kinds::{container as c, kusudama as k};
     kind_direct(&[
         ("itKusudama_Logic4_Spawned", Cb::Event(k::spawned)),
         ("itKusudama_UnkMotion0_Anim", Cb::Pred(k::upright)),
-        ("itKusudama_UnkMotion0_Phys", Cb::Event(k::idle)),
-        ("itKusudama_UnkMotion0_Coll", Cb::Pred(k::coll0)),
+        ("itKusudama_UnkMotion0_Phys", Cb::Event(c::idle)),
+        (
+            "itKusudama_UnkMotion0_Coll",
+            Cb::Pred(|r, g| c::rests(r, g, &k::PARTY_BALL)),
+        ),
         ("itKusudama_UnkMotion1_Anim", Cb::Pred(k::anim1)),
-        ("itKusudama_UnkMotion1_Phys", Cb::Event(k::idle)),
+        ("itKusudama_UnkMotion1_Phys", Cb::Event(c::idle)),
         ("itKusudama_UnkMotion1_Coll", Cb::Pred(k::coll1)),
         ("itKusudama_UnkMotion2_Anim", Cb::Pred(k::upright)),
-        ("itKusudama_UnkMotion2_Phys", Cb::Event(k::phys2)),
-        ("itKusudama_UnkMotion2_Coll", Cb::Pred(k::coll2)),
+        ("itKusudama_UnkMotion2_Phys", Cb::Event(c::gravity)),
+        (
+            "itKusudama_UnkMotion2_Coll",
+            Cb::Pred(|r, g| c::lands(r, g, &k::PARTY_BALL)),
+        ),
         ("itKusudama_UnkMotion3_Anim", Cb::Pred(k::anim3)),
-        ("itKusudama_UnkMotion3_Phys", Cb::Event(k::idle)),
+        ("itKusudama_UnkMotion3_Phys", Cb::Event(c::idle)),
         ("itKusudama_UnkMotion3_Coll", Cb::Pred(k::coll3)),
-        ("itKusudama_Logic4_PickedUp", Cb::Event(k::picked_up)),
-        ("itKusudama_UnkMotion4_Anim", Cb::Pred(k::no)),
-        ("itKusudama_UnkMotion4_Phys", Cb::Event(k::idle)),
-        ("itKusudama_Logic4_Thrown", Cb::Event(k::thrown)),
+        (
+            "itKusudama_Logic4_PickedUp",
+            Cb::Event(|r, g| c::picked_up(r, g, &k::PARTY_BALL)),
+        ),
+        ("itKusudama_UnkMotion4_Anim", Cb::Pred(c::still)),
+        ("itKusudama_UnkMotion4_Phys", Cb::Event(c::idle)),
+        (
+            "itKusudama_Logic4_Thrown",
+            Cb::Event(|r, g| c::thrown(r, g, &k::PARTY_BALL)),
+        ),
         ("itKusudama_UnkMotion8_Anim", Cb::Pred(k::anim8)),
-        ("itKusudama_UnkMotion8_Phys", Cb::Event(k::idle)),
-        ("itKusudama_UnkMotion8_Coll", Cb::Pred(k::no)),
-        ("itKusudama_Logic4_DmgReceived", Cb::Pred(k::dmg_received)),
+        ("itKusudama_UnkMotion8_Phys", Cb::Event(c::idle)),
+        ("itKusudama_UnkMotion8_Coll", Cb::Pred(c::still)),
+        (
+            "itKusudama_Logic4_DmgReceived",
+            Cb::Pred(|r, g| c::damaged(r, g, &k::OPENING)),
+        ),
     ]);
     for source in [
         "itKusudama_UnkMotion0_Anim",
@@ -4319,20 +4402,41 @@ fn party_ball() {
                 ("it_8028A190", Cb::Event(k::stopped)),
                 ("it_8028A3CC", Cb::Event(k::fell)),
                 ("it_8028A544", Cb::Event(k::rise)),
-                ("itKusudama_UnkMotion6_Anim", Cb::Pred(k::no)),
-                ("itKusudama_UnkMotion6_Phys", Cb::Event(k::phys6)),
-                ("itKusudama_UnkMotion5_Coll", Cb::Pred(k::coll5)),
-                ("itKusudama_Logic4_Dropped", Cb::Event(k::dropped)),
-                ("itKusudama_UnkMotion6_Coll", Cb::Pred(k::coll6)),
-                ("it_8028AC74", Cb::Event(k::burst)),
-                ("itKusudama_UnkMotion7_Anim", Cb::Pred(k::anim7)),
-                ("itKusudama_UnkMotion7_Phys", Cb::Event(k::idle)),
-                ("itKusudama_UnkMotion7_Coll", Cb::Pred(k::no)),
-                ("it_8028AD44", Cb::Event(k::open)),
-                ("itKusudama_Logic4_DmgDealt", Cb::Pred(k::dmg_dealt)),
-                ("itKusudama_Logic4_Clanked", Cb::Pred(k::clanked)),
-                ("itKusudama_Logic4_HitShield", Cb::Pred(k::clanked)),
-                ("itKusudama_Logic4_Reflected", Cb::Pred(k::clanked)),
+                ("itKusudama_UnkMotion6_Anim", Cb::Pred(c::still)),
+                ("itKusudama_UnkMotion6_Phys", Cb::Event(c::thrown_phys)),
+                (
+                    "itKusudama_UnkMotion5_Coll",
+                    Cb::Pred(|r, g| c::flies(r, g, &k::OPENING)),
+                ),
+                (
+                    "itKusudama_Logic4_Dropped",
+                    Cb::Event(|r, g| c::dropped(r, g, &k::PARTY_BALL)),
+                ),
+                (
+                    "itKusudama_UnkMotion6_Coll",
+                    Cb::Pred(|r, g| c::drops(r, g, &k::OPENING)),
+                ),
+                ("it_8028AC74", Cb::Event(|r, g| c::burst(r, g, &k::OPENING))),
+                ("itKusudama_UnkMotion7_Anim", Cb::Pred(c::blast_lasts)),
+                ("itKusudama_UnkMotion7_Phys", Cb::Event(c::idle)),
+                ("itKusudama_UnkMotion7_Coll", Cb::Pred(c::still)),
+                ("it_8028AD44", Cb::Event(|r, g| c::open(r, g, &k::OPENING))),
+                (
+                    "itKusudama_Logic4_DmgDealt",
+                    Cb::Pred(|r, g| c::hit(r, g, &k::OPENING)),
+                ),
+                (
+                    "itKusudama_Logic4_Clanked",
+                    Cb::Pred(|r, g| c::hit(r, g, &k::OPENING)),
+                ),
+                (
+                    "itKusudama_Logic4_HitShield",
+                    Cb::Pred(|r, g| c::hit(r, g, &k::OPENING)),
+                ),
+                (
+                    "itKusudama_Logic4_Reflected",
+                    Cb::Pred(|r, g| c::hit(r, g, &k::OPENING)),
+                ),
                 ("it_80289A00", Cb::Event(k::face_front)),
             ],
         );
@@ -4398,7 +4502,7 @@ fn party_ball() {
             "it_8028A114",
             &prep,
             &|r, a| {
-                Ret::Bool(k::has_items(
+                Ret::Bool(c::has_items(
                     r,
                     a.int(1) as i32,
                     a.int(2) as i32,
@@ -4413,7 +4517,7 @@ fn party_ball() {
         "itKusudama_Logic4_EvtUnk",
         &pass_owner,
         &|r, a| {
-            k::forget(r, a.gobj(0), a.opt_gobj(1));
+            c::forget(r, a.gobj(0), a.opt_gobj(1));
             Ret::None
         },
     );

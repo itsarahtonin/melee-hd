@@ -5,7 +5,7 @@
 
 use super::kinds::{
     climbersstring, fflower, flipper, foxlaser, hassam, hitodeman, linkbomb, linkboomerang,
-    linkhookshot, marumine, mewtwodisable, msbomb, peachturnip, samusgrapple, seakchain, spycloak,
+    linkhookshot, marumine, mewtwodisable, msbomb, peachturnip, powerup, samusgrapple, seakchain,
     star, strand, tether,
 };
 use super::{item, item_mut, lib26b1};
@@ -45,7 +45,7 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
         0x8029_3640 => fflower::forget(r, gobj, other),
         a if FORGET_ONLY.iter().any(|&(x, _)| x == a) => forget(r, gobj, other),
         0x8028_4834 => star::forget(r, gobj, other),
-        0x8029_5EB4 => spycloak::forget(r, gobj, other),
+        0x8029_5EB4 => powerup::forget(r, gobj, other),
         0x8029_CCF8 => foxlaser::forget(r, gobj, other),
         0x8029_FD84 => linkbomb::forget(r, gobj, other),
         0x802A_23CC => linkboomerang::forget(r, gobj, other),

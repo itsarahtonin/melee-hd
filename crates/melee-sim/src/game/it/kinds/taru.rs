@@ -1,12 +1,15 @@
 //! The barrel, `melee/it/kinds/ittaru.c`: a container that rolls down slopes and when hit or
 //! thrown, rolling faster with the slope, until it breaks on a hard landing, a fast wall or a
-//! hit, dropping an item or nothing.
+//! hit, dropping an item or nothing. Its fall, its breaking and its opening are the containers'
+//! ([`container`]).
 
 use gekko_fp as fp;
 
 use super::super::ground::{air, ground, ground_or_fall};
 use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
+use super::super::vars::ItemVars;
 use super::super::{coll, drop, effect, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
+use super::container::{self, Opening};
 use crate::fpu::{mem, reg};
 use crate::game::state::{Game, Running};
 use crate::game::structs::itTaru_ItemVars;
@@ -56,21 +59,42 @@ pub const HIT_SHIELD: u32 = 0x8028_8958;
 pub const REFLECTED: u32 = 0x8028_89F8;
 pub const DMG_RECEIVED: u32 = 0x8028_8A98;
 
+/// The barrel's opening: it breaks on a hit, a landing past `x34` or `xC` damage (its own
+/// collisions and damage read them), stopping on a softer landing; with an item (`x0` in
+/// `x0 + x4`) it opens in state 7 with a crash (0xFB), spilling it, else it bursts in 6 with the
+/// wind.
+pub const OPENING: Opening = Opening {
+    name: "barrel",
+    vars: shared,
+    breaks: break_open,
+    smashes: break_open,
+    damage_limit: 0xC,
+    drop_limit: 0x34,
+    settles: container::stop,
+    has_items: has_item,
+    burst_state: 6,
+    burst_wind: true,
+    open_sfx: 0xFB,
+    spills: Some(spill),
+    open_frames: 0x28,
+    open_state: 7,
+};
+
 /// Runs one of the barrel's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 => anim0(r, gobj),
+        ANIM0 => container::smokes(r, gobj),
         COLL0 => coll0(r, gobj),
-        ANIM1 | ANIM2 | COLL6 | COLL7 => no(r, gobj),
+        ANIM1 | ANIM2 | COLL6 | COLL7 => container::still(r, gobj),
         COLL1 => coll1(r, gobj),
         ANIM3 | ANIM4 => tick(r, gobj),
         COLL3 => coll3(r, gobj),
         ANIM5 => anim5(r, gobj),
         COLL5 | COLL4 => coll5(r, gobj),
-        ANIM6 => anim6(r, gobj),
-        ANIM7 => anim7(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD | REFLECTED => hit(r, gobj),
+        ANIM6 => container::blast_lasts(r, gobj),
+        ANIM7 => container::gone_after(r, gobj, &OPENING),
+        DMG_DEALT | CLANKED | HIT_SHIELD | REFLECTED => container::hit(r, gobj, &OPENING),
         DMG_RECEIVED => dmg_received(r, gobj),
         _ => return None,
     })
@@ -83,9 +107,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         SPAWNED => spawned(r, gobj),
         ROLL => roll(r, gobj),
         TURN => turn(r, gobj),
-        PHYS0 | PHYS2 | PHYS6 | PHYS7 => idle(r, gobj),
-        FELL => fell(r, gobj),
-        PHYS1 => phys1(r, gobj),
+        PHYS0 | PHYS2 | PHYS6 | PHYS7 => container::idle(r, gobj),
+        FELL => container::fell(r, gobj),
+        PHYS1 => container::gravity(r, gobj),
         PICKED_UP => picked_up(r, gobj),
         DROPPED | LET_GO => let_go(r, gobj),
         THROWN => thrown(r, gobj),
@@ -94,8 +118,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         LAND_ROLLING => land_rolling(r, gobj),
         PHYS5 => phys5(r, gobj),
         PHYS4 => phys4(r, gobj),
-        OPEN_EMPTY => open_empty(r, gobj),
-        OPEN => open(r, gobj),
+        OPEN_EMPTY => container::burst(r, gobj, &OPENING),
+        OPEN => container::open(r, gobj, &OPENING),
         _ => return false,
     }
     true
@@ -106,16 +130,41 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut itTaru_ItemVars {
     item_mut(game, gobj).vars.taru()
 }
 
-/// `itTaruAttributes`' word at `off`.
-fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
-    article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a barrel without attributes")
-        .at(off)
+/// The fields the box and the party ball have too.
+fn shared(v: &mut ItemVars) -> container::Vars<'_> {
+    let t = v.taru();
+    container::Vars {
+        opened: &mut t.hit,
+        timer: &mut t.open_frames,
+    }
 }
 
+/// `itTaruAttributes`' float at `off`.
 fn attr_f(r: &Running, gobj: GObjId, off: u32) -> f32 {
-    r.data.f32(attr(r, gobj, off))
+    container::attr_f(r, gobj, &OPENING, off)
+}
+
+/// Its item as it opens: coins in a coin match, else a monster if one comes out, else one item
+/// (the file's inline `it_802886C4_inline`).
+fn spill(r: &mut Running, gobj: GObjId) {
+    let pos = item(r.game, gobj).pos;
+    if !drop::drop_coins(r, gobj, pos, None)
+        && drop::drop_monster(r, Some(gobj), pos, None).is_none()
+    {
+        drop::drop_contents(r, gobj, 1, false);
+    }
+}
+
+/// Whether it breaks with an item in it: `x0` in `x0 + x4`.
+fn has_item(r: &mut Running, gobj: GObjId) -> bool {
+    let x0 = container::attr_i(r, gobj, &OPENING, 0);
+    let x4 = container::attr_i(r, gobj, &OPENING, 4);
+    r.game.objs.rng.below(x0.wrapping_add(x4)) < x0
+}
+
+/// Breaks: splinters, then opens with an item or empty.
+fn break_open(r: &mut Running, gobj: GObjId) {
+    container::break_open(r, gobj, &OPENING);
 }
 
 /// `(f32) i`, as the original converts it (exact, then rounded to single).
@@ -147,7 +196,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     v.turn.set(0.0);
     v.roll_speed.set(0.0);
     v.normal.set(Vec3::new(0.0, 1.0, 0.0));
-    fell(r, gobj);
+    container::fell(r, gobj);
 }
 
 /// Rolls, `it_802874F0`: on the ground its speed (`xDE4`) gathers down slopes and fades on the
@@ -251,38 +300,13 @@ pub fn turn(r: &mut Running, gobj: GObjId) {
     jobj::set_angle(&mut r.game.objs.jobjs, j, |q| q.z = roll);
 }
 
-/// Smokes as its time runs out, `itTaru_UnkMotion0_Anim`.
-#[doc(alias = "itTaru_UnkMotion0_Anim")]
-pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    if reg(item(r.game, gobj).life_timer) <= 1.0 {
-        effect::spawn_simple(r, gobj, 0x421);
-    }
-    false
-}
-
-/// The callbacks that do nothing and answer false.
-#[doc(alias = "itTaru_UnkMotion1_Anim")]
-#[doc(alias = "itTaru_UnkMotion2_Anim")]
-#[doc(alias = "itTaru_UnkMotion6_Coll")]
-#[doc(alias = "itTaru_UnkMotion7_Coll")]
-pub fn no(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing.
-#[doc(alias = "itTaru_UnkMotion0_Phys")]
-#[doc(alias = "itTaru_UnkMotion2_Phys")]
-#[doc(alias = "itTaru_UnkMotion6_Phys")]
-#[doc(alias = "itTaru_UnkMotion7_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
 /// `itTaru_UnkMotion0_Coll`: on a steep enough slope it starts rolling down it; else it lies
 /// along the ground.
 #[doc(alias = "itTaru_UnkMotion0_Coll")]
 pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     if !ground(r, gobj) {
         maplib::enter_air(item_mut(r.game, gobj));
-        fell(r, gobj);
+        container::fell(r, gobj);
         return false;
     }
     let limit = attr_f(r, gobj, 0x14);
@@ -309,22 +333,6 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// Falls (state 1), `it_80287D0C`.
-#[doc(alias = "it_80287D0C")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    lib26b1::disable_pickup(r.game, gobj);
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
-/// Gravity from the attributes.
-#[doc(alias = "itTaru_UnkMotion1_Phys")]
-pub fn phys1(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
-    let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
-}
-
 /// Bounces off the floor by the attributes' `x58`.
 fn bounce(r: &mut Running, gobj: GObjId) {
     let x58 = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::X58);
@@ -339,12 +347,9 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     if air(r, gobj) {
         maplib::enter_ground(item_mut(r.game, gobj));
         play_sfx(r, gobj, 0x104, 0x7F, 0x40);
-        let x34 = attr_f(r, gobj, 0x34);
+        let x34 = attr_f(r, gobj, OPENING.drop_limit);
         if abs(item(r.game, gobj).vel.y) < reg(x34) {
-            // `Item_StopAndEnterState`.
-            item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
-            lib26b1::enable_pickup(r.game, gobj);
-            change_state(r, gobj, 0, change::ANIM_UPDATE);
+            (OPENING.settles)(r, gobj);
         } else {
             bounce(r, gobj);
         }
@@ -404,7 +409,7 @@ pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
 /// `itTaru_UnkMotion3_Phys`.
 #[doc(alias = "itTaru_UnkMotion3_Phys")]
 pub fn phys3(r: &mut Running, gobj: GObjId) {
-    phys1(r, gobj);
+    container::gravity(r, gobj);
     roll(r, gobj);
     turn(r, gobj);
 }
@@ -416,9 +421,9 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
     if air(r, gobj) {
         maplib::enter_ground(item_mut(r.game, gobj));
         play_sfx(r, gobj, 0x104, 0x7F, 0x40);
-        let x34 = attr_f(r, gobj, 0x34);
+        let x34 = attr_f(r, gobj, OPENING.drop_limit);
         if abs(item(r.game, gobj).vel.y) > reg(x34) {
-            return hit(r, gobj);
+            return container::hit(r, gobj, &OPENING);
         }
         let x5c = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::X5C);
         let ip = item_mut(r.game, gobj);
@@ -435,7 +440,7 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
             ip.vel.y = 0.0;
         }
     } else if maplib::touched_wall(r.game, gobj) != 0 {
-        return hit(r, gobj);
+        return container::hit(r, gobj, &OPENING);
     }
     turn(r, gobj);
     false
@@ -495,7 +500,7 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
         let walls = crate::mp::coll::LEFT_WALL_MASK | crate::mp::coll::RIGHT_WALL_MASK;
         if ip.coll.env_flags & walls != 0 {
             if abs(ip.vars.taru().roll_speed.get()) > reg(x2c) {
-                return hit(r, gobj);
+                return container::hit(r, gobj, &OPENING);
             }
             ip.facing_dir = -ip.facing_dir;
             let v = ip.vars.taru();
@@ -525,101 +530,6 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// Breaks open empty, `it_802885C8`: hidden, it blasts a moment, pushing the wind.
-#[doc(alias = "it_802885C8")]
-pub fn open_empty(r: &mut Running, gobj: GObjId) {
-    lib26b1::hide(r.game, gobj);
-    lib2725::blast_effect(r, gobj);
-    hitbox::start_blink(r.game, gobj);
-    lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::freeze_lifetime(r.game, gobj);
-    lib2725::start_vanishing(r.game, r.data, gobj);
-    let ip = item_mut(r.game, gobj);
-    ip.vel.x = 0.0;
-    ip.vel.y = 0.0;
-    super::super::set_flag(&mut ip.draw_flags, 2, true);
-    let v = ip.vars.taru();
-    v.hit.set(1);
-    v.open_frames.set(40);
-    hitbox::set_hit_ids(r.game, gobj);
-    let pos = item(r.game, gobj).pos;
-    crate::lb::wind::blast(
-        &mut r.game.gr.winds,
-        pos,
-        0x78,
-        1.0,
-        0.02,
-        std::f32::consts::FRAC_PI_3,
-    );
-    change_state(r, gobj, 6, change::ANIM_UPDATE);
-}
-
-/// `itTaru_UnkMotion6_Anim`: the blast lasts its lifetime.
-#[doc(alias = "itTaru_UnkMotion6_Anim")]
-pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::tick_life(r.game, gobj)
-}
-
-/// Breaks open with an item, `it_802886C4`: a crash, a small quake, coins, a monster or one
-/// item, and gone.
-#[doc(alias = "it_802886C4")]
-pub fn open(r: &mut Running, gobj: GObjId) {
-    play_sfx(r, gobj, 0xFB, 0x7F, 0x40);
-    let pos = item(r.game, gobj).pos;
-    crate::game::camera::request_quake(r, 2, Some(pos));
-    if !drop::drop_coins(r, gobj, pos, None)
-        && drop::drop_monster(r, Some(gobj), pos, None).is_none()
-    {
-        drop::drop_contents(r, gobj, 1, false);
-    }
-    let j = jobj_of(r.game, gobj);
-    lib2725::hide_tree(r.game, j);
-    hitbox::start_blink(r.game, gobj);
-    let ip = item_mut(r.game, gobj);
-    ip.vel.x = 0.0;
-    ip.vel.y = 0.0;
-    super::super::set_flag(&mut ip.draw_flags, 2, true);
-    let v = ip.vars.taru();
-    v.hit.set(1);
-    v.open_frames.set(0x28);
-    lib26b1::disable_pickup(r.game, gobj);
-    change_state(r, gobj, 7, change::ANIM_UPDATE);
-}
-
-/// `itTaru_UnkMotion7_Anim`: gone after 40 frames.
-#[doc(alias = "itTaru_UnkMotion7_Anim")]
-pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
-    let v = vars(r.game, gobj);
-    v.open_frames.update(|old| old.wrapping_sub(1));
-    v.open_frames.get() <= 0
-}
-
-/// Breaks: splinters (effect 0x427), then opens with an item (`x0` in `x0 + x4`) or empty.
-fn break_open(r: &mut Running, gobj: GObjId) {
-    let pos = item(r.game, gobj).pos;
-    crate::game::ef::spawn(r, 0x427, Some(gobj), &[crate::game::ef::Arg::Vec(pos)]);
-    let x0 = r.data.u32(attr(r, gobj, 0)) as i32;
-    let x4 = r.data.u32(attr(r, gobj, 4)) as i32;
-    if r.game.objs.rng.below(x0.wrapping_add(x4)) < x0 {
-        open(r, gobj);
-    } else {
-        open_empty(r, gobj);
-    }
-}
-
-/// Hitting something (or being reflected), an unbroken barrel breaks,
-/// `it_3F14_Logic2_DmgDealt` and the rest.
-#[doc(alias = "it_3F14_Logic2_DmgDealt")]
-#[doc(alias = "it_3F14_Logic2_Clanked")]
-#[doc(alias = "it_3F14_Logic2_HitShield")]
-#[doc(alias = "it_3F14_Logic2_Reflected")]
-pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).hit.get() == 0 {
-        break_open(r, gobj);
-    }
-    false
-}
-
 /// `it_3F14_Logic2_DmgReceived`: enough damage breaks it; less sometimes knocks a lying barrel
 /// rolling, and pushes a rolling one.
 #[doc(alias = "it_3F14_Logic2_DmgReceived")]
@@ -629,7 +539,7 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     }
     let (x8, xc, x10) = (
         attr_f(r, gobj, 8),
-        attr_f(r, gobj, 0xC),
+        attr_f(r, gobj, OPENING.damage_limit),
         attr_f(r, gobj, 0x10),
     );
     if to_f32(item(r.game, gobj).damage_taken) >= reg(xc) {
@@ -658,10 +568,4 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
         hitbox::set_hit_ids(r.game, gobj);
     }
     false
-}
-
-/// Forgets a GObj the barrel points to, `itTaru_Logic2_EvtUnk` (`it_8026B894`).
-#[doc(alias = "itTaru_Logic2_EvtUnk")]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
 }
