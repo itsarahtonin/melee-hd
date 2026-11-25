@@ -432,7 +432,7 @@ pub fn record(disc_path: &str, replay_path: &str, at: u32, view: View) -> (Drawn
         }
         let rec = Recorder::default();
         let (images, notes) = drawer.frame(t, true, Some(&Watch(&rec)));
-        let reflection = t.game.gr.izumi.reflection.is_some().then(|| {
+        let reflection = t.game.gr.izumi_reflection().is_some().then(|| {
             drawer
                 .frames
                 .space

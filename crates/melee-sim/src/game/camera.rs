@@ -571,7 +571,7 @@ fn cam_offset(s: &StageInfo) -> Vec3 {
 
 /// `Ground_801C4368`'s slope plus one, through the stack as the camera keeps it.
 fn ground_floor(s: &StageInfo) -> f64 {
-    reg(mem(fp::frsp(fp::fadd(reg(s.acid_level), 1.0))))
+    reg(mem(fp::frsp(fp::fadd(reg(s.acid_level()), 1.0))))
 }
 
 /// The lower of the camera bounds' bottom and the ground's floor.
@@ -620,7 +620,7 @@ fn fighter_dead(game: &Game, gobj: GObjId) -> bool {
 /// The stage's floor for the eye in the stages that have one (`get_stage_floor_height`).
 fn eye_floor(game: &Game) -> f64 {
     let s = &game.stage_info;
-    match GrKind::from_id(s.grkind) {
+    match GrKind::from_id(s.ground_kind_id()) {
         Some(GrKind::Castle) => reg(super::gr::peachs_castle::camera_floor(game)),
         Some(GrKind::Corneria) => super::gr::corneria::camera_floor(game),
         Some(GrKind::Zebes) => reg(super::gr::brinstar::camera_floor(s)),
@@ -932,7 +932,7 @@ fn clamp_into_bounds(s: &StageInfo, p: &mut Vec3) {
     if flags == 0 {
         return;
     }
-    let floor = mem(fp::frsp(fp::fadd(reg(s.acid_level), 1.0)));
+    let floor = mem(fp::frsp(fp::fadd(reg(s.acid_level()), 1.0)));
     if flags & OUTSIDE_LEFT != 0 {
         p.x = mem(cam_left(s));
     }
@@ -971,7 +971,7 @@ pub fn track_bounds(
         } else {
             1.0
         };
-        let mult = fp::fmuls(weight, reg(s.cam_info.cam_track_ratio));
+        let mult = fp::fmuls(weight, reg(s.camera_settings().cam_track_ratio));
         min_x = reg(f32::MAX);
         max_x = reg(-f32::MAX);
         (min_y, max_y) = (min_x, max_x);
@@ -1105,11 +1105,11 @@ pub fn fit_depth(b: &mut Bounds, s: &StageInfo, t: &CameraTransformState) {
     if dx > dist {
         dist = dx;
     }
-    if dist < reg(s.cam_info.cam_zoom_rate) {
-        dist = reg(s.cam_info.cam_zoom_rate);
+    if dist < reg(s.camera_settings().cam_zoom_rate) {
+        dist = reg(s.camera_settings().cam_zoom_rate);
     }
-    if dist > reg(s.cam_info.cam_max_depth) {
-        dist = reg(s.cam_info.cam_max_depth);
+    if dist > reg(s.camera_settings().cam_max_depth) {
+        dist = reg(s.camera_settings().cam_max_depth);
     }
     b.z_pos = mem(dist);
 }
@@ -1160,7 +1160,7 @@ pub fn frame(b: &Bounds, s: &StageInfo, t: &mut CameraTransformState) {
     let (y_min, y_max) = (reg(b.y_min), reg(b.y_max));
     let y_sum = fp::fadds(fp::fsubs(y_min, reg(o.y)), fp::fsubs(y_max, reg(o.y)));
     let base = fp::fmadds(y_sum, fp::fsubs(0.5, bias), reg(o.y));
-    let tilt = reg(s.cam_info.cam_tilt_rate);
+    let tilt = reg(s.camera_settings().cam_tilt_rate);
     let mut angle = fp::fneg(fp::fmuls(deg, fp::fmuls(fp::fadds(base, param(0x8)), tilt)));
     if angle > fp::fmuls(deg, param(0xC)) {
         angle = fp::fmuls(deg, param(0xC));
@@ -1183,7 +1183,7 @@ pub fn frame(b: &Bounds, s: &StageInfo, t: &mut CameraTransformState) {
     let o = cam_offset(s);
     let (x_min, x_max) = (reg(b.x_min), reg(b.x_max));
     let x_center = fp::fmuls(0.5, fp::fadds(x_min, x_max));
-    let pan = reg(s.cam_info.cam_pan_rate);
+    let pan = reg(s.camera_settings().cam_pan_rate);
     let mut angle = fp::fneg(fp::fmuls(
         deg,
         fp::fmuls(fp::fsubs(x_center, reg(o.x)), pan),
@@ -1207,11 +1207,11 @@ pub fn frame(b: &Bounds, s: &StageInfo, t: &mut CameraTransformState) {
     t.target_interest.x = mem(fp::fsubs(fp::fnmsubs(dist_x, tan_r, x_max), x_off));
     t.target_interest.z = 0.0;
     let mut dist = if dist_y > dist_x { dist_y } else { dist_x };
-    if dist < reg(s.cam_info.cam_zoom_rate) {
-        dist = reg(s.cam_info.cam_zoom_rate);
+    if dist < reg(s.camera_settings().cam_zoom_rate) {
+        dist = reg(s.camera_settings().cam_zoom_rate);
     }
-    if dist > reg(s.cam_info.cam_max_depth) {
-        dist = reg(s.cam_info.cam_max_depth);
+    if dist > reg(s.camera_settings().cam_max_depth) {
+        dist = reg(s.camera_settings().cam_max_depth);
     }
     t.target_position.x = mem(fp::fadds(reg(t.target_interest.x), x_off));
     t.target_position.y = mem(fp::fsubs(reg(t.target_interest.y), y_off));
@@ -1399,13 +1399,13 @@ pub fn apply_quake(game: &mut Game, b: &Bounds, which: Which) {
         fp::fdivs(half_height, fp::fmuls(0.5, width)),
     );
     let scale_y = fp::fdivs(half_height, fp::fmuls(0.5, height));
-    let near = reg(s.cam_info.cam_zoom_rate);
-    let range = fp::fsubs(reg(s.cam_info.cam_max_depth), near);
+    let near = reg(s.camera_settings().cam_zoom_rate);
+    let range = fp::fsubs(reg(s.camera_settings().cam_max_depth), near);
     let ratio = if range < f64::from(0.001_f32) {
         0.5
     } else {
         fp::fdivs(
-            fp::fsubs(reg(b.z_pos), reg(s.cam_info.cam_zoom_rate)),
+            fp::fsubs(reg(b.z_pos), reg(s.camera_settings().cam_zoom_rate)),
             range,
         )
     };
@@ -1530,7 +1530,7 @@ pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
         let p = &mut g.display_phase.playback;
         p.take(&g.camera);
         if kind == QUAKE_LOOP && !p.quake_model {
-            p.quake_model = g.stage_info.quake_model_set.is_some();
+            p.quake_model = g.stage_info.has_quake_models();
         }
         if let Ok(k) = usize::try_from(kind)
             && k < QUAKE_KINDS
@@ -1741,7 +1741,7 @@ fn update_zoom_distance(c: &mut Camera) {
 /// quakes down ([`standard`]).
 fn update_eases(r: &mut Running, b: &Bounds, b_copy: &Bounds, ours: bool) {
     zoom_on_player(r.game, Which::Main);
-    let speed = reg(r.game.stage_info.cam_info.cam_track_smooth);
+    let speed = reg(r.game.stage_info.camera_settings().cam_track_smooth);
     let c = &mut r.game.camera.cam;
     let zoom = c.zoom;
     ease_interest(b, &mut c.transform, speed, zoom);
@@ -3013,7 +3013,7 @@ pub fn pause_input(game: &mut Game) {
             next_slot(game, i32::from(game.camera.cam.pauser_slot), dir) as i8;
         seek_pause_target(game, dir);
         let slot = game.camera.cam.pauser_slot;
-        let init = reg(game.stage_info.cam_info.pausecam_zpos_init);
+        let init = reg(game.stage_info.camera_settings().pausecam_zpos_init);
         let c = &mut game.camera.cam;
         reset_orbit(c, i32::from(slot), init);
         orbit_zoom(c, 0.0);
@@ -3097,7 +3097,7 @@ pub fn set_up_pause(game: &mut Game, mut slot: i8, mut pauser: i8, zoom_preset: 
     c.orbit_limits.z_max = 2000.0;
     c.orbit_limits.z_min = -2000.0;
     let angles = stage::cam_angles_of(s).map(reg);
-    let ci = &s.cam_info;
+    let ci = &s.camera_settings();
     c.orbit_limits.angle_up = mem(angles[0]);
     c.orbit_limits.angle_down = mem(angles[1]);
     c.orbit_limits.angle_right = mem(angles[3]);
@@ -3490,12 +3490,12 @@ fn fixed(r: &mut Running, ours: bool) {
         let target = t.target_interest;
         ease_toward(&mut t.interest, target, param(0x74));
     }
-    let fov = s.cam_info.fixed_cam_fov;
+    let fov = s.camera_settings().fixed_cam_fov;
     for t in [&mut c.transform, &mut c.transform_copy] {
         ease_fov(t, reg(fov), param(0x7C));
     }
     for t in [&mut c.transform, &mut c.transform_copy] {
-        t.target_position = s.cam_info.fixed_cam_pos;
+        t.target_position = s.camera_settings().fixed_cam_pos;
         let target = t.target_position;
         ease_toward(&mut t.position, target, param(0x78));
     }
@@ -4081,8 +4081,8 @@ mod playback_camera_tests {
             let mut g = Box::<Game>::default();
             g.rules = crate::game::state::Rules::VANILLA
                 .with_fixes(slippi.then_some(crate::game::slippi::CodeSet::V3_19));
-            g.stage_info.cam_info.cam_bounds.left = -170.0;
-            g.stage_info.cam_info.cam_bounds.right = 173.3;
+            g.stage_info.raw_parts_mut().cam_info.cam_bounds.left = -170.0;
+            g.stage_info.raw_parts_mut().cam_info.cam_bounds.right = 173.3;
             let mut live = Vec::new();
             for (mode, updates, settles) in [(STANDARD, 3, 2), (PAUSE, 5, 0), (STANDARD, 1100, 0)] {
                 g.camera.cam.mode = mode;

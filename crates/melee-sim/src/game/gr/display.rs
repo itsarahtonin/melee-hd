@@ -227,3 +227,102 @@ impl Running<'_> {
         }
     }
 }
+
+/// The stage's fog, which the display pass runs for the stage (`Ground_801C4FAC`,
+/// `Ground_801C1E2C`).
+impl Running<'_> {
+    /// The stage's fog fitted to the camera, `Ground_801C4FAC`, for stages that set guide
+    /// points (`stage_info.unk8C.b3`, [`set_guide_points`](super::ground::set_guide_points)):
+    /// a near and a far point, the side pair the camera faces (`x148`/`x154` looking left,
+    /// `x160`/`x16C` otherwise), blended by heading with the front pair (`x130`/`x13C`) when it
+    /// looks into the stage; the fog starts at the near point's distance from the eye (at
+    /// least 5) and ends at the far one's (at least 10, and past the start).
+    #[doc(alias = "Ground_801C4FAC")]
+    pub fn stage_fog_update(&mut self, c: crate::hsd::cobj::CObjId) {
+        use crate::fpu::{mem, reg};
+        use crate::hsd::cobj;
+        use gekko_fp as fp;
+        let i = &self.game.stage_info;
+        if !i.bits.has_guide_points {
+            return;
+        }
+        let eye = cobj::eye_vector(&mut self.game.objs, self.data, Some(c))
+            .unwrap_or(cobj::NO_EYE_VECTOR);
+        let i = &self.game.stage_info;
+        let (mut front_near, mut front_far) = (i.guides.front_near, i.guides.front_far);
+        let (mut near, mut far) = if reg(eye.x) < 0.0 {
+            (i.guides.left_near, i.guides.left_far)
+        } else {
+            (i.guides.right_near, i.guides.right_far)
+        };
+        let (near, far) = if reg(eye.z) < 0.0 {
+            let len = crate::math::sqrt_reg(fp::fmadds(
+                reg(eye.x),
+                reg(eye.x),
+                fp::fmuls(reg(eye.z), reg(eye.z)),
+            ));
+            let inv = fp::fdivs(1.0, len);
+            let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
+            let xw = fp::fmuls(inv, abs(reg(eye.x)));
+            let zw = fp::fmuls(inv, abs(reg(eye.z)));
+            let scale = |v: &mut crate::vec::Vec3, w: f64| {
+                v.x = mem(fp::fmuls(reg(v.x), w));
+                v.y = mem(fp::fmuls(reg(v.y), w));
+                v.z = mem(fp::fmuls(reg(v.z), w));
+            };
+            scale(&mut near, xw);
+            scale(&mut far, xw);
+            scale(&mut front_near, zw);
+            scale(&mut front_far, zw);
+            (front_near.sdk_add(near), front_far.sdk_add(far))
+        } else {
+            (near, far)
+        };
+        let at = cobj::eye_position(&mut self.game.objs, self.data, c)
+            .expect("HSD_CObjGetEyePosition: a CObj without an eye WObj");
+        let Some(fog_gobj) = self.game.stage_info.fog else {
+            return;
+        };
+        let Some(Obj::Fog(fog)) = self.game.world.gobjs[fog_gobj.0].obj else {
+            return;
+        };
+        let sq = |v: f64| fp::fmuls(v, v);
+        let (dx, dy, dz) = (
+            fp::fsubs(reg(near.x), reg(at.x)),
+            fp::fsubs(reg(near.y), reg(at.y)),
+            fp::fsubs(reg(near.z), reg(at.z)),
+        );
+        let start = crate::math::sqrt_reg(fp::fadds(sq(dz), fp::fadds(sq(dx), sq(dy))));
+        let (dx, dy, dz) = (
+            fp::fsubs(reg(far.x), reg(at.x)),
+            fp::fsubs(reg(far.y), reg(at.y)),
+            fp::fsubs(reg(far.z), reg(at.z)),
+        );
+        let mut end = crate::math::sqrt_reg(fp::fadds(sq(dz), fp::fadds(sq(dx), sq(dy))));
+        let mut begin = start;
+        if end < 10.0 {
+            end = 10.0;
+        }
+        if start < 5.0 {
+            begin = 5.0;
+        }
+        if begin > end {
+            end = fp::fadds(1.0, begin);
+        }
+        let f = &mut self.game.objs.fogs[fog];
+        f.start = mem(begin);
+        f.end = mem(end);
+    }
+
+    /// The stage's fog GObj's render callback, `Ground_801C1E2C`: its fog, unless the camera
+    /// draws collisions or the stage keeps its fog off (`Ground_801C1E00`).
+    #[doc(alias = "Ground_801C1E2C")]
+    pub fn render_stage_fog(&mut self, gobj: GObjId) {
+        if self.game.camera.draw_collisions() || !self.game.stage_info.bits.fog_enabled {
+            return;
+        }
+        if let Some(Obj::Fog(f)) = self.game.world.gobj(gobj).obj {
+            display::fog_set(&mut self.game.objs, Some(f));
+        }
+    }
+}

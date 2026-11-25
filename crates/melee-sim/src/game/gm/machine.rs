@@ -138,7 +138,7 @@ impl Running<'_> {
         m.routing.prev_mode = GameMode::NONE;
         m.phase = Phase::StartMode;
         self.game.game_mode = m.routing.curr_mode;
-        self.game.gr.game_mode = m.routing.curr_mode;
+        self.game.gr.set_game_mode(m.routing.curr_mode);
     }
 
     /// Runs the modes' loops from where they stand to the next scene loop's start: the
@@ -210,7 +210,7 @@ impl Running<'_> {
         crate::game::oracle_hooks::reach(self.game, crate::game::oracle_hooks::Entry::RunGameMode);
         let mode = self.game.machine.routing.curr_mode;
         self.game.game_mode = mode;
-        self.game.gr.game_mode = mode;
+        self.game.gr.set_game_mode(mode);
         let entry = GameMode::of(mode).mode();
         let (preloaded, on_load) = (entry.preloaded, entry.on_load);
         let m = &mut self.game.machine;

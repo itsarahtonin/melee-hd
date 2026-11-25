@@ -178,7 +178,7 @@ impl Files<'_> {
     /// dummy stage's defaults), at their addresses.
     pub(crate) fn set_statics(&mut self, game: &Game, archives: &Archives) {
         self.statics.clear();
-        if let Some(id) = game.gr.defaults {
+        if let Some(id) = *game.gr.raw_parts().defaults {
             let _ = archives;
             // Each region at its address: a pointer there maps to the region's offset in the
             // archive's data.

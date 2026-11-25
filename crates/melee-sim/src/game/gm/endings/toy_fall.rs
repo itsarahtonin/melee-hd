@@ -418,7 +418,7 @@ impl Running<'_> {
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
         super::super::super::it::item::load_common_data(self.game, self.data, it_co, kept);
         super::super::super::it::item::init_globals(self.game, self.data);
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         super::super::super::gr::setup::setup(self, grkind);
         super::super::super::ef::eflib::init(self);
         super::super::super::ef::load_sync(self, 0);

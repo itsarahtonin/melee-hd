@@ -391,7 +391,7 @@ impl Running<'_> {
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
         super::super::it::item::load_common_data(self.game, self.data, it_co, kept);
         super::super::it::item::init_globals(self.game, self.data);
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         super::super::gr::setup::setup_at(self, grkind, 0x28);
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);
@@ -1091,7 +1091,7 @@ impl Running<'_> {
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);
         super::super::ef::load_sync(self, 0x1F);
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         super::super::gr::setup::setup_at(self, grkind, 0x10);
         self.game.init_all_players();
         self.bg_flash_create(10);

@@ -88,7 +88,7 @@ impl Running<'_> {
                 mem(fp::fmuls(reg(t.y), s)),
                 mem(fp::fmuls(reg(t.z), s)),
             );
-            self.game.gr.start_points[i] = p;
+            self.game.gr.set_start_point(i, p);
             jobj::req_anim_all(&mut self.game.objs, Some(j), 0.0);
         }
         let a = &mut self.game.audio;

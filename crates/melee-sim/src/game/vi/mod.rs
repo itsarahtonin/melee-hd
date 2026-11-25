@@ -498,7 +498,7 @@ impl Running<'_> {
         super::it::item::load_common_data(self.game, self.data, it_co, kept);
         super::it::item::init_globals(self.game, self.data);
         before_setup(self);
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         super::gr::setup::setup_at(self, grkind, stage_frames(frames));
         super::gr::stage::demo_init(self, stkind, demo);
     }

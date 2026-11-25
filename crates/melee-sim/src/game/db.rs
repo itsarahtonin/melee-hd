@@ -1482,7 +1482,11 @@ impl Running<'_> {
         }
         // An adventure enemy only when the stage loaded its article (`it_804A0F60`).
         if (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&kind)
-            && self.game.gr.stage_articles[(kind - ItKind::OldGoomba.id()) as usize].is_none()
+            && self
+                .game
+                .gr
+                .stage_article((kind - ItKind::OldGoomba.id()) as usize)
+                .is_none()
         {
             return;
         }

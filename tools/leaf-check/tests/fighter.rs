@@ -1160,11 +1160,13 @@ fn dynamics_library() {
                     }
                     "lb_800115F4" => {
                         let gr = &mut g.game.gr;
-                        gr.wind_level = wind::tick(&mut gr.winds, gr.wind_level);
+                        let level = gr.wind_level();
+                        let level = wind::tick(gr.winds_mut(), level);
+                        gr.set_wind_level(level);
                     }
                     "lb_80011A50" => {
                         let slot = wind::push(
-                            &mut g.game.gr.winds,
+                            g.game.gr.winds_mut(),
                             v(r[3]),
                             r[4] as i32,
                             f(1),
@@ -1178,12 +1180,17 @@ fn dynamics_library() {
                         let base = peek_u32(call, leaf_check::sym("lb_804D63A8"));
                         return Ret::Int(slot.map_or(0, |s| base + 0x38 * u32::from(s)));
                     }
-                    "lb_800119DC" => {
-                        wind::blast(&mut g.game.gr.winds, v(r[3]), r[4] as i32, f(1), f(2), f(3))
-                    }
+                    "lb_800119DC" => wind::blast(
+                        g.game.gr.winds_mut(),
+                        v(r[3]),
+                        r[4] as i32,
+                        f(1),
+                        f(2),
+                        f(3),
+                    ),
                     _ => {
                         let fid = maps.fighters[&r[5]];
-                        let (dir, len) = wind::force_at(&g.game.gr.winds, v(r[3]));
+                        let (dir, len) = wind::force_at(g.game.gr.winds(), v(r[3]));
                         g.game.fighters[fid.0].ledge_points[0].center = dir;
                         return Ret::Float(f64::from(len));
                     }

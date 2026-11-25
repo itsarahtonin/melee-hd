@@ -245,7 +245,7 @@ pub fn crash(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3) {
     eflib::destroy_all(r, gobj);
     let p = item(r.game, gobj).pos;
     crate::lb::wind::blast(
-        &mut r.game.gr.winds,
+        r.game.gr.winds_mut(),
         p,
         0x78,
         1.0,

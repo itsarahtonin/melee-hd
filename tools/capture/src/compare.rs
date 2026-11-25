@@ -220,7 +220,7 @@ impl<'a> Comparer<'a> {
         // With no modes' machine (a replay's match, a state taken up from a trace tick) the
         // state is a match's.
         let kind = scene_kind(g.machine.scene_info);
-        g.gr.param.is_none()
+        g.gr.raw_parts().param.is_none()
             || g.machine.scene_info.is_none()
             || is_match_scene(kind)
             || kind == Some(GameScene::Results)

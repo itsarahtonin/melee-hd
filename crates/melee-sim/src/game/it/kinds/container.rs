@@ -389,7 +389,7 @@ pub fn burst(r: &mut Running, gobj: GObjId, o: &Opening) {
     if o.burst_wind {
         let pos = item(r.game, gobj).pos;
         crate::lb::wind::blast(
-            &mut r.game.gr.winds,
+            r.game.gr.winds_mut(),
             pos,
             0x78,
             1.0,

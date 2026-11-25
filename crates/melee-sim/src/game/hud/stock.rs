@@ -875,8 +875,8 @@ impl Running<'_> {
     pub fn target_icons_proc(&mut self, _gobj: GObjId) {
         let g = &mut *self.game;
         let (left, total) = (
-            i32::from(g.stage_info.targets_left),
-            i32::from(g.stage_info.target_count),
+            i32::from(g.stage_info.targets_left()),
+            i32::from(g.stage_info.target_count()),
         );
         let mut counter = 0;
         let (mut x, mut y) = (reg(-21.0), reg(11.0));

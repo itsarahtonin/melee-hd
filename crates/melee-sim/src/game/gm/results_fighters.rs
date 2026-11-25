@@ -233,7 +233,7 @@ impl Running<'_> {
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
         super::super::gr::setup::select(self, 0, None);
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         super::super::gr::setup::setup(self, grkind);
         let kept = self.take_cached_named("ItCo.usd");
         let it_co = self.game.ft.data.files.archive("ItCo.usd");

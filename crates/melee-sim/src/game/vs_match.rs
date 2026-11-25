@@ -505,7 +505,7 @@ impl Match {
         game.follow_playback_camera = settings.follow_playback_camera;
         game.pacing = crate::lb::pacing::Pacing::new();
         // The stage's code reads the same game mode (`gm_GetCurrentGameMode`).
-        game.gr.game_mode = settings.game_mode;
+        game.gr.set_game_mode(settings.game_mode);
         game.objs.rng.seed = settings.seed;
         game.ucf = settings.ucf;
         game.recorder = settings
@@ -534,7 +534,7 @@ impl Match {
         }
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         game.gm.unlocks = settings.unlocks;
-        game.gr.stadium.buffer_address = settings.stadium_buffer;
+        game.gr.set_stadium_buffer(settings.stadium_buffer);
         // `main` turns the items' own spawning on (`db_EnableItemSpawns`; `gmMain_804D6594`
         // is false on a retail disc).
         game.it.db_menu.ItemSpawnsEnabled = 1;
@@ -608,7 +608,7 @@ impl Match {
             Vec::new()
         };
         for (i, &(_, id)) in stadium_files.iter().enumerate() {
-            game.gr.stadium.files[i] = Some(id);
+            game.gr.set_stadium_file(i, id);
         }
         // The trophies' data the stage load reads in (`Toy_803124BC`), for its disc load's
         // timing.
@@ -759,7 +759,7 @@ impl Match {
                 m.game.stage_info.ground_kind(),
                 super::gr::GrKind::Inishie1 | super::gr::GrKind::Inishie2
             )
-            && let Some(fast) = super::gr::mushroom_kingdom::fast_song(m.game.stage_info.bgm)
+            && let Some(fast) = super::gr::mushroom_kingdom::fast_song(m.game.stage_info.bgm())
         {
             let name = crate::lb::audio::HPS_NAMES[fast as usize];
             let file = load(&format!("audio/{name}"));

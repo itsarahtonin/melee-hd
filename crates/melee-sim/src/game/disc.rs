@@ -111,9 +111,9 @@ impl Running<'_> {
             .unwrap_or(false);
         // The enemy spawner's slots are this scene's when its heap holds their block (the
         // spawner's globals keep a past stage's).
-        let zako = game.gr.zako.addr;
+        let zako = game.gr.raw_parts().zako.addr;
         let zako_live = zako != 0
-            && game.gr.zako.slots.is_some()
+            && game.gr.raw_parts().zako.slots.is_some()
             && crate::hsd::heap::with(|h| {
                 h.os.allocated
                     .iter()

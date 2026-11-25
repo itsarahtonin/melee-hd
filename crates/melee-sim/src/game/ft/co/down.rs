@@ -55,7 +55,7 @@ impl Running<'_> {
         }
         let g = self.game.geometry.as_ref().expect("no collision geometry");
         let flags = g.line_surface(fp.coll_data.floor.index);
-        let t = crate::mp::terrain_sounds(self.game.stage_info.grkind, flags);
+        let t = crate::mp::terrain_sounds(self.game.stage_info.ground_kind_id(), flags);
         let (sounds, first) = t.sounds(set);
         let mut out = [0; 4];
         let flag;

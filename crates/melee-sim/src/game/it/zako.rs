@@ -246,32 +246,12 @@ pub fn clear_x1e(game: &mut Game, gobj: GObjId) {
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
     if kind == ItKind::Trophy {
-        // A trophy point's slot (the last) forgets the coin it made.
-        let slots = r
-            .game
-            .gr
-            .zako
-            .slots
-            .as_mut()
-            .expect("grzakogenerator.c: slots");
-        for slot in &mut slots[80..81] {
-            if slot.item == Some(gobj) {
-                slot.item = None;
-            }
-        }
+        crate::game::gr::zako::trophy_coin_left(r.game, gobj, false);
         return;
     }
     let idx = common(r.game, gobj).idx();
     if idx != -1 {
-        let slot = &mut r
-            .game
-            .gr
-            .zako
-            .slots
-            .as_mut()
-            .expect("grzakogenerator.c: slots")[idx as usize];
-        slot.item = None;
-        slot.timer = 2;
+        crate::game::gr::zako::enemy_destroyed(r.game, idx);
     }
 }
 
@@ -853,32 +833,12 @@ pub fn ko(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
     ko_bonus(r, gobj);
     if kind == ItKind::Trophy {
-        // A trophy point's slot (the last) frees, the coin it made taken.
-        let slots = r
-            .game
-            .gr
-            .zako
-            .slots
-            .as_mut()
-            .expect("grzakogenerator.c: slots");
-        for slot in &mut slots[80..81] {
-            if slot.item == Some(gobj) {
-                slot.point = -1;
-                slot.item = None;
-            }
-        }
+        crate::game::gr::zako::trophy_coin_left(r.game, gobj, true);
         return;
     }
     let idx = common(r.game, gobj).idx();
     if idx != -1 {
-        let z = &mut r.game.gr.zako;
-        let slots = z.slots.as_mut().expect("grzakogenerator.c: slots");
-        let off = u32::from((slots[idx as usize].point - 0x20) as u16);
-        slots[idx as usize].item = None;
-        let spawns = z.spawns.expect("grzakogenerator.c: an enemy table");
-        let respawn = r.data.u8(spawns.at(4 * off + 3));
-        r.game.gr.zako.slots.as_mut().unwrap()[idx as usize].timer =
-            if respawn == 1 { 0x708 } else { -1 };
+        crate::game::gr::zako::enemy_kod(r.game, r.data, idx);
         common(r.game, gobj).set_idx(-1);
     }
 }

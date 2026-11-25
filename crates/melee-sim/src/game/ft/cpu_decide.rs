@@ -955,7 +955,7 @@ impl Running<'_> {
     /// step, `ftCo_800A1F98`; never on another stage.
     #[doc(alias = "ftCo_800A1F98")]
     fn cpu_under_acid(&self, frames: i32, y: f32) -> bool {
-        if self.game.stage_info.grkind != GrKind::Zebes {
+        if self.game.stage_info.ground_kind_id() != GrKind::Zebes {
             return false;
         }
         let (level, step) = ground::acid_level_and_step(self.game);
