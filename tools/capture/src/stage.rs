@@ -1573,7 +1573,12 @@ impl Comparer<'_> {
                     );
                     // The trophy word is unknown until written (`Slot::trophy`).
                     if let Some(trophy) = o.trophy {
-                        self.check(&format!("zako slot {i}"), "x8", trophy, self.u32(e + 8) as i32);
+                        self.check(
+                            &format!("zako slot {i}"),
+                            "x8",
+                            trophy,
+                            self.u32(e + 8) as i32,
+                        );
                     }
                     // A slot's GObj can be one freed since (a dangling pointer, compared by
                     // address).
