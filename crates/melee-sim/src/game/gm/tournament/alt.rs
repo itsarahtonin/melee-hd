@@ -13,6 +13,7 @@ use super::bracket::{Counters, Screen, player_x};
 use super::lib::{ckind_of, f, icon_frame, icon_of, scene_model};
 use crate::fpu::{mem, reg};
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -232,7 +233,11 @@ impl Running<'_> {
             let j = self.tou_jobj(g);
             self.tou_set_ty(Some(j), -2.5);
             self.tou_set_index(g, ii);
-            let anim = if pm.slot_type == 0 { mem(f(ii)) } else { 4.0 };
+            let anim = if pm.slot_type == PlayerKind::Human {
+                mem(f(ii))
+            } else {
+                4.0
+            };
             self.tou_frame(Some(j), anim);
             let m = self.alt_m4(8);
             let g = self.tou_model(false, m, 0, 0x1A, 2, true, Some(PROC_READY), 0.0);
@@ -630,7 +635,7 @@ impl Running<'_> {
         let mut colors = [0u8; 4];
         for i in 0..4 {
             let m = self.game.tou.tm.match_players[i];
-            if m.slot_type != 3 {
+            if m.slot_type != PlayerKind::None {
                 chars[i] = ckind_of(i32::from(m.icon));
                 colors[i] = m.color;
             }
@@ -645,7 +650,7 @@ impl Running<'_> {
         self.setup_vs_preload_cache();
         let mut mask = 0u64;
         for (m, &c) in self.game.tou.tm.match_players.iter().zip(&chars) {
-            if m.slot_type != 3 {
+            if m.slot_type != PlayerKind::None {
                 mask |= crate::lb::audio::character_banks(c);
             }
         }

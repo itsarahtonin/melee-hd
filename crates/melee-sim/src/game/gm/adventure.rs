@@ -7,6 +7,7 @@ use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
+use crate::game::pl::player::PlayerKind;
 
 /// `ChKind_None`, `CKind_Kirby`, `CKind_Mario`, `CKind_Luigi`.
 const NONE: u8 = 0x21;
@@ -1313,7 +1314,7 @@ impl Running<'_> {
         {
             for p in &mut self.game.one_player.match_start.players[1..4] {
                 if p.ckind == CharacterKind::Luigi as i8 {
-                    p.slot_type = crate::game::pl::player::PKIND_NONE as u8;
+                    p.slot_type = PlayerKind::None.into();
                 }
             }
         }
@@ -1327,7 +1328,7 @@ impl Running<'_> {
         self.adventure_enter_vs();
         let start = &mut self.game.one_player.match_start;
         for p in &mut start.players[1..4] {
-            if i32::from(p.slot_type) == crate::game::pl::player::PKIND_CPU {
+            if p.slot_type == PlayerKind::Cpu {
                 p.model_scale = 1.4;
             }
         }
@@ -1441,7 +1442,7 @@ impl Running<'_> {
     pub fn adventure_enter_tiny(&mut self) {
         self.adventure_enter_vs();
         for p in &mut self.game.one_player.match_start.players[1..4] {
-            if p.slot_type == 1 {
+            if p.slot_type == PlayerKind::Cpu {
                 p.model_scale =
                     crate::fpu::mem(gekko_fp::fmuls(crate::fpu::reg(p.model_scale), 0.5));
             }

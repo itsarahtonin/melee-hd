@@ -6,9 +6,7 @@ use super::super::state::Game;
 use super::super::structs::{GmStats, MatchEnd};
 use super::match_exit::selkind;
 use crate::game::gm::GameMode;
-
-/// `Gm_PKind_Human`.
-const PKIND_HUMAN: u8 = 0;
+use crate::game::pl::player::PlayerKind;
 
 /// A 16-bit counter one more, held at 0xFFFF.
 fn bump16(v: u16) -> u16 {
@@ -100,7 +98,7 @@ impl Game {
         let n = end
             .player_standings
             .iter()
-            .filter(|p| p.pkind == PKIND_HUMAN)
+            .filter(|p| p.pkind == PlayerKind::Human)
             .count() as u32;
         let s = &mut self.game_data.thing.save_data;
         s.vs_contestants = (s.vs_contestants as u32).wrapping_add(n) as i32;
@@ -181,7 +179,7 @@ pub fn merge_sudden_death(end: &mut MatchEnd, sd: &mut MatchEnd) {
     }
     if sd.n_winners > 1 {
         for i in 0..6 {
-            if sd.player_standings[i].pkind != 3 {
+            if sd.player_standings[i].pkind != PlayerKind::None {
                 sd.player_standings[i].is_big_loser = end.player_standings[i]
                     .is_big_loser
                     .wrapping_add(sd.player_standings[i].is_small_loser);
@@ -197,17 +195,21 @@ pub fn merge_sudden_death(end: &mut MatchEnd, sd: &mut MatchEnd) {
             }
         }
     }
-    let players = sd.player_standings.iter().filter(|p| p.pkind != 3).count() as u8;
+    let players = sd
+        .player_standings
+        .iter()
+        .filter(|p| p.pkind != PlayerKind::None)
+        .count() as u8;
     if end.n_winners > 1 {
         for i in 0..6 {
-            if end.player_standings[i].pkind == 3 {
+            if end.player_standings[i].pkind == PlayerKind::None {
                 continue;
             }
             let (s, e) = (&sd.player_standings[i], &mut end.player_standings[i]);
             e.ftkind = s.ftkind;
             e.coins = e.coins.wrapping_add(s.coins);
             if e.is_big_loser == 0 {
-                if s.pkind == 3 {
+                if s.pkind == PlayerKind::None {
                     e.is_big_loser = e.is_big_loser.wrapping_add(players);
                     e.is_small_loser = e.is_small_loser.wrapping_add(players);
                 } else {
@@ -242,7 +244,9 @@ pub fn merge_sudden_death(end: &mut MatchEnd, sd: &mut MatchEnd) {
 /// Whether any player was human, `gmVsMelee_WasAnyPlayerHuman`.
 #[doc(alias = "gmVsMelee_WasAnyPlayerHuman")]
 pub fn any_human(end: &MatchEnd) -> bool {
-    end.player_standings.iter().any(|p| p.pkind == PKIND_HUMAN)
+    end.player_standings
+        .iter()
+        .any(|p| p.pkind == PlayerKind::Human)
 }
 
 /// Whether the match had several winners (players, or teams in teams), unless it had no
@@ -274,7 +278,7 @@ fn last_place(end: &MatchEnd) -> i32 {
         }
     } else {
         for p in &end.player_standings[..4] {
-            if p.pkind != 3 && i32::from(p.is_big_loser) > max {
+            if p.pkind != PlayerKind::None && i32::from(p.is_big_loser) > max {
                 max = i32::from(p.is_big_loser);
             }
         }
@@ -321,7 +325,7 @@ pub fn loser(end: &MatchEnd) -> usize {
     let mut tied = false;
     for i in 0..4 {
         let p = &ps[i];
-        let last = p.pkind != 3
+        let last = p.pkind != PlayerKind::None
             && if end.is_teams == 1 {
                 i32::from(end.team_standings[usize::from(p.team)].is_big_loser) == result
             } else {
@@ -390,7 +394,7 @@ pub fn stats_winner(end: &MatchEnd) -> i32 {
     let mut winner = 0;
     for i in 0..4 {
         let p = &end.player_standings[i];
-        if p.pkind != 3 && p.is_small_loser == 0 {
+        if p.pkind != PlayerKind::None && p.is_small_loser == 0 {
             winner = i as i32;
         }
     }
@@ -407,10 +411,10 @@ pub fn stats_winner(end: &MatchEnd) -> i32 {
     let ps = &end.player_standings;
     let mut ret = 0;
     for i in 0..4 {
-        if ps[i].pkind != 3 && i32::from(ps[i].team) == team {
+        if ps[i].pkind != PlayerKind::None && i32::from(ps[i].team) == team {
             let mut result = i as i32;
             for j in 0..4 {
-                if ps[j].pkind != 3
+                if ps[j].pkind != PlayerKind::None
                     && i32::from(ps[j].team) == team
                     && i != j
                     && ps[i].is_small_loser > ps[j].is_small_loser
@@ -458,7 +462,7 @@ fn add_stats(end: &MatchEnd, slot: usize, s: &mut GmStats, vs_walk: &mut i32) {
     s.play_time = s.play_time.wrapping_add(end.frame_count / 60);
     let count = end.player_standings[..4]
         .iter()
-        .filter(|q| q.pkind != 3)
+        .filter(|q| q.pkind != PlayerKind::None)
         .count() as u32;
     let total = s.total_player_count.wrapping_add(count);
     s.total_player_count = if total > 0xFFFF { 0xFFFF } else { total };
@@ -486,12 +490,12 @@ impl Game {
     pub fn add_match_stats(&mut self, end: &MatchEnd) {
         let ps = &end.player_standings;
         for i in 0..4 {
-            if ps[i].pkind == 3 {
+            if ps[i].pkind == PlayerKind::None {
                 continue;
             }
             let si = usize::from(selkind(ps[i].ckind as u8));
             for j in 0..4 {
-                if i == j || ps[j].pkind == 3 {
+                if i == j || ps[j].pkind == PlayerKind::None {
                     continue;
                 }
                 let sj = usize::from(selkind(ps[j].ckind as u8));
@@ -506,12 +510,12 @@ impl Game {
         }
         for i in 0..4 {
             let p = &ps[i];
-            if p.pkind == 3 || p.nametag == 0x78 {
+            if p.pkind == PlayerKind::None || p.nametag == 0x78 {
                 continue;
             }
             for j in 0..4 {
                 let q = &ps[j];
-                if i != j && q.pkind != 3 && q.nametag != 0x78 {
+                if i != j && q.pkind != PlayerKind::None && q.nametag != 0x78 {
                     let nt = self.game_data.name_tag(usize::from(p.nametag));
                     let at = usize::from(q.nametag);
                     let v = (i32::from(p.kills[j]) + i32::from(nt.vs_kos[at])).min(0xFFFF);

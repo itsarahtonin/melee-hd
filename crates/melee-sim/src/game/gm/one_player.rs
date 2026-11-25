@@ -18,6 +18,7 @@ use super::super::structs::{StartMeleeData, VsModeData};
 use super::vs_melee::{CssData, SssData};
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
+use crate::game::gr::StKind;
 use gekko_fp as fp;
 
 /// The select's match types (`CSSMatchType`) the modes enter it with.
@@ -406,7 +407,11 @@ const fn cs(
     }
 }
 
-/// `gmClassic_803DDEC8.x00`: Classic's twelve stages, the last the list's end (0xD).
+/// The stage number that ends Classic's list (`CLASSIC_STAGES`).
+pub const CLASSIC_LIST_END: u8 = 0xD;
+
+/// `gmClassic_803DDEC8.x00`: Classic's twelve stages, the last the list's end
+/// ([`CLASSIC_LIST_END`]).
 pub const CLASSIC_STAGES: [ClassicStage; 12] = [
     cs(0x00, 0x00, 0, 300, 0, 2),
     cs(0x01, 0x10, 0, 300, 0, 4),
@@ -419,14 +424,15 @@ pub const CLASSIC_STAGES: [ClassicStage; 12] = [
     cs(0x08, 0x80, 2, 180, 0, 4),
     cs(0x09, 0x04, 0, 300, 0, 2),
     cs(0x0a, 0x20, 0, 300, 0, 2),
-    cs(0x0d, 0x00, 0, 0, 0, 0),
+    cs(CLASSIC_LIST_END, 0x00, 0, 0, 0, 0),
 ];
 
 /// A Classic matchup (`gmClassicMatchup`): its stage kind and up to three opponents
 /// (`ChKind_None` for none).
 pub type Matchup = (u16, [i8; 3]);
 
-const END: u16 = 0x148;
+/// A matchup table's end (`St_Kind_Unk328`).
+const END: u16 = StKind::Unk328.id();
 
 /// `gmClassic_803DDEC8Data.x0C0`: the last stage's (Master Hand's) matchup.
 pub const CLASSIC_FINAL: [Matchup; 2] = [(176, [30, 26, 33]), (END, [0, 0, 0])];
@@ -776,7 +782,7 @@ impl Running<'_> {
     fn classic_pick_matchups(&mut self) {
         let n = CLASSIC_STAGES
             .iter()
-            .position(|s| s.stage == 0xD)
+            .position(|s| s.stage == CLASSIC_LIST_END)
             .expect("the list's end");
         // Which stages each pass picks for, and from which table.
         type Pass = (fn(u8) -> bool, usize);

@@ -26,6 +26,7 @@ use super::render::{FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use crate::fpu::{mem, reg};
 use crate::game::gm::{GameMode, GameScene};
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::fog;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -526,8 +527,7 @@ impl Running<'_> {
         self.game.set_player_ckind(slot, ckind);
         self.game.set_player_costume(slot, costume);
         self.game.set_player_port(slot, 0);
-        self.game
-            .set_player_pkind(slot, super::pl::player::PKIND_DEMO);
+        self.game.set_player_pkind(slot, PlayerKind::Demo);
         self.game.set_player_facing(slot, facing);
         if let Some(p) = pos {
             self.game.set_player_pos(slot, p);
@@ -807,7 +807,7 @@ impl SceneFiles {
         let p = &mut self.players.players[slot];
         p.ckind = ckind as i8;
         p.color = costume;
-        p.slot_type = super::pl::player::PKIND_DEMO as u8;
+        p.slot_type = PlayerKind::Demo.into();
     }
 
     /// A player's demo animations from `file` (`Player_80036E20`'s `idx`) for `pose`: its

@@ -16,6 +16,7 @@ use super::cpu_move::LINE_FLAG_PLATFORM;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CpuKind;
 use crate::game::it::ItKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd;
 use crate::math;
 use crate::vec::Vec3;
@@ -33,9 +34,6 @@ const VS_SP: u32 = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME - 0x48;
 /// 0x50 bytes), with the same 0x48 bytes of its own.
 const NANA_ALONE_SP: u32 = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME - 0x50 - 0x48;
 const BACK_ON_SCREEN_FRAME: u32 = 0x68;
-
-/// `Gm_PKind_Cpu`.
-const PKIND_CPU: i32 = 1;
 
 impl Running<'_> {
     /// The VS decision, `ftCo_800B24B8`. Every call it makes runs with the fighter's
@@ -667,7 +665,7 @@ impl Running<'_> {
                 let pkind = self
                     .game
                     .player_kind(i32::from(other.player_idx), i32::from(other.is_sub_fighter));
-                if pkind == PKIND_CPU && other.cpu.kind != CpuKind::Manual {
+                if pkind == PlayerKind::Cpu && other.cpu.kind != CpuKind::Manual {
                     continue;
                 }
             }

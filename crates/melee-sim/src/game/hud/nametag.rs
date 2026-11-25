@@ -7,7 +7,7 @@ use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::code;
 use super::super::handles::CodeRef;
-use super::super::pl::player::{PKIND_HUMAN, PKIND_NONE};
+use super::super::pl::player::PlayerKind;
 use super::super::state::{Game, OBJ_CAMERA, OBJ_JOBJ, Obj, Running, UserData};
 use super::super::structs::StaticModelDesc;
 use super::{Draw, HIDDEN};
@@ -88,7 +88,7 @@ impl Game {
                 .unwrap_or_else(|| panic!("a tag frame past the table isn't ported"))
         };
         if teams != 0 {
-            if pkind == 0 {
+            if pkind == PlayerKind::Human {
                 return row(port);
             }
             if (self.vs_fighter_shows_hearts(port as i32) || self.vs_single_player_rules())
@@ -98,7 +98,7 @@ impl Game {
             }
             return row(4);
         }
-        if pkind == 0 {
+        if pkind == PlayerKind::Human {
             return FRAMES[port][3];
         }
         18.0
@@ -106,7 +106,7 @@ impl Game {
 
     /// Whether a slot shows a name (a human with a tag).
     fn has_nametag(&self, slot: i32) -> bool {
-        self.player_pkind(slot) == PKIND_HUMAN && self.player_nametag(slot) != NO_NAMETAG
+        self.player_pkind(slot) == PlayerKind::Human && self.player_nametag(slot) != NO_NAMETAG
     }
 
     fn nametag_frame_of(&self, slot: i32) -> f32 {
@@ -215,7 +215,7 @@ impl Running<'_> {
         let s = i32::from(slot);
         let g = &*self.game;
         let child = g.objs.jobjs[j].child;
-        let show = g.player_pkind(s) != PKIND_NONE
+        let show = g.player_pkind(s) != PlayerKind::None
             && g.player_state(s) != 0
             && g.player_stocks(s) != 0
             && (g.hud.nametags.shown[usize::from(slot)] != 0

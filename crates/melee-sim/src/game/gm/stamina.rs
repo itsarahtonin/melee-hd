@@ -4,9 +4,9 @@
 
 use super::super::code::Val;
 use super::super::handles::CodeRef;
-use super::super::pl::player::PKIND_NONE;
 use super::super::state::{Game, Running};
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 
 /// The match start the mode sets (`StartMeleeRules::on_match_start`).
 pub const ON_MATCH_START: u32 = 0x801B_9850;
@@ -33,7 +33,7 @@ impl Game {
         let teams = self.vs.start.is_teams != 0;
         let mut count = 0;
         for i in 0..4 {
-            if self.player_pkind(i) != PKIND_NONE && self.player_stocks(i) == 0 {
+            if self.player_pkind(i) != PlayerKind::None && self.player_stocks(i) == 0 {
                 self.gm.stamina.eliminated[i as usize] = true;
             }
             if self.gm.stamina.eliminated[i as usize] {
@@ -82,7 +82,7 @@ impl Game {
         let g = self;
         g.gm.stamina.done_counter = 0;
         for i in 0..4 {
-            g.gm.stamina.eliminated[i as usize] = g.player_pkind(i) == PKIND_NONE;
+            g.gm.stamina.eliminated[i as usize] = g.player_pkind(i) == PlayerKind::None;
             g.gm.stamina.slomo_counter[i as usize] = 0;
         }
         let gobj = g.world.create(0xF, 0x11, 0);
@@ -97,7 +97,7 @@ impl Game {
     pub fn stamina_proc(&mut self) {
         let g = self;
         for i in 0..4 {
-            if g.player_pkind(i) == PKIND_NONE {
+            if g.player_pkind(i) == PlayerKind::None {
                 continue;
             }
             let c = &mut g.gm.stamina.slomo_counter[i as usize];

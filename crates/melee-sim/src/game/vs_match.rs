@@ -23,6 +23,7 @@ use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
 use crate::game::it::ItKind;
+use crate::game::pl::player::PlayerKind;
 use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
 
@@ -119,9 +120,6 @@ pub struct ReplayStart {
     /// plays with Slippi's.
     pub unlocks: Option<super::gm::Unlocks>,
 }
-
-/// `Gm_PKind`'s computer player.
-const PKIND_CPU: u8 = 1;
 
 /// Whether the rules' item switch can spawn a Super Scope: items on (`it_8026D018`) with its
 /// kind in the switch's mask, which the spawner, the containers and the Party Ball all follow.
@@ -225,7 +223,7 @@ impl Settings {
         };
         let heap = players
             .iter()
-            .any(|p| p.kind == PKIND_CPU || p.character == CharacterKind::IceClimbers)
+            .any(|p| p.kind == PlayerKind::Cpu || p.character == CharacterKind::IceClimbers)
             || scope_on(&start.rules);
         Settings {
             start,
@@ -282,7 +280,7 @@ impl Settings {
             && s.start
                 .players
                 .iter()
-                .any(|p| p.slot_type != 3 && p.ckind == CharacterKind::Mars)
+                .any(|p| p.slot_type != PlayerKind::None && p.ckind == CharacterKind::Mars)
         {
             return Err(CodeError::Unknown {
                 kind: 0xC2,
@@ -337,7 +335,7 @@ impl Settings {
         rules.playback_runs_model(
             d.players
                 .iter()
-                .any(|p| p.slot_type != 3 && p.ckind == CharacterKind::Samus),
+                .any(|p| p.slot_type != PlayerKind::None && p.ckind == CharacterKind::Samus),
         )
     }
 
@@ -404,7 +402,9 @@ impl Settings {
 pub fn retail_kinds(start: &StartMeleeData) -> Result<(), CodeError> {
     for (slot, p) in start.players.iter().enumerate() {
         let kind = p.ckind as u8;
-        if kind > CharacterKind::NONE || (kind == CharacterKind::NONE && p.slot_type != 3) {
+        if kind > CharacterKind::NONE
+            || (kind == CharacterKind::NONE && p.slot_type != PlayerKind::None)
+        {
             return Err(CodeError::ModdedCharacter {
                 slot: slot as u8,
                 kind,
@@ -973,7 +973,7 @@ pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, 
         _ => Vec::new(),
     };
     for p in &start.players {
-        if i32::from(p.slot_type) == super::pl::player::PKIND_NONE {
+        if p.slot_type == PlayerKind::None {
             continue;
         }
         let m = super::pl::player::mapping(i32::from(p.ckind));
@@ -1036,7 +1036,7 @@ pub fn load_fighter_files(
     add(files, data, "PlCo.dat");
     let mut anims: Vec<&'static str> = Vec::new();
     for p in &start.players {
-        if i32::from(p.slot_type) == super::pl::player::PKIND_NONE {
+        if p.slot_type == PlayerKind::None {
             continue;
         }
         let m = super::pl::player::mapping(i32::from(p.ckind));
@@ -1073,16 +1073,13 @@ pub fn load_fighter_files(
     let kirby_costumes: Vec<usize> = start
         .players
         .iter()
-        .filter(|p| {
-            i32::from(p.slot_type) != super::pl::player::PKIND_NONE
-                && i32::from(p.ckind) == CharacterKind::Kirby
-        })
+        .filter(|p| p.slot_type != PlayerKind::None && i32::from(p.ckind) == CharacterKind::Kirby)
         .map(|p| usize::from(p.color))
         .collect();
     if !kirby_costumes.is_empty() {
         use super::ft::kirby::init::{COPY_FILES, copy_costume_files};
         for p in &start.players {
-            if i32::from(p.slot_type) == super::pl::player::PKIND_NONE {
+            if p.slot_type == PlayerKind::None {
                 continue;
             }
             let m = super::pl::player::mapping(i32::from(p.ckind));
@@ -1391,7 +1388,7 @@ pub fn load_results_files(
         add(files, data, name);
     }
     for p in &start.players {
-        if i32::from(p.slot_type) == super::pl::player::PKIND_NONE {
+        if p.slot_type == PlayerKind::None {
             continue;
         }
         let ck = i32::from(p.ckind);

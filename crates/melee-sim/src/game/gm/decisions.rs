@@ -6,6 +6,7 @@
 
 use super::super::state::{Game, Running};
 use super::super::structs::MatchEnd;
+use crate::game::pl::player::PlayerKind;
 
 /// A decision (`struct lbl_803D5A4C_t`): its kind, its text and points' index (`x2`), the
 /// match kinds it counts in (`x4`, a mask the caller's flags test), whether it counts points
@@ -403,7 +404,7 @@ fn score_ranks(r: &MatchEnd) -> [u8; 7] {
     let mut scores = [0i32; 6];
     let mut ranks = [0u8; 7];
     for k in 0..6 {
-        if p[k].pkind != 3 {
+        if p[k].pkind != PlayerKind::None {
             let sd = i32::from(p[k].self_destructs);
             scores[k] = p[k]
                 .kos
@@ -413,11 +414,11 @@ fn score_ranks(r: &MatchEnd) -> [u8; 7] {
         }
     }
     for i in 0..6 {
-        if p[i].pkind == 3 {
+        if p[i].pkind == PlayerKind::None {
             continue;
         }
         for j in 0..6 {
-            if p[j].pkind != 3 && i != j && scores[i] < scores[j] {
+            if p[j].pkind != PlayerKind::None && i != j && scores[i] < scores[j] {
                 ranks[i] = ranks[i].wrapping_add(1);
             }
         }
@@ -603,13 +604,21 @@ impl Running<'_> {
         let au = a as usize;
         let flags = &r.mode_bonuses;
         let bit = |b: u8, n: u32| (b >> n) & 1 != 0;
-        let others = |f: &dyn Fn(usize) -> bool| (0..4).any(|i| p[i].pkind != 3 && i != au && f(i));
+        let others = |f: &dyn Fn(usize) -> bool| {
+            (0..4).any(|i| p[i].pkind != PlayerKind::None && i != au && f(i))
+        };
         let one = |c: bool| i32::from(c);
         let net = |i: usize| p[i].falls.wrapping_sub(i32::from(p[i].self_destructs));
         // The most of a value, at least three and twice the next (`0xDB`, `0xDD`, `0xDF`,
         // `0xE1`): the values of the slots that play, 0 for the others.
         let most = |f: &dyn Fn(usize) -> i32, mine: i32| {
-            let mut v: [i32; 4] = core::array::from_fn(|i| if p[i].pkind != 3 { f(i) } else { 0 });
+            let mut v: [i32; 4] = core::array::from_fn(|i| {
+                if p[i].pkind != PlayerKind::None {
+                    f(i)
+                } else {
+                    0
+                }
+            });
             sort4(&mut v, |x, y| x < y);
             v[0] as u32 == mine as u32 && v[0] >= v[1].wrapping_mul(2)
         };
@@ -700,7 +709,7 @@ impl Running<'_> {
             0xF5 => one(bit(flags[1], 3)),
             0xF9 => {
                 let mut v: [f32; 4] = core::array::from_fn(|i| {
-                    if p[i].pkind != 3 {
+                    if p[i].pkind != PlayerKind::None {
                         self.game.hit_rate_record(i as i32)
                     } else {
                         0.0
@@ -714,7 +723,7 @@ impl Running<'_> {
             0xFB => {
                 let mut min = 0.0f32;
                 for (i, s) in p.iter().enumerate().take(4) {
-                    if s.pkind != 3 && min > self.game.lowest_value(i as i32) {
+                    if s.pkind != PlayerKind::None && min > self.game.lowest_value(i as i32) {
                         min = self.game.lowest_value(i as i32);
                     }
                 }
@@ -753,7 +762,7 @@ impl Running<'_> {
                 }
                 let mut v: [u32; 4] = core::array::from_fn(|i| {
                     let x = self.game.player(i as i32).ext.shortest_hold;
-                    if p[i].pkind != 3 && x != 0 {
+                    if p[i].pkind != PlayerKind::None && x != 0 {
                         x
                     } else {
                         0x0FFF_FFFF
@@ -771,7 +780,7 @@ impl Running<'_> {
                     return 1;
                 }
                 let mut v: [u32; 4] = core::array::from_fn(|i| {
-                    if p[i].pkind != 3 {
+                    if p[i].pkind != PlayerKind::None {
                         self.game.player(i as i32).ext.longest_hold
                     } else {
                         0

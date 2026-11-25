@@ -7,7 +7,7 @@ use gekko_fp as fp;
 use melee_data::archive::Archives;
 
 use super::data::common;
-use super::item::{article, common_data, is_fighter};
+use super::item::{HoldKind, article, common_data, is_fighter};
 use super::{flag, item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::code;
@@ -788,7 +788,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
         let me = item(r.game, gobj);
         if !flag(me.draw_flags, 1) {
             let pos = hit.hurt_coll_pos;
-            if me.hold_kind == 4 || me.hold_kind == 6 {
+            if me.hold_kind == HoldKind::StageItem || me.hold_kind == HoldKind::Monster {
                 // An enemy's: the hit's own effect by element. The effects but the spark and
                 // 1005 are handed the item, which they don't read.
                 use crate::game::ef::Arg;
@@ -1136,7 +1136,7 @@ pub fn push_from_items(game: &mut Game, data: &Archives, gobj: GObjId, heavy_onl
             && if heavy_only {
                 super::lib26b1::is_heavy(game, data, g)
             } else {
-                other.hold_kind != 3 || me.flags.flags.pushed_by_enemies
+                other.hold_kind != HoldKind::StageHurtbox || me.flags.flags.pushed_by_enemies
             };
         if candidate {
             let oj = jobj_of(game, g).expect("jobj");

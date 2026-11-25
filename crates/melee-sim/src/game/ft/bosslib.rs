@@ -14,6 +14,7 @@ use super::super::state::Running;
 use super::masterhand::{attr, mv as hand_mv};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -24,8 +25,6 @@ const MS_DEAD_DOWN: i32 = 0;
 const MH_MS_ENTRY: i32 = 343;
 /// Crazy Hand's state `ftBossLib_8015C2A8` tests.
 const CH_MS_183: i32 = 0x183;
-/// `Gm_PKind_Boss`.
-const PKIND_BOSS: i32 = 4;
 
 impl Running<'_> {
     /// Nothing, `ftBossLib_8015BD20`: a human-played hand's input callback.
@@ -56,10 +55,7 @@ impl Running<'_> {
     pub fn boss_check_slot(&self, gobj: GObjId) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         let kind = self.game.player_pkind(slot);
-        if kind != super::super::pl::player::PKIND_HUMAN
-            && kind != PKIND_BOSS
-            && kind != super::super::pl::player::PKIND_CPU
-        {
+        if kind != PlayerKind::Human && kind != PlayerKind::Boss && kind != PlayerKind::Cpu {
             panic!("the original's assertion failed: boss is human or boss!");
         }
     }

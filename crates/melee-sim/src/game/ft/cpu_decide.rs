@@ -11,8 +11,8 @@ use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
-use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
+use crate::game::ft::{CpuBehavior, CpuKind};
 use crate::game::it::ItKind;
 use crate::math;
 use crate::mp::FloorR5;
@@ -182,12 +182,6 @@ const BEHAVIOR_FRAME: u32 = 0x90;
 const BEHAVIOR_FLAGS_SLOT: u32 = 0x58;
 const CHECK_FLOOR_FRAME: u32 = 0xF0;
 const CHECK_FLOOR_SLOT: u32 = 0x44;
-
-/// Behaviors (`CpuFighter::x18`) the decision switches to.
-pub mod behavior {
-    pub const WAIT_OUT: i32 = 4;
-    pub const DI: i32 = 0x12;
-}
 
 impl Running<'_> {
     /// Whether `(x, y)` is out of reach of the blast zones, padded by the fighter's half size
@@ -627,7 +621,7 @@ impl Running<'_> {
             fpp.cpu.hold_choice = 0;
         }
         // DI in hitstun.
-        if fpp.cpu.behavior == behavior::DI {
+        if fpp.cpu.behavior == CpuBehavior::Di {
             return (true, r5);
         }
         let switch = if fpp.kind == FighterKind::GKoopa
@@ -648,7 +642,7 @@ impl Running<'_> {
         if switch {
             // `ftCo_800B4A78` leaves r5 alone.
             self.cpu_script_clear(f);
-            self.game.fighters[f.0].cpu.behavior = behavior::DI;
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::Di.id();
             return (true, r5);
         }
         let r5 = Leftover::Unknown("ftCo_800ADE48");
@@ -659,117 +653,117 @@ impl Running<'_> {
         macro_rules! switch_to {
             ($b:expr) => {{
                 self.cpu_script_clear(f);
-                self.game.fighters[f.0].cpu.behavior = $b;
+                self.game.fighters[f.0].cpu.behavior = CpuBehavior::id($b);
                 return (true, r5);
             }};
         }
         // Leaving a barrel (`ftCo_MS_BarrelWait`, `ftCo_MS_Barrel`).
-        if x18 == 0x11 {
+        if x18 == CpuBehavior::Barrel {
             return (true, r5);
         }
         if ms == 0x125 || ms == 0x154 {
-            switch_to!(0x11);
+            switch_to!(CpuBehavior::Barrel);
         }
         // Riding a Warp Star.
-        if x18 == 0x13 {
+        if x18 == CpuBehavior::WarpStar {
             return (true, r5);
         }
         if ms == 0x131 || ms == 0x132 {
-            switch_to!(0x13);
+            switch_to!(CpuBehavior::WarpStar);
         }
         // Lying down.
-        if x18 == 5 {
+        if x18 == CpuBehavior::GetUp {
             return (true, r5);
         }
         if matches!(ms, 0xB7 | 0xB8 | 0xBF | 0xC0) {
-            switch_to!(5);
+            switch_to!(CpuBehavior::GetUp);
         }
         // On a ledge.
-        if x18 == 6 {
+        if x18 == CpuBehavior::Ledge {
             return (true, r5);
         }
         if matches!(ms, 0xFC | 0xFD) {
-            switch_to!(6);
+            switch_to!(CpuBehavior::Ledge);
         }
         // Holding a fighter.
-        if x18 == 9 {
+        if x18 == CpuBehavior::Hold {
             return (true, r5);
         }
         if self.cpu_is_grabbing(f) {
-            switch_to!(9);
+            switch_to!(CpuBehavior::Hold);
         }
-        if self.game.fighters[f.0].cpu.behavior == behavior::WAIT_OUT {
+        if self.game.fighters[f.0].cpu.behavior == CpuBehavior::Recover {
             return (true, r5);
         }
         if self.cpu_falling_away(f) {
-            switch_to!(behavior::WAIT_OUT);
+            switch_to!(CpuBehavior::Recover);
         }
         let x18 = self.game.fighters[f.0].cpu.behavior;
         let fpp = &self.game.fighters[f.0];
         // Tumbling (`ftCo_MS_DamageFall`) at level 5 and up.
-        if x18 == 0xF {
+        if x18 == CpuBehavior::Tumble {
             return (true, r5);
         }
         if fpp.cpu.level >= 5 && fpp.motion_id == 0x26 {
-            switch_to!(0xF);
+            switch_to!(CpuBehavior::Tumble);
         }
         // Held.
-        if x18 == 0x10 {
+        if x18 == CpuBehavior::Mash {
             return (true, r5);
         }
         let ms = fpp.motion_id;
         if ms == 0xE0 || ms == 0xE3 || (0x10A..=0x10E).contains(&ms) {
-            switch_to!(0x10);
+            switch_to!(CpuBehavior::Mash);
         }
         // Shielding or dodging.
-        if self.game.fighters[f.0].cpu.behavior == 7 {
+        if self.game.fighters[f.0].cpu.behavior == CpuBehavior::Shield {
             self.cpu_shield_threat(f);
             return (true, r5);
         }
         if self.cpu_shield_chance(f) && self.cpu_shield_threat(f) != 0 {
-            switch_to!(7);
+            switch_to!(CpuBehavior::Shield);
         }
-        if self.game.fighters[f.0].cpu.behavior == 3 {
+        if self.game.fighters[f.0].cpu.behavior == CpuBehavior::Ranged {
             return (true, r5);
         }
         if self.cpu_ranged_attack(f) {
-            switch_to!(3);
+            switch_to!(CpuBehavior::Ranged);
         }
-        if self.game.fighters[f.0].cpu.behavior == 2 {
+        if self.game.fighters[f.0].cpu.behavior == CpuBehavior::Attack {
             return (true, r5);
         }
         if self.cpu_attack(f) {
-            switch_to!(2);
+            switch_to!(CpuBehavior::Attack);
         }
-        if self.game.fighters[f.0].cpu.behavior == 8 {
+        if self.game.fighters[f.0].cpu.behavior == CpuBehavior::JumpAtTarget {
             return (true, r5);
         }
         let jump = self.cpu_jump_attack(f);
         let c = &mut self.game.fighters[f.0].cpu;
         c.jump_kind = (jump & 3) as u8;
         if c.jump_kind != 0 {
-            c.behavior = 8;
+            c.behavior = CpuBehavior::JumpAtTarget.id();
             return (true, r5);
         }
-        if self.game.fighters[f.0].cpu.behavior == 0xD {
+        if self.game.fighters[f.0].cpu.behavior == CpuBehavior::PickUp {
             return (true, r5);
         }
         if self.cpu_item_pickup(f) {
-            self.game.fighters[f.0].cpu.behavior = 0xD;
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::PickUp.id();
             return (true, r5);
         }
-        if self.game.fighters[f.0].cpu.behavior == 0xE {
+        if self.game.fighters[f.0].cpu.behavior == CpuBehavior::ThrowItem {
             return (true, r5);
         }
         if self.cpu_throws_held_item(f) {
-            self.game.fighters[f.0].cpu.behavior = 0xE;
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::ThrowItem.id();
             return (true, r5);
         }
         let c = &self.game.fighters[f.0].cpu;
-        if c.behavior == 0xA {
+        if c.behavior == CpuBehavior::Stand {
             return (true, r5);
         }
-        if c.alt_behavior != 0 && self.cpu_at_destination(f, 0.0) {
+        if c.alt_behavior != CpuBehavior::Idle && self.cpu_at_destination(f, 0.0) {
             let c = &mut self.game.fighters[f.0].cpu;
             c.behavior = c.alt_behavior;
             return (true, r5);

@@ -13,6 +13,7 @@ mod sound_test;
 
 use crate::game::ft::CharacterKind;
 use crate::game::gr::StKind;
+use crate::game::pl::player::PlayerKind;
 pub use boot::{AUX_DELAY, AUX_REVERB_STD, SavedSound, SoundBank, balance_fx, balance_voice};
 pub use sound_test::{character_song, song_flag};
 
@@ -1580,7 +1581,7 @@ impl crate::game::state::Running<'_> {
             }
         } else {
             for i in 0..4 {
-                if self.game.player_pkind(i) != crate::game::pl::player::PKIND_NONE {
+                if self.game.player_pkind(i) != PlayerKind::None {
                     result |= character_banks(self.game.player_ckind(i));
                 }
             }

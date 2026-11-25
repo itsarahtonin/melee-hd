@@ -635,7 +635,10 @@ fn hold_kind() {
     leaf_check::shard_test!();
     check("Item_802674AC", &|_, a| {
         let spawn: SpawnItem = a.get(0);
-        Ret::Words(a.int(0) + 0xC, vec![item::hold_kind_of(spawn.kind) as u32])
+        Ret::Words(
+            a.int(0) + 0xC,
+            vec![item::hold_kind_of(spawn.kind).id() as u32],
+        )
     });
 }
 

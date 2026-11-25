@@ -11,6 +11,7 @@ use super::lib::{ckind_of, f, icon_frame, scene_model};
 use super::{Loaded, STATE_SSS, STATE_VS};
 use crate::fpu::{mem, reg};
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -296,7 +297,7 @@ impl Running<'_> {
     /// screen a human (a computer plays on without one).
     fn screen_unplugged(&self, s: &Screen, p: usize) -> bool {
         self.tou_pad_err(p) != 0
-            && (!s.step_only || self.game.tou.tm.match_players[p].slot_type != 1)
+            && (!s.step_only || self.game.tou.tm.match_players[p].slot_type != PlayerKind::Cpu)
     }
 
     /// The bracket's screen hidden outside the players' step, and shown in it; whether to
@@ -395,7 +396,7 @@ impl Running<'_> {
         if a.state == 0
             && self.scr(s).choice[p] == 6
             && a.done != 0
-            && self.game.tou.tm.match_players[p].slot_type != 0
+            && self.game.tou.tm.match_players[p].slot_type != PlayerKind::Human
         {
             a.state = 1;
             a.done = 0;
@@ -501,7 +502,9 @@ impl Running<'_> {
         } else {
             self.scr(s).bounce[p] = 0;
         }
-        if self.tou_pad_err(p) != 0 && self.game.tou.tm.match_players[p].slot_type != 1 {
+        if self.tou_pad_err(p) != 0
+            && self.game.tou.tm.match_players[p].slot_type != PlayerKind::Cpu
+        {
             self.tou_show(Some(j));
             let x = player_x(self.game.tou.tm.players_per_match, p as i32);
             self.tou_move(j, fp::fadds(reg(0.3), x), reg(s.tag_y), 666.0);
@@ -570,7 +573,7 @@ impl Running<'_> {
         if !self.screen_shown(&PLAYERS, j, p) {
             return;
         }
-        if self.game.tou.tm.match_players[p].slot_type == 1 {
+        if self.game.tou.tm.match_players[p].slot_type == PlayerKind::Cpu {
             self.tou_hide(Some(j));
         }
         let x = player_x(self.game.tou.tm.players_per_match, p as i32);
@@ -596,7 +599,7 @@ impl Running<'_> {
         if !self.screen_shown(&PLAYERS, j, p) {
             return;
         }
-        if self.game.tou.tm.match_players[p].slot_type != 1 {
+        if self.game.tou.tm.match_players[p].slot_type != PlayerKind::Cpu {
             self.tou_hide(Some(j));
         }
         let x = player_x(self.game.tou.tm.players_per_match, p as i32);
@@ -874,7 +877,7 @@ impl Running<'_> {
             let j = self.tou_jobj(g);
             self.tou_set_index(g, i as i32);
             let m = self.game.tou.tm.match_players[i];
-            if m.slot_type == 1 {
+            if m.slot_type == PlayerKind::Cpu {
                 self.tou_frame(Some(j), mem(f(i32::from(m.level))));
             } else {
                 self.tou_hide(Some(j));
@@ -930,7 +933,7 @@ impl Running<'_> {
         let me = &self.game.tou.match_end;
         for i in 0..4 {
             let p = &me.player_standings[i];
-            if p.pkind != 3 && p.is_small_loser == 0 {
+            if p.pkind != PlayerKind::None && p.is_small_loser == 0 {
                 return i as i32;
             }
         }
@@ -998,7 +1001,7 @@ impl Running<'_> {
             }
         } else if self.game.tou.tm.to_match == 1 {
             for i in 0..4 {
-                if self.game.tou.bracket[idx].slots[i].slot_type == 3 {
+                if self.game.tou.bracket[idx].slots[i].slot_type == PlayerKind::None {
                     self.game.tou.bracket[idx].slots[i].rank = 3;
                 } else {
                     let p = &mut self.game.tou.match_end.player_standings[i];
@@ -1014,7 +1017,7 @@ impl Running<'_> {
             let mut count = 0;
             for i in 0..4 {
                 let s = &mut self.game.tou.bracket[idx].slots[i];
-                if s.slot_type == 3 {
+                if s.slot_type == PlayerKind::None {
                     s.rank = 4;
                 } else {
                     s.rank = count;
@@ -1057,7 +1060,7 @@ impl Running<'_> {
         let s = self.game.tou.bracket[idx].slots[sel];
         self.br().winner_seat = sel as u8;
         self.br().winner_type = s.slot_type;
-        if s.slot_type == 0 && self.game.tou.bracket[idx].height != 0 {
+        if s.slot_type == PlayerKind::Human && self.game.tou.bracket[idx].height != 0 {
             let tag = self.game.tou.tm.match_players[sel].name;
             self.tou_rumble(sel, tag.min(0x78) as u8, 0x1F, 0x78);
         }
@@ -1223,7 +1226,7 @@ impl Running<'_> {
         let mut ready = 0;
         let mut unplugged = false;
         for i in 0..n {
-            if self.game.tou.tm.match_players[i].slot_type == 1 {
+            if self.game.tou.tm.match_players[i].slot_type == PlayerKind::Cpu {
                 ready += 1;
                 continue;
             }
@@ -1253,7 +1256,8 @@ impl Running<'_> {
                 return;
             }
             for i in 0..n {
-                if self.game.tou.tm.match_players[i].slot_type == 0 && self.br().anims[i].state == 4
+                if self.game.tou.tm.match_players[i].slot_type == PlayerKind::Human
+                    && self.br().anims[i].state == 4
                 {
                     self.game.tou.tm.match_players[i].slot_type = 3;
                 }
@@ -1289,7 +1293,9 @@ impl Running<'_> {
         }
         self.br().step_frames = 0;
         for i in 0..n {
-            if self.tou_pad_err(i) != 0 || self.game.tou.tm.match_players[i].slot_type != 0 {
+            if self.tou_pad_err(i) != 0
+                || self.game.tou.tm.match_players[i].slot_type != PlayerKind::Human
+            {
                 continue;
             }
             let b = self.tou_triggered(i as i32);
@@ -1513,7 +1519,7 @@ impl Running<'_> {
         let mut colors = [0u8; 4];
         for i in 0..4 {
             let m = self.game.tou.tm.match_players[i];
-            if m.slot_type != 3 {
+            if m.slot_type != PlayerKind::None {
                 chars[i] = ckind_of(i32::from(m.icon));
                 colors[i] = m.color;
             }
@@ -1526,7 +1532,7 @@ impl Running<'_> {
         };
         self.setup_vs_preload_cache();
         for i in 0..4 {
-            if self.game.tou.tm.match_players[i].slot_type != 3 {
+            if self.game.tou.tm.match_players[i].slot_type != PlayerKind::None {
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;
                 gc.entries[i].char_id = chars[i];
                 gc.entries[i].color = colors[i];
@@ -1538,7 +1544,7 @@ impl Running<'_> {
         self.preload_refresh();
         let mut mask = 0u64;
         for (m, &c) in self.game.tou.tm.match_players.iter().zip(&chars) {
-            if m.slot_type != 3 {
+            if m.slot_type != PlayerKind::None {
                 mask |= crate::lb::audio::character_banks(c);
             }
         }

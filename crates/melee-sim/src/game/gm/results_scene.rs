@@ -12,6 +12,7 @@ use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use super::super::structs::MatchEnd;
 use crate::fpu::mem;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -138,11 +139,6 @@ pub fn canceled(outcome: u8) -> bool {
     outcome == super::match_exit::OUTCOME_NO_CONTEST || outcome == super::match_exit::OUTCOME_RETRY
 }
 
-/// `Gm_PKind_Human`, `Gm_PKind_Cpu`, `Gm_PKind_NA`.
-pub const PKIND_HUMAN: u8 = 0;
-pub const PKIND_CPU: u8 = 1;
-pub const PKIND_NA: u8 = 3;
-
 /// `HSD_GOBJ_CLASS_CAMERA`, `HSD_GOBJ_CLASS_LIGHT`, the screen's models' class.
 const CLASS_CAMERA: u16 = 0x13;
 const CLASS_LIGHT: u16 = 0xB;
@@ -254,7 +250,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8016F140")]
     fn results_bonus_count(&mut self, slot: u8) -> i32 {
         let me = self.results_end();
-        let human = me.player_standings[usize::from(slot)].pkind == PKIND_HUMAN;
+        let human = me.player_standings[usize::from(slot)].pkind == PlayerKind::Human;
         let earned: Vec<usize> = (0..0x100)
             .filter(|&i| me.decisions[usize::from(slot)].earned[i] != 0)
             .collect();
@@ -276,7 +272,7 @@ impl Running<'_> {
         let mut x4 = 0;
         for i in 0..4 {
             let p = &me.player_standings[i];
-            if p.pkind != PKIND_NA && p.is_small_loser == 0 {
+            if p.pkind != PlayerKind::None && p.is_small_loser == 0 {
                 x4 = i as u8;
             }
         }
@@ -291,12 +287,12 @@ impl Running<'_> {
         if me.is_teams == 1 {
             'found: for i in 0..4 {
                 let pi = &me.player_standings[i];
-                if pi.pkind == PKIND_NA || pi.team != x5 {
+                if pi.pkind == PlayerKind::None || pi.team != x5 {
                     continue;
                 }
                 for j in 0..4 {
                     let pj = &me.player_standings[j];
-                    if pj.pkind != PKIND_NA
+                    if pj.pkind != PlayerKind::None
                         && pj.team == x5
                         && i != j
                         && pi.is_small_loser > pj.is_small_loser
@@ -361,7 +357,7 @@ impl Running<'_> {
         self.results_winners();
         let x6 = usize::from(self.game.results.data.team_best);
         let w = &me.player_standings[x6];
-        if w.pkind == PKIND_HUMAN && !canceled(me.outcome) && w.flags[0] & 0x02 != 0 {
+        if w.pkind == PlayerKind::Human && !canceled(me.outcome) && w.flags[0] & 0x02 != 0 {
             self.alarm_rumble_catch_up();
             self.rumble_start(x6 as u8, 3, 0x20, 0);
         }
@@ -396,7 +392,7 @@ impl Running<'_> {
         }
         for i in 0..4 {
             let p = &me.player_standings[i];
-            if p.pkind == PKIND_NA {
+            if p.pkind == PlayerKind::None {
                 continue;
             }
             self.results_images(i);
@@ -570,7 +566,7 @@ impl Running<'_> {
         let flames = [model(3), model(2), model(1)];
         for (i, &pos) in spots.iter().enumerate() {
             let p = &me.player_standings[i];
-            if p.pkind == PKIND_NA {
+            if p.pkind == PlayerKind::None {
                 continue;
             }
             let mut place = if me.is_teams == 0 {
@@ -667,7 +663,7 @@ pub(super) fn column_color(me: &MatchEnd, slot: usize) -> [u8; 4] {
         return [0xFF; 4];
     }
     let p = &me.player_standings[slot];
-    let c = if p.pkind == PKIND_NA {
+    let c = if p.pkind == PlayerKind::None {
         4
     } else {
         match p.team {

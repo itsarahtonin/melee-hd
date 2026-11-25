@@ -50,6 +50,7 @@
 use super::state::{Game, Running, UserData};
 use super::structs::{PlayerInitData, StartMeleeData, StartMeleeRules};
 use crate::game::ft::CharacterKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 
 /// The version the recording writes, `CURRENT_VERSION` (major, minor, build, unused).
@@ -94,8 +95,6 @@ pub const FIRST_FRAME: i32 = -123;
 
 /// `StartMeleeData`'s callbacks, which the codes clear in what they send (0x40 to 0x5C).
 const CALLBACKS: core::ops::Range<usize> = 0x40..0x5C;
-/// `Gm_PKind_Human`, a player's slot type the codes test for.
-const PKIND_HUMAN: u8 = 0;
 /// No nametag.
 const NO_NAMETAG: u8 = 0x78;
 /// The A button in a pad status.
@@ -214,7 +213,7 @@ pub fn live_start(g: &Game, d: &StartMeleeData) -> (super::vs_match::ReplayStart
     let mut nametags = [[0u16; 8]; 4];
     for (port, tag) in nametags.iter_mut().enumerate() {
         let p = 0x60 + 0x24 * port;
-        if info[p + 1] != PKIND_HUMAN {
+        if info[p + 1] != PlayerKind::Human {
             continue;
         }
         // As the recording codes write it ([`Recorder::game_start`]): Zelda held A as the
@@ -415,7 +414,7 @@ impl Recorder {
         info[CALLBACKS].fill(0);
         for port in 0..4 {
             let p = 0x60 + 0x24 * port;
-            if info[p + 1] != PKIND_HUMAN {
+            if info[p + 1] != PlayerKind::Human {
                 continue;
             }
             // Zelda holding A as the match starts is Sheik.
@@ -437,7 +436,7 @@ impl Recorder {
         }
         for port in 0..4 {
             let p = 0x60 + 0x24 * port;
-            let has = info[p + 1] == PKIND_HUMAN && info[p + 10] != NO_NAMETAG;
+            let has = info[p + 1] == PlayerKind::Human && info[p + 10] != NO_NAMETAG;
             let tag = match (has, from_menus) {
                 (false, _) => [0; 8],
                 (true, true) => name_tag_text(g, info[p + 10]),
@@ -683,7 +682,11 @@ impl Recorder {
             0xFF
         });
         for p in &copy.vs.state.match_end.player_standings[..4] {
-            w.u8(if p.pkind == 3 { 0xFF } else { p.is_small_loser });
+            w.u8(if p.pkind == PlayerKind::None {
+                0xFF
+            } else {
+                p.is_small_loser
+            });
         }
         self.frame_buf.clear();
         self.raw.extend_from_slice(&w.0);

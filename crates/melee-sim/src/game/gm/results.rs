@@ -10,9 +10,8 @@ use super::super::state::{Game, Running};
 use super::super::structs::MatchEnd;
 use crate::fpu::reg;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 
-/// `Gm_PKind_NA`: no player in the slot.
-const PKIND_NA: u8 = 3;
 /// `OUTCOME_TIMEOUT`, `OUTCOME_1P_GAME_OVER`.
 const OUTCOME_TIMEOUT: u8 = 1;
 const OUTCOME_1P_GAME_OVER: u8 = 4;
@@ -113,7 +112,7 @@ impl Running<'_> {
     pub(crate) fn compile_results_into(&mut self, r: &mut MatchEnd) {
         self.game.fill_standings(r);
         for i in 0..6 {
-            if r.player_standings[i].pkind != PKIND_NA {
+            if r.player_standings[i].pkind != PlayerKind::None {
                 r.player_standings[i].score =
                     if self.game.game_mode != GameMode::Stamina && r.match_kind == 3 {
                         self.tally_bonuses(i as i32);
@@ -135,7 +134,7 @@ impl Game {
         let mut r = std::mem::take(&mut self.vs.state.match_end);
         self.fill_standings(&mut r);
         for i in 0..6 {
-            if r.player_standings[i].pkind != PKIND_NA {
+            if r.player_standings[i].pkind != PlayerKind::None {
                 r.player_standings[i].score = self.player_score(&r, i);
                 r.player_standings[i].sub_rank = sub_rank(&r, i);
             }
@@ -161,7 +160,7 @@ impl Game {
         for (i, row) in kills.iter_mut().enumerate() {
             let pkind = self.player_pkind(i as i32) as u8;
             r.player_standings[i].pkind = pkind;
-            if pkind == PKIND_NA {
+            if pkind == PlayerKind::None {
                 continue;
             }
             let s = i as i32;
@@ -233,7 +232,7 @@ impl Game {
             p.timed_stat_4 = (pl.ext.altered_frames / 60) as i32;
             p.teammate_hits = pl.stale_moves.teammate_hits as u32;
             for (j, k) in row.iter_mut().enumerate() {
-                if r.player_standings[j].pkind != PKIND_NA {
+                if r.player_standings[j].pkind != PlayerKind::None {
                     *k = self.player_kos(s, j as i32) as u16;
                 }
             }
@@ -242,12 +241,12 @@ impl Game {
             p.kills_rest = row[4];
         }
         for (i, row) in kills.iter().enumerate() {
-            if r.player_standings[i].pkind == PKIND_NA {
+            if r.player_standings[i].pkind == PlayerKind::None {
                 continue;
             }
             let team_i = r.player_standings[i].team;
             for (j, &k) in row.iter().enumerate() {
-                if r.player_standings[j].pkind == PKIND_NA {
+                if r.player_standings[j].pkind == PlayerKind::None {
                     continue;
                 }
                 let other = if r.is_teams == 1 {
@@ -298,7 +297,7 @@ impl Game {
             return v;
         }
         let count = (0..6)
-            .filter(|&i| self.player_pkind(i) != i32::from(PKIND_NA))
+            .filter(|&i| self.player_pkind(i) != PlayerKind::None)
             .count();
         match count {
             2 => f64::from(0.9_f32),
@@ -364,7 +363,7 @@ impl Game {
     #[doc(alias = "fn_80165E7C")]
     fn team_scores(&self, r: &mut MatchEnd) {
         for i in 0..6 {
-            if r.player_standings[i].pkind == PKIND_NA {
+            if r.player_standings[i].pkind == PlayerKind::None {
                 continue;
             }
             let team = usize::from(r.player_standings[i].team);
@@ -481,7 +480,7 @@ const STATS_DOWN_ATTACK_D: usize = 50;
 #[doc(alias = "fn_801656A8")]
 fn sub_rank(r: &MatchEnd, i: usize) -> u32 {
     let me = &r.player_standings[i];
-    let live = |j: usize| r.player_standings[j].pkind != PKIND_NA;
+    let live = |j: usize| r.player_standings[j].pkind != PlayerKind::None;
     let gt = (0..6)
         .filter(|&j| live(j) && me.kos > r.player_standings[j].kos)
         .count() as u32;
@@ -500,11 +499,11 @@ fn sub_rank(r: &MatchEnd, i: usize) -> u32 {
 fn rank_big(r: &mut MatchEnd) {
     let mut max = 0i32;
     for i in 0..6 {
-        if r.player_standings[i].pkind == PKIND_NA {
+        if r.player_standings[i].pkind == PlayerKind::None {
             continue;
         }
         for j in 0..6 {
-            if r.player_standings[j].pkind != PKIND_NA
+            if r.player_standings[j].pkind != PlayerKind::None
                 && i != j
                 && r.player_standings[i].score < r.player_standings[j].score
             {
@@ -517,7 +516,9 @@ fn rank_big(r: &mut MatchEnd) {
     r.loser = (r.loser & 0x0F) | ((max as u8 & 0x0F) << 4);
     let mut count = 0;
     for j in 0..6 {
-        if r.player_standings[j].pkind != PKIND_NA && r.player_standings[j].is_big_loser == 0 {
+        if r.player_standings[j].pkind != PlayerKind::None
+            && r.player_standings[j].is_big_loser == 0
+        {
             r.winners[count] = j as u8;
             count += 1;
         }
@@ -530,13 +531,13 @@ fn rank_big(r: &mut MatchEnd) {
 #[doc(alias = "fn_80165D60")]
 fn rank_small(r: &mut MatchEnd) {
     for i in 0..6 {
-        if r.player_standings[i].pkind == PKIND_NA {
+        if r.player_standings[i].pkind == PlayerKind::None {
             continue;
         }
         r.player_standings[i].is_small_loser = r.player_standings[i].is_big_loser;
         for j in 0..6 {
             let (pi, pj) = (&r.player_standings[i], &r.player_standings[j]);
-            if pj.pkind != PKIND_NA
+            if pj.pkind != PlayerKind::None
                 && i != j
                 && pi.is_big_loser == pj.is_big_loser
                 && pi.sub_rank < pj.sub_rank

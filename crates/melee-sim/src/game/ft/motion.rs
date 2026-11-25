@@ -8,7 +8,6 @@ use melee_data::archive::DataRef;
 
 use super::super::code::run_fighter_cb;
 use super::super::handles::FighterId;
-use super::super::pl::player::PKIND_DEMO;
 use super::super::state::Running;
 use super::super::structs::Fighter;
 use super::anim::x594_bit;
@@ -16,6 +15,7 @@ use super::common::GA_GROUND;
 use super::{MotionState, motion_table};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, USE_QUATERNION};
 
@@ -89,7 +89,7 @@ impl Running<'_> {
             .expect("a fighter without animations")
             .at(ANIM_ENTRY_SIZE * anim as u32);
         if fp.kind == FighterKind::Nana
-            && self.game.player_pkind(i32::from(fp.player_idx)) != PKIND_DEMO
+            && self.game.player_pkind(i32::from(fp.player_idx)) != PlayerKind::Demo
             && self.anim_aram(fp, own) == 0
         {
             let popo = self.game.ft.data.data_list[FighterKind::Popo as usize]
@@ -138,7 +138,7 @@ impl Running<'_> {
     pub(super) fn anim_share_source(&self, f: FighterId) -> Option<FighterId> {
         let fp = &self.game.fighters[f.0];
         let slot = i32::from(fp.player_idx);
-        if fp.kind == FighterKind::Nana && self.game.player_pkind(slot) != PKIND_DEMO {
+        if fp.kind == FighterKind::Nana && self.game.player_pkind(slot) != PlayerKind::Demo {
             return self
                 .game
                 .player_entity_at(slot, 0)

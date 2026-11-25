@@ -13,6 +13,7 @@ use super::opponents::NONE;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::{self, GObjId};
 
 /// The events (`0x33`).
@@ -924,7 +925,7 @@ impl Running<'_> {
             return;
         }
         let p0 = &me.player_standings[0];
-        let coins = if p0.pkind == 0 {
+        let coins = if p0.pkind == PlayerKind::Human {
             i32::from(p0.coins)
         } else {
             0
@@ -1284,7 +1285,7 @@ impl Running<'_> {
         } else {
             let mut kos: u32 = 0;
             for i in 1..6 {
-                if self.game.player_pkind(i) != 3 {
+                if self.game.player_pkind(i) != PlayerKind::None {
                     kos = kos.wrapping_add(self.game.player_kos(0, i));
                 }
             }
@@ -1333,7 +1334,9 @@ impl Running<'_> {
             1 => {
                 let mut count = 0;
                 for i in 1..6 {
-                    if self.game.player_pkind(i) != 3 && self.game.player_stocks(i) != 0 {
+                    if self.game.player_pkind(i) != PlayerKind::None
+                        && self.game.player_stocks(i) != 0
+                    {
                         count += 1;
                     }
                 }
@@ -1820,7 +1823,7 @@ impl Running<'_> {
     fn event_crowd_22_proc(&mut self, gobj: GObjId) {
         let mut count = 0;
         for i in 1..6 {
-            if self.game.player_pkind(i) != 3 && self.game.player_stocks(i) != 0 {
+            if self.game.player_pkind(i) != PlayerKind::None && self.game.player_stocks(i) != 0 {
                 count += 1;
             }
         }

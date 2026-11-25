@@ -1481,6 +1481,7 @@ fn print(r: &mut Running, t: TextId, x: f32, y: f32, fmt: &[u8], args: &[FmtArg]
         .add_string(t, f64::from(x), f64::from(y), Some(&s[..len]));
 }
 
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::sis::{FmtArg, SisPtr};
 
 /// The names and the clock, `grStadium_801D3460`: the static text's string 5 rebuilt in its
@@ -1516,7 +1517,7 @@ pub fn text_names(r: &mut Running, _gobj: GObjId) {
     let mut names: [&'static [u8]; 4] = [&[]; 4];
     let mut n_names = 0;
     for i in 0..4 {
-        if r.game.player_pkind(i) != crate::game::pl::player::PKIND_NONE
+        if r.game.player_pkind(i) != PlayerKind::None
             && let Some(n) = r.game.player_name(i)
         {
             names[n_names] = n;
@@ -1574,7 +1575,7 @@ pub fn text_ko(r: &mut Running, gobj: GObjId) {
     t.default_kerning = 1;
     t.text_color = [0xC0, 0xC0, 0xFF, 0xFF];
     t.default_alignment = 1;
-    if i32::from(slot_type) == crate::game::pl::player::PKIND_HUMAN {
+    if i32::from(slot_type) == PlayerKind::Human {
         t.default_scale = [0.625, 1.5];
         print(
             r,
@@ -1609,9 +1610,7 @@ fn brighten(v: u8) -> u8 {
 pub fn text_results(r: &mut Running, _gobj: GObjId) {
     let (st, dy) = texts(r.game);
     let in_play = |r: &mut Running, slot: i32| -> bool {
-        if r.game.player_pkind(slot) == crate::game::pl::player::PKIND_NONE
-            || r.game.player_asleep(slot)
-        {
+        if r.game.player_pkind(slot) == PlayerKind::None || r.game.player_asleep(slot) {
             return false;
         }
         let Some(f) = r.game.player_entity(slot) else {

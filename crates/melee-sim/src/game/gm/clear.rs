@@ -15,13 +15,13 @@ use melee_data::archive::{ArchiveId, DataRef};
 use super::super::code::ParticleHooks;
 use super::super::handles::CodeRef;
 use super::super::hud::ModelDesc;
-use super::super::pl::player::PKIND_HUMAN;
 use super::super::render::{CAMERA_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use super::super::structs::{HSD_ImageDesc, MatchEnd};
 use super::decisions::{decision_flags, decision_kind, decision_text};
 use super::vs::{OUTCOME_1P_BONUS_STAGE_END, OUTCOME_NO_CONTEST, OUTCOME_RETRY};
 use crate::fpu::{mem, reg};
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, HIDDEN, JObjId};
 use crate::hsd::sis::TextId;
@@ -243,7 +243,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8016F344")]
     fn tally_all_bonuses(&mut self) {
         for i in 0..4 {
-            if self.game.vs.state.match_end.player_standings[i].pkind != 3 {
+            if self.game.vs.state.match_end.player_standings[i].pkind != PlayerKind::None {
                 self.tally_bonuses(i as i32);
             }
         }
@@ -737,7 +737,7 @@ impl Running<'_> {
         if self.clear().counted == 0 && result != 0 {
             self.count_tick();
         }
-        let human = |r: &Running, i: i32| r.game.player_pkind(i) == PKIND_HUMAN;
+        let human = |r: &Running, i: i32| r.game.player_pkind(i) == PlayerKind::Human;
         let trigger = |r: &Running, i: i32| {
             let port = r.game.player_port(i) as u8;
             r.game.pads.master[usize::from(port)].trigger

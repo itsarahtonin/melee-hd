@@ -46,6 +46,7 @@ use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::ft::AnimFile;
 use melee_sim::game::ft::create::addr;
 use melee_sim::game::ft::data::kind_tables;
+use melee_sim::game::pl::player::PlayerKind;
 use melee_sim::game::pl::player::mapping;
 use melee_sim::game::state::{Game, Running};
 use ssbm_rt::Ctx;
@@ -234,7 +235,9 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
         .into_iter()
         .collect();
     // The fighter kinds the playing slots need, and their files on our side.
-    let slots: Vec<i32> = (0..6).filter(|&s| game.player_pkind(s) != 3).collect();
+    let slots: Vec<i32> = (0..6)
+        .filter(|&s| game.player_pkind(s) != PlayerKind::None)
+        .collect();
     let mut named: Vec<(String, ArchiveId)> = Vec::new();
     let mut anims: Vec<AnimEntry> = Vec::new();
     for &s in &slots {

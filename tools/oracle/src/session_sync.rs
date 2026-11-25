@@ -31,6 +31,7 @@ use melee_sim::state_eq::StateEq;
 use crate::diff::panic_text;
 use crate::session::{Console, Recording};
 use melee_sim::game::gm::{GameMode, GameScene};
+use melee_sim::game::pl::player::PlayerKind;
 
 /// One tick and its frame's display pass when it's due: the tick's output.
 fn step(s: &mut Session, console: &mut Console) -> Frame {
@@ -452,7 +453,7 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         .iter()
         .enumerate()
         .take(4)
-        .filter(|(_, p)| i32::from(p.slot_type) != melee_sim::game::pl::player::PKIND_NONE)
+        .filter(|(_, p)| p.slot_type != PlayerKind::None)
         .map(|(i, p)| Player {
             character: p.ckind as u8,
             costume: p.color,
@@ -464,9 +465,11 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         .collect();
     // A team battle and handicaps (the automatic handicap's too) are the menus' alone: the
     // launcher makes neither, so its shortcut can't make such a match.
-    let handicaps = start.players.iter().take(4).any(|p| {
-        i32::from(p.slot_type) != melee_sim::game::pl::player::PKIND_NONE && p.handicap != 9
-    });
+    let handicaps = start
+        .players
+        .iter()
+        .take(4)
+        .any(|p| p.slot_type != PlayerKind::None && p.handicap != 9);
     // The challenger approach's match (VS mode's state 0x81) is set up from the challenger's
     // data, not the select screens': the launcher makes none.
     if s.game.machine.routing.curr_state_id == 0x81 {

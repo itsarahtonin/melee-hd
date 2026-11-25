@@ -92,6 +92,57 @@ impl CpuKind {
     }
 }
 
+super::registry::kind_enum! {
+    /// A computer player's behavior (`CpuFighter::x18`, `cpu.behavior`, and the two it falls
+    /// back to, `default_behavior` and `alt_behavior`): what its decision (`ftCo_800ADE48`,
+    /// `cpu_choose_behavior`) settled on, which picks the commands it writes each frame
+    /// (`ftCo_800B2790`'s switch). The game's own numbers, named here by what each does.
+    /// The state keeps the number (a script's command can write any byte, `SET_X18`); code
+    /// compares it with these and matches on [`CpuBehavior::from_id`].
+    CpuBehavior:
+    /// Nothing: the script cleared and done.
+    Idle = 0,
+    /// Walking toward the destination (`ftCo_800ABA34`).
+    Walk = 1,
+    /// Attacking its target (`ftCo_800B658C`).
+    Attack = 2,
+    /// A ranged attack (`ftCo_800B9020`).
+    Ranged = 3,
+    /// Getting back to the stage (`cpu_recover`): falling away from it, it waits out the
+    /// recovery (the decision's other picks wait for it to end).
+    Recover = 4,
+    /// Getting up from lying down (`ftCo_800AC7D4`).
+    GetUp = 5,
+    /// Hanging from a ledge (`ftCo_800ACB44`).
+    Ledge = 6,
+    /// Shielding or dodging (`ftCo_800BA9A0`).
+    Shield = 7,
+    /// Jumping at its target (`ftCo_800B7180`).
+    JumpAtTarget = 8,
+    /// Holding a grabbed fighter (`ftCo_800B683C`).
+    Hold = 9,
+    /// Standing at the destination (`ftCo_800ACD5C`); a charging special isn't let go.
+    Stand = 10,
+    /// Training's jump in place (`ftCo_800AD42C`).
+    Hop = 11,
+    /// Training's walk (`ftCo_800AD54C`).
+    Pace = 12,
+    /// Picking up an item (the A tap of the decision's item pickup).
+    PickUp = 13,
+    /// Getting rid of the held item (`ftCo_800AD7FC`).
+    ThrowItem = 14,
+    /// Tumbling (`ftCo_800ABBA8`), at level 5 and up.
+    Tumble = 15,
+    /// Mashing out of a hold (`ftCo_800AC30C`).
+    Mash = 16,
+    /// In a barrel or a barrel cannon (`ftCo_800AC434`).
+    Barrel = 17,
+    /// DI in hitstun (`ftCo_800AC5A0`).
+    Di = 18,
+    /// Riding a Warp Star: the stick let go until it lands.
+    WarpStar = 19,
+}
+
 /// `ftPp_MS_SpecialLw`, `ftPp_MS_SpecialAirLw`, and the Ice Climbers' up special's states
 /// (`ftPp_MS_SpecialHi_0` to `_5`).
 const MS_PP_SPECIAL_LW: i32 = 357;
@@ -405,7 +456,7 @@ impl Running<'_> {
             // The VS kind, two others and the two the switch doesn't list.
             K::Normal | K::SpLwLink | K::SpLwSamus | K::Manual | K::Air => self.cpu_decide_vs(f),
             K::NoAct => {
-                self.game.fighters[f.0].cpu.behavior = 0;
+                self.game.fighters[f.0].cpu.behavior = CpuBehavior::Idle.id();
                 Leftover::Unknown("ftCo_800B2AFC")
             }
             // Training's: stop where it stands, walk to its spot or jump, the jump and the
@@ -457,7 +508,7 @@ impl Running<'_> {
             c.destination_timer = 0;
         }
         let sp = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME;
-        if c.behavior != 4 {
+        if c.behavior != CpuBehavior::Recover {
             c.ledge_picked = false;
             // `ftCo_800A75DC`'s vector at `r1 + 0x18` as `ftCo_800A4BEC`'s frame left it, as
             // in the VS decision: the back chain (this frame's stack pointer) and the word its
@@ -600,7 +651,7 @@ impl Running<'_> {
         if c.behavior != c.alt_behavior && c.behavior != c.default_behavior {
             c.destination_timer = 0;
         }
-        if c.behavior != 4 {
+        if c.behavior != CpuBehavior::Recover {
             c.ledge_picked = false;
             let fpp = &self.game.fighters[f.0];
             let at = if walk { fpp.cpu.spawn_pos } else { fpp.cur_pos };
@@ -704,7 +755,7 @@ impl Running<'_> {
             r5 = left;
             if follow {
                 let c = &mut self.game.fighters[f.0].cpu;
-                c.behavior = 0;
+                c.behavior = CpuBehavior::Idle.id();
                 c.follows_popo = true;
                 c.acts_alone = false;
                 c.may_air_attack = false;
@@ -786,7 +837,7 @@ impl Running<'_> {
         if c.behavior != c.alt_behavior && c.behavior != c.default_behavior {
             c.destination_timer = 0;
         }
-        if c.behavior == 4 {
+        if c.behavior == CpuBehavior::Recover {
             false
         } else {
             c.ledge_picked = false;
@@ -982,24 +1033,25 @@ impl Running<'_> {
         self.cpu_script_reset(f);
         let r5 = self.cpu_charge_release(f).unwrap_or(r5);
         use super::cpu_script::cmd;
-        match self.game.fighters[f.0].cpu.behavior {
-            0 => {
+        use CpuBehavior as B;
+        match CpuBehavior::from_id(self.game.fighters[f.0].cpu.behavior) {
+            Some(B::Idle) => {
                 self.cpu_script_clear(f);
                 self.cpu_cmd(f, cmd::DONE);
             }
-            1 => self.cpu_walk(f),
-            2 => self.cpu_attack_behavior(f),
-            3 => self.cpu_ranged(f),
-            4 => self.cpu_recover_behavior(f),
-            5 => self.cpu_get_up(f),
-            6 => self.cpu_ledge_behavior(f),
-            7 => self.cpu_shield(f),
-            8 => self.cpu_jump_at_target(f),
-            9 => self.cpu_hold(f),
-            10 => self.cpu_stand(f),
-            11 => self.cpu_hop(f),
-            12 => self.cpu_pace(f),
-            13 => {
+            Some(B::Walk) => self.cpu_walk(f),
+            Some(B::Attack) => self.cpu_attack_behavior(f),
+            Some(B::Ranged) => self.cpu_ranged(f),
+            Some(B::Recover) => self.cpu_recover_behavior(f),
+            Some(B::GetUp) => self.cpu_get_up(f),
+            Some(B::Ledge) => self.cpu_ledge_behavior(f),
+            Some(B::Shield) => self.cpu_shield(f),
+            Some(B::JumpAtTarget) => self.cpu_jump_at_target(f),
+            Some(B::Hold) => self.cpu_hold(f),
+            Some(B::Stand) => self.cpu_stand(f),
+            Some(B::Hop) => self.cpu_hop(f),
+            Some(B::Pace) => self.cpu_pace(f),
+            Some(B::PickUp) => {
                 if self.game.fighters[f.0].item_gobj.is_some() {
                     let c = &mut self.game.fighters[f.0].cpu;
                     c.behavior = c.default_behavior;
@@ -1018,12 +1070,12 @@ impl Running<'_> {
                     c.behavior = c.default_behavior;
                 }
             }
-            14 => self.cpu_throw_item(f),
-            15 => self.cpu_tumble(f),
-            16 => self.cpu_mash(f),
-            17 => self.cpu_barrel(f),
-            18 => self.cpu_di(f, r5),
-            19 => {
+            Some(B::ThrowItem) => self.cpu_throw_item(f),
+            Some(B::Tumble) => self.cpu_tumble(f),
+            Some(B::Mash) => self.cpu_mash(f),
+            Some(B::Barrel) => self.cpu_barrel(f),
+            Some(B::Di) => self.cpu_di(f, r5),
+            Some(B::WarpStar) => {
                 let ms = self.game.fighters[f.0].motion_id;
                 if ms != 0x131 && ms != 0x132 {
                     let c = &mut self.game.fighters[f.0].cpu;
@@ -1036,7 +1088,8 @@ impl Running<'_> {
                     self.cpu_cmd(f, cmd::DONE);
                 }
             }
-            _ => self.cpu_cmd(f, cmd::DONE),
+            // Any other number a script's command left.
+            None => self.cpu_cmd(f, cmd::DONE),
         }
         self.cpu_script_start(f);
     }
@@ -1088,7 +1141,7 @@ impl Running<'_> {
     fn cpu_charge_release(&mut self, f: FighterId) -> Option<Leftover> {
         use super::cpu_script::cmd;
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.behavior == 10 {
+        if fpp.cpu.behavior == CpuBehavior::Stand {
             return None;
         }
         let ms = fpp.motion_id;

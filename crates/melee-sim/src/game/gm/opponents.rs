@@ -5,7 +5,7 @@
 
 use super::super::code::{self, Val};
 use super::super::handles::CodeRef;
-use super::super::pl::player::{PKIND_CPU, PKIND_NONE};
+use super::super::pl::player::PlayerKind;
 use super::super::state::{Game, Running};
 use crate::game::ft::CharacterKind;
 
@@ -418,7 +418,7 @@ impl Game {
     pub fn opponents_remaining(&self) -> i32 {
         let mut count = i32::from(self.gm.opponents.left);
         for i in 0..6 {
-            if self.player_pkind(i) != PKIND_NONE
+            if self.player_pkind(i) != PlayerKind::None
                 && self.player_flags_bit1(i)
                 && self.player_state(i) == 2
             {
@@ -437,7 +437,7 @@ impl Game {
         let at_once = i32::from(o.at_once);
         let mut marked = 0;
         for i in 0..6 {
-            if self.player_pkind(i) == PKIND_NONE {
+            if self.player_pkind(i) == PlayerKind::None {
                 if marked >= at_once {
                     break;
                 }
@@ -457,7 +457,7 @@ impl Game {
     pub fn opponents_count(&self) -> i32 {
         let mut count = i32::from(self.gm.opponents.left);
         for i in 0..6 {
-            if self.player_pkind(i) != PKIND_NONE
+            if self.player_pkind(i) != PlayerKind::None
                 && self.player_flags_bit1(i)
                 && self.player_state(i) == 2
             {
@@ -472,7 +472,7 @@ impl Game {
     fn costume_worn(&self, slot: i32, costume: i32) -> bool {
         let chr = self.player_ckind(slot) as i8;
         (0..6).any(|s| {
-            self.player_pkind(s) != PKIND_NONE
+            self.player_pkind(s) != PlayerKind::None
                 && !self.player_flags_bit1(s)
                 && chr == self.player_ckind(s) as i8
                 && costume == self.player_costume(s) as i32
@@ -604,7 +604,7 @@ impl Running<'_> {
         // `fn_8016B138`.
         self.game.vs.start.is_teams = 0;
         for i in 1..6 {
-            self.game.set_player_pkind(i, PKIND_NONE);
+            self.game.set_player_pkind(i, PlayerKind::None);
             self.game.unset_player_flags_bit1(i);
         }
     }
@@ -645,7 +645,9 @@ impl Running<'_> {
         if self.game.gm.opponents.left == 0 {
             let g = &*self.game;
             let playing = (0..6).any(|s| {
-                g.player_pkind(s) != PKIND_NONE && g.player_flags_bit1(s) && g.player_stocks(s) != 0
+                g.player_pkind(s) != PlayerKind::None
+                    && g.player_flags_bit1(s)
+                    && g.player_stocks(s) != 0
             });
             if !playing {
                 let o = &mut self.game.gm.opponents;
@@ -680,7 +682,7 @@ impl Running<'_> {
             .unwrap_or_else(|| panic!("a joiner's stage point {point} reads a stale vector"));
         pos.y = super::super::gr::stage::cam_top(self.game);
         self.game.set_player_pos(slot, pos);
-        self.game.set_player_pkind(slot, PKIND_CPU);
+        self.game.set_player_pkind(slot, PlayerKind::Cpu);
         let i = idx as usize;
         let o = self.game.gm.opponents;
         self.game

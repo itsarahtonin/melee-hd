@@ -4,13 +4,14 @@
 use super::super::state::Game;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::pl::player::PlayerKind;
 
 impl Game {
     /// The name of the character a slot plays, as the saved language shows it, or none for
     /// an empty slot, `gm_80160A60`: Zelda's or Sheik's as the slot's fighter is now.
     #[doc(alias = "gm_80160A60")]
     pub fn player_name(&self, slot: i32) -> Option<&'static [u8]> {
-        if self.player_pkind(slot) == super::super::pl::player::PKIND_NONE {
+        if self.player_pkind(slot) == PlayerKind::None {
             return None;
         }
         let mut ckind = self.player_ckind(slot) as u8;

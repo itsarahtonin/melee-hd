@@ -17,6 +17,7 @@ use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
 use crate::game::handles::CodeRef;
+use crate::game::pl::player::PlayerKind;
 use crate::game::state::{Game, OBJ_CAMERA, OBJ_LIGHT, Obj, Running};
 use crate::hsd::cobj::{self, StaticDesc};
 use crate::hsd::gobj::{GObjId, ProcId};
@@ -1511,7 +1512,7 @@ impl Running<'_> {
         self.game.rank_results_standalone(me);
         let mut sfx = 0u64;
         for p in &me.player_standings[..4] {
-            if p.pkind != 3 && p.is_big_loser == 0 {
+            if p.pkind != PlayerKind::None && p.is_big_loser == 0 {
                 sfx |= crate::lb::audio::character_banks(i32::from(p.ckind));
             }
         }

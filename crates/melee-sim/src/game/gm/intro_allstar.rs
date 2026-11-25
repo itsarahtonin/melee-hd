@@ -12,6 +12,7 @@ use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running
 use super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
 use crate::game::gm::GameScene;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 
@@ -239,8 +240,7 @@ impl Running<'_> {
         self.game.set_player_ckind(0, ckind);
         self.game.set_player_costume(0, costume);
         self.game.set_player_port(0, 0);
-        self.game
-            .set_player_pkind(0, super::super::pl::player::PKIND_DEMO);
+        self.game.set_player_pkind(0, PlayerKind::Demo);
         self.game.set_player_facing(0, 0.0);
         self.game.set_player_model_scale(0, 1.0);
         self.player_create_demo(0, 6);

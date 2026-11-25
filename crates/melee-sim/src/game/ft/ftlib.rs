@@ -2,6 +2,7 @@
 
 use super::super::state::{Game, Running};
 use crate::game::ft::CpuKind;
+use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -37,12 +38,9 @@ impl Running<'_> {
         let kind = self
             .game
             .player_kind(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-        kind == GM_PKIND_CPU && fp.cpu.kind != CpuKind::Manual
+        kind == PlayerKind::Cpu && fp.cpu.kind != CpuKind::Manual
     }
 }
-
-/// `Gm_PKind_Cpu`.
-const GM_PKIND_CPU: i32 = 1;
 
 /// `ftCo_MS_Rebirth` and `ftCo_MS_RebirthWait`: the action states of a fighter on the respawn
 /// platform.
