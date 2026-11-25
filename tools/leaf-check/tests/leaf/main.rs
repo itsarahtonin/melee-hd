@@ -3,6 +3,9 @@
 //! family runs as `cargo test -p leaf-check --test leaf -- NAME::` where it ran as
 //! `--test NAME` (docs/oracle.md, "leaf-check"; `LEAF_CHECK_SHARD` splits one as before).
 //! The modules the families share are `support`'s, compiled once.
+// `mpcoll` takes in `mplib`'s query, mutation and state modules and `support/mpstage.rs` as its
+// own children (their `super::` is each family's own stage setup), as it did as its own binary.
+#![allow(clippy::duplicate_mod)]
 
 mod aobj;
 mod archive;
