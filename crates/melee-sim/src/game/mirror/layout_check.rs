@@ -177,6 +177,10 @@ fn owned() -> Vec<Layout> {
     .collect()
 }
 
+/// A field (or a bitfield, or a group's field) as a run of bits: its first bit, its end, its
+/// path, and for a struct of its own its C name and its tail's offset (`Layout::from`).
+type Run = (u32, u32, String, Option<(&'static str, u32)>);
+
 /// What's wrong with `l` against the C struct `c`, one line each; empty when it matches.
 fn check(l: &Layout, c: &CRecord, name: &str) -> Vec<String> {
     let mut errors = Vec::new();
@@ -187,7 +191,7 @@ fn check(l: &Layout, c: &CRecord, name: &str) -> Vec<String> {
         ));
     }
     // Every field and pad as a run of bits, groups flattened.
-    let mut runs: Vec<(u32, u32, String, Option<(&'static str, u32)>)> = Vec::new();
+    let mut runs: Vec<Run> = Vec::new();
     let mut pads: Vec<(u32, u32)> = Vec::new();
     flatten(l, 0, "", &mut runs, &mut pads);
     let mut all: Vec<(u32, u32, String)> = runs
@@ -291,13 +295,7 @@ fn tail(c: &CRecord, from: u32) -> CRecord {
     }
 }
 
-fn flatten(
-    l: &Layout,
-    base: u32,
-    prefix: &str,
-    runs: &mut Vec<(u32, u32, String, Option<(&'static str, u32)>)>,
-    pads: &mut Vec<(u32, u32)>,
-) {
+fn flatten(l: &Layout, base: u32, prefix: &str, runs: &mut Vec<Run>, pads: &mut Vec<(u32, u32)>) {
     pads.extend(l.pads.iter().map(|&(a, n)| (base + a, base + a + n)));
     for f in &l.fields {
         let FieldLayout {

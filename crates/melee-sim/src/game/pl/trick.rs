@@ -460,7 +460,7 @@ impl Running<'_> {
             let held = reg(self.game.fighter(g).smash_attrs.smash_since_hitbox);
             if held > reg(self.bonus_param_f32(0x38)) {
                 let p = self.game.player_mut(slot);
-                p.ext.ko_flags = p.ext.ko_flags | 0x08;
+                p.ext.ko_flags |= 0x08;
             }
         }
         // `pl_8003EAAC`.

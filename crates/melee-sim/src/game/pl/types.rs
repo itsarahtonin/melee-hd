@@ -1018,8 +1018,8 @@ pub struct StatsExt {
     #[at(0xDD0)]
     #[doc(alias("xDD0"))]
     pub frame_flags: u8,
-    /// KO and window flags, `bit0` the top one: 0 to 3 KO'd right, left, up, down; 5 the
-    /// quickest press within the presses' window.
+    /// KO and window flags, `bit0` the top one: 0 to 3 KO'd right, left, up, down; 4 a smash
+    /// attack held past the bonus data's time; 5 the quickest press within the presses' window.
     #[at(0xDD1)]
     #[doc(alias("xDD1"))]
     pub ko_flags: u8,
