@@ -712,7 +712,9 @@ impl Game {
     /// matches they keep, which run Vanilla's menus whatever the ruleset) and under
     /// [`Memory::Modelled`]; under [`Memory::WhatSlippiReads`] in a replay's playback or a live
     /// match only where its settings started the model ([`Rules::playback_runs_model`], or a
-    /// tool comparing its addresses with the original's). Where it doesn't, the step lends
+    /// tool comparing its addresses with the original's), and in a state a tool took up from
+    /// memory ([`crate::hsd::heap::Heap::imported`]), whose objects hold the original's
+    /// addresses with the model stopped, as under Vanilla. Where it doesn't, the step lends
     /// nothing: the allocators' hooks give unknown addresses and anything else that reaches
     /// the model stops by name (`hsd::heap::with`).
     #[inline]
@@ -720,6 +722,7 @@ impl Game {
         self.rules.fixes().memory == Memory::Modelled
             || !self.runs_playback_codes()
             || self.objs.heap.active
+            || self.objs.heap.imported
     }
 
     /// The model lent out for a step ([`Game::models_memory`]); give it back with

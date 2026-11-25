@@ -217,6 +217,7 @@ pub fn read_past(m: &[u8], carried: &[bool]) -> Heap {
         // An import from memory keeps no image: its leftovers come in with the state.
         image: Default::default(),
         carried: vec![false; Kind::COUNT],
+        imported: false,
     }
 }
 
