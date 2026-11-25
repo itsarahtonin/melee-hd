@@ -30,7 +30,7 @@ impl Running<'_> {
         if fp.coll_data.floor.index == -1 {
             return 1.0;
         }
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         reg(crate::mp::friction(grkind, fp.coll_data.floor.flags))
     }
 

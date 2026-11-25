@@ -8,16 +8,16 @@
 //! again. The helicopter crosses behind when the UFO isn't out.
 
 use gekko_fp as fp;
-use melee_data::archive::DataRef;
 
 use super::super::camera;
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
-use super::data::{FOURSIDE_CALLBACKS, StageCallbacks};
+use super::data::FOURSIDE_CALLBACKS;
 use super::ground::{
     ground_of, jobj_of, map_gobj, nth_joint, set_guide_points, update_coll_joint, update_map_coll,
 };
-use super::{anime, setup, zako};
+use super::skeleton::{self, Param, Setup, StageObjects, map_id};
+use super::{anime, setup};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -56,42 +56,42 @@ mod p {
     pub const X48: u32 = 0x48;
 }
 
-#[derive(Clone, Copy)]
-struct Param(DataRef);
-
-impl Param {
-    fn i(self, r: &Running, off: u32) -> i32 {
-        r.data.u32(self.0.at(off)) as i32
-    }
-    fn h(self, r: &Running, off: u32) -> i16 {
-        r.data.u16(self.0.at(off)) as i16
-    }
-    fn f(self, r: &Running, off: u32) -> f32 {
-        r.data.f32(self.0.at(off))
-    }
-    /// `base + (add != 0 ? HSD_Randi(add) : 0)`.
-    fn wait(self, r: &mut Running, base: u32, add: u32) -> i32 {
-        let a = self.i(r, add);
-        let extra = if a != 0 { r.game.objs.rng.below(a) } else { 0 };
-        self.i(r, base).wrapping_add(extra)
-    }
+/// `base + (add != 0 ? HSD_Randi(add) : 0)`, two of the parameters.
+fn wait(r: &mut Running, p: Param, base: u32, add: u32) -> i32 {
+    let a = p.i(r.data, add);
+    let extra = if a != 0 { r.game.objs.rng.below(a) } else { 0 };
+    p.i(r.data, base).wrapping_add(extra)
 }
 
 fn param(game: &Game) -> Param {
-    Param(
-        game.gr
-            .fourside_yakumono
-            .expect("grfourside.c: yakumono_param"),
-    )
+    Param::of(game.gr.fourside_yakumono, "grfourside.c: yakumono_param")
 }
+
+/// Fourside's objects (`grFs_StageCallbacks`).
+pub const OBJECTS: StageObjects = StageObjects {
+    callbacks: &FOURSIDE_CALLBACKS,
+    late: None,
+};
+
+/// Fourside's setup, `grFourside_801F2D10`: its parameters, maps 0, 4, 6, 2, 1, 3 and 5,
+/// camera limits and blast zones.
+pub const SETUP: Setup = Setup {
+    objects: &OBJECTS,
+    param: |gr| &mut gr.fourside_yakumono,
+    own_entry_points: false,
+    keeps_spawn_point: true,
+    maps: &[0, 4, 6, 2, 1, 3, 5],
+    then: None,
+    after: None,
+};
 
 /// A stage object's process or callback, by address: Fourside's.
 #[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_2EF0 | 0x801F_2EF4 | 0x801F_2F2C | 0x801F_2F30 | 0x801F_309C | 0x801F_314C
-        | 0x801F_3150 | 0x801F_37F8 | 0x801F_3B6C | 0x801F_3F0C => empty(r, gobj),
-        0x801F_2EBC | 0x801F_2EF8 => init_anim(r, gobj),
+        | 0x801F_3150 | 0x801F_37F8 | 0x801F_3B6C | 0x801F_3F0C => skeleton::empty(r, gobj),
+        0x801F_2EBC | 0x801F_2EF8 => skeleton::animate(r, gobj),
         0x801F_2F34 => init_city(r, gobj),
         0x801F_3078 => proc_city(r, gobj),
         0x801F_30F0 => init_buildings(r, gobj),
@@ -114,70 +114,6 @@ pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
         _ => return false,
     }
     true
-}
-
-/// The objects' processes and destroy callbacks that do nothing.
-#[doc(alias = "grFourside_801F2EF0")]
-#[doc(alias = "grFourside_801F2EF4")]
-#[doc(alias = "grFourside_801F2F2C")]
-#[doc(alias = "grFourside_801F2F30")]
-#[doc(alias = "grFourside_801F309C")]
-#[doc(alias = "grFourside_801F314C")]
-#[doc(alias = "grFourside_801F3150")]
-#[doc(alias = "grFourside_801F37F8")]
-#[doc(alias = "grFourside_801F3B6C")]
-#[doc(alias = "grFourside_801F3F0C")]
-pub fn empty(_r: &mut Running, _gobj: GObjId) {}
-
-/// Creates one of the stage's objects and sets it up, `grFourside_801F2DD0`.
-#[doc(alias = "grFourside_801F2DD0")]
-pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
-}
-
-/// The stage's objects' setup functions and processes, by map id (`grFs_StageCallbacks`).
-pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
-    &FOURSIDE_CALLBACKS[map_id as usize]
-}
-
-/// Fourside's setup, `grFourside_801F2D10`: its parameters, maps 0, 4, 6, 2, 1, 3 and 5,
-/// camera limits and blast zones.
-#[doc(alias = "grFourside_801F2D10")]
-pub fn on_init(r: &mut Running) {
-    r.game.gr.fourside_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.bits.own_entry_points = false;
-    r.game.stage_info.bits.keeps_spawn_point = true;
-    for map_id in [0, 4, 6, 2, 1, 3, 5] {
-        create(r, map_id, setup::SETUP_FRAME);
-    }
-    setup::measure_cam_bounds(r.game, r.data);
-    setup::measure_blast_zones(r.game, r.data);
-}
-
-/// `grFourside_801F2D0C` does nothing (only a demo runs it).
-#[doc(alias = "grFourside_801F2D0C")]
-pub fn on_demo_init(_r: &mut Running) {}
-
-/// `grFourside_801F2DA0` does nothing.
-#[doc(alias = "grFourside_801F2DA0")]
-pub fn on_load(_r: &mut Running) {}
-
-/// Fourside's start, `grFourside_801F2DA4`: the enemy spawner, without enemies.
-#[doc(alias = "grFourside_801F2DA4")]
-pub fn on_start(r: &mut Running) {
-    zako::start(r.game, r.data, None);
-}
-
-fn map_id(game: &Game, gobj: GObjId) -> i32 {
-    game.grounds[ground_of(game, gobj).0].map_id
-}
-
-/// Maps 0's and 2's setups, `stageGObj0_OnInit` and `stageGObj2_OnInit`: their animations.
-#[doc(alias = "stageGObj0_OnInit@801F2EBC")]
-#[doc(alias = "stageGObj2_OnInit@801F2EF8")]
-pub fn init_anim(r: &mut Running, gobj: GObjId) {
-    let m = map_id(r.game, gobj);
-    anime::start_map(r.game, r.data, gobj, m, 0);
 }
 
 /// The city's setup (map 6), `grFourside_801F2F34`: its collision and animation, the guide
@@ -264,7 +200,7 @@ pub fn init_crane(r: &mut Running, gobj: GObjId) {
     anime::start(r.game, r.data, gobj, 0, 7, 0, 0.0, 0.0, true);
     r.game.grounds[g.0].u.fourside_crane().set_swung(false);
     let p = param(r.game);
-    let wait = p.wait(r, p::CRANE_WAIT, p::CRANE_WAIT_ADD);
+    let wait = wait(r, p, p::CRANE_WAIT, p::CRANE_WAIT_ADD);
     let y = r.game.objs.jobjs[girder.expect("jobj")].translate.y;
     let v = r.game.grounds[g.0].u.fourside_crane();
     v.ticks = wait;
@@ -316,7 +252,7 @@ pub fn proc_crane(r: &mut Running, gobj: GObjId) {
             }
         }
         3 => {
-            let wait = p.wait(r, p::CRANE_IRON_WAIT, p::CRANE_IRON_WAIT_ADD);
+            let wait = wait(r, p, p::CRANE_IRON_WAIT, p::CRANE_IRON_WAIT_ADD);
             let v = r.game.grounds[g.0].u.fourside_crane();
             v.ticks = wait;
             v.state = 4;
@@ -330,11 +266,11 @@ pub fn proc_crane(r: &mut Running, gobj: GObjId) {
                 } else {
                     (p::CRANE_IRON_UP_MAX, p::CRANE_IRON_UP_MIN)
                 };
-                let span = abs(fp::fsubs(reg(p.f(r, max)), reg(p.f(r, min))));
+                let span = abs(fp::fsubs(reg(p.f(r.data, max)), reg(p.f(r.data, min))));
                 let n = fp::fctiwz(span);
                 let k = if n != 0 { r.game.objs.rng.below(n) } else { 0 };
                 let d = fp::frsp(f64::from(k));
-                let from = abs(reg(p.f(r, min)));
+                let from = abs(reg(p.f(r.data, min)));
                 let v = r.game.grounds[g.0].u.fourside_crane();
                 if down {
                     v.target = mem(fp::fsubs(reg(v.target), fp::fadds(d, from)));
@@ -352,8 +288,8 @@ pub fn proc_crane(r: &mut Running, gobj: GObjId) {
             }
         }
         5 => {
-            let spd = p.f(r, p::CRANE_IRON_SPD);
-            let acl = p.f(r, p::CRANE_IRON_STOP_ACL);
+            let spd = p.f(r.data, p::CRANE_IRON_SPD);
+            let acl = p.f(r.data, p::CRANE_IRON_STOP_ACL);
             let v = r.game.grounds[g.0].u.fourside_crane();
             v.height = mem(fp::fsubs(reg(v.height), reg(spd)));
             if reg(v.height) <= reg(v.target) {
@@ -365,8 +301,8 @@ pub fn proc_crane(r: &mut Running, gobj: GObjId) {
             }
         }
         6 => {
-            let spd = p.f(r, p::CRANE_IRON_SPD);
-            let acl = p.f(r, p::CRANE_IRON_STOP_ACL);
+            let spd = p.f(r.data, p::CRANE_IRON_SPD);
+            let acl = p.f(r.data, p::CRANE_IRON_STOP_ACL);
             let v = r.game.grounds[g.0].u.fourside_crane();
             v.height = mem(fp::fadds(reg(v.height), reg(spd)));
             if reg(v.height) >= reg(v.target) {
@@ -380,7 +316,7 @@ pub fn proc_crane(r: &mut Running, gobj: GObjId) {
             let pull = reg(v.pull);
             if abs(pull) > reg(v.start_speed) {
                 v.height = v.target;
-                let wait = p.wait(r, p::CRANE_WAIT, p::CRANE_WAIT_ADD);
+                let wait = wait(r, p, p::CRANE_WAIT, p::CRANE_WAIT_ADD);
                 let v = r.game.grounds[g.0].u.fourside_crane();
                 v.ticks = wait;
                 v.state = 0;
@@ -411,7 +347,7 @@ pub fn init_ufo(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
-    let wait = param(r.game).i(r, p::UFO_WAIT);
+    let wait = param(r.game).i(r.data, p::UFO_WAIT);
     let v = r.game.grounds[g.0].u.fourside_ufo();
     v.ticks = wait;
     v.state = 0;
@@ -446,11 +382,11 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
             if timer <= 0 {
                 let mut prob = 0;
                 if v.on_roof != 0 {
-                    prob = i32::from(p.h(r, p::X46));
+                    prob = i32::from(p.h(r.data, p::X46));
                 }
                 let v = r.game.grounds[g.0].u.fourside_ufo();
-                if i32::from(v.waits) >= i32::from(p.h(r, p::UFO_CHALLENGE)) {
-                    prob = i32::from(p.h(r, p::X48));
+                if i32::from(v.waits) >= i32::from(p.h(r.data, p::UFO_CHALLENGE)) {
+                    prob = i32::from(p.h(r.data, p::X48));
                 }
                 if prob != 0 && r.game.objs.rng.below(prob) == 0 {
                     r.game.grounds[g.0].u.fourside_ufo().waits = 0;
@@ -475,7 +411,7 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
                         v.state = 1;
                     }
                 } else {
-                    let wait = p.i(r, p::UFO_WAIT);
+                    let wait = p.i(r.data, p::UFO_WAIT);
                     let v = r.game.grounds[g.0].u.fourside_ufo();
                     v.ticks = wait;
                     v.waits = v.waits.wrapping_add(1);
@@ -486,7 +422,7 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
         }
         1 => {
             if anime::finished(r.game, gobj, 0, 7) {
-                let stay = p.wait(r, p::UFO_STAY_TIME, p::UFO_STAY_TIME_ADD);
+                let stay = wait(r, p, p::UFO_STAY_TIME, p::UFO_STAY_TIME_ADD);
                 r.game.grounds[g.0].u.fourside_ufo().ticks = stay;
                 anime::start_map(r.game, r.data, gobj, m, i32::from(prev) * 4 + 1);
                 let b = r.game.grounds[g.0].u.fourside_ufo().subject;
@@ -524,7 +460,7 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
             if timer >= 0x3C {
                 jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
                 r.game.geometry_mut().disable_joint(UFO_JOINT);
-                let wait = p.i(r, p::UFO_WAIT);
+                let wait = p.i(r.data, p::UFO_WAIT);
                 let v = r.game.grounds[g.0].u.fourside_ufo();
                 v.ticks = wait;
                 v.state = 0;
@@ -550,7 +486,7 @@ pub fn frame_ufo(r: &mut Running, gobj: GObjId) {
         return;
     };
     let top = super::stage::cam_top(r.game);
-    let offs = param(r.game).f(r, p::UFO_CS_OFFS);
+    let offs = param(r.game).f(r.data, p::UFO_CS_OFFS);
     if reg(pos.y) > fp::fadds(reg(offs), reg(top)) {
         return;
     }
@@ -576,7 +512,7 @@ pub fn init_heli(r: &mut Running, gobj: GObjId) {
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     r.game.grounds[g.0].u.fourside2().state = 0;
     let p = param(r.game);
-    let wait = p.wait(r, p::HELI_WAIT, p::HELI_WAIT_ADD);
+    let wait = wait(r, p, p::HELI_WAIT, p::HELI_WAIT_ADD);
     let v = r.game.grounds[g.0].u.fourside2();
     v.ticks = wait;
     v.sound_played = 0;
@@ -646,7 +582,7 @@ pub fn proc_heli(r: &mut Running, gobj: GObjId) {
                 jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
                 r.game.grounds[g.0].u.fourside2().state = 0;
                 let p = param(r.game);
-                let wait = p.wait(r, p::HELI_WAIT, p::HELI_WAIT_ADD);
+                let wait = wait(r, p, p::HELI_WAIT, p::HELI_WAIT_ADD);
                 r.game.grounds[g.0].u.fourside2().ticks = wait;
             }
             let v = r.game.grounds[g.0].u.fourside2();

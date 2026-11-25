@@ -2014,9 +2014,9 @@ impl Running<'_> {
         }
         let me = self.game.fighter_id(gobj);
         let max = self.hit_status(me);
-        for i in 0..self.game.gr.devices.coll_count {
+        for i in 0..self.game.gr.devices().coll_count {
             assert!(i == 0, "ftColl_8007BAC0: a device past ft_80459A8C's one");
-            let d = &self.game.gr.devices;
+            let d = &self.game.gr.devices();
             let Some(ground) = d.device2 else { continue };
             let (kind, cb) = (d.device2_type, d.device2_cb);
             if !self.device_applies(gobj, kind) {
@@ -2187,10 +2187,12 @@ impl Running<'_> {
 
     /// The hit the stage gives a line ([`Self::line_hazard`]'s `DynamicsDesc`).
     pub(crate) fn line_hazard_desc(&mut self, line: i32) -> Option<melee_data::archive::DataRef> {
-        let f = self.game.stage_info.on_touch_line?;
-        let touch = super::super::gr::registry::by_address(self.game.stage_info.grkind, f.0, |d| {
-            d.on_touch_line
-        })
+        let f = self.game.stage_info.touch_line_callback()?;
+        let touch = super::super::gr::registry::by_address(
+            self.game.stage_info.ground_kind_id(),
+            f.0,
+            |d| d.on_touch_line,
+        )
         .and_then(|s| s.touch_line)
         .unwrap_or_else(|| unported_call(&format!("a stage's on_touch_line {:#x}", f.0)));
         touch(self, line)

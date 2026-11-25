@@ -14,7 +14,8 @@ use melee_data::archive::{ArchiveId, DataRef};
 use super::super::handles::CodeRef;
 use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, Obj, Running, UserData};
-use super::super::structs::{HSD_ImageDesc, ifMagnify};
+use super::super::structs::HSD_ImageDesc;
+use super::types::Magnifier;
 use crate::fpu::{mem, reg};
 use crate::hsd::display::{self, Draw};
 use crate::hsd::gobj::{self, GObjId};
@@ -59,7 +60,7 @@ const CAMERA_DESC: cobj::StaticDesc = cobj::StaticDesc {
     projection: [0.0, 0.0, 0.0, 0.0],
 };
 
-/// A bubble's texture's image (`ifMagnifyPlayer::idesc`): the model's own, in `IfAll.dat`,
+/// A bubble's texture's image (`MagnifierBubble::idesc`): the model's own, in `IfAll.dat`,
 /// for the first player, and the magnifier's copies (`image_descs`, static) for the others.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct MagnifyImage(pub Option<ImageRef>);
@@ -117,7 +118,7 @@ impl Running<'_> {
     #[doc(alias = "ifMagnify_802FC7C0")]
     pub fn create_magnifier(&mut self, if_all: ArchiveId) {
         let keep = self.game.magnify.image_descs.clone();
-        self.game.magnify = ifMagnify {
+        self.game.magnify = Magnifier {
             image_descs: keep,
             ..Default::default()
         };
@@ -125,8 +126,7 @@ impl Running<'_> {
         let p = self
             .game
             .gr
-            .param
-            .as_ref()
+            .ground_param()
             .expect("stage_info.param is null");
         let colors = (
             p.bubble_color_0.clone(),

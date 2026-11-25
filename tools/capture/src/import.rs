@@ -17,7 +17,7 @@ use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::{
     BgFlashUserData, Camera, CameraDebugMode, CmSubject, ControllerMap, DynamicsData, Fighter,
-    FighterBone, SceneLoop, StaticPlayer, VsSceneController, ifMagnify,
+    FighterBone, Magnifier, SceneLoop, StaticPlayer, VsSceneController,
 };
 use melee_sim::hsd::aobj::{AObj, AObjId};
 use melee_sim::hsd::cobj::{CObj, CObjId};
@@ -795,7 +795,7 @@ impl Importer<'_> {
             bytes: &cap.call.mem1,
             base: MEM1,
         };
-        self.game.magnify = ifMagnify::import(&mem, sym("ifMagnify_804A1DE0"), self);
+        self.game.magnify = Magnifier::import(&mem, sym("ifMagnify_804A1DE0"), self);
         // The random numbers' seed, where `HSD_RandSeedPtr` points.
         self.game.objs.rng.seed = self.u32(self.u32(sym("HSD_RandSeedPtr")));
         // Whether expressions' argument buffer is allocated (`arg_buf`).

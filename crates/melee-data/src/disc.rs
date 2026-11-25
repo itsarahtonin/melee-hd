@@ -122,6 +122,20 @@ impl Disc {
             .ok_or_else(|| DiscError::FileNotFound(path.to_owned()))
     }
 
+    /// Where a file starts on the disc, from the file system table: the offset its reads
+    /// send the drive.
+    pub fn file_offset(&self, path: &str) -> Result<u32, DiscError> {
+        let mut partition = self
+            .reader
+            .open_partition_kind(PartitionKind::Data, &PartitionOptions::default())?;
+        let meta = partition.meta()?;
+        let fst = meta.fst().map_err(DiscError::InvalidFst)?;
+        fst.find(path)
+            .filter(|(_, node)| node.is_file())
+            .map(|(_, node)| node.offset(false) as u32)
+            .ok_or_else(|| DiscError::FileNotFound(path.to_owned()))
+    }
+
     /// The path of the file with entry number `entrynum`.
     pub fn path_of(&self, entrynum: i32) -> Result<String, DiscError> {
         let mut partition = self

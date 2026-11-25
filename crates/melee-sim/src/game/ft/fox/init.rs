@@ -5,7 +5,7 @@
 
 use super::super::super::code::Val;
 use super::super::super::state::Running;
-use super::{BLASTER, addr, attr, ext};
+use super::{BLASTER, addr, attr};
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -28,57 +28,11 @@ impl Running<'_> {
         self.item_pickup_hand(gobj, flag, 1);
     }
 
-    /// `Fighter_OnItemPickup(gobj, flag, hand, hand)`: hand `hand` takes the item's hold
-    /// pose, unless it is heavy, and closes on it when `flag` says so.
-    pub(crate) fn item_pickup_hand(&mut self, gobj: GObjId, flag: bool, hand: i32) {
-        let item = self
-            .game
-            .fighter(gobj)
-            .item_gobj
-            .expect("picking up no item");
-        if super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            return;
-        }
-        let kind = self
-            .ext(ext::IT_GET_HOLD_KIND, &[Val::GObj(Some(item))])
-            .int();
-        let pose = match kind {
-            1 => Some(1),
-            2 => Some(0),
-            3 => Some(2),
-            4 => Some(3),
-            _ => None,
-        };
-        if let Some(p) = pose {
-            self.ext(
-                ext::FTANIM_SET_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(hand), Val::Int(p)],
-            );
-        }
-        if flag {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(hand)],
-            );
-        }
-    }
-
     /// Hiding the held item, `ftFx_Init_OnItemInvisible`: the hand lets go of its pose,
     /// unless the item is heavy.
     #[doc(alias = "ftFx_Init_OnItemInvisible")]
     pub fn fox_on_item_invisible(&mut self, gobj: GObjId) {
         self.item_invisible_hand(gobj, 1);
-    }
-
-    /// `Fighter_OnItemInvisible(gobj, hand)`.
-    pub(crate) fn item_invisible_hand(&mut self, gobj: GObjId, hand: i32) {
-        let item = self.game.fighter(gobj).item_gobj.expect("hiding no item");
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(hand)],
-            );
-        }
     }
 
     /// Showing the held item again, `ftFx_Init_OnItemVisible`.
@@ -87,36 +41,11 @@ impl Running<'_> {
         self.item_visible_hand(gobj, 1);
     }
 
-    /// `Fighter_OnItemVisible(gobj, hand)`.
-    pub(crate) fn item_visible_hand(&mut self, gobj: GObjId, hand: i32) {
-        let item = self.game.fighter(gobj).item_gobj.expect("showing no item");
-        if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(
-                ext::FTANIM_SHOW_PART_ANIM_POSE,
-                &[Val::GObj(Some(gobj)), Val::Int(hand)],
-            );
-        }
-    }
-
     /// Dropping the item, `ftFx_Init_OnItemDrop`: no hold pose, and the hand lets go of it
     /// when `flag` says so.
     #[doc(alias = "ftFx_Init_OnItemDrop")]
     pub fn fox_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.item_drop_hand(gobj, flag, 1);
-    }
-
-    /// `Fighter_OnItemDrop(gobj, flag, hand, hand)`.
-    pub(crate) fn item_drop_hand(&mut self, gobj: GObjId, flag: bool, hand: i32) {
-        self.ext(
-            ext::FTANIM_SET_PART_ANIM_POSE,
-            &[Val::GObj(Some(gobj)), Val::Int(hand), Val::Int(-1)],
-        );
-        if flag {
-            self.ext(
-                ext::FTANIM_END_PART_ANIM,
-                &[Val::GObj(Some(gobj)), Val::Int(hand)],
-            );
-        }
     }
 
     /// Falco's attributes, `ftFx_Init_OnLoadForFalco` (`PUSH_ATTRS` with Fox's layout): the

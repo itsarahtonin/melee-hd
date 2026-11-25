@@ -210,7 +210,7 @@ impl Importer<'_> {
         if let Some(&h) = self.maps.start_hooks.get(&a) {
             return h;
         }
-        let id = StartHookId(self.game.gr.start_hooks.alloc(StartHook {
+        let id = StartHookId(self.game.gr.raw_parts_mut().start_hooks.alloc(StartHook {
             next: None,
             gobj: None,
             func: CodeRef(0),
@@ -220,7 +220,7 @@ impl Importer<'_> {
         let next = (next != 0).then(|| self.start_hook(next));
         let g = self.cap.u32(a + 4);
         let gobj = (g != 0).then(|| self.maps.gobjs[&g]);
-        self.game.gr.start_hooks[id.0] = StartHook {
+        self.game.gr.raw_parts_mut().start_hooks[id.0] = StartHook {
             next,
             gobj,
             func: CodeRef(self.cap.u32(a + 8)),
@@ -283,13 +283,14 @@ impl Importer<'_> {
         let info = sym("stage_info");
         self.game.stage_info = StageInfo::import(&m, info, self);
         let param = self.cap.u32(info + 0x6B0);
-        self.game.gr.param = (param != 0).then(|| GroundParam::import(&m, param, self));
+        *self.game.gr.raw_parts_mut().param =
+            (param != 0).then(|| GroundParam::import(&m, param, self));
         let table = sym("grDatFiles_8049EE10");
         for i in 0..4 {
             let at = table + 0xC * i as u32;
             let archive = self.cap.u32(at);
             let archive_addr = archive;
-            self.game.gr.archives[i] = match archive {
+            self.game.gr.raw_parts_mut().archives[i] = match archive {
                 0 => None,
                 _ => {
                     let map_head = self.cap.u32(at + 4);
@@ -333,20 +334,20 @@ impl Importer<'_> {
             let mut i = 1;
             while cap.u32(yaku + 4 * i) != 0 {
                 if let Some(d) = self.data_or_unhandled(cap.u32(yaku_slot(cap, i))) {
-                    self.game.gr.yaku_scripts.push((i as u8, d));
+                    self.game.gr.raw_parts_mut().yaku_scripts.push((i as u8, d));
                 }
                 i += 1;
             }
         }
         let buf = self.cap.u32(sym("Ground_804D6950"));
-        self.game.gr.coll_off = (buf != 0).then(|| {
+        *self.game.gr.raw_parts_mut().coll_off = (buf != 0).then(|| {
             let i = (buf - MEM1) as usize;
             cap.call.mem1[i..i + 64].try_into().unwrap()
         });
-        self.game.gr.coll_stamp = self.u16_at(sym("Ground_804D6954")) as i16;
+        *self.game.gr.raw_parts_mut().coll_stamp = self.u16_at(sym("Ground_804D6954")) as i16;
         let areas = sym("grDynamicAttr_8049EFA0");
         let index = |p: u32| (p != 0).then(|| ((p - areas) / 0x24) as u8);
-        let attrs = &mut self.game.gr.dynamic_attrs;
+        let attrs = self.game.gr.raw_parts_mut().dynamic_attrs;
         for (k, a) in attrs.areas.iter_mut().enumerate() {
             let at = areas + 0x24 * k as u32;
             *a = DynamicAttr {
@@ -364,85 +365,86 @@ impl Importer<'_> {
         }
         attrs.active = index(cap.u32(sym("grDynamicAttr_804D6960")));
         attrs.free = index(cap.u32(sym("grDynamicAttr_804D6964")));
-        self.game.gr.coll_generation = cap.u32(sym("mpColl_804D64AC")) as i32;
-        self.game.gr.anime_loop = (
+        *self.game.gr.raw_parts_mut().coll_generation = cap.u32(sym("mpColl_804D64AC")) as i32;
+        *self.game.gr.raw_parts_mut().anime_loop = (
             self.f32_at(sym("grAnime_804D6958")),
             self.f32_at(sym("grAnime_804D695C")),
         );
-        self.game.gr.stkind = cap.u32(sym("selected_stage")) as i32;
+        *self.game.gr.raw_parts_mut().stkind = cap.u32(sym("selected_stage")) as i32;
         let yaku = cap.u32(GRLAST_YAKUMONO);
-        self.game.gr.last_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().last_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRBATTLE_YAKUMONO);
-        self.game.gr.battle_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().battle_yakumono = self.data_or_unhandled(yaku);
         crate::stadium::import_statics(self);
         let yaku = cap.u32(GRSTORY_YAKUMONO);
-        self.game.gr.story_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().story_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GROLDPUPUPU_YAKUMONO);
-        self.game.gr.oldpupupu_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().oldpupupu_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRIZUMI_YAKUMONO);
-        self.game.gr.izumi_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().izumi_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GROLDYOSHI_YAKUMONO);
-        self.game.gr.oldyoshi_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().oldyoshi_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRKRAID_YAKUMONO);
-        self.game.gr.kraid_yakumono = self.data_or_unhandled(yaku);
-        self.game.gr.kraid_anim = cap.u32(GRKRAID_ANIM) as i32;
-        self.game.gr.test_turn = f32::from_bits(cap.u32(sym("grTe_804D6A48")));
+        *self.game.gr.raw_parts_mut().kraid_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().kraid_anim = cap.u32(GRKRAID_ANIM) as i32;
+        *self.game.gr.raw_parts_mut().test_turn = f32::from_bits(cap.u32(sym("grTe_804D6A48")));
         let yaku = cap.u32(GRFOURSIDE_YAKUMONO);
-        self.game.gr.fourside_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().fourside_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRGREATBAY_YAKUMONO);
-        self.game.gr.greatbay_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().greatbay_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GROLDKONGO_YAKUMONO);
-        self.game.gr.oldkongo_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().oldkongo_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRKINOKOROUTE_YAKUMONO);
-        self.game.gr.kinokoroute_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().kinokoroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRSHRINEROUTE_YAKUMONO);
-        self.game.gr.shrineroute_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().shrineroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRBIGBLUEROUTE_YAKUMONO);
-        self.game.gr.bigblueroute_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().bigblueroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPUSHON_YAKUMONO);
-        self.game.gr.pushon_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().pushon_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRZEBESROUTE_YAKUMONO);
-        self.game.gr.zebesroute_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().zebesroute_yakumono = self.data_or_unhandled(yaku);
         for (i, at) in gr::target_test::YAKUMONO_STATICS.into_iter().enumerate() {
             let yaku = cap.u32(at);
-            self.game.gr.target_yakumono[i] = self.data_or_unhandled(yaku);
+            self.game.gr.raw_parts_mut().target_yakumono[i] = self.data_or_unhandled(yaku);
         }
         for (i, addr) in GRFIGURE_YAKUMONO.into_iter().enumerate() {
             let yaku = cap.u32(addr);
-            self.game.gr.figure_yakumono[i] = self.data_or_unhandled(yaku);
+            self.game.gr.raw_parts_mut().figure_yakumono[i] = self.data_or_unhandled(yaku);
         }
         let yaku = cap.u32(GRHOMERUN_YAKUMONO);
-        let h = &mut self.game.gr.homerun;
+        let h = self.game.gr.raw_parts_mut().homerun;
         h.scale = f32::from_bits(cap.u32(GRHOMERUN_STATICS));
         h.ticks = cap.u32(GRHOMERUN_STATICS + 4) as i32;
         h.max_dist = f32::from_bits(cap.u32(GRHOMERUN_STATICS + 8));
         h.ratio = f32::from_bits(cap.u32(GRHOMERUN_STATICS + 0xC));
-        self.game.gr.homerun.yakumono = self.data_or_unhandled(yaku);
+        self.game.gr.raw_parts_mut().homerun.yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
-        self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
-        self.game.gr.yorster_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().yorster_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRGARDEN_YAKUMONO);
-        self.game.gr.garden_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().garden_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRKONGO_YAKUMONO);
-        self.game.gr.kongo_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().kongo_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRGREENS_YAKUMONO);
-        self.game.gr.greens_yakumono = self.data_or_unhandled(yaku);
-        self.game.gr.greens.demo = self.u8_at(GRGREENS_DEMO);
-        self.game.gr.greens.waiting = self.u8_at(GRGREENS_WAITING);
+        *self.game.gr.raw_parts_mut().greens_yakumono = self.data_or_unhandled(yaku);
+        self.game.gr.raw_parts_mut().greens.demo = self.u8_at(GRGREENS_DEMO);
+        self.game.gr.raw_parts_mut().greens.waiting = self.u8_at(GRGREENS_WAITING);
         for i in 0..0x20u32 {
-            self.game.gr.greens.layout[i as usize] = self.u8_at(GRGREENS_LAYOUT + i);
+            self.game.gr.raw_parts_mut().greens.layout[i as usize] =
+                self.u8_at(GRGREENS_LAYOUT + i);
         }
         let yaku = cap.u32(GRZEBES_YAKUMONO);
-        self.game.gr.zebes_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().zebes_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRONETT_YAKUMONO);
-        self.game.gr.onett_yakumono = self.data_or_unhandled(yaku);
-        self.game.gr.onett_unread = cap.u32(GRONETT_X69C4) as i32;
+        *self.game.gr.raw_parts_mut().onett_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().onett_unread = cap.u32(GRONETT_X69C4) as i32;
         let yaku = cap.u32(GRCORNERIA_YAKUMONO);
-        self.game.gr.corneria_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().corneria_yakumono = self.data_or_unhandled(yaku);
         self.import_corneria();
         let yaku = cap.u32(GRVENOM_YAKUMONO);
-        self.game.gr.venom_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().venom_yakumono = self.data_or_unhandled(yaku);
         self.import_venom();
         self.import_zebes();
         self.import_mutecity();
@@ -450,7 +452,7 @@ impl Importer<'_> {
             let at = GRKONGO_PLANKS + 0x18 * i;
             let j = cap.u32(at + 4);
             let jobj = self.import_handle_jobj(j);
-            let p = &mut self.game.gr.kongo.planks[i as usize];
+            let p = &mut self.game.gr.raw_parts_mut().kongo.planks[i as usize];
             p.jobj = jobj;
             p.angle = f32::from_bits(cap.u32(at + 0xC));
             p.speed = f32::from_bits(cap.u32(at + 0x10));
@@ -458,57 +460,64 @@ impl Importer<'_> {
         }
         for i in 0..2u32 {
             let j = cap.u32(GRKONGO_POSTS + 4 * i);
-            self.game.gr.kongo.posts[i as usize] = self.import_handle_jobj(j);
+            self.game.gr.raw_parts_mut().kongo.posts[i as usize] = self.import_handle_jobj(j);
         }
         let yaku = cap.u32(GRRCRUISE_YAKUMONO);
-        self.game.gr.rcruise_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().rcruise_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRBIGBLUE_YAKUMONO);
-        self.game.gr.bigblue_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().bigblue_yakumono = self.data_or_unhandled(yaku);
         for i in 0..12u32 {
             let at = GRBIGBLUE_TRACK + 0x14 * i + 8;
-            self.game.gr.bigblue.track_deltas[i as usize] = Vec3::new(
+            self.game.gr.raw_parts_mut().bigblue.track_deltas[i as usize] = Vec3::new(
                 f32::from_bits(cap.u32(at)),
                 f32::from_bits(cap.u32(at + 4)),
                 f32::from_bits(cap.u32(at + 8)),
             );
         }
         let yaku = cap.u32(GRMUTECITY_YAKUMONO);
-        self.game.gr.mutecity_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().mutecity_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPURA_YAKUMONO);
-        self.game.gr.pura_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().pura_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRFLATZONE_YAKUMONO);
-        self.game.gr.flatzone_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().flatzone_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRINISHIE1_YAKUMONO);
-        self.game.gr.inishie1_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().inishie1_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRINISHIE2_YAKUMONO);
-        self.game.gr.inishie2_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().inishie2_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRICEMT_YAKUMONO);
-        self.game.gr.icemt_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().icemt_yakumono = self.data_or_unhandled(yaku);
         for i in 0..3 {
             let g = cap.u32(GRICEMT_FIELDS + 4 * i);
-            self.game.gr.icemt_fields[i as usize] = self.import_handle_gobj(g);
+            self.game.gr.raw_parts_mut().icemt_fields[i as usize] = self.import_handle_gobj(g);
         }
         let yaku = cap.u32(GRCASTLE_YAKUMONO);
-        self.game.gr.castle_yakumono = self.data_or_unhandled(yaku);
+        *self.game.gr.raw_parts_mut().castle_yakumono = self.data_or_unhandled(yaku);
         let (pool, w) = (cap.u32(gr::vars::WIND_POOL), cap.u32(GRCASTLE_WIND));
-        self.game.gr.castle = gr::peachs_castle::Globals {
+        *self.game.gr.raw_parts_mut().castle = gr::peachs_castle::Globals {
             wind: (w != 0).then(|| (w.wrapping_sub(pool) / gr::vars::WIND_SIZE) as u8),
             step: self.f32_at(GRCASTLE_STEP),
             gusts: self.u8_at(GRCASTLE_GUSTS),
         };
         let n = gr::poke_floats::VTX_COUNT as u32;
         let vtx: Vec<u32> = (0..n).map(|i| cap.u32(GRPURA_VTX + 0xC * i + 8)).collect();
-        self.game.gr.pura_vtx_jobjs.clear();
+        self.game.gr.raw_parts_mut().pura_vtx_jobjs.clear();
         if vtx.iter().any(|&p| p != 0) {
             for p in vtx {
                 let j = self.import_handle_jobj(p);
-                self.game.gr.pura_vtx_jobjs.push(j);
+                self.game.gr.raw_parts_mut().pura_vtx_jobjs.push(j);
             }
         }
-        self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
-        self.game.gr.game_mode = self.u8_at(sym("state_machine"));
+        *self.game.gr.raw_parts_mut().battle_demo = self.u8_at(sym("isDemoFight")) != 0;
+        *self.game.gr.raw_parts_mut().game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
-        for (i, p) in self.game.gr.start_points.iter_mut().enumerate() {
+        for (i, p) in self
+            .game
+            .gr
+            .raw_parts_mut()
+            .start_points
+            .iter_mut()
+            .enumerate()
+        {
             let at = points + 0xC * i as u32;
             *p = Vec3::new(
                 f32::from_bits(cap.u32(at)),
@@ -520,7 +529,7 @@ impl Importer<'_> {
             let p = s.cap.u32(a);
             s.import_handle_gobj(p)
         };
-        self.game.gr.devices = gr::FtDevices {
+        *self.game.gr.raw_parts_mut().devices = gr::FtDevices {
             coll_count: cap.u32(sym("ft_804D6570")) as i32,
             bury_count: cap.u32(sym("ftDevice_BuryThingCount")) as i32,
             wind_count: cap.u32(sym("ft_804D6578")) as i32,
@@ -552,11 +561,11 @@ impl Importer<'_> {
         let articles = sym("it_804A0F60");
         for k in 0..30 {
             let a = cap.u32(articles + 4 * k as u32);
-            self.game.gr.stage_articles[k] = self.data_or_unhandled(a);
+            self.game.gr.raw_parts_mut().stage_articles[k] = self.data_or_unhandled(a);
         }
         let z = sym("lbl_8049F030");
         let slots = cap.u32(z + 4);
-        self.game.gr.zako = gr::zako::Zako {
+        *self.game.gr.raw_parts_mut().zako = gr::zako::Zako {
             spawns: self.data_or_unhandled(cap.u32(z)),
             slots: (slots != 0).then(|| {
                 (0..81)
@@ -576,8 +585,8 @@ impl Importer<'_> {
             flags: self.u8_at(z + 0xA),
             addr: slots,
         };
-        self.game.gr.winds = winds(|a| cap.u32(a));
-        self.game.gr.wind_level = cap.u32(sym("lb_804D63B4")) as i32;
+        *self.game.gr.raw_parts_mut().winds = winds(|a| cap.u32(a));
+        *self.game.gr.raw_parts_mut().wind_level = cap.u32(sym("lb_804D63B4")) as i32;
         self.game.geometry = self.geometry();
         self.globals();
         self.camera();
@@ -972,13 +981,13 @@ impl Comparer<'_> {
         let info = sym("stage_info");
         game.stage_info.compare(&m, info, "stage_info", self);
         let param = self.u32(info + 0x6B0);
-        match (&game.gr.param, param) {
+        match (game.gr.raw_parts().param, param) {
             (None, 0) => {}
             (Some(p), a) if a != 0 => p.compare(&m, a, "stage param", self),
             (o, t) => self.diff("stage param", "presence", o.is_some(), format!("{t:#x}")),
         }
         let table = sym("grDatFiles_8049EE10");
-        for (i, ours) in game.gr.archives.iter().enumerate() {
+        for (i, ours) in game.gr.raw_parts().archives.iter().enumerate() {
             let at = table + 0xC * i as u32;
             let theirs = (self.u32(at) != 0).then(|| {
                 let mh = self.u32(at + 4);
@@ -1026,7 +1035,7 @@ impl Comparer<'_> {
                 mem & bits,
             );
         }
-        for &(i, script) in &game.gr.yaku_scripts {
+        for &(i, script) in game.gr.raw_parts().yaku_scripts {
             let articles = self.u32(sym("it_804D6D38"));
             let article = self.u32(articles + 4 * (160 - 43));
             let slot = self.u32(article + 0xC) + 0x10 * u32::from(i) + 0xC;
@@ -1043,29 +1052,32 @@ impl Comparer<'_> {
         self.check(
             "Ground_804D6950",
             "collision switches",
-            game.gr.coll_off,
+            *game.gr.raw_parts().coll_off,
             theirs,
         );
         self.check(
             "Ground_804D6954",
             "stamp",
-            game.gr.coll_stamp,
+            *game.gr.raw_parts().coll_stamp,
             self.u16(sym("Ground_804D6954")) as i16,
         );
-        self.start_hooks(game.stage_info.start_hooks, self.u32(info + 0x6A4));
+        self.start_hooks(
+            *game.stage_info.raw_parts().start_hooks,
+            self.u32(info + 0x6A4),
+        );
         self.dynamic_attrs();
         let generation = self.u32(sym("mpColl_804D64AC")) as i32;
         let ours = game
             .geometry
             .as_ref()
-            .map_or(game.gr.coll_generation, |g| g.generation());
+            .map_or(*game.gr.raw_parts().coll_generation, |g| g.generation());
         self.check("mpColl_804D64AC", "update counter", ours, generation);
         self.check(
             "grAnime_804D6958",
             "loop frames",
             (
-                game.gr.anime_loop.0.to_bits(),
-                game.gr.anime_loop.1.to_bits(),
+                game.gr.raw_parts().anime_loop.0.to_bits(),
+                game.gr.raw_parts().anime_loop.1.to_bits(),
             ),
             (
                 self.u32(sym("grAnime_804D6958")),
@@ -1075,7 +1087,7 @@ impl Comparer<'_> {
         self.check(
             "selected_stage",
             "stkind",
-            game.gr.stkind,
+            *game.gr.raw_parts().stkind,
             self.u32(sym("selected_stage")) as i32,
         );
         // Final Destination's and Battlefield's parameters stay set past their match too, into
@@ -1083,11 +1095,15 @@ impl Comparer<'_> {
         {
             use melee_sim::game::mirror::Cx;
             let yaku = self.u32(GRLAST_YAKUMONO);
-            self.compare_data("grLast yakumono_param data", game.gr.last_yakumono, yaku);
+            self.compare_data(
+                "grLast yakumono_param data",
+                *game.gr.raw_parts().last_yakumono,
+                yaku,
+            );
             let yaku = self.u32(GRBATTLE_YAKUMONO);
             self.compare_data(
                 "grBattle yakumono_param data",
-                game.gr.battle_yakumono,
+                *game.gr.raw_parts().battle_yakumono,
                 yaku,
             );
         }
@@ -1096,177 +1112,177 @@ impl Comparer<'_> {
             (
                 "grStory yakumono_param",
                 GRSTORY_YAKUMONO,
-                game.gr.story_yakumono,
+                *game.gr.raw_parts().story_yakumono,
             ),
             (
                 "grOldPupupu yakumono_param",
                 GROLDPUPUPU_YAKUMONO,
-                game.gr.oldpupupu_yakumono,
+                *game.gr.raw_parts().oldpupupu_yakumono,
             ),
             (
                 "grIzumi yakumono_param",
                 GRIZUMI_YAKUMONO,
-                game.gr.izumi_yakumono,
+                *game.gr.raw_parts().izumi_yakumono,
             ),
             (
                 "grOldYoshi yakumono_param",
                 GROLDYOSHI_YAKUMONO,
-                game.gr.oldyoshi_yakumono,
+                *game.gr.raw_parts().oldyoshi_yakumono,
             ),
             (
                 "grKraid yakumono_param",
                 GRKRAID_YAKUMONO,
-                game.gr.kraid_yakumono,
+                *game.gr.raw_parts().kraid_yakumono,
             ),
             (
                 "grFourside yakumono_param",
                 GRFOURSIDE_YAKUMONO,
-                game.gr.fourside_yakumono,
+                *game.gr.raw_parts().fourside_yakumono,
             ),
             (
                 "grGreatBay yakumono_param",
                 GRGREATBAY_YAKUMONO,
-                game.gr.greatbay_yakumono,
+                *game.gr.raw_parts().greatbay_yakumono,
             ),
             (
                 "grOldKongo yakumono_param",
                 GROLDKONGO_YAKUMONO,
-                game.gr.oldkongo_yakumono,
+                *game.gr.raw_parts().oldkongo_yakumono,
             ),
             (
                 "grKinokoRoute yakumono_param",
                 GRKINOKOROUTE_YAKUMONO,
-                game.gr.kinokoroute_yakumono,
+                *game.gr.raw_parts().kinokoroute_yakumono,
             ),
             (
                 "grShrineRoute yakumono_param",
                 GRSHRINEROUTE_YAKUMONO,
-                game.gr.shrineroute_yakumono,
+                *game.gr.raw_parts().shrineroute_yakumono,
             ),
             (
                 "grBigBlueRoute yakumono_param",
                 GRBIGBLUEROUTE_YAKUMONO,
-                game.gr.bigblueroute_yakumono,
+                *game.gr.raw_parts().bigblueroute_yakumono,
             ),
             (
                 "grPushOn yakumono_param",
                 GRPUSHON_YAKUMONO,
-                game.gr.pushon_yakumono,
+                *game.gr.raw_parts().pushon_yakumono,
             ),
             (
                 "grZebesRoute yakumono_param",
                 GRZEBESROUTE_YAKUMONO,
-                game.gr.zebesroute_yakumono,
+                *game.gr.raw_parts().zebesroute_yakumono,
             ),
             (
                 "grFigure1 yakumono_param",
                 GRFIGURE_YAKUMONO[0],
-                game.gr.figure_yakumono[0],
+                game.gr.raw_parts().figure_yakumono[0],
             ),
             (
                 "grFigure2 yakumono_param",
                 GRFIGURE_YAKUMONO[1],
-                game.gr.figure_yakumono[1],
+                game.gr.raw_parts().figure_yakumono[1],
             ),
             (
                 "grFigure3 yakumono_param",
                 GRFIGURE_YAKUMONO[2],
-                game.gr.figure_yakumono[2],
+                game.gr.raw_parts().figure_yakumono[2],
             ),
             (
                 "grHomeRun yakumono_param",
                 GRHOMERUN_YAKUMONO,
-                game.gr.homerun.yakumono,
+                game.gr.raw_parts().homerun.yakumono,
             ),
             (
                 "grShrine yakumono_param",
                 GRSHRINE_YAKUMONO,
-                game.gr.shrine_yakumono,
+                *game.gr.raw_parts().shrine_yakumono,
             ),
             (
                 "grYorster yakumono_param",
                 GRYORSTER_YAKUMONO,
-                game.gr.yorster_yakumono,
+                *game.gr.raw_parts().yorster_yakumono,
             ),
             (
                 "grGarden yakumono_param",
                 GRGARDEN_YAKUMONO,
-                game.gr.garden_yakumono,
+                *game.gr.raw_parts().garden_yakumono,
             ),
             (
                 "grKongo yakumono_param",
                 GRKONGO_YAKUMONO,
-                game.gr.kongo_yakumono,
+                *game.gr.raw_parts().kongo_yakumono,
             ),
             (
                 "grGreens yakumono_param",
                 GRGREENS_YAKUMONO,
-                game.gr.greens_yakumono,
+                *game.gr.raw_parts().greens_yakumono,
             ),
             (
                 "grZebes yakumono_param",
                 GRZEBES_YAKUMONO,
-                game.gr.zebes_yakumono,
+                *game.gr.raw_parts().zebes_yakumono,
             ),
             (
                 "grOnett yakumono_param",
                 GRONETT_YAKUMONO,
-                game.gr.onett_yakumono,
+                *game.gr.raw_parts().onett_yakumono,
             ),
             (
                 "grRCruise yakumono_param",
                 GRRCRUISE_YAKUMONO,
-                game.gr.rcruise_yakumono,
+                *game.gr.raw_parts().rcruise_yakumono,
             ),
             (
                 "grPura yakumono_param",
                 GRPURA_YAKUMONO,
-                game.gr.pura_yakumono,
+                *game.gr.raw_parts().pura_yakumono,
             ),
             (
                 "grFlatzone yakumono_param",
                 GRFLATZONE_YAKUMONO,
-                game.gr.flatzone_yakumono,
+                *game.gr.raw_parts().flatzone_yakumono,
             ),
             (
                 "grInishie1 yakumono_param",
                 GRINISHIE1_YAKUMONO,
-                game.gr.inishie1_yakumono,
+                *game.gr.raw_parts().inishie1_yakumono,
             ),
             (
                 "grInishie2 yakumono_param",
                 GRINISHIE2_YAKUMONO,
-                game.gr.inishie2_yakumono,
+                *game.gr.raw_parts().inishie2_yakumono,
             ),
             (
                 "grIceMt yakumono_param",
                 GRICEMT_YAKUMONO,
-                game.gr.icemt_yakumono,
+                *game.gr.raw_parts().icemt_yakumono,
             ),
             (
                 "grCorneria yakumono_param",
                 GRCORNERIA_YAKUMONO,
-                game.gr.corneria_yakumono,
+                *game.gr.raw_parts().corneria_yakumono,
             ),
             (
                 "grVenom yakumono_param",
                 GRVENOM_YAKUMONO,
-                game.gr.venom_yakumono,
+                *game.gr.raw_parts().venom_yakumono,
             ),
             (
                 "grCastle yakumono_param",
                 GRCASTLE_YAKUMONO,
-                game.gr.castle_yakumono,
+                *game.gr.raw_parts().castle_yakumono,
             ),
             (
                 "grMuteCity yakumono_param",
                 GRMUTECITY_YAKUMONO,
-                game.gr.mutecity_yakumono,
+                *game.gr.raw_parts().mutecity_yakumono,
             ),
             (
                 "grBigBlue yakumono_param",
                 GRBIGBLUE_YAKUMONO,
-                game.gr.bigblue_yakumono,
+                *game.gr.raw_parts().bigblue_yakumono,
             ),
         ] {
             // A stage's parameters stay set past its match, into its freed file.
@@ -1275,16 +1291,16 @@ impl Comparer<'_> {
         }
         for (i, at) in gr::target_test::YAKUMONO_STATICS.into_iter().enumerate() {
             use melee_sim::game::mirror::Cx;
-            let ours = game.gr.target_yakumono[i];
+            let ours = game.gr.raw_parts().target_yakumono[i];
             self.compare_data(&format!("grT yakumono_param {i} data"), ours, self.u32(at));
         }
         // A stage's own statics compare on that stage: past its match they name its freed
         // heap, ours as well, and only its code reads them.
-        let on = |k: gr::GrKind| game.stage_info.grkind == k;
+        let on = |k: gr::GrKind| *game.stage_info.raw_parts().grkind == k;
         if on(gr::GrKind::Zebes) {
             self.compare_zebes();
         }
-        for (i, g) in game.gr.icemt_fields.iter().enumerate() {
+        for (i, g) in game.gr.raw_parts().icemt_fields.iter().enumerate() {
             if !on(gr::GrKind::Icemt) {
                 break;
             }
@@ -1301,7 +1317,7 @@ impl Comparer<'_> {
             self.compare_corneria();
         }
         if on(gr::GrKind::Homerun) {
-            let h = &game.gr.homerun;
+            let h = game.gr.raw_parts().homerun;
             self.check(
                 "grHr_804D6AD8",
                 "scale, ticks, max_dist, ratio",
@@ -1322,7 +1338,7 @@ impl Comparer<'_> {
         if on(gr::GrKind::Venom) {
             self.compare_venom();
         }
-        let castle = &game.gr.castle;
+        let castle = game.gr.raw_parts().castle;
         let pool = self.u32(gr::vars::WIND_POOL);
         let w = castle
             .wind
@@ -1342,7 +1358,7 @@ impl Comparer<'_> {
         if on(gr::GrKind::MuteCity) {
             self.compare_mutecity();
         }
-        for (i, d) in game.gr.bigblue.track_deltas.iter().enumerate() {
+        for (i, d) in game.gr.raw_parts().bigblue.track_deltas.iter().enumerate() {
             let at = GRBIGBLUE_TRACK + 0x14 * i as u32 + 8;
             self.check(
                 &format!("grBb_TrackEntries[{i}]"),
@@ -1354,10 +1370,10 @@ impl Comparer<'_> {
         self.check(
             "grOt_804D69C4",
             "onett x69c4",
-            game.gr.onett_unread,
+            *game.gr.raw_parts().onett_unread,
             self.u32(GRONETT_X69C4) as i32,
         );
-        let greens = &game.gr.greens;
+        let greens = game.gr.raw_parts().greens;
         self.check(
             "grGr_804D6AAC",
             "greens flags",
@@ -1373,29 +1389,29 @@ impl Comparer<'_> {
         self.check(
             "grKr_804D6A0C",
             "kraid anim",
-            game.gr.kraid_anim,
+            *game.gr.raw_parts().kraid_anim,
             self.u32(GRKRAID_ANIM) as i32,
         );
         self.check(
             "grTe_804D6A48",
             "test stage turn",
-            game.gr.test_turn.to_bits(),
+            game.gr.raw_parts().test_turn.to_bits(),
             self.u32(sym("grTe_804D6A48")),
         );
         self.check(
             "isDemoFight",
             "demo",
-            game.gr.battle_demo,
+            *game.gr.raw_parts().battle_demo,
             self.u8(sym("isDemoFight")) != 0,
         );
         self.check(
             "state_machine",
             "game mode",
-            game.gr.game_mode,
+            *game.gr.raw_parts().game_mode,
             self.u8(sym("state_machine")),
         );
         let points = sym("grLib_8049EF58");
-        for (i, p) in game.gr.start_points.iter().enumerate() {
+        for (i, p) in game.gr.raw_parts().start_points.iter().enumerate() {
             let at = points + 0xC * i as u32;
             self.check(
                 &format!("grLib_8049EF58[{i}]"),
@@ -1404,7 +1420,7 @@ impl Comparer<'_> {
                 [self.u32(at), self.u32(at + 4), self.u32(at + 8)],
             );
         }
-        let d = game.gr.devices.clone();
+        let d = game.gr.raw_parts().devices.clone();
         let gobj_pair = |s: &Self, a: u32| {
             let p = s.u32(a);
             (p != 0).then(|| s.maps.gobjs.get(&p).copied())
@@ -1430,7 +1446,7 @@ impl Comparer<'_> {
                 gobj_pair(self, sym("ft_80459A8C")),
             ],
         );
-        let kongo = &game.gr.kongo;
+        let kongo = game.gr.raw_parts().kongo;
         let jobj_pair = |s: &Self, a: u32| {
             let p = s.u32(a);
             (p != 0).then(|| s.maps.jobjs.get(&p).copied())
@@ -1468,7 +1484,7 @@ impl Comparer<'_> {
             if !on(gr::GrKind::Pura) {
                 break;
             }
-            let ours = game.gr.pura_vtx_jobjs.get(i).copied().flatten();
+            let ours = game.gr.raw_parts().pura_vtx_jobjs.get(i).copied().flatten();
             self.check(
                 &format!("grPu_803E6C0C[{i}]"),
                 "joint",
@@ -1499,10 +1515,14 @@ impl Comparer<'_> {
             // An earlier stage's article this one doesn't replace names its freed file.
             let a = self.u32(articles + 4 * k as u32);
             use melee_sim::game::mirror::Cx;
-            self.compare_data(&format!("it_804A0F60[{k}]"), game.gr.stage_articles[k], a);
+            self.compare_data(
+                &format!("it_804A0F60[{k}]"),
+                game.gr.raw_parts().stage_articles[k],
+                a,
+            );
         }
         let z = sym("lbl_8049F030");
-        let zk = &game.gr.zako;
+        let zk = game.gr.raw_parts().zako;
         // Past the match scene whose heap held the slots (the results screen's, and the next
         // match's until its stage's start sets them again, `grZakoGenerator_801CAE04` from the
         // stage's `OnStart` some 84 ticks in), the pointer names freed memory, ours the last
@@ -1578,7 +1598,7 @@ impl Comparer<'_> {
         // what the block held (`lb_800100B0` writes neither, and nothing reads them):
         // compared are the lists and the blowing sources' fields (docs/engine.md).
         if crate::leftovers::enabled() {
-            let ours = &game.gr.winds;
+            let ours = game.gr.raw_parts().winds;
             let mut blowing = Vec::new();
             let mut cur = theirs.active;
             while let Some(c) = cur {
@@ -1601,13 +1621,18 @@ impl Comparer<'_> {
             }
         }
         // By bit pattern: a free source keeps what its block held, NaNs among it.
-        if wind_bits(&game.gr.winds) != wind_bits(&theirs) {
-            self.diff("lb_804D63A8", "wind sources", &game.gr.winds, &theirs);
+        if wind_bits(game.gr.raw_parts().winds) != wind_bits(&theirs) {
+            self.diff(
+                "lb_804D63A8",
+                "wind sources",
+                game.gr.raw_parts().winds,
+                &theirs,
+            );
         }
         self.check(
             "lb_804D63B4",
             "wind level",
-            game.gr.wind_level,
+            *game.gr.raw_parts().wind_level,
             self.u32(sym("lb_804D63B4")) as i32,
         );
         if let Some(g) = &game.geometry {
@@ -1719,7 +1744,7 @@ impl Comparer<'_> {
                 }
                 break;
             }
-            let h = self.game.gr.start_hooks[o.unwrap().0].clone();
+            let h = self.game.gr.raw_parts().start_hooks[o.unwrap().0].clone();
             let g = self.u32(t + 4);
             let theirs = (g != 0).then(|| self.maps.gobjs.get(&g).copied());
             self.check(&path, "GObj", h.gobj.map(Some), theirs);
@@ -1733,7 +1758,7 @@ impl Comparer<'_> {
     fn dynamic_attrs(&mut self) {
         let areas = sym("grDynamicAttr_8049EFA0");
         let index = |p: u32| (p != 0).then(|| ((p - areas) / 0x24) as u8);
-        let attrs = self.game.gr.dynamic_attrs.clone();
+        let attrs = self.game.gr.raw_parts().dynamic_attrs.clone();
         for (k, a) in attrs.areas.iter().enumerate() {
             let at = areas + 0x24 * k as u32;
             self.check(
@@ -1869,7 +1894,8 @@ impl Comparer<'_> {
             // A joint freed since (Pokémon Stadium's transformation pieces) dangles, compared
             // by address.
             let jo = self.u32(a + 0x20);
-            let freed = (self.game.gr.freed_coll_jobjs.iter()).find(|&&(k, _)| k == j as i32);
+            let freed =
+                (self.game.gr.raw_parts().freed_coll_jobjs.iter()).find(|&&(k, _)| k == j as i32);
             if let (None, Some(&(_, addr))) = (joint.jobj, freed) {
                 self.check(&path, "freed joint's address", addr, jo);
             } else {
@@ -2129,7 +2155,7 @@ impl Importer<'_> {
                 Vec3::new(self.f32_at(at), self.f32_at(at + 4), self.f32_at(at + 8));
         }
         c.talk = cap.u32(GRCORNERIA_TALK) as i32;
-        self.game.gr.corneria = c;
+        *self.game.gr.raw_parts_mut().corneria = c;
     }
 
     /// Venom's statics.
@@ -2145,7 +2171,7 @@ impl Importer<'_> {
         v.slot = cap.u32(GRVENOM_SLOT);
         v.wait = cap.u32(GRVENOM_SLOT + 4) as i32;
         v.demo = cap.u32(GRVENOM_SLOT + 0xC) as i32;
-        self.game.gr.venom = v;
+        *self.game.gr.raw_parts_mut().venom = v;
     }
 
     /// Brinstar's statics and spawn configurations.
@@ -2180,18 +2206,18 @@ impl Importer<'_> {
             }
             z
         };
-        self.game.gr.zebes = z;
+        *self.game.gr.raw_parts_mut().zebes = z;
         for i in 0..20u32 {
             let b = GRZEBES_BUBBLES + 0x24 * i;
             // A gone bubble's pop pointer can only be one a bubble that moved up left.
             let j = self.cap.u32(b + 4);
-            let left = self.game.gr.zebes.bubbles[i as usize].state == 0 && j != 0;
+            let left = self.game.gr.raw_parts().zebes.bubbles[i as usize].state == 0 && j != 0;
             let pop = if left {
                 None
             } else {
                 self.import_handle_jobj(j)
             };
-            let e = &mut self.game.gr.zebes.bubbles[i as usize];
+            let e = &mut self.game.gr.raw_parts_mut().zebes.bubbles[i as usize];
             e.pop = pop;
             e.pop_left = left;
             let g = self.cap.u32(b + 0x20);
@@ -2199,11 +2225,12 @@ impl Importer<'_> {
                 // Mute City's race order reaches this word (`Globals::order_before`).
                 continue;
             }
-            self.game.gr.zebes.bubbles[i as usize].gobj = self.import_handle_gobj(g);
+            self.game.gr.raw_parts_mut().zebes.bubbles[i as usize].gobj =
+                self.import_handle_gobj(g);
         }
         let grkind = self.cap.u32(sym("stage_info") + 0x88) as i32;
         let addrs = config_addrs(grkind, &|a| self.cap.u32(a));
-        self.game.gr.spawn_configs.clear();
+        self.game.gr.raw_parts_mut().spawn_configs.clear();
         for a in addrs {
             let mem = |x: u32| self.cap.u32(x);
             let spawns_addr = mem(a + 4);
@@ -2216,10 +2243,8 @@ impl Importer<'_> {
                 .collect();
             let generator = mem(a + 0x14);
             assert_eq!(generator, 0, "a spawn configuration holding a generator");
-            self.game
-                .gr
-                .spawn_configs
-                .push(melee_sim::game::gr::zako::SpawnConfig {
+            self.game.gr.raw_parts_mut().spawn_configs.push(
+                melee_sim::game::gr::zako::SpawnConfig {
                     addr: a,
                     spawns_addr,
                     descs: mem(a),
@@ -2229,7 +2254,8 @@ impl Importer<'_> {
                     generator: None,
                     x18: mem(a + 0x18) as i32,
                     spawns,
-                });
+                },
+            );
         }
     }
 }
@@ -2238,7 +2264,7 @@ impl Comparer<'_> {
     /// Venom's statics against memory; the Arwings' hold, which nothing writes, stays 0.
     fn compare_venom(&mut self) {
         let game = self.game;
-        let v = &game.gr.venom;
+        let v = game.gr.raw_parts().venom;
         let gobj_pair = |s: &Self, a: u32| {
             let p = s.u32(a);
             (p != 0).then(|| s.maps.gobjs.get(&p).copied())
@@ -2274,7 +2300,7 @@ impl Comparer<'_> {
     /// Corneria's statics against memory.
     fn compare_corneria(&mut self) {
         let game = self.game;
-        let c = &game.gr.corneria;
+        let c = game.gr.raw_parts().corneria;
         let gobj_pair = |s: &Self, a: u32| {
             let p = s.u32(a);
             (p != 0).then(|| s.maps.gobjs.get(&p).copied())
@@ -2320,7 +2346,7 @@ impl Comparer<'_> {
     /// Brinstar's statics and spawn configurations against memory.
     fn compare_zebes(&mut self) {
         let game = self.game;
-        let z = &game.gr.zebes;
+        let z = game.gr.raw_parts().zebes;
         let mem = |a: u32| self.u32(a);
         let bits = |v: Vec3| [v.x, v.y, v.z].map(f32::to_bits);
         let theirs: [[u32; 3]; 4] =
@@ -2364,7 +2390,7 @@ impl Comparer<'_> {
                     jo,
                 );
             }
-            if i == 19 && game.stage_info.grkind == gr::GrKind::MuteCity {
+            if i == 19 && *game.stage_info.raw_parts().grkind == gr::GrKind::MuteCity {
                 // Mute City's race order reaches this word, compared with its statics.
                 continue;
             }
@@ -2377,10 +2403,11 @@ impl Comparer<'_> {
                 gp,
             );
         }
-        let addrs = config_addrs(game.stage_info.grkind, &|a| self.u32(a));
+        let addrs = config_addrs(*game.stage_info.raw_parts().grkind, &|a| self.u32(a));
         for a in addrs {
             let Some(c) = game
                 .gr
+                .raw_parts()
                 .spawn_configs
                 .iter()
                 .find(|c| c.addr == a || (c.addr == 0 && c.descs == self.u32(a)))
@@ -2424,7 +2451,7 @@ impl Importer<'_> {
     /// Mute City's race: the cars, the order with the word before it, and the track's state.
     fn import_mutecity(&mut self) {
         let mem = |a: u32| self.cap.u32(a);
-        let m = &mut self.game.gr.mutecity;
+        let m = self.game.gr.raw_parts_mut().mutecity;
         m.track_live = mem(GRMUTECITY_TRACK_LIVE) as i32;
         m.order_before = mem(GRMUTECITY_ORDER - 4) as i32;
         for i in 0..gr::mute_city::CARS as u32 {
@@ -2447,7 +2474,8 @@ impl Importer<'_> {
             };
             let item = self.cap.u32(b + 0x24);
             let item = self.import_handle_gobj(item);
-            self.game.gr.mutecity.cars[i as usize] = gr::mute_city::Car { item, ..c };
+            self.game.gr.raw_parts_mut().mutecity.cars[i as usize] =
+                gr::mute_city::Car { item, ..c };
         }
     }
 }
@@ -2456,7 +2484,7 @@ impl Comparer<'_> {
     /// Mute City's race against memory.
     fn compare_mutecity(&mut self) {
         let game = self.game;
-        let m = &game.gr.mutecity;
+        let m = game.gr.raw_parts().mutecity;
         self.check(
             "grMc_804D69D4",
             "track live",
@@ -2466,7 +2494,7 @@ impl Comparer<'_> {
         let theirs: [i32; 30] =
             std::array::from_fn(|i| self.u32(GRMUTECITY_ORDER + 4 * i as u32) as i32);
         self.check("grMc_8049F440", "order", m.order, theirs);
-        if game.stage_info.grkind == gr::GrKind::MuteCity {
+        if *game.stage_info.raw_parts().grkind == gr::GrKind::MuteCity {
             self.check(
                 "grMc_8049F440[-1]",
                 "the word before the order",
@@ -2522,7 +2550,7 @@ fn ground_render_target_view(
     at: u32,
     mem: &[u8],
 ) -> Option<Vec<u8>> {
-    let runs = game.gr.render_leftovers.get(&g.0)?;
+    let runs = game.gr.raw_parts().render_leftovers.get(&g.0)?;
     let size = melee_sim::game::gr::setup::GROUND_SIZE;
     let img = &game.objs.heap.image;
     let fill = img.render_fill;

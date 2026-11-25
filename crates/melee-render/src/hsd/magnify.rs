@@ -1,6 +1,6 @@
 //! The magnifier's bubbles: each player off screen is drawn into its bubble's texture with
 //! an EFB copy (`lb_800122C8`, `HSD_ImageDescCopyFromEFB`). The first bubble copies into its
-//! model's own image; the others into the copies' buffers (`ifMagnify::image_descs`), which
+//! model's own image; the others into the copies' buffers (`Magnifier::image_descs`), which
 //! only the presentation reads.
 
 use gekko_fp as fp;
@@ -51,7 +51,7 @@ impl Ctx<'_> {
     #[doc(alias = "Player_80036978")]
     pub fn magnifier_erase_color(&self, slot: u8) -> Option<Color> {
         let game = self.game;
-        let param = game.gr.param.as_ref()?;
+        let param = game.gr.ground_param()?;
         let player = game.players.get(usize::from(slot))?;
         let fg = player.player_entity[usize::from(player.transformed[0])]?;
         let Some(UserData::Fighter(f)) = game.world.gobj(fg).user_data else {
@@ -231,7 +231,7 @@ impl Ctx<'_> {
     /// camera's render is copied into (`grIzumi_801CCD98`), which the presentation keeps. In
     /// widescreen it's wider ([`Ctx::reflection_widening`]).
     pub fn reflection_image(&self, d: DataRef) -> Option<Image> {
-        let r = self.game.gr.izumi.reflection.as_ref()?;
+        let r = self.game.gr.izumi_reflection()?;
         if r.image != Some(d) {
             return None;
         }
@@ -265,7 +265,7 @@ impl Ctx<'_> {
     /// cameras do, its texels wider.
     pub fn reflection_widening(&self) -> Option<(u16, f32)> {
         let aspect = self.hsd.widescreen?;
-        let r = self.game.gr.izumi.reflection.as_ref()?;
+        let r = self.game.gr.izumi_reflection()?;
         Some(widened_copy(
             r.desc.width,
             aspect / crate::frame::GAME_ASPECT,
@@ -293,7 +293,7 @@ impl Ctx<'_> {
     /// render, in the EFB's top left corner, copied into the reflection image, and that corner
     /// cleared for the screen's pass.
     pub fn reflection_copy(&mut self) {
-        let image = self.game.gr.izumi.reflection.as_ref().and_then(|r| r.image);
+        let image = self.game.gr.izumi_reflection().and_then(|r| r.image);
         let Some(img) = image.and_then(|d| self.reflection_image(d)) else {
             self.hsd.note_once("a reflection copy without an image");
             return;
@@ -305,7 +305,7 @@ impl Ctx<'_> {
     /// data), which the presentation keeps; in widescreen, a screen copied from the frame is
     /// narrower ([`Ctx::screen_widening`]).
     pub fn screen_image(&self, n: u8) -> Option<Image> {
-        let s = self.game.gr.stadium.screens.get(usize::from(n))?.as_ref()?;
+        let s = self.game.gr.stadium_screen(usize::from(n))?;
         let desc = &s.desc;
         let width = match self.screen_widening(n) {
             Some(k) => narrowed(desc.width, k),

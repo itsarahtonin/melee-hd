@@ -110,7 +110,7 @@ impl<'a> StageMaps<'a> {
 
     /// The stage's kind (`stage_info.grkind`).
     pub fn grkind(&self) -> i32 {
-        self.info.grkind
+        self.info.ground_kind_id()
     }
 
     /// A GObj's joint (`hsd_obj`), if it holds one.
@@ -131,7 +131,7 @@ impl<'a> StageMaps<'a> {
 
     /// The GObj of map `map_id`, `Ground_GetMapGObj`.
     pub fn gobj(&self, map_id: i32) -> Option<GObjId> {
-        self.info.map_gobjs[map_id as usize]
+        self.info.map_gobj(map_id)
     }
 
     /// A GObj's P-link (`p_link`).
@@ -141,7 +141,7 @@ impl<'a> StageMaps<'a> {
 
     /// The stage object of map `map_id`, `Ground_GetMapGObj(map_id)->user_data`.
     pub fn ground(&self, map_id: i32) -> Option<super::super::handles::GroundId> {
-        let g = self.info.map_gobjs[map_id as usize]?;
+        let g = self.info.map_gobj(map_id)?;
         match self.world.gobjs[g.0].user_data {
             Some(super::super::state::UserData::Ground(gr)) => Some(gr),
             _ => None,
@@ -154,7 +154,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
     /// `grDynamicAttr_801CA284`: the first area on the in-use list on a floor connected to it
     /// whose circle holds the point, else 0.
     fn dynamic_terrain(&mut self, g: &Geometry, pos: Vec3, line_id: i32) -> i32 {
-        dynamic_terrain(&self.stage_maps.gr.dynamic_attrs, g, pos, line_id)
+        dynamic_terrain(self.stage_maps.gr.dynamic_attrs(), g, pos, line_id)
     }
 
     fn joint_callback(
@@ -184,7 +184,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     };
                     super::super::gr::yoshis_island::block_landed(
                         &mut self.grounds[g.0],
-                        gr.yorster_yakumono,
+                        gr.yakumono(super::super::gr::GrKind::Yorster),
                         data,
                         &part_joint,
                         joint_id,
@@ -223,7 +223,9 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         self.objs,
                         self.data,
                         self.grounds,
-                        self.stage_maps.gr.greatbay_yakumono,
+                        self.stage_maps
+                            .gr
+                            .yakumono(super::super::gr::GrKind::GreatBay),
                         g,
                         coll,
                         x50,
@@ -253,7 +255,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
             }
             super::super::gr::onett::ROOF_LANDED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    let param = self.stage_maps.gr.onett_yakumono;
+                    let param = self.stage_maps.gr.yakumono(super::super::gr::GrKind::Onett);
                     super::super::gr::onett::roof_landed(
                         &mut self.grounds[g.0],
                         param,
@@ -264,7 +266,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
             }
             super::super::gr::onett::AWNING_LANDED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    let param = self.stage_maps.gr.onett_yakumono;
+                    let param = self.stage_maps.gr.yakumono(super::super::gr::GrKind::Onett);
                     super::super::gr::onett::awning_landed(
                         &mut self.grounds[g.0],
                         param,
@@ -318,7 +320,10 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
             super::super::gr::mushroom_kingdom::BLOCK_BUMPED => self.bumps.bumped(joint_id, dy),
             super::super::gr::mushroom_kingdom::LIFT_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    let param = self.stage_maps.gr.inishie1_yakumono;
+                    let param = self
+                        .stage_maps
+                        .gr
+                        .yakumono(super::super::gr::GrKind::Inishie1);
                     super::super::gr::mushroom_kingdom::lift_touched(
                         self.grounds,
                         param,
@@ -343,7 +348,10 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
             }
             super::super::gr::big_blue::CAR_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    let param = self.stage_maps.gr.bigblue_yakumono;
+                    let param = self
+                        .stage_maps
+                        .gr
+                        .yakumono(super::super::gr::GrKind::BigBlue);
                     super::super::gr::big_blue::car_touched(
                         &mut self.grounds[g.0],
                         param,
@@ -420,7 +428,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                 )
             }
             super::super::gr::mute_city::TRACK_TOUCHED => {
-                let live = self.stage_maps.gr.mutecity.track_live;
+                let live = self.stage_maps.gr.mute_city_track_live();
                 let item = coll
                     .gobj
                     .is_some_and(|o| self.stage_maps.p_link(o) == ITEM_P_LINK);

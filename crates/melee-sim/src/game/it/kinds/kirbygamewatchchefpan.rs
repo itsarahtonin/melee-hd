@@ -1,13 +1,11 @@
 //! The pan of Kirby's copy of Chef, `melee/it/kinds/itkirbygamewatchchefpan.c`: held at his
-//! thumb and colored as his copy, gone once he leaves the move.
+//! thumb and colored as his copy, gone once he leaves the move. Its hooks are Mr. Game &
+//! Watch's held items' ([`gamewatch::Held`]).
 
-use super::super::item::{animate, change, change_state, destroy};
-use super::super::{item, lib26b1};
-use super::gamewatch;
+use super::gamewatch::{self, Clears, Held};
 use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
-use crate::vec::Vec3;
 
 pub const DESTROYED: u32 = 0x802C_75DC;
 pub const PICKED_UP: u32 = 0x802C_7698;
@@ -15,11 +13,22 @@ pub const ANIM: u32 = 0x802C_76E8;
 #[doc(alias("EVT_UNK"))]
 pub const FORGET: u32 = 0x802C_7754;
 
+/// The pan's settings: Kirby's copy's, its script variables left as they are.
+pub const HELD: Held = Held {
+    kind: ItKind::KirbyGameAndWatchPan,
+    forget: |r, f| r.kb_gw_pan_gone(f),
+    owner_done: |r, f| r.kb_gw_done(f),
+    clears: Clears::None,
+    owner_air: false,
+    hides_on_land: false,
+    gone_at: None,
+};
+
 /// Runs one of the pan's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM => anim(r, gobj),
+        ANIM => gamewatch::held_anim(r, gobj, &HELD),
         _ => return None,
     })
 }
@@ -28,85 +37,9 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        DESTROYED => destroyed(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
+        DESTROYED => gamewatch::held_destroyed(r, gobj, &HELD),
+        PICKED_UP => gamewatch::held_picked_up(r, gobj, &HELD),
         _ => return false,
     }
     true
-}
-
-/// The pan at `parent`'s part `part`, `it_802C74D8`.
-#[doc(alias = "it_802C74D8")]
-pub fn spawn(
-    r: &mut Running,
-    parent: GObjId,
-    pos: Vec3,
-    part: i32,
-    facing_dir: f32,
-) -> Option<GObjId> {
-    gamewatch::spawn_held(
-        r,
-        ItKind::KirbyGameAndWatchPan.id(),
-        parent,
-        pos,
-        part,
-        facing_dir,
-    )
-}
-
-/// Gone, `itKirbyGameWatchChefPan_Logic113_Destroyed`: its owner forgets it.
-#[doc(alias = "itKirbyGameWatchChefPan_Logic113_Destroyed")]
-pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if let Some(owner) = item(r.game, gobj).owner {
-        r.kb_gw_pan_gone(owner);
-    }
-}
-
-/// Taken away, `it_802C760C`.
-#[doc(alias = "it_802C760C")]
-pub fn remove(r: &mut Running, gobj: GObjId) {
-    destroyed(r, gobj);
-    destroy(r, gobj);
-}
-
-/// Paused, `it_802C7658`.
-#[doc(alias = "it_802C7658")]
-pub fn hitlag_start(r: &mut Running, gobj: GObjId) {
-    gamewatch::hitlag_start(r, gobj);
-}
-
-/// Running again, `it_802C7678`.
-#[doc(alias = "it_802C7678")]
-pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
-    gamewatch::hitlag_end(r, gobj);
-}
-
-/// Taken in hand, `itKirbyGameWatchChefPan_Logic113_PickedUp`: animating.
-#[doc(alias = "itKirbyGameWatchChefPan_Logic113_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).owner.is_some() {
-        change_state(r, gobj, 0, change::ANIM_UPDATE);
-        animate(r, gobj);
-    }
-}
-
-/// `itKirbygamewatchchefpan_UnkMotion0_Anim`: gone once its owner has left the move (or it
-/// has none).
-#[doc(alias = "itKirbygamewatchchefpan_UnkMotion0_Anim")]
-pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
-    let go = match item(r.game, gobj).owner {
-        Some(owner) => r.kb_gw_done(owner),
-        None => true,
-    };
-    if go {
-        destroyed(r, gobj);
-    }
-    go
-}
-
-/// Forgets a GObj, `itKirbyGameWatchChefPan_Logic113_EvtUnk`.
-// Ports `itKirbyGameWatchChefPan_Logic113_EvtUnk`; aliased once a check reaches it.
-#[doc(alias("evt_unk"))]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
 }

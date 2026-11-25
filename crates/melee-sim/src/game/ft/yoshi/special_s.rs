@@ -911,7 +911,7 @@ impl Running<'_> {
             delta = fp::fneg(delta);
         }
         let friction = reg(crate::mp::friction(
-            self.game.stage_info.grkind,
+            self.game.stage_info.ground_kind_id(),
             fp.coll_data.floor.flags,
         ));
         let fp = &mut self.game.fighters[f.0];
@@ -935,7 +935,7 @@ impl Running<'_> {
         let x20 = self.ys_mvf(gobj, mv::X20);
         let fp = &self.game.fighters[f.0];
         let friction = reg(crate::mp::friction(
-            self.game.stage_info.grkind,
+            self.game.stage_info.ground_kind_id(),
             fp.coll_data.floor.flags,
         ));
         let fp = &mut self.game.fighters[f.0];

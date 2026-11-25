@@ -37,7 +37,7 @@ fn corner_camera(w: u16, h: u16) -> CameraView {
 /// as the stages make them (`grIzumi_801CCD98`, `grStadium_801D2BEC`).
 fn game() -> Game {
     let mut game = Game::default();
-    game.gr.izumi.reflection = Some(fountain_of_dreams::Reflection {
+    game.gr.raw_parts_mut().izumi.reflection = Some(fountain_of_dreams::Reflection {
         image: Some(DataRef {
             archive: ArchiveId(0),
             offset: 0,
@@ -45,7 +45,7 @@ fn game() -> Game {
         desc: pokemon_stadium::screen_image(80, 60, 4),
         ..Default::default()
     });
-    game.gr.stadium.screens[pokemon_stadium::SCREEN_TEXT as usize] =
+    game.gr.raw_parts_mut().stadium.screens[pokemon_stadium::SCREEN_TEXT as usize] =
         Some(pokemon_stadium::Screen {
             desc: pokemon_stadium::screen_image(250, 160, 4),
             ..Default::default()

@@ -8,7 +8,7 @@
 //! between the audio library's calls isn't simulated, so where it takes time the timeline is
 //! moved to where ssbm-rs's clock has that code end ([`BootTimes`]).
 
-use melee_data::archive::{ArchiveId, Archives};
+use melee_data::archive::Archives;
 
 use super::Audio;
 use super::ax::{Ax, PB_WORDS, VOICES as AX_VOICES, Voice};
@@ -319,12 +319,14 @@ impl Audio {
     /// the read's callback; its tables then point into it.
     #[doc(alias = "AXDriver_8038DA70")]
     #[doc(alias = "fn_8038DA5C")]
-    pub fn driver_load_bank(&mut self, data: &Archives, bank: ArchiveId, len: u32) {
+    pub fn driver_load_bank(&mut self, data: &Archives, file: &crate::lb::audio::SoundBank) {
+        let (bank, len) = (file.archive, file.len);
         let base = self.audio_malloc(len.next_multiple_of(32));
         self.driver.bank_addr = base;
-        // `DVDReadAsyncPrio`: one read straight into the block, done after the disc's latency
-        // (and its transfer); its callback (`fn_8038DA5C`) ends the spin.
-        self.hw.disc_read(len.next_multiple_of(32), self.disc);
+        // `DVDReadAsyncPrio`: one read straight into the block from the file's start, done
+        // after the disc's time for it; its callback (`fn_8038DA5C`) ends the spin.
+        let at = super::clock::disc_offset(file.entrynum, 0);
+        self.hw.disc_read(at, len.next_multiple_of(32), self.disc);
         self.driver.reading_bank = true;
         self.with_clock(data, |c, f| c.spin_until(f, super::clock::Wait::BankRead));
         let file = data.get(bank).data();

@@ -580,12 +580,12 @@ impl Running<'_> {
         if self.game.fighter(gobj).wind_immune {
             return out;
         }
-        for i in 0..self.game.gr.devices.wind_count {
+        for i in 0..self.game.gr.devices().wind_count {
             assert!(
                 i == 0,
                 "ftColl_GetWindOffsetVec: a wind device past ft_80459A68's one"
             );
-            let d = &self.game.gr.devices;
+            let d = &self.game.gr.devices();
             let Some(ground) = d.device else { continue };
             let (kind, cb) = (d.device_type, d.device_cb);
             if !self.device_applies(gobj, kind) {
@@ -664,8 +664,11 @@ impl Running<'_> {
         let kb_limit = reg(self.common().f32(0x4F0));
         let si = &self.game.stage_info;
         // `Stage_GetBlastZone*Offset`, inline.
-        let (x_off, y_off) = (reg(si.cam_info.cam_x_offset), reg(si.cam_info.cam_y_offset));
-        let b = &si.blast_zone;
+        let (x_off, y_off) = (
+            reg(si.camera_settings().cam_x_offset),
+            reg(si.camera_settings().cam_y_offset),
+        );
+        let b = &si.blast_zone();
         let right = fp::fadds(reg(b.right), x_off);
         let left = fp::fadds(reg(b.left), x_off);
         let top = fp::fadds(reg(b.top), y_off);

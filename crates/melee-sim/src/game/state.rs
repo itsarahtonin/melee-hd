@@ -10,8 +10,8 @@ use super::camera::CameraState;
 use super::gr;
 use super::handles::{CodeRef, FighterId, GroundId, ItemId};
 use super::structs::{
-    ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, SceneLoop, StageInfo,
-    StaticPlayer, VsSceneController, ifMagnify,
+    ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, Magnifier, SceneLoop,
+    StageInfo, StaticPlayer, VsSceneController,
 };
 use super::{ft, gm, pl};
 use crate::hsd::Objects;
@@ -349,7 +349,7 @@ pub struct Game {
     pub pl: pl::Globals,
     /// The off-screen magnifier (`ifMagnify_804A1DE0`): which players are off screen, which
     /// deals them damage over time.
-    pub magnify: ifMagnify,
+    pub magnify: Magnifier,
     /// Where the magnifier's bubbles but the first copy their pixels (`image_descs`'
     /// buffers), where the allocator model gives them: the heap's image takes them as a render
     /// target once a bubble is copied ([`crate::hsd::image::Src::RenderTarget`]).
@@ -599,7 +599,7 @@ impl Host<GameKinds> for Running<'_> {
             UserData::SisCamera(g) => self.game.sis.forget_camera(g),
             // `mn_8022EB04`: the heap byte goes back.
             UserData::NameTagSlot(slot) => {
-                let addr = self.game.hud.nametags.user_data_addrs[usize::from(slot)];
+                let addr = self.game.hud.nametag_user_data_addr(slot);
                 crate::hsd::heap::mem_free(addr);
             }
             UserData::BgFlash => self.game.bg_flash_free(),
@@ -736,11 +736,11 @@ impl Host<GameKinds> for Running<'_> {
                 crate::hsd::export::with_image(|img| {
                     super::export::stadium_screen(game, data, img, which)
                 });
-                let s = self.game.gr.stadium.screens[usize::from(which)].as_ref();
+                let s = self.game.gr.stadium_screen(usize::from(which));
                 crate::hsd::heap::mem_free(s.map_or(0, |s| s.addr));
             }
             UserData::IzumiReflection => {
-                let r = self.game.gr.izumi.reflection.as_ref();
+                let r = self.game.gr.izumi_reflection();
                 crate::hsd::heap::mem_free(r.map_or(0, |r| r.addr));
             }
             // `fn_800138AC`: `HSD_Free`.

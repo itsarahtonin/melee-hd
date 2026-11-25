@@ -67,7 +67,7 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         // `&un_804DDBA8[slot]`, a byte each (`un_802FE260`).
         UserData::ArrowSlot(slot) => Some(0x804D_DBA8 + u32::from(slot)),
         // `NameTag_Create`'s heap byte.
-        UserData::NameTagSlot(slot) => known(game.hud.nametags.user_data_addrs[usize::from(slot)]),
+        UserData::NameTagSlot(slot) => known(game.hud.nametag_user_data_addr(slot)),
         UserData::Raw(p) => Some(p.0),
         UserData::Toy(a) => known(a),
         // The select screen's blocks, while their GObjs have them.
@@ -80,15 +80,11 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         UserData::CssTag(i) => game.charsel.tags[usize::from(i)]
             .as_ref()
             .and_then(|c| known(c.addr)),
-        UserData::StadiumScreen(which) => game.gr.stadium.screens[usize::from(which)]
-            .as_ref()
-            .and_then(|s| known(s.addr)),
-        UserData::IzumiReflection => game
+        UserData::StadiumScreen(which) => game
             .gr
-            .izumi
-            .reflection
-            .as_ref()
-            .and_then(|r| known(r.addr)),
+            .stadium_screen(usize::from(which))
+            .and_then(|s| known(s.addr)),
+        UserData::IzumiReflection => game.gr.izumi_reflection().and_then(|r| known(r.addr)),
     }
 }
 
@@ -192,7 +188,7 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
 /// process), as it goes back (`HSD_Free` once the match starts) or with its scene's heap (a
 /// cutscene's stage never starts).
 pub fn start_hook(game: &Game, img: &mut Image, h: super::handles::StartHookId) {
-    let hooks = &game.gr.start_hooks;
+    let hooks = game.gr.raw_parts().start_hooks;
     let at = hooks.addr(h.0);
     if at == 0 {
         return;
@@ -462,7 +458,7 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
         }
     }
     let kind = std::any::type_name::<super::gr::StartHook>();
-    for (slot, _) in game.gr.start_hooks.iter() {
+    for (slot, _) in game.gr.raw_parts().start_hooks.iter() {
         if img.in_scene(kind, slot) {
             start_hook(game, img, super::handles::StartHookId(slot));
         }
@@ -499,7 +495,7 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
         }
     }
     let kind = std::any::type_name::<crate::game::hud::debug_menu::DebugMenu>();
-    if let Some(menus) = &game.hud.devtext.menus {
+    if let Some(menus) = &game.hud.devtext().menus {
         for (slot, m) in menus.iter() {
             if img.in_scene(kind, slot) {
                 debug_menu(game, data, img, slot, m.text);
@@ -555,7 +551,7 @@ const DEVTEXT_SIZE: u32 = 0x34;
 /// `DevText_Remove(&menu->x4)` writes the list's link through it, leaving the next screen (or
 /// null) where the screen was first in its list.
 pub fn debug_menu(game: &Game, data: &Archives, img: &mut Image, slot: u32, text: Option<u8>) {
-    let Some(pool) = &game.hud.devtext.menus else {
+    let Some(pool) = &game.hud.devtext().menus else {
         return;
     };
     let at = pool.addr(slot);
@@ -608,7 +604,7 @@ fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
     }
     if g.lines_addr != 0 {
         let at = g.lines_addr;
-        let lines = match game.stage_info.coll_data {
+        let lines = match *game.stage_info.raw_parts().coll_data {
             None => Some(DEFAULT_MAP_LINES),
             Some(c) => data.ptr(c.at(8)).and_then(|d| img.data_addr(d)),
         };
@@ -667,7 +663,7 @@ fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
 /// back with the scene's heap: each slot's point, timer and spawn; its trophy word where the
 /// stage wrote it, else what the block held.
 fn zako_slots(game: &Game, data: &Archives, img: &mut Image) {
-    let z = &game.gr.zako;
+    let z = game.gr.raw_parts().zako;
     let (Some(slots), at) = (&z.slots, z.addr) else {
         return;
     };
@@ -719,7 +715,7 @@ fn wind_sources(game: &Game, data: &Archives, img: &mut Image) {
     if block == 0 {
         return;
     }
-    let w = &game.gr.winds;
+    let w = game.gr.winds();
     let mut l = Lay::leftover(img, data, block, 8 * 0x38);
     for (i, e) in w.entries.iter().enumerate() {
         let at = 0x38 * i as u32;
@@ -896,7 +892,7 @@ pub fn bg_flash_fields(img: &Image, l: &mut Lay, u: &super::structs::BgFlashUser
 /// ends at 0x1C.
 pub fn stadium_screen(game: &Game, data: &Archives, img: &mut Image, which: u8) {
     use super::gr::pokemon_stadium::{SCREEN_FEED, SCREEN_TEXT, SCREEN_ZOOM};
-    let Some(s) = &game.gr.stadium.screens[usize::from(which)] else {
+    let Some(s) = game.gr.stadium_screen(usize::from(which)) else {
         return;
     };
     if s.addr == 0 {
@@ -948,7 +944,7 @@ pub fn ground(game: &Game, data: &Archives, img: &mut Image, g: super::handles::
     for b in blocks {
         b.put(img);
     }
-    if let Some(runs) = game.gr.render_leftovers.get(&g.0) {
+    if let Some(runs) = game.gr.raw_parts().render_leftovers.get(&g.0) {
         // The flag byte's bits no code writes (`GroundX11Flags::rest`): over the GPU's pixels
         // the object never held them, and the image keeps whole bytes, so the byte goes back
         // as the pixels it was made over (`m6-multiman/mm-100-win`, tick 21767: a Battlefield
@@ -1833,7 +1829,7 @@ pub fn coll_joints(game: &Game, data: &Archives, img: &mut Image) {
     if at == 0 || g.joints.is_empty() {
         return;
     }
-    let descs = match game.stage_info.coll_data {
+    let descs = match *game.stage_info.raw_parts().coll_data {
         None => Some(DEFAULT_MAP_JOINTS),
         Some(c) => data.ptr(c.at(0x24)).and_then(|d| img.data_addr(d)),
     };

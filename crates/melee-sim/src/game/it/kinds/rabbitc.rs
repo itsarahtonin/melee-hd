@@ -1,10 +1,10 @@
 //! The Bunny Hood, `melee/it/kinds/itrabbitc.c`: it falls and rests; the fighter that picks it
 //! up wears it (`ftCommon_8007FA58`), its ears and parts fitted to the head
-//! (`it_80294E78`, `it_80294EB0`), its shine shown or hidden (`it_802950D4`).
+//! (`it_80294E78`, `it_80294EB0`), its shine shown or hidden (`it_802950D4`). Its rest, falls,
+//! pickup, drop and skid are the power-ups' ([`powerup`]).
 
-use super::super::ground::{air, fall, ground_or_fall, ground_skid};
-use super::super::item::{change, change_state};
-use super::super::{item_mut, lib26b1, lib2725};
+use super::super::lib2725;
+use super::powerup::{self, PowerUp};
 use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -28,16 +28,25 @@ pub const ANIM4: u32 = 0x8029_5368;
 pub const PHYS4: u32 = 0x8029_5370;
 pub const COLL4: u32 = 0x8029_5374;
 
+/// The Bunny Hood: its shine hidden while it's held and shown again when it's let go of.
+pub const BUNNY_HOOD: PowerUp = PowerUp {
+    clears_hurt: false,
+    on_spawn: None,
+    tilts: false,
+    on_pickup: Some(hide_shine),
+    on_drop: Some(unhide_shine),
+};
+
 /// Runs one of the Bunny Hood's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         SHIELD_BOUNCED => shield_bounced(r, gobj),
-        ANIM0 | ANIM3 | ANIM2 | ANIM4 => still(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL1 => coll1(r, gobj),
-        COLL3 => coll3(r, gobj),
-        COLL4 => coll4(r, gobj),
+        ANIM0 | ANIM3 | ANIM2 | ANIM4 => powerup::still(r, gobj),
+        COLL0 => powerup::rests(r, gobj, &BUNNY_HOOD),
+        COLL1 => powerup::lands(r, gobj),
+        COLL3 => powerup::vanishes(r, gobj),
+        COLL4 => powerup::skids(r, gobj),
         _ => return None,
     })
 }
@@ -46,12 +55,12 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => spawned(r, gobj),
-        PHYS0 | PHYS4 => idle(r, gobj),
-        PHYS1 | PHYS3 => gravity(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        DROPPED => dropped(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        SPAWNED => powerup::spawned(r, gobj, &BUNNY_HOOD),
+        PHYS0 | PHYS4 => powerup::idle(r, gobj),
+        PHYS1 | PHYS3 => powerup::gravity(r, gobj),
+        PICKED_UP => powerup::picked_up(r, gobj, &BUNNY_HOOD),
+        DROPPED => powerup::dropped(r, gobj, &BUNNY_HOOD),
+        ENTERED_AIR => powerup::entered_air(r, gobj),
         _ => return false,
     }
     true
@@ -98,10 +107,15 @@ pub fn show_shine(r: &mut Running, gobj: GObjId, on: bool) {
     }
 }
 
-/// `itRabbitC_Logic31_Spawned`: falling.
-#[doc(alias = "itRabbitC_Logic31_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    fell(r, gobj);
+/// Its shine hidden as it's picked up (`itRabbitC_Logic31_PickedUp` makes
+/// `it_802950D4`'s calls itself).
+fn hide_shine(r: &mut Running, gobj: GObjId) {
+    show_shine(r, gobj, false);
+}
+
+/// Its shine shown as it's let go of (`itRabbitC_Logic31_Dropped`'s).
+fn unhide_shine(r: &mut Running, gobj: GObjId) {
+    show_shine(r, gobj, true);
 }
 
 /// A Bunny Hood resting at `pos`, `it_80294DC0`.
@@ -109,96 +123,6 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
     let mut spawn = super::super::item::drop_spawn(ItKind::BunnyHood.id(), pos, false);
     let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
-    landed(r, gobj);
+    powerup::landed(r, gobj);
     Some(gobj)
-}
-
-/// Stops and rests, `it_80295138`.
-#[doc(alias = "it_80295138")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
-    lib26b1::enable_pickup(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The states that animate nothing, `itRabbitc_UnkMotion0_Anim` (2, 3 for 1 and 3, 4).
-#[doc(alias = "itRabbitc_UnkMotion0_Anim")]
-#[doc(alias = "itRabbitc_UnkMotion2_Anim")]
-#[doc(alias = "itRabbitc_UnkMotion3_Anim")]
-#[doc(alias = "itRabbitc_UnkMotion4_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itRabbitc_UnkMotion0_Phys` and 4.
-#[doc(alias = "itRabbitc_UnkMotion0_Phys")]
-#[doc(alias = "itRabbitc_UnkMotion4_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itRabbitc_UnkMotion0_Coll`: resting, it falls off ledges.
-#[doc(alias = "itRabbitc_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
-}
-
-/// Falls, `it_802951C0`.
-#[doc(alias = "it_802951C0")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
-/// Gravity, `itRabbitc_UnkMotion1_Phys` and 3.
-#[doc(alias = "itRabbitc_UnkMotion1_Phys")]
-#[doc(alias = "itRabbitc_UnkMotion3_Phys")]
-pub fn gravity(r: &mut Running, gobj: GObjId) {
-    super::gravity(r, gobj);
-}
-
-/// `itRabbitc_UnkMotion1_Coll`: lands.
-#[doc(alias = "itRabbitc_UnkMotion1_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
-    false
-}
-
-/// Held, its shine hidden, `itRabbitC_Logic31_PickedUp`.
-#[doc(alias = "itRabbitC_Logic31_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-    let j = lib2725::bone(r.game, r.data, gobj, 3);
-    lib2725::hide_tree(r.game, j);
-}
-
-/// Let go of, it falls with its shine shown, `itRabbitC_Logic31_Dropped`.
-#[doc(alias = "itRabbitC_Logic31_Dropped")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE | change::DROP_UPDATE);
-    let j = lib2725::bone(r.game, r.data, gobj, 3);
-    lib2725::show_tree(r.game, j);
-}
-
-/// `itRabbitc_UnkMotion3_Coll`: thrown, gone when it touches anything.
-#[doc(alias = "itRabbitc_UnkMotion3_Coll")]
-pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
-    air(r, gobj)
-}
-
-/// Skidding off a slope, `itRabbitC_Logic31_EnteredAir`.
-#[doc(alias = "itRabbitC_Logic31_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, change::ANIM_UPDATE);
-}
-
-/// `itRabbitc_UnkMotion4_Coll`: skidding, it stops or falls.
-#[doc(alias = "itRabbitc_UnkMotion4_Coll")]
-pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
-}
-
-/// Forgets a GObj the hood points to, `itRabbitC_Logic31_EvtUnk` (`it_8026B894`).
-#[doc(alias = "itRabbitC_Logic31_EvtUnk")]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
 }

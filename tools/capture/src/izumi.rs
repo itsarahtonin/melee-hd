@@ -49,7 +49,7 @@ pub(crate) fn import_reflection(imp: &mut Importer, ud: u32) -> UserData {
     } else {
         HSD_ImageDesc::default()
     };
-    imp.game.gr.izumi.reflection = Some(Reflection {
+    imp.game.gr.raw_parts_mut().izumi.reflection = Some(Reflection {
         texture_matrix,
         image,
         desc,
@@ -72,7 +72,7 @@ pub(crate) fn compare_reflection(cmp: &mut Comparer, path: &str, t: u32) {
         crate::stadium::HSD_FREE,
         w(mem, t + 0x30),
     );
-    let Some(v) = cmp.game.gr.izumi.reflection.as_ref() else {
+    let Some(v) = cmp.game.gr.raw_parts().izumi.reflection.as_ref() else {
         cmp.diff(path, "reflection user data", "none", format!("{ud:#x}"));
         return;
     };

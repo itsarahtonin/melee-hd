@@ -63,9 +63,39 @@ const TOTAL_TIME_READ: u64 = 16;
 const TICK_READ: u64 = 16;
 /// Time an ARAM load takes per 4 KB chunk (eight register reads).
 pub const ARAM_CHUNK: u64 = 64;
-/// A disc read's time from its command to its interrupt, ssbm-rs's `DVD_LATENCY` (Slippi's
-/// fast disc speed), before the transfer time a [`DiscSpeed`] adds.
+/// A disc read's time from its command to its interrupt at [`DiscSpeed::FastFlat`], ssbm-rs's
+/// `DVD_LATENCY` (its model of Slippi's fast disc speed before its `05d550a`), and before the
+/// transfer time [`DiscSpeed::Drive`] adds.
 pub const DISC_LATENCY: u64 = 20_250;
+/// Dolphin's GameCube CPU clock, its core timing's ticks a second (`SystemTimers`'
+/// `m_cpu_core_clock`), twelve to a time base tick (`TIMER_RATIO`).
+pub const DOLPHIN_CPU_HZ: u64 = 486_000_000;
+const DOLPHIN_TB_RATIO: u64 = 12;
+/// Dolphin's `DVDInterface.cpp` (project-slippi/dolphin `41a7a3a`): a read command's start
+/// (`READ_COMMAND_LATENCY_US`), the drive's buffer's rate into memory (`BUFFER_TRANSFER_RATE`,
+/// bytes a second), and its ECC block (`DVD_ECC_BLOCK_SIZE`), the chunks a read is timed in.
+const DOLPHIN_READ_LATENCY_US: u64 = 600;
+const DOLPHIN_BUFFER_RATE: u64 = 32 * 1024 * 1024;
+const DOLPHIN_ECC_BLOCK: u64 = 0x8000;
+
+/// Dolphin's time for a read of `len` bytes at disc offset `offset` under `FastDiscSpeed`, in
+/// its CPU cycles ([`DOLPHIN_CPU_HZ`]): `DVDInterface::ScheduleReads` with every block
+/// buffered (fast disc speed makes the buffer the whole disc), so the read's latency and then
+/// each chunk up to the next ECC block boundary at the buffer's rate, each chunk's cycles
+/// rounded down on their own.
+pub fn dolphin_read_cycles(offset: u64, len: u32) -> u64 {
+    let mut cycles = DOLPHIN_READ_LATENCY_US * (DOLPHIN_CPU_HZ / 1_000_000);
+    let (mut offset, mut left) = (offset, u64::from(len));
+    loop {
+        let chunk = ((offset + 1).next_multiple_of(DOLPHIN_ECC_BLOCK) - offset).min(left);
+        cycles += chunk * DOLPHIN_CPU_HZ / DOLPHIN_BUFFER_RATE;
+        offset += chunk;
+        left -= chunk;
+        if left == 0 {
+            return cycles;
+        }
+    }
+}
 /// Time base ticks a second.
 pub const TB_HZ: u64 = 40_500_000;
 /// A GameCube drive's average read rate, in bytes a second: the pace ssbm-rs's window reads
@@ -149,38 +179,67 @@ const MOVIE_ALARM_TAIL: u64 = 0;
 /// alone those often fall within one 5 ms audio frame, so the SDK's `__AXSyncPBs` copies only
 /// the addresses to the DSP, the stale loop flag stops the voice at the end of its first
 /// buffer, and the song goes silent about 1.8 s in. A drive's pace keeps them frames apart: any
-/// rate under about 13 MB/s does.
+/// rate under about 13 MB/s does. So does Slippi Dolphin's own fast disc speed, which isn't a
+/// flat latency ([`DiscSpeed::Fast`]); the flat latency ([`DiscSpeed::FastFlat`]) is kept for
+/// the sessions ssbm-rs recorded with it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum DiscSpeed {
-    /// Each read finishes [`DISC_LATENCY`] after its command, as ssbm-rs's runs read unless told
-    /// otherwise (Slippi's fast disc speed): what the oracle's traces and the replay checks
-    /// were made with.
+    /// Slippi Dolphin's fast disc speed (`FastDiscSpeed`, on in its playback and netplay
+    /// builds), as its `DVDInterface` times a read ([`dolphin_read_cycles`]): 600 µs, then the
+    /// bytes at 32 MiB/s, counted in 0x8000-byte blocks of the read's disc offset. What
+    /// ssbm-rs's runs read at since its `05d550a` (`DiscSpeed::Dolphin`): every replay trace
+    /// (`traces/v6-dolphin`), and every replay's match, as Slippi Dolphin's playback reads. A
+    /// 0x4000-byte read takes about 1.09 ms, which keeps a song's start and its first box's
+    /// addresses in separate audio frames (docs/player.md, "The music the fast speed cuts").
     #[default]
     Fast,
-    /// A drive's pace, as ssbm-rs's window reads (`Hw::set_disc_rate`, and `DISC_RATE=3000000`
-    /// in any run): reads also move their bytes at [`DRIVE_RATE`], after the latency. What the
-    /// player's own matches read at (a replay in the player reads at [`DiscSpeed::Fast`], as
-    /// Slippi Dolphin's playback does).
+    /// ssbm-rs's model of the fast speed before its `05d550a` (its `DiscSpeed::Flat`,
+    /// `DISC_RATE=flat`): each read finishes [`DISC_LATENCY`] after its command. The sessions
+    /// recorded with it play back at it: a recording whose header has no disc rate and no
+    /// [`DOLPHIN_DISC`](crate::game::inputs::DOLPHIN_DISC) flag. It cuts about half of all
+    /// songs 1.8 s in.
+    FastFlat,
+    /// A drive's pace, as ssbm-rs's window reads (`DiscSpeed::Rate`, and `DISC_RATE=3000000`
+    /// in any run): reads also move their bytes at [`DRIVE_RATE`], after [`DISC_LATENCY`].
+    /// What the player's own matches read at (a replay in the player reads at
+    /// [`DiscSpeed::Fast`], as Slippi Dolphin's playback does).
     Drive,
 }
 
 impl DiscSpeed {
-    /// Time base ticks a read of `len` bytes takes to transfer, on top of its latency.
-    pub fn transfer(self, len: u32) -> u64 {
+    /// Time base ticks from the command of a read of `len` bytes at disc offset `offset` to
+    /// its interrupt: at Dolphin's speed the first time base tick its cycles have passed by.
+    pub fn read_time(self, offset: u64, len: u32) -> u64 {
         match self {
-            DiscSpeed::Fast => 0,
-            DiscSpeed::Drive => u64::from(len) * TB_HZ / u64::from(DRIVE_RATE),
+            DiscSpeed::Fast => dolphin_read_cycles(offset, len).div_ceil(DOLPHIN_TB_RATIO),
+            DiscSpeed::FastFlat => DISC_LATENCY,
+            DiscSpeed::Drive => DISC_LATENCY + u64::from(len) * TB_HZ / u64::from(DRIVE_RATE),
         }
     }
 
-    /// The speed a command line names: `fast` or `drive`.
+    /// The speed a command line names: `fast`, `fast-flat` or `drive` ([`DiscSpeed::NAMES`]).
     pub fn parse(name: &str) -> Option<DiscSpeed> {
         match name {
             "fast" => Some(DiscSpeed::Fast),
+            "fast-flat" => Some(DiscSpeed::FastFlat),
             "drive" => Some(DiscSpeed::Drive),
             _ => None,
         }
     }
+
+    /// The names [`DiscSpeed::parse`] takes, for a usage line.
+    pub const NAMES: &str = "fast|fast-flat|drive";
+}
+
+/// The disc offset of a read of disc file `entrynum`, `at` bytes into it, as `DVDReadAsyncPrio`
+/// sends it to the drive: the file's start in the retail disc's file system table
+/// ([`super::fst::OFFSETS`]) plus `at`.
+pub fn disc_offset(entrynum: i32, at: u32) -> u64 {
+    let start = usize::try_from(entrynum)
+        .ok()
+        .and_then(|e| super::fst::OFFSETS.get(e))
+        .unwrap_or_else(|| panic!("disc file {entrynum} isn't on the disc"));
+    u64::from(*start) + u64::from(at)
 }
 
 /// What happens at a time on the timeline.
@@ -592,14 +651,14 @@ pub enum Wait {
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by
-/// the time into the stretch its command went out, and the time its bytes take to transfer
-/// after the latency; a second one can't start before it ends), ARAM transfers, which
+/// the time into the stretch its command went out, and the time from that command to its
+/// interrupt; a second one can't start before it ends), ARAM transfers, which
 /// finish at once and interrupt, and the copy manager's alarm.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct HwLog {
     pub spent: u64,
     pub read: Option<u64>,
-    pub transfer: u64,
+    pub read_time: u64,
     pub aram: u32,
     /// The copy manager's alarm set (`OSSetAlarm` in `lbMemory_80015320`'s copies), by
     /// when it fires counted from the stretch's start.
@@ -628,12 +687,13 @@ impl HwLog {
         }
     }
 
-    /// A disc read's command goes out, for `len` bytes at `speed`.
-    pub fn disc_read(&mut self, len: u32, speed: DiscSpeed) {
+    /// A disc read's command goes out, for `len` bytes at disc offset `offset` ([`disc_offset`])
+    /// at `speed`.
+    pub fn disc_read(&mut self, offset: u64, len: u32, speed: DiscSpeed) {
         self.spent += DISC_ISSUE;
         assert!(self.read.is_none(), "two disc reads in flight");
         self.read = Some(self.spent);
-        self.transfer = speed.transfer(len);
+        self.read_time = speed.read_time(offset, len);
     }
 
     /// A hardware register is read.
@@ -888,7 +948,7 @@ impl Clock {
     fn apply(&mut self, start: u64, log: &HwLog) {
         if let Some(r) = log.read {
             assert!(self.disc_timeout.is_none(), "two disc reads in flight");
-            self.schedule(start + r + DISC_LATENCY + log.transfer, EventKind::DiscDone);
+            self.schedule(start + r + log.read_time, EventKind::DiscDone);
             self.disc_timeout =
                 Some(self.schedule(start + r + DISC_TIMEOUT, EventKind::DiscTimeout));
         }
@@ -1394,7 +1454,7 @@ mod tests {
         fn take_log(&mut self) -> HwLog {
             let mut log = HwLog::default();
             if std::mem::take(&mut self.read) {
-                log.disc_read(0x4000, self.speed);
+                log.disc_read(0, 0x4000, self.speed);
             }
             log
         }
@@ -1427,17 +1487,69 @@ mod tests {
 
     #[test]
     fn a_drive_reads_at_its_pace() {
-        // 0x4000 bytes at 3 MB/s: 5.46 ms, longer than an audio frame.
-        for (speed, transfer) in [(DiscSpeed::Fast, 0), (DiscSpeed::Drive, 221_184)] {
+        // 0x4000 bytes at 3 MB/s: 5.46 ms, longer than an audio frame. Dolphin's fast speed:
+        // 600 µs and the bytes at 32 MiB/s, 528,904 of its cycles, 44,075⅓ time base ticks.
+        for (speed, time) in [
+            (DiscSpeed::Fast, 44_076),
+            (DiscSpeed::FastFlat, DISC_LATENCY),
+            (DiscSpeed::Drive, DISC_LATENCY + 221_184),
+        ] {
             let mut c = Clock::new(0, AUDIO_FRAME, 675_000, 675_000);
             c.tick_end(&mut Stub { read: true, speed });
             let done = c.events.iter().find(|e| e.kind == EventKind::DiscDone);
-            assert_eq!(
-                done.map(|e| e.at),
-                Some(DISC_ISSUE + DISC_LATENCY + transfer)
-            );
+            assert_eq!(done.map(|e| e.at), Some(DISC_ISSUE + time), "{speed:?}");
         }
-        assert!(DiscSpeed::Drive.transfer(0x4000) > AUDIO_FRAME);
+        assert!(DiscSpeed::Drive.read_time(0, 0x4000) > AUDIO_FRAME);
+    }
+
+    /// Dolphin's read times under `FastDiscSpeed`, worked by hand from `ScheduleReads`:
+    /// 600 µs × 486 cycles = 291,600, then each chunk to the next 0x8000 boundary at
+    /// `len × 486,000,000 / 33,554,432` cycles, rounded down chunk by chunk.
+    #[test]
+    fn dolphin_reads_at_its_buffer_rate() {
+        // 0x20 bytes: 463.48 cycles, so 292,063; 24,338.58 time base ticks.
+        assert_eq!(dolphin_read_cycles(0, 0x20), 292_063);
+        assert_eq!(DiscSpeed::Fast.read_time(0, 0x20), 24_339);
+        // 0x4000 bytes: 237,304.6875 cycles, so 528,904; 44,075.33 ticks.
+        assert_eq!(dolphin_read_cycles(0, 0x4000), 528_904);
+        assert_eq!(DiscSpeed::Fast.read_time(0, 0x4000), 44_076);
+        // Across a block boundary the two chunks round down apart: 16 bytes each, 231.74
+        // cycles, so 462 for both where one chunk of 0x20 has 463.
+        assert_eq!(dolphin_read_cycles(0x7FF0, 0x20), 291_600 + 2 * 231);
+        // 0x1000 and 0x3000 bytes: 59,326.17 and 177,978.52 cycles, the same 237,304 together.
+        assert_eq!(dolphin_read_cycles(0x7000, 0x4000), 528_904);
+        // 0x80000 bytes, sixteen whole blocks of 474,609.375 cycles: 7,885,344, 657,112
+        // ticks exactly.
+        assert_eq!(dolphin_read_cycles(0, 0x8_0000), 291_600 + 16 * 474_609);
+        assert_eq!(DiscSpeed::Fast.read_time(0, 0x8_0000), 657_112);
+        // An empty read still takes the command's latency.
+        assert_eq!(dolphin_read_cycles(0x1234, 0), 291_600);
+        // ssbm-rs's own values (its `hw.rs`, `dolphin_times_commands_as_its_fast_disc_speed`).
+        assert_eq!(DiscSpeed::Fast.read_time(0x8000, 0x80), 24_455);
+        assert_eq!(DiscSpeed::Fast.read_time(0x7FF0, 0x20), 24_339);
+        // A read's time takes its offset: 0xA0 bytes from a block's start are 293,917 cycles
+        // (2,317.43 for the bytes), a cycle past 24,493 time base ticks; across a block
+        // boundary (0x80 bytes and 0x20, 1,853.94 and 463.49 cycles) they lose that cycle.
+        assert_eq!(dolphin_read_cycles(0, 0xA0), 293_917);
+        assert_eq!(DiscSpeed::Fast.read_time(0, 0xA0), 24_494);
+        assert_eq!(dolphin_read_cycles(0x7F80, 0xA0), 293_916);
+        assert_eq!(DiscSpeed::Fast.read_time(0x7F80, 0xA0), 24_493);
+        // The flat model and a drive's pace take neither.
+        assert_eq!(DiscSpeed::FastFlat.read_time(0x7F80, 0xA0), DISC_LATENCY);
+        assert_eq!(
+            DiscSpeed::Drive.read_time(0x7F80, 0xA0),
+            DiscSpeed::Drive.read_time(0, 0xA0)
+        );
+    }
+
+    /// A read's disc offset is its file's start in the retail disc's file system table plus
+    /// where in the file it starts: entry 2, `audio/1padv.ssm`, starts at 0x4738E1E0, and
+    /// `audio/us/smash2.sem` (entry 190) at 0x3C219188, a word boundary within a block.
+    #[test]
+    fn a_read_starts_at_its_files_place_on_the_disc() {
+        assert_eq!(disc_offset(2, 0), 0x4738_E1E0);
+        assert_eq!(disc_offset(2, 0x4000), 0x4739_21E0);
+        assert_eq!(disc_offset(190, 0x20), 0x3C21_91A8);
     }
 
     #[test]

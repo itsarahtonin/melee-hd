@@ -1,6 +1,7 @@
 //! Cyndaquil (`It_PKind_Hinoarashi`), `melee/it/kinds/ithinoarashi.c`: out of the ball it
 //! lands and blows flames (`It_Kind_Hinoarashi_Flame`) from its back as its script says, until
-//! its animation ends; hit hard enough, it's launched and falls away.
+//! its animation ends; hit hard enough, it's launched and falls away. The way out is
+//! [`shooter`]'s, over [`CYNDAQUIL`].
 //!
 //! The flame's state and callbacks (`it_802D66F8` to `it_802D6850`) are at the top of
 //! `itmaril.c`; their collision turns the flame with [`touch_normal`] and
@@ -12,6 +13,7 @@ use super::super::ground::air;
 use super::super::item::{change, change_state, play_sfx, spawn_air};
 use super::super::pokemon::{self, attr_f32, effect_hitlag, table_bone, take_bone_motion};
 use super::super::{hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, set_flag};
+use super::shooter::{self, Release};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
@@ -54,15 +56,24 @@ pub const ANGLE: usize = 0x78;
 const PI: f64 = std::f64::consts::PI;
 const TAU: f64 = std::f64::consts::TAU;
 
+/// Cyndaquil's way out (state 0, posed), landing to blow flames.
+pub const CYNDAQUIL: Release = Release {
+    out: 0,
+    hitlag: true,
+    posed: true,
+    landed,
+    fallen: None,
+};
+
 /// Runs one of Cyndaquil's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 => anim0(r, gobj),
-        COLL0 => coll0(r, gobj),
+        ANIM0 => shooter::growing(r, gobj),
+        COLL0 => shooter::landing(r, gobj, &CYNDAQUIL),
         ANIM1 => anim1(r, gobj),
         COLL1 => coll1(r, gobj),
-        ANIM2 => anim2(r, gobj),
+        ANIM2 => shooter::kept(r, gobj),
         DMG_RECEIVED => dmg_received(r, gobj),
         _ => return None,
     })
@@ -74,7 +85,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
         ACCESSORY => accessory(r, gobj),
-        PHYS0 => phys0(r, gobj),
+        PHYS0 => shooter::falling(r, gobj, &CYNDAQUIL),
         LANDED => landed(r, gobj),
         PHYS1 => phys1(r, gobj),
         PHYS2 => phys2(r, gobj),
@@ -125,34 +136,12 @@ pub fn accessory(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// Into the air falling out of the ball, `it_802D5E4C`: posed at its first frame, no longer
+/// Into the air falling out of the ball, `it_802D5E4C` ([`shooter::enter_air`]), no longer
 /// kept clear of.
 #[doc(alias = "it_802D5E4C")]
 pub fn enter_air(r: &mut Running, gobj: GObjId) {
-    maplib::enter_air(item_mut(r.game, gobj));
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-    effect_hitlag(r.game, gobj);
-    super::drmariopill::set_pose(r, gobj, 0, 0.0);
+    shooter::enter_air(r, gobj, &CYNDAQUIL);
     lib26b1::stop_keeping_clear(r.game, gobj);
-}
-
-/// `it_802D5EC8`: growing out of the ball.
-#[doc(alias = "it_802D5EC8")]
-pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::grow(r, gobj);
-    false
-}
-
-/// `it_802D5EEC`: falling out of the ball.
-#[doc(alias = "it_802D5EEC")]
-pub fn phys0(r: &mut Running, gobj: GObjId) {
-    pokemon::fall(r, gobj);
-}
-
-/// `it_802D5F0C`: lands and blows flames.
-#[doc(alias = "it_802D5F0C")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::land(r, gobj, landed)
 }
 
 /// Lands and blows flames, `it_802D5F34`: done blinking, hittable, stopped, its script's
@@ -203,12 +192,6 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itHinoarashi_UnkMotion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     air(r, gobj);
-    false
-}
-
-/// `itHinoarashi_UnkMotion2_Anim`: launched, nothing.
-#[doc(alias = "itHinoarashi_UnkMotion2_Anim")]
-pub fn anim2(_r: &mut Running, _gobj: GObjId) -> bool {
     false
 }
 

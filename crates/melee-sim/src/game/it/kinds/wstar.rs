@@ -1,11 +1,12 @@
 //! The Warp Star, `melee/it/kinds/itwstar.c`: it falls, then rests spinning; picked up, it
 //! carries its rider off and up (the fighter's Warp Star states, `ft::co::warpstar`), comes
 //! down from the top with it (state 3) and crashes where it lands, its blast an attack of its
-//! rider's (state 5, until it's gone).
+//! rider's (state 5, until it's gone). Its spawn, rest, fall, pickup, drop and skid are the
+//! power-ups' ([`powerup`]); its ride is its own.
 
-use super::super::ground::{fall, ground_or_fall, ground_skid};
 use super::super::item::{article, change, change_state};
-use super::super::{effect, item, item_mut, lib26b1, lib2725, set_flag};
+use super::super::{effect, item, item_mut, lib26b1, lib2725};
+use super::powerup::{self, PowerUp};
 use crate::game::ef::SpawnKind;
 use crate::game::ef::eflib;
 use crate::game::state::Running;
@@ -31,16 +32,25 @@ pub const ANIM5: u32 = 0x8029_49C0;
 pub const PHYS5: u32 = 0x8029_4A1C;
 pub const COLL5: u32 = 0x8029_4A20;
 
+/// The Warp Star: its spawn clears its hurt flag and sets its ride's scales; its glow on as
+/// it's picked up and its effects gone as it's let go of.
+pub const WARP_STAR: PowerUp = PowerUp {
+    clears_hurt: true,
+    on_spawn: Some(ride_scales),
+    tilts: false,
+    on_pickup: Some(glow),
+    on_drop: Some(eflib::destroy_all),
+};
+
 /// Runs one of the Warp Star's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM1 | ANIM3 | ANIM4 => still(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL1 => coll1(r, gobj),
-        COLL4 => coll4(r, gobj),
+        ANIM0 | ANIM1 | ANIM3 | ANIM4 | COLL5 => powerup::still(r, gobj),
+        COLL0 => powerup::rests(r, gobj, &WARP_STAR),
+        COLL1 => powerup::lands(r, gobj),
+        COLL4 => powerup::skids(r, gobj),
         ANIM5 => crashed(r, gobj),
-        COLL5 => still(r, gobj),
         _ => return None,
     })
 }
@@ -49,53 +59,32 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => spawned(r, gobj),
-        LANDED => landed(r, gobj),
+        SPAWNED => powerup::spawned(r, gobj, &WARP_STAR),
+        LANDED => powerup::landed(r, gobj),
         PHYS0 => resting(r, gobj),
-        FELL => fell(r, gobj),
-        PHYS1 => gravity(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        DROPPED => dropped(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
-        PHYS4 | PHYS5 => idle(r, gobj),
+        FELL => powerup::fell(r, gobj),
+        PHYS1 => powerup::gravity(r, gobj),
+        PICKED_UP => powerup::picked_up(r, gobj, &WARP_STAR),
+        DROPPED => powerup::dropped(r, gobj, &WARP_STAR),
+        ENTERED_AIR => powerup::entered_air(r, gobj),
+        PHYS4 | PHYS5 => powerup::idle(r, gobj),
         _ => return false,
     }
     true
 }
 
-/// `itWStar_Logic29_Spawned`: its ride's scales at 1, falling.
-#[doc(alias = "itWStar_Logic29_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let ip = item_mut(r.game, gobj);
-    set_flag(&mut ip.hurt_flags, 7, false);
-    let v = ip.vars.wstar();
+/// Its ride's scales at 1 as it spawns (`itWStar_Logic29_Spawned`'s own part).
+fn ride_scales(r: &mut Running, gobj: GObjId) {
+    let v = item_mut(r.game, gobj).vars.wstar();
     v.hit.set(1.0);
     v.speed.set(1.0);
-    fell(r, gobj);
 }
 
-/// Stops and stands, `it_8029455C`.
-#[doc(alias = "it_8029455C")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib2725::clear_velocity(r.game, gobj);
-    lib26b1::enable_pickup(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
+/// Its glow on bone 3 as it's picked up (`it_3F14_Logic29_PickedUp`'s own part).
+fn glow(r: &mut Running, gobj: GObjId) {
+    let j = lib2725::bone(r.game, r.data, gobj, 3);
+    effect::queue(r, gobj, SpawnKind::Attach, 0x43D, j, &[]);
 }
-
-/// The states that animate nothing, `itWstar_UnkMotion0_Anim` (1, 3 for 2 and 3, 4).
-#[doc(alias = "itWstar_UnkMotion0_Anim")]
-#[doc(alias = "itWstar_UnkMotion5_Coll")]
-#[doc(alias = "itWstar_UnkMotion1_Anim")]
-#[doc(alias = "itWstar_UnkMotion3_Anim")]
-#[doc(alias = "itWstar_UnkMotion4_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// Moves nothing, `itWstar_UnkMotion4_Phys` (and the crash's).
-#[doc(alias = "itWstar_UnkMotion4_Phys")]
-#[doc(alias = "itWstar_UnkMotion5_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
 
 /// `itWstar_UnkMotion0_Phys`: resting, it spins at its attributes' rate.
 #[doc(alias = "itWstar_UnkMotion0_Phys")]
@@ -106,60 +95,6 @@ pub fn resting(r: &mut Running, gobj: GObjId) {
     let rate = r.data.f32(a);
     lib2725::clamp_fall(r.game, gobj, rate);
     lib2725::spin(r.game, r.data, gobj);
-}
-
-/// `itWstar_UnkMotion0_Coll`: falls off ledges.
-#[doc(alias = "itWstar_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
-}
-
-/// Falls, `it_80294624`.
-#[doc(alias = "it_80294624")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
-/// Gravity, `itWstar_UnkMotion1_Phys`.
-#[doc(alias = "itWstar_UnkMotion1_Phys")]
-pub fn gravity(r: &mut Running, gobj: GObjId) {
-    super::gravity(r, gobj);
-}
-
-/// `itWstar_UnkMotion1_Coll`: lands.
-#[doc(alias = "itWstar_UnkMotion1_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
-    false
-}
-
-/// Picked up, with its glow on bone 3, `it_3F14_Logic29_PickedUp`.
-#[doc(alias = "it_3F14_Logic29_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-    let j = lib2725::bone(r.game, r.data, gobj, 3);
-    effect::queue(r, gobj, SpawnKind::Attach, 0x43D, j, &[]);
-}
-
-/// Let go of, it falls, its effects gone, `itWStar_Logic29_Dropped`.
-#[doc(alias = "itWStar_Logic29_Dropped")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE | change::DROP_UPDATE);
-    eflib::destroy_all(r, gobj);
-}
-
-/// Skidding off a slope, `itWStar_Logic29_EnteredAir`.
-#[doc(alias = "itWStar_Logic29_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, change::ANIM_UPDATE);
-}
-
-/// `itWstar_UnkMotion4_Coll`: skidding, it stops or falls.
-#[doc(alias = "itWstar_UnkMotion4_Coll")]
-pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
 }
 
 /// `itWstarAttributes`' word at `off`.
@@ -310,7 +245,7 @@ pub fn crash(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3) {
     eflib::destroy_all(r, gobj);
     let p = item(r.game, gobj).pos;
     crate::lb::wind::blast(
-        &mut r.game.gr.winds,
+        r.game.gr.winds_mut(),
         p,
         0x78,
         1.0,

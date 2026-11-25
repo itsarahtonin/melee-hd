@@ -784,7 +784,7 @@ fn slippi_onett_cars_note_the_other_phase() {
                 GroundVars::OnettCar(v) => Some((v.state_a, v.sub_state_a, v.curr_car)),
                 _ => None,
             })
-            .map(|c| (c, g.stage_info.cars_state))
+            .map(|c| (c, *g.stage_info.raw_parts().cars_state))
     };
     let runs = on_sim_thread(FpMode::Slippi, || {
         let rules = Rules::slippi_online();
@@ -1038,7 +1038,8 @@ fn slippi_onett_cars_note_a_doubled_round() {
         });
         format!(
             "{cars:?} {} {:#x}",
-            g.stage_info.cars_state, g.objs.rng.seed
+            *g.stage_info.raw_parts().cars_state,
+            g.objs.rng.seed
         )
     };
     doubled_round_notes(
@@ -1102,7 +1103,7 @@ fn slippi_stadium_close_up_notes_a_doubled_round() {
         "Pokémon Stadium's close-up",
         Find::Noted,
         &|g| {
-            let z = g.gr.stadium.screens[usize::from(SCREEN_ZOOM)].as_ref();
+            let z = g.gr.raw_parts().stadium.screens[usize::from(SCREEN_ZOOM)].as_ref();
             format!("{:?}", z.map(|z| (z.copy_x, z.copy_y)))
         },
         true,
@@ -1238,7 +1239,7 @@ fn slippi_mute_city_wrecks_note_reads_off_course() {
         Vec3::new(0.0, 0.0, -10000.0),
         None,
         &|g, _| {
-            for c in &mut g.gr.mutecity.cars {
+            for c in &mut g.gr.raw_parts_mut().mutecity.cars {
                 c.damage = 1000.0;
             }
         },

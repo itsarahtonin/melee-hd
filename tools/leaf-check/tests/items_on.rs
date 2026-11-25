@@ -37,7 +37,7 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::types::StepFeet;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::kinds::{
-    egg, fflower, freeze, held, lgun, parasol, sscope, sscopebeam, wstar,
+    egg, fflower, freeze, held, lgun, parasol, powerup, sscope, sscopebeam,
 };
 use melee_sim::game::it::types::StepBox;
 use melee_sim::game::it::{self, CLASS_ITEM, item};
@@ -202,7 +202,7 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_80292E64", fflower::start_shooting),
     ("it_80292EAC", fflower::stop_shooting),
     ("it_80292FF0", held::landed),
-    ("it_8029455C", wstar::landed),
+    ("it_8029455C", powerup::landed),
     ("it_802957AC", held::landed),
     ("Item_80268560", it::item::init_dynamics),
     ("Item_8026A788", it::item::proc_dynamics),

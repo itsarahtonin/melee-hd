@@ -453,7 +453,7 @@ impl Running<'_> {
     #[doc(alias = "Fighter_80068E64")]
     pub(super) fn set_depth_scale(&mut self, f: FighterId) {
         // `Gr_Kind_Flatzone`.
-        let z = if self.game.stage_info.grkind == GrKind::Flatzone {
+        let z = if self.game.stage_info.ground_kind_id() == GrKind::Flatzone {
             self.common().f32(0x7E4)
         } else {
             1.0

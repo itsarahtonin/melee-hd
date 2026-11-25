@@ -33,7 +33,7 @@ use melee_sim::game::it::ItKind;
 use melee_sim::game::it::kinds::{
     chicorita, entei, fire, freezer, fushigibana, hassam, hinoarashi, hitodeman, houou, kabigon,
     kamex, kireihana, legendary, lizardon, lucky, lugia, maril, marumine, matadogas, mew, pippi,
-    porygon2, raikou, sonans, suikun, thunder, togepy, tosakinto, unknown,
+    porygon2, raikou, shooter, sonans, suikun, thunder, togepy, tosakinto, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
@@ -240,18 +240,34 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802D0774", kireihana::fall_leaving),
     ("it_802D07C0", kireihana::fall_leaving_kept),
     ("it_802D08F0", kireihana::enter_air),
-    ("it_802C963C", chicorita::landed),
-    ("it_802C9670", chicorita::fire),
-    ("it_802C98E4", chicorita::leave),
-    ("it_802C9A74", chicorita::enter_air),
-    ("it_802C9B20", chicorita::shoot),
+    ("it_802C963C", |r, g| {
+        shooter::landed(r, g, &chicorita::CHIKORITA)
+    }),
+    ("it_802C9670", |r, g| {
+        shooter::fire(r, g, &chicorita::CHIKORITA)
+    }),
+    ("it_802C98E4", |r, g| {
+        shooter::leave(r, g, &chicorita::CHIKORITA)
+    }),
+    ("it_802C9A74", |r, g| {
+        shooter::enter_air(r, g, &chicorita::CHIKORITA.release)
+    }),
+    ("it_802C9B20", |r, g| shooter::shoot(r, g, &chicorita::LEAF)),
     ("it_802C9CC0", chicorita::leaf_fly),
-    ("it_802CA558", kamex::landed),
-    ("it_802CA58C", kamex::ready),
-    ("it_802CA6A0", kamex::fire),
-    ("it_802CA938", kamex::leave),
-    ("it_802CAA40", kamex::enter_air),
-    ("it_802CAB10", kamex::shoot),
+    ("it_802CA558", |r, g| {
+        shooter::landed(r, g, &kamex::BLASTOISE)
+    }),
+    ("it_802CA58C", |r, g| {
+        shooter::stand(r, g, &kamex::BLASTOISE)
+    }),
+    ("it_802CA6A0", |r, g| shooter::fire(r, g, &kamex::BLASTOISE)),
+    ("it_802CA938", |r, g| {
+        shooter::leave(r, g, &kamex::BLASTOISE)
+    }),
+    ("it_802CAA40", |r, g| {
+        shooter::enter_air(r, g, &kamex::BLASTOISE.release)
+    }),
+    ("it_802CAB10", |r, g| shooter::shoot(r, g, &kamex::WATER)),
     ("it_802CADF0", kamex::water_fly),
     ("it_802CB350", matadogas::enter_air),
     ("it_802CB798", matadogas::gas_drift),
@@ -283,7 +299,9 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802CF0D4", unknown::swarm_fly),
     ("it_802D5E4C", hinoarashi::enter_air),
     ("it_802C8FE4", tosakinto::landed),
-    ("it_802CB960", lizardon::landed),
+    ("it_802CB960", |r, g| {
+        shooter::landed(r, g, &lizardon::CHARIZARD)
+    }),
     ("it_802D32D8", pippi::landed),
     ("it_802C9E8C", kabigon::stand),
     ("it_802CA074", kabigon::go_up),
@@ -326,8 +344,10 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802D4494", hitodeman::choose_follow_frames),
     ("it_802D4510", hitodeman::choose_shots),
     ("it_802D4990", hitodeman::start_shooting),
-    ("it_802D4B54", hitodeman::enter_air),
-    ("it_802D4C74", hitodeman::shoot),
+    ("it_802D4B54", |r, g| {
+        shooter::enter_air(r, g, &hitodeman::STARYU)
+    }),
+    ("it_802D4C74", |r, g| shooter::shoot(r, g, &hitodeman::STAR)),
     ("it_802D4F78", hitodeman::star_fly),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),

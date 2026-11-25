@@ -21,8 +21,10 @@ use crate::paced::Paced;
 use crate::pacing::Mode;
 use crate::predict_tests::{REPLAY, disc};
 
-/// The bench replay's first tick that draws nothing (ticks counted from 0).
-const SKIP: u32 = 1986;
+/// The bench replay's first tick that draws nothing (ticks counted from 0). The render skip's
+/// phase follows the timeline: at Slippi Dolphin's fast disc speed (the replay's, since
+/// 2026-11-22) the boot's longer reads put it at 1960, where the flat model's put it at 1986.
+const SKIP: u32 = 1960;
 
 /// A frame builder with no history, for streams compared one against one.
 fn fresh(dol: &[u8]) -> Frames {

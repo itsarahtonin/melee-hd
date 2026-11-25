@@ -443,7 +443,7 @@ impl Running<'_> {
     /// The fighter's burial timers for the stage, `ftCo_800C09B4`.
     #[doc(alias = "ftCo_800C09B4")]
     fn init_bury(&mut self, f: FighterId) {
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         let fp = &mut self.game.fighters[f.0];
         fp.bury_grkind = grkind;
         fp.bury_timer_1 = 0;
@@ -652,7 +652,7 @@ impl Running<'_> {
         let v = |o: u32| mem(fp::fmuls(reg(self.data.f32(x3c.at(o))), s));
         let (x0, y0, z0) = (v(0), v(4), v(8));
         let (xc, yc, zc) = (v(0xC), v(0x10), v(0x14));
-        let zoom = reg(self.game.stage_info.cam_info.cam_fixed_zoom);
+        let zoom = reg(self.game.stage_info.camera_settings().cam_fixed_zoom);
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
         let cb = self.game.camera.subject_mut(b);
         cb.state = 0;

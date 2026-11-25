@@ -237,7 +237,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
             .as_ref()
             .expect("no collision geometry")
             .line_surface(line);
-        let sfx = crate::mp::terrain_sounds(r.game.stage_info.grkind, flags)
+        let sfx = crate::mp::terrain_sounds(r.game.stage_info.ground_kind_id(), flags)
             .sounds(0)
             .0[0];
         set(r, gobj, off::STEP, 14);

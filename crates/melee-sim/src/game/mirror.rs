@@ -815,10 +815,10 @@ mod label_tests {
         );
         assert_eq!(
             labels_after::<StageInfo>("stage_info", |s| {
-                s.bits.fog_enabled = true;
-                s.guides.front_far.y = 1.0;
-                s.watch_2.point = 1;
-                s.acid_level = 1.0;
+                s.raw_parts_mut().bits.fog_enabled = true;
+                s.raw_parts_mut().guides.front_far.y = 1.0;
+                s.raw_parts_mut().watch_2.point = 1;
+                *s.raw_parts_mut().acid_level = 1.0;
             }),
             [
                 "stage_info.bits (unk8C).fog_enabled (b2)",

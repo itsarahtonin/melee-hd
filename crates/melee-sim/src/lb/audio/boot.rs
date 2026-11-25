@@ -67,12 +67,13 @@ pub fn balance_fx(balance: i8) -> i32 {
     fp::fctiwz(fp::fmuls(127.0, fp::fdivs(t, 50.0)))
 }
 
-/// The sound bank's file (`smash2.sem`), loaded and parsed by the caller: its archive and
-/// size.
+/// The sound bank's file (`smash2.sem`), loaded and parsed by the caller: its archive, size
+/// and disc entry (whose place on the disc times its read).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SoundBank {
     pub archive: ArchiveId,
     pub len: u32,
+    pub entrynum: i32,
 }
 
 /// `fn_80023254`: the banks of `class`, largest first (`lbl_80433B44`), 55 past the last.
@@ -227,7 +228,7 @@ impl Audio {
             self.driver.freed_ends[0] = old - 0x20 + size;
         }
         self.driver_free_bank();
-        self.driver_load_bank(data, bank.archive, bank.len);
+        self.driver_load_bank(data, &bank);
         let new = self.driver.bank_addr;
         if old != 0 {
             for v in self.driver.voices.iter_mut().filter(|v| v.stream != 0) {

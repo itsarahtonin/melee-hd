@@ -25,144 +25,144 @@ use crate::vec::Vec3;
 #[mirror(c = "StageInfo", size = 0x748, pad(0x8D, 3), pad(0x70A, 2))]
 pub struct StageInfo {
     #[at(0x0)]
-    pub cam_info: StageCameraInfo,
+    pub(in crate::game::gr) cam_info: StageCameraInfo,
     #[at(0x74)]
-    pub blast_zone: StageBlastZone,
+    pub(in crate::game::gr) blast_zone: StageBlastZone,
     #[at(0x84)]
-    pub flags: u32,
+    pub(in crate::game::gr) flags: u32,
     #[at(0x88)]
-    pub grkind: i32,
+    pub(in crate::game::gr) grkind: i32,
     #[at(0x8C)]
     #[doc(alias("unk8C"))]
-    pub bits: StageBits,
+    pub(in crate::game::gr) bits: StageBits,
     /// The stage's checks of a watched point (the race's), each a callback, with the point's
     /// box and the point found in [`StageInfo::watch`] and [`StageInfo::watch_2`].
     #[at(0x90)]
     #[doc(alias("x90"))]
-    pub watch_callback: Option<CodeRef>,
+    pub(in crate::game::gr) watch_callback: Option<CodeRef>,
     #[at(0x94)]
     #[doc(alias("x94"))]
-    pub watch_callback_2: Option<CodeRef>,
+    pub(in crate::game::gr) watch_callback_2: Option<CodeRef>,
     #[at(0x98)]
     #[doc(alias("x98"))]
-    pub bgm: i32,
+    pub(in crate::game::gr) bgm: i32,
     /// The frame the watch last ran.
     #[at(0x9C)]
     #[doc(alias("x9C"))]
-    pub watch_frame: u32,
+    pub(in crate::game::gr) watch_frame: u32,
     /// The item frequencies' table (`Ground_801C28CC`), its first word and the rest.
     #[at(0xA0)]
     #[doc(alias("xA0"))]
-    pub item_frequencies: i32,
+    pub(in crate::game::gr) item_frequencies: i32,
     #[at(0xA4)]
     #[doc(alias("xA4_pad"))]
-    pub item_frequencies_rest: [u8; 136],
+    pub(in crate::game::gr) item_frequencies_rest: [u8; 136],
     #[at(0x12C)]
     #[doc(alias("x12C"))]
-    pub fog: Option<GObjId>,
+    pub(in crate::game::gr) fog: Option<GObjId>,
     #[at(0x130)]
-    pub guides: GuidePoints,
+    pub(in crate::game::gr) guides: GuidePoints,
     #[at(0x178)]
-    pub on_touch_line: Option<CodeRef>,
+    pub(in crate::game::gr) on_touch_line: Option<CodeRef>,
     #[at(0x17C)]
-    pub on_check_shadow_render: Option<CodeRef>,
+    pub(in crate::game::gr) on_check_shadow_render: Option<CodeRef>,
     #[at(0x180)]
-    pub map_gobjs: [Option<GObjId>; 64],
+    pub(in crate::game::gr) map_gobjs: [Option<GObjId>; 64],
     /// The stage's points' joints, by point.
     #[at(0x280)]
     #[doc(alias("x280"))]
-    pub points: [Option<JObjId>; 261],
+    pub(in crate::game::gr) points: [Option<JObjId>; 261],
     #[at(0x694)]
     #[doc(alias("x694"))]
-    pub cameras: StageCameras,
+    pub(in crate::game::gr) cameras: StageCameras,
     #[at(0x6A4)]
     #[doc(alias("x6A4"))]
-    pub start_hooks: Option<StartHookId>,
+    pub(in crate::game::gr) start_hooks: Option<StartHookId>,
     #[at(0x6A8)]
-    pub itemdata: Option<DataRef>,
+    pub(in crate::game::gr) itemdata: Option<DataRef>,
     #[at(0x6AC)]
-    pub coll_data: Option<DataRef>,
+    pub(in crate::game::gr) coll_data: Option<DataRef>,
     #[at(0x6B0)]
-    pub param: Option<DataRef>,
+    pub(in crate::game::gr) param: Option<DataRef>,
     #[at(0x6B4)]
-    pub ald_yaku_all: Option<DataRef>,
+    pub(in crate::game::gr) ald_yaku_all: Option<DataRef>,
     #[at(0x6B8)]
-    pub map_ptcl: Option<DataRef>,
+    pub(in crate::game::gr) map_ptcl: Option<DataRef>,
     #[at(0x6BC)]
-    pub map_texg: Option<DataRef>,
+    pub(in crate::game::gr) map_texg: Option<DataRef>,
     #[at(0x6C0)]
-    pub yakumono_param: Option<DataRef>,
+    pub(in crate::game::gr) yakumono_param: Option<DataRef>,
     #[at(0x6C4)]
-    pub map_plit: Option<DataRef>,
+    pub(in crate::game::gr) map_plit: Option<DataRef>,
     /// Only the stage's file load clears it.
     #[at(0x6C8)]
     #[doc(alias("x6C8"))]
-    pub unread_6c8: Option<DataRef>,
+    pub(in crate::game::gr) unread_6c8: Option<DataRef>,
     #[at(0x6CC)]
-    pub quake_model_set: Option<DataRef>,
+    pub(in crate::game::gr) quake_model_set: Option<DataRef>,
     #[at(0x6D0)]
     #[doc(alias("x6D0"))]
-    pub goal_point: i16,
+    pub(in crate::game::gr) goal_point: i16,
     /// A target stage's targets, and those left.
     #[at(0x6D2)]
     #[doc(alias("x6D2"))]
-    pub target_count: i16,
+    pub(in crate::game::gr) target_count: i16,
     #[at(0x6D4)]
     #[doc(alias("x6D4"))]
-    pub targets_left: i16,
+    pub(in crate::game::gr) targets_left: i16,
     #[at(0x6D6)]
     #[doc(alias("x6D6"))]
-    pub unused_6d6: i16,
+    pub(in crate::game::gr) unused_6d6: i16,
     #[at(0x6D8)]
     #[doc(alias("x6D8"))]
-    pub route_event: i32,
+    pub(in crate::game::gr) route_event: i32,
     #[at(0x6DC)]
     #[doc(alias("x6DC"))]
-    pub route_zone: i16,
+    pub(in crate::game::gr) route_zone: i16,
     #[at(0x6DE)]
     #[doc(alias("x6DE"))]
-    pub unused_6de: i16,
+    pub(in crate::game::gr) unused_6de: i16,
     #[at(0x6E0)]
     #[doc(alias("x6E0"))]
-    pub home_run_distance: f32,
+    pub(in crate::game::gr) home_run_distance: f32,
     #[at(0x6E4)]
     #[doc(alias("x6E4"))]
-    pub drawn_trophies: [i32; 2],
+    pub(in crate::game::gr) drawn_trophies: [i32; 2],
     #[at(0x6EC)]
     #[doc(alias("x6EC_pad"))]
-    pub pad_6ec: [u8; 28],
+    pub(in crate::game::gr) pad_6ec: [u8; 28],
     #[at(0x708)]
     #[doc(alias("x708"))]
-    pub trophy_coin_wait: i16,
+    pub(in crate::game::gr) trophy_coin_wait: i16,
     /// The first watched point's box and the point found.
     #[at(0x70C)]
     #[doc(alias("x70C"))]
-    pub watch: Watch,
+    pub(in crate::game::gr) watch: Watch,
     #[at(0x718)]
     #[doc(alias("x718"))]
-    pub watch_2: Watch,
+    pub(in crate::game::gr) watch_2: Watch,
     #[at(0x724)]
     #[doc(alias("x724"))]
-    pub acid_level: f32,
+    pub(in crate::game::gr) acid_level: f32,
     #[at(0x728)]
     #[doc(alias("x728"))]
-    pub prev_acid_level: f32,
+    pub(in crate::game::gr) prev_acid_level: f32,
     /// The barrel a stage throws (Jungle Japes'), its place and its value.
     #[at(0x72C)]
     #[doc(alias("x72C"))]
-    pub barrel: Option<GObjId>,
+    pub(in crate::game::gr) barrel: Option<GObjId>,
     #[at(0x730)]
     #[doc(alias("x730"))]
-    pub barrel_pos: Vec3,
+    pub(in crate::game::gr) barrel_pos: Vec3,
     #[at(0x73C)]
     #[doc(alias("x73C"))]
-    pub barrel_value: f32,
+    pub(in crate::game::gr) barrel_value: f32,
     #[at(0x740)]
     #[doc(alias("x740"))]
-    pub cars_state: i32,
+    pub(in crate::game::gr) cars_state: i32,
     #[at(0x744)]
     #[doc(alias("x744_pad"))]
-    pub pad_744: [u8; 4],
+    pub(in crate::game::gr) pad_744: [u8; 4],
 }
 
 impl Default for StageInfo {
@@ -218,6 +218,150 @@ impl Default for StageInfo {
             cars_state: 0,
             pad_744: [0; 4],
         }
+    }
+}
+
+/// What the rest of the game reads of the stage's state, and the few writes it makes, named
+/// (`docs/refactor.md`, task 27). The fields are `gr`'s; the oracle's tools and the heap's
+/// image reach them whole through [`StageInfo::raw_parts`].
+impl StageInfo {
+    /// The stage's ground kind as its number (`grkind`), as the game compares it; see
+    /// [`StageInfo::ground_kind`] for the kind itself.
+    #[inline]
+    pub fn ground_kind_id(&self) -> i32 {
+        self.grkind
+    }
+
+    /// The camera's settings for the stage (`cam_info`): its bounds and offsets, its tilt, pan,
+    /// tracking and zoom, the pause camera's depths, the fixed camera.
+    #[inline]
+    pub fn camera_settings(&self) -> &StageCameraInfo {
+        &self.cam_info
+    }
+
+    /// The blast zones, before the camera's offsets (`blast_zone`).
+    #[inline]
+    pub fn blast_zone(&self) -> &StageBlastZone {
+        &self.blast_zone
+    }
+
+    /// The stage's switches (`unk8C`): its song's, its fog's, its guide and entry points'.
+    #[inline]
+    pub fn bits(&self) -> &StageBits {
+        &self.bits
+    }
+
+    /// Whether a bonus stage has ended (`Ground_801C1D84`): its goal reached, its targets
+    /// broken, its race run (`flags` 0x330).
+    #[inline]
+    pub fn bonus_stage_ended(&self) -> bool {
+        self.flags & 0x330 != 0
+    }
+
+    /// The rising acid's or lava's level (Brinstar's, `x724`).
+    #[inline]
+    pub fn acid_level(&self) -> f32 {
+        self.acid_level
+    }
+
+    /// Whether the stage has its own quake models (`quake_model_set`).
+    #[inline]
+    pub fn has_quake_models(&self) -> bool {
+        self.quake_model_set.is_some()
+    }
+
+    /// The stage's callback for a fighter touching one of its lines (`on_touch_line`).
+    #[inline]
+    pub fn touch_line_callback(&self) -> Option<CodeRef> {
+        self.on_touch_line
+    }
+
+    /// The GObj of map `map_id` (`Ground_GetMapGObj`).
+    #[inline]
+    pub fn map_gobj(&self, map_id: i32) -> Option<GObjId> {
+        self.map_gobjs[map_id as usize]
+    }
+
+    /// The barrel the stage throws (Jungle Japes', `x72C`).
+    #[inline]
+    pub fn barrel(&self) -> Option<GObjId> {
+        self.barrel
+    }
+
+    /// A target stage's targets (`x6D2`) and those left (`x6D4`).
+    #[inline]
+    pub fn target_count(&self) -> i16 {
+        self.target_count
+    }
+
+    #[inline]
+    pub fn targets_left(&self) -> i16 {
+        self.targets_left
+    }
+
+    /// The entry point an adventure stage's zone respawns at (`x6DC`).
+    #[inline]
+    pub fn route_zone(&self) -> i16 {
+        self.route_zone
+    }
+
+    /// The stage's song (`x98`).
+    #[inline]
+    pub fn bgm(&self) -> i32 {
+        self.bgm
+    }
+
+    /// The stage's item counts by kind (`Ground_801C2AD8`, `xA0` on): the frequencies' table
+    /// as 35 big-endian words.
+    #[doc(alias = "Ground_801C2AD8")]
+    pub fn item_counts(&self) -> [i32; 35] {
+        std::array::from_fn(|i| match i {
+            0 => self.item_frequencies,
+            _ => {
+                let at = 4 * (i - 1);
+                i32::from_be_bytes(self.item_frequencies_rest[at..at + 4].try_into().unwrap())
+            }
+        })
+    }
+
+    /// Moves the camera's offsets (`cam_x_offset`, `cam_y_offset`) to a point: a special
+    /// target stage's respawn at its zone's entry point (`fn_8016719C`).
+    pub fn set_camera_offset(&mut self, x: f32, y: f32) {
+        self.cam_info.cam_x_offset = x;
+        self.cam_info.cam_y_offset = y;
+    }
+
+    /// Sets the camera's motion settings in their order in `cam_info` (`x18` to `x38`): the
+    /// vertical tilt, the pan's degrees, the pan's and the tilt's rates, the tracking's ratio,
+    /// the fixed zoom, the tracking's smoothing, the zoom's rate and the greatest depth; the
+    /// player camera code's values (`C2 801C0A50`).
+    pub fn set_camera_motion(&mut self, values: [f32; 9]) {
+        let c = &mut self.cam_info;
+        let [
+            tilt,
+            pan,
+            pan_rate,
+            tilt_rate,
+            ratio,
+            zoom,
+            smooth,
+            rate,
+            depth,
+        ] = values;
+        c.cam_vertical_tilt = tilt;
+        c.cam_pan_degrees = pan;
+        c.cam_pan_rate = pan_rate;
+        c.cam_tilt_rate = tilt_rate;
+        c.cam_track_ratio = ratio;
+        c.cam_fixed_zoom = zoom;
+        c.cam_track_smooth = smooth;
+        c.cam_zoom_rate = rate;
+        c.cam_max_depth = depth;
+    }
+
+    /// Takes another stage state's switches (`unk8C`), as a live match takes playback's.
+    pub fn carry_bits_from(&mut self, other: &StageInfo) {
+        self.bits.clone_from(&other.bits);
     }
 }
 

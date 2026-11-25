@@ -501,7 +501,7 @@ impl Session {
         // What the executable's data holds that the comparison reads: the stage selected
         // (`selected_stage`, Fountain of Dreams) and the camera's default field of view
         // (`cm_803BCCA0`'s, 38 degrees).
-        game.gr.stkind = 2;
+        game.gr.set_stage_kind(2);
         game.camera.set_default_fov(38.0);
         game.audio.disc = setup.disc;
         game.audio.dsp = setup.dsp;
@@ -556,16 +556,18 @@ impl Session {
         let file = console.file(SOUND_BANK);
         let bank = crate::lb::audio::SoundBank {
             len: file.bytes.len() as u32,
+            entrynum: file.entrynum,
             archive: self.data.add(Archive::raw(&file.bytes)),
         };
         // Japanese's, which the language options load.
         let file = console.file(SOUND_BANK_JP);
         let bank_jp = crate::lb::audio::SoundBank {
             len: file.bytes.len() as u32,
+            entrynum: file.entrynum,
             archive: self.data.add(Archive::raw(&file.bytes)),
         };
         // The executable's data the dummy stage points into (the results screen's).
-        self.game.gr.defaults = Some(
+        self.game.gr.set_defaults(
             self.data
                 .add(Archive::parse(&super::gr::exe_data::FILE).expect("the executable's data")),
         );
@@ -943,7 +945,8 @@ impl Session {
         }
         if grkind == super::gr::GrKind::PStadium {
             for (i, name) in super::gr::pokemon_stadium::FILES.iter().enumerate() {
-                self.game.gr.stadium.files[i] = Some(self.game.ft.data.files.archive(name));
+                let file = self.game.ft.data.files.archive(name);
+                self.game.gr.set_stadium_file(i, file);
             }
         }
         // Training's entry loads its menu's files after the stage's song starts, so the
@@ -1478,15 +1481,7 @@ impl Running<'_> {
     /// ahead of their reads ([`Self::take_alarm_reads`]): a rumble the entry starts begins
     /// after them, as the original's alarm handlers ran each in its time.
     pub fn alarm_rumble_catch_up(&mut self) {
-        let Some(c) = self.game.audio.clock.as_ref() else {
-            return;
-        };
-        let p = &mut self.game.pads;
-        let due = c.pads.saturating_sub(u32::from(p.lib.qcount));
-        for _ in p.rumble_ahead..due {
-            p.rumble.interpret(self.data);
-            p.rumble_ahead += 1;
-        }
+        super::gm::scene::alarm_rumble_catch_up(self.game, self.data);
     }
 
     /// `HSD_PadRenewStatus` from the game's code (the trophy screens'): the pad alarm's reads

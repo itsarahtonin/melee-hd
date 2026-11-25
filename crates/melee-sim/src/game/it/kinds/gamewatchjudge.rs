@@ -4,6 +4,7 @@
 use super::super::item::{change, change_state, destroy, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use super::gamewatch;
+use crate::game::ft::gamewatch::special_s::JUDGEMENT;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
@@ -86,7 +87,7 @@ pub fn face_away(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itGameWatchJudge_Logic77_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(owner) = item(r.game, gobj).owner {
-        r.gw_judgement_set_flag(owner);
+        r.gw_held_set_flag(owner, &JUDGEMENT);
     }
 }
 
@@ -126,7 +127,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
     face_away(r, gobj);
     let go = match item(r.game, gobj).owner {
-        Some(owner) => r.gw_judgement_should_go(owner),
+        Some(owner) => r.gw_held_should_go(owner, &JUDGEMENT),
         None => true,
     };
     if go {

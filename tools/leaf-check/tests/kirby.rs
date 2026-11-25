@@ -91,7 +91,8 @@ use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::ItKind;
 use melee_sim::game::it::kinds::{
-    kirbycutterbeam, kirbygamewatchchefpan, kirbyhammer, kirbyinhale, peachtoad, seakneedleheld,
+    gamewatch, kirbycutterbeam, kirbygamewatchchefpan, kirbyhammer, kirbyinhale, peachtoad,
+    seakneedleheld,
 };
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -523,9 +524,9 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialNPe_8010C4AC" => return b(g.peach_toad_done(gobj, &PE_KIRBY)),
         "ftKb_SpecialNGw_8010D160" => return b(g.kb_gw_done(gobj)),
         "it_802BDF40" => peachtoad::remove(g, gobj),
-        "it_802C760C" => kirbygamewatchchefpan::remove(g, gobj),
-        "it_802C7658" => kirbygamewatchchefpan::hitlag_start(g, gobj),
-        "it_802C7678" => kirbygamewatchchefpan::hitlag_end(g, gobj),
+        "it_802C760C" => gamewatch::held_remove(g, gobj, &kirbygamewatchchefpan::HELD),
+        "it_802C7658" => gamewatch::held_hitlag_start(g, gobj),
+        "it_802C7678" => gamewatch::held_hitlag_end(g, gobj),
         "it_802B18B0" => seakneedleheld::show_needles(g, gobj),
         "it_8029BB90" => kirbycutterbeam::start(g, gobj, gobj_reg(maps, call, 4, &name)),
         "it_802ADC34" => kirbyhammer::remove(g, gobj),

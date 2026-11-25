@@ -74,6 +74,15 @@ pub fn generation(game: &Game) -> i32 {
     }
 }
 
+/// Sets the collision geometry's update counter ([`generation`]): the loaded geometry's, or
+/// its stand-in before a stage loads, as a live match takes playback's.
+pub fn set_generation(game: &mut Game, generation: i32) {
+    match &mut game.geometry {
+        Some(g) => g.set_generation(generation),
+        None => game.gr.coll_generation = generation,
+    }
+}
+
 /// The stage's scale, `Ground_801C0498`: its parameters' `y`, or 1 without them.
 #[doc(alias = "Ground_801C0498")]
 pub fn scale(game: &Game) -> f32 {

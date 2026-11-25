@@ -4,7 +4,7 @@
 //! melee-hd [--saves DIR] [--no-session-record]     boots Melee from power-on with the native save
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread]
-//!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
+//!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
 //! melee-hd --settings-shot FILE.png [--size WxH] draws the settings panel to a PNG
@@ -32,7 +32,7 @@
 //! The disc reads at a drive's pace, as ssbm-rs's window reads it, which the music needs
 //! (`melee_sim::audio::clock::DiscSpeed`), but in a replay's match, which reads at Slippi's
 //! fast disc speed as Slippi Dolphin's playback and the replay checks do; `--disc-speed`
-//! sets either for any match.
+//! sets either for any match (or `fast-flat`, the flat model ssbm-rs's older sessions ran at).
 //!
 //! Frames are shown at the game's 73:60, pillarboxed; `--widescreen` (16:9) or `--aspect W:H`
 //! widens the drawn cameras to a wider aspect, and `--aspect 4:3` stretches the picture to 4:3
@@ -284,7 +284,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
@@ -491,7 +491,8 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.given.fullscreen = true;
             }
             "--disc-speed" => {
-                a.disc_speed = Some(DiscSpeed::parse(&value()?).ok_or("--disc-speed drive|fast")?)
+                a.disc_speed =
+                    Some(DiscSpeed::parse(&value()?).ok_or("--disc-speed fast|fast-flat|drive")?)
             }
             "--widescreen" => {
                 a.aspect = present::Aspect::wide(16.0 / 9.0);
@@ -2298,6 +2299,12 @@ impl App {
         }
     }
 
+    /// Saves the pipelines of the menus' renderer set aside while a live match draws, if one
+    /// is, and lets it go (its threads joined, `melee_gpu::Threaded`'s drop).
+    fn drop_handoff(&mut self) {
+        save_menus(std::mem::take(&mut self.handoff));
+    }
+
     /// The window's new size: the surface follows it at once, and the internal resolution at
     /// the next frame.
     fn resized(&mut self, w: u32, h: u32) {
@@ -2392,7 +2399,7 @@ impl App {
         }
         self.frames = Frames::new();
         self.frames.space.load_dol(&session.dol);
-        self.handoff = handoff::Handoff::default();
+        self.drop_handoff();
         self.session = Some(session);
         let aspect = self.aspect;
         self.set_aspect(aspect);
@@ -2415,7 +2422,7 @@ impl App {
         self.hold = jit::Hold::default();
         self.session = None;
         self.drop_renderer();
-        self.handoff = handoff::Handoff::default();
+        self.drop_handoff();
         self.console_view = None;
         self.last_image = None;
     }
@@ -2757,12 +2764,16 @@ impl App {
     fn drop_aside(&mut self) {
         if let Some(a) = self.aside.take() {
             let Aside {
-                session, renderer, ..
+                session,
+                renderer,
+                handoff,
+                ..
             } = *a;
             drop(session);
             if let Some(g) = renderer {
                 self.specialized = pipelines::save(&g.into_renderer());
             }
+            save_menus(handoff);
         }
     }
 
@@ -3099,6 +3110,14 @@ impl ApplicationHandler for App {
 
 /// The GPU's side of the frames: the renderer on threads of its own (each frame done before
 /// it's presented), or on this one with `--one-thread`.
+/// Saves the pipelines of the menus' renderer `handoff` set aside, if a live match drew, and
+/// lets it go: quitting during a Slippi live match saves the menus' pipelines as the match's.
+fn save_menus(handoff: handoff::Handoff<Option<Gpu>>) {
+    if let Some(Some(g)) = handoff.into_menus() {
+        pipelines::save(&g.into_renderer());
+    }
+}
+
 fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool, fast: bool) -> Gpu {
     if fast {
         Gpu::fast(renderer, !one_thread)
@@ -3857,6 +3876,7 @@ fn run(args: Args) -> ExitCode {
     }
     app.session = None;
     app.drop_renderer();
+    app.drop_handoff();
     app.drop_aside();
     // The rows still waiting for their frames' GPU times.
     app.collect_done();

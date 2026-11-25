@@ -558,7 +558,7 @@ impl Game {
             }
         }
         // `Ground_801C1D84`: a bonus stage's end.
-        if self.stage_info.flags & 0x330 != 0 {
+        if self.stage_info.bonus_stage_ended() {
             return OUTCOME_1P_BONUS_STAGE_END;
         }
         OUTCOME_NONE
@@ -895,8 +895,8 @@ impl Running<'_> {
                 None => self.game.enable_pause_camera(slot, pauser),
             }
         }
+        self.rumble_mut().pause_all();
         let g = &mut *self.game;
-        g.pads.rumble.pause_all();
         g.vs.state.pauser = pauser as i8;
         g.vs.state.pause_timer = 0xA;
     }
@@ -916,7 +916,7 @@ impl Running<'_> {
         self.game.clear_db_pause_flag(bit);
         self.show_hud_parts();
         self.game.hide_pause(i);
-        self.game.pads.rumble.unpause_all();
+        self.rumble_mut().unpause_all();
         let start = self.game.vs.start.clone();
         if start.pause_camera {
             match start.on_unpause_override {
@@ -935,8 +935,7 @@ impl Running<'_> {
         let fixed = self
             .game
             .gr
-            .param
-            .as_ref()
+            .ground_param()
             .expect("stage_info.param is null")
             .fixed_cam;
         let c = &mut self.game.camera;
@@ -955,11 +954,12 @@ impl Running<'_> {
             let o = self.game.vs.state.match_result;
             code::call(self, f.0, &[Val::Int(o.into())]);
         }
-        let g = &mut *self.game;
-        g.pads.rumble.remove_all();
+        let rumble = self.rumble_mut();
+        rumble.remove_all();
         for port in 0..4 {
-            g.pads.rumble.on(port);
+            rumble.on(port);
         }
+        let g = &mut *self.game;
         if !g.vs.start.keeps_rumble {
             self.lb_audio_music_stop();
         }
@@ -1003,7 +1003,7 @@ impl Running<'_> {
         let sel = super::match_exit::selkind(ckind);
         let r = self.game.record_1p(sel);
         let (cleared, best) = (r.target_cleared, r.target_record);
-        let left = i32::from(self.game.stage_info.targets_left);
+        let left = i32::from(self.game.stage_info.targets_left());
         let new = if !cleared {
             left == 0
         } else {
@@ -1278,7 +1278,7 @@ impl Running<'_> {
             .position(|f| f.platform_timer == 0)
             .unwrap_or(0);
         let chr = self.game.player_ckind(slot) as i8;
-        let own = self.game.stage_info.bits.own_entry_points;
+        let own = self.game.stage_info.bits().own_entry_points;
         let point = if own { slot } else { 0 };
         let pos = super::super::gr::stage::entry_point(self.game, self.data, point)
             .unwrap_or_else(|| panic!("entry point {point} reads a stale vector"));
@@ -1354,13 +1354,11 @@ impl Running<'_> {
     pub fn respawn(&mut self, slot: i32, sub: i32) {
         let stkind = i32::from(self.game.vs_stkind());
         let (point, mut pos, off) = if super::super::gr::stage::is_special_target_stage(stkind) {
-            let point = i32::from(self.game.stage_info.route_zone);
+            let point = i32::from(self.game.stage_info.route_zone());
             let pos = super::super::gr::stage::entry_point(self.game, self.data, point)
                 .unwrap_or_else(|| panic!("entry point {point} reads a stale vector"));
             if stkind != StKind::AdventureIcemt && sub == 0 {
-                let c = &mut self.game.stage_info.cam_info;
-                c.cam_x_offset = pos.x;
-                c.cam_y_offset = pos.y;
+                self.game.stage_info.set_camera_offset(pos.x, pos.y);
                 super::super::camera::snap(self);
             }
             (point, pos, Vec3::new(0.0, 0.0, 0.0))
@@ -1370,7 +1368,7 @@ impl Running<'_> {
         pos.x = mem(fp::fadds(reg(pos.x), reg(off.x)));
         let g = &mut *self.game;
         g.set_player_spawn_platform_pos(slot, pos);
-        if !g.stage_info.bits.keeps_spawn_point {
+        if !g.stage_info.bits().keeps_spawn_point {
             g.set_player_spawn_point(slot, point);
             g.set_player_some_pos(slot, off);
         }
@@ -2065,9 +2063,9 @@ impl Running<'_> {
             self.game.audio(0x8002_785C, [0; 4]);
         }
         // `Stage_8022524C` and `Stage_80225298` hand the stage's ground kind on.
-        let grkind = self.game.stage_info.grkind;
+        let grkind = self.game.stage_info.ground_kind_id();
         super::super::gr::setup::setup(self, grkind);
-        let tilt = self.game.stage_info.cam_info.cam_vertical_tilt;
+        let tilt = self.game.stage_info.camera_settings().cam_vertical_tilt;
         self.game.camera.set_default_fov(tilt);
         self.place_players(f26);
         super::super::gr::setup::on_load(self, grkind);

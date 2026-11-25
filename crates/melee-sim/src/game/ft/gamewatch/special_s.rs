@@ -8,7 +8,7 @@ use gekko_fp as fp;
 use super::super::super::it::kinds::{foods, gamewatchjudge as judge};
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
-use super::{addr, attr, ms, part, u};
+use super::{ItemSlot, addr, attr, ms, part, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -25,6 +25,19 @@ const KEEP_FLAGS: u32 = KEEP_COL_ANIM_HIT_STATUS
     | SKIP_MODEL_PART_VIS
     | SKIP_MODEL_FLAGS
     | UNK_27;
+/// The hammer: out through Judgement's states, on the ground and in the air.
+pub const JUDGEMENT: ItemSlot = ItemSlot {
+    slot: u::JUDGEMENT,
+    states: (ms::SPECIAL_S1, ms::SPECIAL_AIR_S9),
+    hitlag_cbs: (
+        addr::SPECIAL_S_ITEM_JUDGEMENT_ENTER_HITLAG,
+        addr::SPECIAL_S_ITEM_JUDGEMENT_EXIT_HITLAG,
+    ),
+    remove: judge::remove,
+    hitlag_start: judge::hitlag_start,
+    hitlag_end: judge::hitlag_end,
+    exit_hitlag: |r, g| r.gw_held_exit_hitlag(g, &JUDGEMENT),
+};
 
 impl Running<'_> {
     /// The hammer out at the script's mark (`cmd_vars[1]`), `ftGw_SpecialS_ItemJudgementSetup`:
@@ -46,56 +59,8 @@ impl Running<'_> {
             let pos = self.gw_part_pos(gobj, bone, Some(Vec3::new(0.0, 5.0, 0.0)));
             foods::spawn(self, Some(gobj), pos);
         }
-        if self.gw_item(gobj, u::JUDGEMENT).is_some() {
-            self.gw_damage_cbs(gobj);
-        }
-        self.gw_hitlag_cbs(
-            gobj,
-            addr::SPECIAL_S_ITEM_JUDGEMENT_ENTER_HITLAG,
-            addr::SPECIAL_S_ITEM_JUDGEMENT_EXIT_HITLAG,
-        );
+        self.gw_held_cbs(gobj, &JUDGEMENT);
         self.gw_set_accessory(gobj, None);
-    }
-
-    /// The hammer forgotten, `ftGw_SpecialS_ItemJudgementSetFlag`.
-    #[doc(alias = "ftGw_SpecialS_ItemJudgementSetFlag")]
-    pub fn gw_judgement_set_flag(&mut self, gobj: GObjId) {
-        self.gw_judgement_exit_hitlag(gobj);
-        self.gw_set_item(gobj, u::JUDGEMENT, None);
-        self.gw_clear_damage_cbs(gobj);
-    }
-
-    /// The hammer taken away, `ftGw_SpecialS_ItemJudgementRemove`.
-    #[doc(alias = "ftGw_SpecialS_ItemJudgementRemove")]
-    pub fn gw_judgement_remove(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::JUDGEMENT) {
-            judge::remove(self, item);
-            self.gw_judgement_set_flag(gobj);
-        }
-    }
-
-    /// `ftGw_SpecialS_ItemJudgementEnterHitlag`.
-    #[doc(alias = "ftGw_SpecialS_ItemJudgementEnterHitlag")]
-    pub fn gw_judgement_enter_hitlag(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::JUDGEMENT) {
-            judge::hitlag_start(self, item);
-        }
-    }
-
-    /// `ftGw_SpecialS_ItemJudgementExitHitlag`.
-    #[doc(alias = "ftGw_SpecialS_ItemJudgementExitHitlag")]
-    pub fn gw_judgement_exit_hitlag(&mut self, gobj: GObjId) {
-        if let Some(item) = self.gw_item(gobj, u::JUDGEMENT) {
-            judge::hitlag_end(self, item);
-        }
-    }
-
-    /// Whether the hammer should go, `ftGw_SpecialS_ItemCheckJudgementRemove`: out of
-    /// Judgement's states.
-    #[doc(alias = "ftGw_SpecialS_ItemCheckJudgementRemove")]
-    pub fn gw_judgement_should_go(&self, gobj: GObjId) -> bool {
-        let msid = self.game.fighter(gobj).motion_id;
-        !(ms::SPECIAL_S1..=ms::SPECIAL_AIR_S9).contains(&msid)
     }
 
     /// Judgement's number, `ftGw_SpecialS_GetRandomInt`: one of the nine (from 0) but the
@@ -245,14 +210,7 @@ impl Running<'_> {
 
     /// Judgement's hooks again after a change (`ftGameWatch_SpecialS_SetCall`).
     fn gw_special_s_set_call(&mut self, gobj: GObjId) {
-        if self.gw_item(gobj, u::JUDGEMENT).is_some() {
-            self.gw_damage_cbs(gobj);
-        }
-        self.gw_hitlag_cbs(
-            gobj,
-            addr::SPECIAL_S_ITEM_JUDGEMENT_ENTER_HITLAG,
-            addr::SPECIAL_S_ITEM_JUDGEMENT_EXIT_HITLAG,
-        );
+        self.gw_held_cbs(gobj, &JUDGEMENT);
         self.gw_set_accessory(gobj, Some(addr::SPECIAL_S_ITEM_JUDGEMENT_SETUP));
     }
 
@@ -283,10 +241,10 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_ITEM_JUDGEMENT_SETUP => g.gw_judgement_setup(gobj),
-        addr::SPECIAL_S_ITEM_JUDGEMENT_SET_FLAG => g.gw_judgement_set_flag(gobj),
-        addr::SPECIAL_S_ITEM_JUDGEMENT_REMOVE => g.gw_judgement_remove(gobj),
-        addr::SPECIAL_S_ITEM_JUDGEMENT_ENTER_HITLAG => g.gw_judgement_enter_hitlag(gobj),
-        addr::SPECIAL_S_ITEM_JUDGEMENT_EXIT_HITLAG => g.gw_judgement_exit_hitlag(gobj),
+        addr::SPECIAL_S_ITEM_JUDGEMENT_SET_FLAG => g.gw_held_set_flag(gobj, &JUDGEMENT),
+        addr::SPECIAL_S_ITEM_JUDGEMENT_REMOVE => g.gw_held_remove(gobj, &JUDGEMENT),
+        addr::SPECIAL_S_ITEM_JUDGEMENT_ENTER_HITLAG => g.gw_held_enter_hitlag(gobj, &JUDGEMENT),
+        addr::SPECIAL_S_ITEM_JUDGEMENT_EXIT_HITLAG => g.gw_held_exit_hitlag(gobj, &JUDGEMENT),
         addr::SPECIAL_S_ENTER => g.gw_special_s_enter(gobj),
         addr::SPECIAL_AIR_S_ENTER => g.gw_special_air_s_enter(gobj),
         addr::SPECIAL_S_ANIM => g.gw_special_s_anim(gobj),

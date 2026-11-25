@@ -14,9 +14,10 @@ use super::super::camera;
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
 use super::super::structs::{CollData, Ground};
-use super::data::{RCRUISE_CALLBACKS, StageCallbacks};
+use super::data::RCRUISE_CALLBACKS;
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, update_coll_joint, update_map_coll};
-use super::{CollUser, anime, setup, stage, zako};
+use super::skeleton::{self, Param, StageObjects, map_id};
+use super::{CollUser, anime, setup, stage};
 use crate::fpu::{mem, reg};
 use crate::hsd::dobj;
 use crate::hsd::gobj::GObjId;
@@ -101,34 +102,24 @@ mod p {
     pub const PLANK_BLINK: u32 = 0x44;
 }
 
-/// The fields of `grRCruise_YakumonoParam` the code reads, by offset.
-#[derive(Clone, Copy)]
-struct Param(DataRef);
-
-impl Param {
-    fn f(self, data: &Archives, off: u32) -> f32 {
-        data.f32(self.0.at(off))
-    }
-    fn i(self, data: &Archives, off: u32) -> i32 {
-        data.u32(self.0.at(off)) as i32
-    }
-}
-
+/// `grRCruise_YakumonoParam`.
 fn param(game: &Game) -> Param {
-    Param(
-        game.gr
-            .rcruise_yakumono
-            .expect("grrcruise.c: yakumono_param"),
-    )
+    Param::of(game.gr.rcruise_yakumono, "grrcruise.c: yakumono_param")
 }
+
+/// Rainbow Cruise's objects (`grRc_StageCallbacks`).
+pub const OBJECTS: StageObjects = StageObjects {
+    callbacks: &RCRUISE_CALLBACKS,
+    late: None,
+};
 
 /// A stage object's process or callback, by address: Rainbow Cruise's.
 #[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_F3E8 | 0x801F_F3EC | 0x801F_F43C | 0x801F_F440 | 0x801F_F738 | 0x801F_F79C
-        | 0x801F_F7A0 | 0x801F_F920 | 0x8020_0070 | 0x8020_045C => empty(r, gobj),
-        0x801F_F3B4 => init_back(r, gobj),
+        | 0x801F_F7A0 | 0x801F_F920 | 0x8020_0070 | 0x8020_045C => skeleton::empty(r, gobj),
+        0x801F_F3B4 => skeleton::animate(r, gobj),
         0x801F_F3F0 => init_far(r, gobj),
         START_HOOK => on_ship_start(r, gobj),
         0x801F_F5B4 => init_ship(r, gobj),
@@ -155,30 +146,6 @@ pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     true
 }
 
-/// The objects' processes and destroy callbacks that do nothing.
-#[doc(alias = "grRCruise_801FF3E8")]
-#[doc(alias = "grRCruise_801FF3EC")]
-#[doc(alias = "grRCruise_801FF43C")]
-#[doc(alias = "grRCruise_801FF440")]
-#[doc(alias = "grRCruise_801FF738")]
-#[doc(alias = "grRCruise_801FF79C")]
-#[doc(alias = "grRCruise_801FF7A0")]
-#[doc(alias = "grRCruise_801FF920")]
-#[doc(alias = "grRCruise_80200070")]
-#[doc(alias = "grRCruise_8020045C")]
-pub fn empty(_r: &mut Running, _gobj: GObjId) {}
-
-/// Creates one of the stage's objects and sets it up, `grRCruise_801FF2C8`.
-#[doc(alias = "grRCruise_801FF2C8")]
-pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
-}
-
-/// The stage's objects' setup functions and processes, by map id (`grRc_StageCallbacks`).
-pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
-    &RCRUISE_CALLBACKS[map_id as usize]
-}
-
 /// The stack address of the scale joint's descriptor for the objects Rainbow Cruise's setup
 /// makes (`grRCruise_801FF168`, a 0x30-byte frame).
 const INIT_FRAME: u32 = setup::init_frame(0x30);
@@ -186,26 +153,29 @@ const INIT_FRAME: u32 = setup::init_frame(0x30);
 /// Rainbow Cruise's setup, `grRCruise_801FF168`: its parameters; the course twice, the first
 /// copy frozen and hidden and leading the second; the scenery, the ship, the flag and the
 /// blocks; camera limits and blast zones; the course's first step; the ship's, flag's and
-/// blocks' collision where their models stand; and joint 11 out of the search.
+/// blocks' collision where their models stand; and joint 11 out of the search. Not the
+/// skeleton's setup ([`skeleton::on_init`]): the objects made before the camera limits are
+/// measured are used after.
 #[doc(alias = "grRCruise_801FF168")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.rcruise_yakumono = super::ground::yakumono_param(r.game);
     r.game.stage_info.bits.own_entry_points = true;
     r.game.stage_info.bits.keeps_spawn_point = false;
-    let lead = create(r, 3, INIT_FRAME).expect("grrcruise.c: the course");
+    let create = |r: &mut Running, map_id| skeleton::create(r, &OBJECTS, map_id, INIT_FRAME);
+    let lead = create(r, 3).expect("grrcruise.c: the course");
     let g = ground_of(r.game, lead);
     r.game.grounds[g.0].u.scroll().flags |= 0x80;
     let j = jobj_of(r.game, lead);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    let course = create(r, 3, INIT_FRAME).expect("grrcruise.c: the course");
+    let course = create(r, 3).expect("grrcruise.c: the course");
     let g = ground_of(r.game, course);
     r.game.grounds[g.0].u.scroll().anim_gobj = Some(lead);
-    create(r, 0, INIT_FRAME);
-    create(r, 2, INIT_FRAME);
-    create(r, 5, INIT_FRAME);
-    let ship = create(r, 1, INIT_FRAME).expect("grrcruise.c: the ship");
-    let flag = create(r, 6, INIT_FRAME).expect("grrcruise.c: the flag");
-    let blocks = create(r, 4, INIT_FRAME).expect("grrcruise.c: the blocks");
+    create(r, 0);
+    create(r, 2);
+    create(r, 5);
+    let ship = create(r, 1).expect("grrcruise.c: the ship");
+    let flag = create(r, 6).expect("grrcruise.c: the flag");
+    let blocks = create(r, 4).expect("grrcruise.c: the blocks");
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
     proc_course(r, course);
@@ -214,31 +184,6 @@ pub fn on_init(r: &mut Running) {
         setup::settle_map_coll(r.game, r.data, map_id);
     }
     r.game.geometry_mut().disable_joint(11);
-}
-
-/// `grRCruise_801FF164` does nothing (only a demo runs it).
-#[doc(alias = "grRCruise_801FF164")]
-pub fn on_demo_init(_r: &mut Running) {}
-
-/// `grRCruise_801FF298` does nothing.
-#[doc(alias = "grRCruise_801FF298")]
-pub fn on_load(_r: &mut Running) {}
-
-/// Rainbow Cruise's start, `grRCruise_801FF29C`: the enemy spawner, without enemies.
-#[doc(alias = "grRCruise_801FF29C")]
-pub fn on_start(r: &mut Running) {
-    zako::start(r.game, r.data, None);
-}
-
-fn map_id(game: &Game, gobj: GObjId) -> i32 {
-    game.grounds[ground_of(game, gobj).0].map_id
-}
-
-/// The background's setup (map 0), `grRCruise_801FF3B4`: its animation.
-#[doc(alias = "grRCruise_801FF3B4")]
-pub fn init_back(r: &mut Running, gobj: GObjId) {
-    let m = map_id(r.game, gobj);
-    anime::start_map(r.game, r.data, gobj, m, 0);
 }
 
 /// The far scenery's setup (map 2), `grRCruise_801FF3F0`: its animation, drawn behind.

@@ -322,6 +322,19 @@ impl Threaded {
         self.stop().expect("the render thread")
     }
 
+    /// The render thread's share of what it and this thread hold, gone once it has ended
+    /// (tests).
+    #[cfg(test)]
+    pub(crate) fn render_share(&self) -> std::sync::Weak<impl Sized + use<>> {
+        Arc::downgrade(&self.done)
+    }
+
+    /// Hands the threads what was queued, without waiting (tests).
+    #[cfg(test)]
+    pub(crate) fn send_now(&mut self) {
+        self.send();
+    }
+
     /// Makes the renderer's EFB `scale` times the console's tall and `width` wide, between
     /// frames, and clears it with `state` (`Renderer::resize_efb`): on the render thread, in
     /// its turn after what was sent before. The copies made from the old EFB go with it, so
@@ -510,6 +523,27 @@ impl Sink for Threaded {
                     .0;
             }
             self.waited = t.elapsed();
+        }
+    }
+}
+
+impl Drop for Threaded {
+    /// Ends the threads and waits for them (what was queued and not sent is let go): the render
+    /// thread holds the renderer, and with it the device, so one left running drops the device's
+    /// last reference whenever it gets there, perhaps while the process exits. On Linux NVIDIA's
+    /// driver then crashed in `vkDestroyDevice`, racing its own exit handlers (`free(): invalid
+    /// size`, `double free or corruption`): the player let its menus' renderer go so, set aside
+    /// while a Slippi live match drew, as it quit during the match. After
+    /// [`Threaded::into_renderer`] there's nothing left to join; a thread's panic was reported
+    /// as it happened, so it isn't raised again here.
+    fn drop(&mut self) {
+        self.tx = None;
+        for w in self.workers.drain(..) {
+            drop(w.tx);
+            let _ = w.thread.join();
+        }
+        if let Some(t) = self.render.take() {
+            let _ = t.join();
         }
     }
 }

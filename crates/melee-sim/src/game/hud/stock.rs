@@ -10,9 +10,9 @@ use super::super::code;
 use super::super::gm::vs::stock_icon_frame;
 use super::super::handles::CodeRef;
 use super::super::state::{Game, OBJ_JOBJ, Obj, Running, UserData};
-use super::super::structs::IfStockUserData;
 use super::Draw;
 use super::HIDDEN;
+use super::types::StockUserData;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::{self, JObjId};
@@ -875,8 +875,8 @@ impl Running<'_> {
     pub fn target_icons_proc(&mut self, _gobj: GObjId) {
         let g = &mut *self.game;
         let (left, total) = (
-            i32::from(g.stage_info.targets_left),
-            i32::from(g.stage_info.target_count),
+            i32::from(g.stage_info.targets_left()),
+            i32::from(g.stage_info.target_count()),
         );
         let mut counter = 0;
         let (mut x, mut y) = (reg(-21.0), reg(11.0));
@@ -1074,4 +1074,4 @@ impl Running<'_> {
 }
 
 /// The type of the icons' user data, for checks.
-pub type StockUser = IfStockUserData;
+pub type StockUser = StockUserData;

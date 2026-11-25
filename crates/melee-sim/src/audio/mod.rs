@@ -13,6 +13,7 @@ pub mod clock;
 pub mod devcom;
 pub mod driver;
 pub mod dsp;
+pub mod fst;
 pub mod heap;
 pub mod mix;
 pub mod stream;

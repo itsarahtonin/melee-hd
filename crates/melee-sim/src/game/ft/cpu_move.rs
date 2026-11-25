@@ -753,7 +753,7 @@ impl Running<'_> {
                 } else {
                     self.cpu_walk_forward(f);
                 }
-            } else if self.game.stage_info.grkind == GrKind::Icemt {
+            } else if self.game.stage_info.ground_kind_id() == GrKind::Icemt {
                 self.cpu_jump_off_piece(f);
             } else if !self.cpu_facing_destination(f) {
                 if angle < 1.3089969288557768 {
@@ -879,7 +879,7 @@ impl Running<'_> {
                 return;
             }
         }
-        if self.game.stage_info.grkind != GrKind::Icemt && self.cpu_against_wall(f) {
+        if self.game.stage_info.ground_kind_id() != GrKind::Icemt && self.cpu_against_wall(f) {
             self.cpu_jump_off_piece(f);
             return;
         }
@@ -894,7 +894,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800AAF48")]
     fn cpu_shrine_opening(&mut self, f: FighterId) -> bool {
         if self.game.fighters[f.0].cpu.destination_timer != 0
-            || self.game.stage_info.grkind != GrKind::Shrine
+            || self.game.stage_info.ground_kind_id() != GrKind::Shrine
         {
             return false;
         }
@@ -1388,7 +1388,7 @@ impl Running<'_> {
             return;
         }
         let c = &self.game.fighters[f.0].cpu;
-        if c.stand_timer > 0 && self.game.gr.game_mode != crate::game::gm::GameMode::Training {
+        if c.stand_timer > 0 && self.game.gr.game_mode() != crate::game::gm::GameMode::Training {
             self.cpu_neutral_stick(f);
             self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
             self.cpu_cmd(f, cmd::PRESS_UP);

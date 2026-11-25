@@ -123,7 +123,7 @@ impl Running<'_> {
                 }
             } else {
                 if fp.has_cargo {
-                    self.enter_dk_heavy_wait(gobj);
+                    self.enter_carry_wait(gobj, &super::super::donkey::heavy::HEAVY);
                 } else {
                     self.enter_lift_wait(gobj);
                 }

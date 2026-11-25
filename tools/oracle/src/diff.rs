@@ -178,7 +178,7 @@ impl Files<'_> {
     /// dummy stage's defaults), at their addresses.
     pub(crate) fn set_statics(&mut self, game: &Game, archives: &Archives) {
         self.statics.clear();
-        if let Some(id) = game.gr.defaults {
+        if let Some(id) = *game.gr.raw_parts().defaults {
             let _ = archives;
             // Each region at its address: a pointer there maps to the region's offset in the
             // archive's data.
@@ -499,7 +499,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 disc_speed = it
                     .next()
                     .and_then(|s| DiscSpeed::parse(s))
-                    .expect("--disc-speed fast|drive")
+                    .expect("--disc-speed fast|fast-flat|drive")
             }
             "--all" => all = true,
             "--heap" => COMPARE_HEAP.with(|c| c.set(true)),
@@ -533,7 +533,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     }
     let [trace_path, replay_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive]"
+            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|fast-flat|drive]"
         );
         eprintln!(
             "                         [--heap] [--write-golden | --golden-check] [--golden FILE] [--times] [--check-rescan N]"

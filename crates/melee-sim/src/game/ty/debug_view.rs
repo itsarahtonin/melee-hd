@@ -49,7 +49,7 @@ impl Running<'_> {
             return;
         };
         let s = crate::msl::vsprintf(PARAMS_FORMAT, &v.map(|x| Arg::Float(f64::from(x))));
-        let text = &mut self.game.hud.devtext.pool[usize::from(t)];
+        let text = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
         text.erase();
         text.set_cursor_xy(0, 0);
         text.print(&s);
@@ -60,14 +60,14 @@ impl Running<'_> {
     /// gallery's zeroed blocks select (their order's first, trophy 0).
     #[doc(alias = "_Toy_80311788")]
     pub(super) fn toy_z_text(&mut self) {
-        let t = self.game.hud.devtext.create(1, 0x21C, 0x82, 0xA, 7);
+        let t = self.game.hud.devtext_mut().create(1, 0x21C, 0x82, 0xA, 7);
         self.game.toys.gallery.debug_text = t;
         let Some(t) = t else {
             // `OSReport("*** Couldn't Open Debug Window!")`.
             return;
         };
-        self.game.hud.devtext.show(t);
-        let text = &mut self.game.hud.devtext.pool[usize::from(t)];
+        self.game.hud.devtext_mut().show(t);
+        let text = &mut self.game.hud.devtext_mut().pool[usize::from(t)];
         text.hide_cursor();
         text.no_wrap();
         text.set_bg_color([0x40, 0x80, 0xD0, 0x60]);

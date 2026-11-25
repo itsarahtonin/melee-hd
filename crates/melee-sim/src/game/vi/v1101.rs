@@ -82,7 +82,9 @@ impl Running<'_> {
             let j = self.root_jobj(g.expect("a metal fighter"));
             jobj::req_anim_all(&mut self.game.objs, Some(j), 432.0);
             self.anim_all(j);
-            self.game.gr.start_points[slot as usize] = SPAWNS[slot as usize];
+            self.game
+                .gr
+                .set_start_point(slot as usize, SPAWNS[slot as usize]);
             jobj::req_anim_all(&mut self.game.objs, Some(j), 0.0);
         }
         let a = &mut self.game.audio;

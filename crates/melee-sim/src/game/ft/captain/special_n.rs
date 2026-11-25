@@ -111,7 +111,7 @@ impl Running<'_> {
         } else {
             return;
         };
-        crate::lb::wind::blast(&mut self.game.gr.winds, pos, 2, scale, scale, 0.0);
+        crate::lb::wind::blast(self.game.gr.winds_mut(), pos, 2, scale, scale, 0.0);
     }
 
     /// `ftCa_SpecialN_Anim`: the wind, then waiting when the punch ends.

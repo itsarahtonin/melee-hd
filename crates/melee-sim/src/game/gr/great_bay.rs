@@ -13,9 +13,10 @@ use melee_data::archive::DataRef;
 use super::super::handles::CodeRef;
 use super::super::it::kinds::tingle;
 use super::super::state::{Game, Running};
-use super::data::{GREATBAY_CALLBACKS, StageCallbacks};
+use super::data::GREATBAY_CALLBACKS;
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, set_guide_points, update_map_coll};
-use super::{anime, grlib, setup, zako};
+use super::skeleton::{self, Param, Setup, StageObjects, map_id};
+use super::{anime, grlib, setup};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -73,25 +74,27 @@ mod p {
     pub const ITEMS: u32 = 0x7C;
 }
 
-#[derive(Clone, Copy)]
-struct Param(DataRef);
-
-impl Param {
-    fn h(self, r: &Running, off: u32) -> i16 {
-        r.data.u16(self.0.at(off)) as i16
-    }
-    fn f(self, r: &Running, off: u32) -> f32 {
-        r.data.f32(self.0.at(off))
-    }
-}
-
 fn param(game: &Game) -> Param {
-    Param(
-        game.gr
-            .greatbay_yakumono
-            .expect("grgreatbay.c: grGb_804D69E0"),
-    )
+    Param::of(game.gr.greatbay_yakumono, "grgreatbay.c: grGb_804D69E0")
 }
+
+/// Great Bay's objects (`grGb_StageCallbacks`): Tingle's process runs at priority 5.
+pub const OBJECTS: StageObjects = StageObjects {
+    callbacks: &GREATBAY_CALLBACKS,
+    late: Some(MAP_TINGLE),
+};
+
+/// Great Bay's setup, `grGreatBay_801F4240`: its parameters, maps 0, 3, 4, 2, 1, 9 (which makes
+/// the giants) and 10, camera limits and blast zones.
+pub const SETUP: Setup = Setup {
+    objects: &OBJECTS,
+    param: |gr| &mut gr.greatbay_yakumono,
+    own_entry_points: false,
+    keeps_spawn_point: true,
+    maps: &[0, 3, 4, 2, 1, 9, MAP_TINGLE],
+    then: None,
+    after: None,
+};
 
 /// A stage object's process or callback, by address: Great Bay's.
 #[melee_callbacks::callbacks(Proc)]
@@ -99,9 +102,9 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_4438 | 0x801F_443C | 0x801F_44A8 | 0x801F_44AC | 0x801F_4518 | 0x801F_451C
         | 0x801F_4690 | 0x801F_545C | 0x801F_5988 | 0x801F_59F8 | 0x801F_59FC | 0x801F_5D48 => {
-            empty(r, gobj)
+            skeleton::empty(r, gobj)
         }
-        0x801F_4404 => init_main(r, gobj),
+        0x801F_4404 => skeleton::animate(r, gobj),
         0x801F_4440 => init_back(r, gobj),
         0x801F_44B0 => init_water(r, gobj),
         START_HOOK => start_sea(r, gobj),
@@ -117,89 +120,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         _ => return false,
     }
     true
-}
-
-/// The objects' processes and destroy callbacks that do nothing.
-#[doc(alias = "grGreatBay_801F4438")]
-#[doc(alias = "grGreatBay_801F443C")]
-#[doc(alias = "grGreatBay_801F44A8")]
-#[doc(alias = "grGreatBay_801F44AC")]
-#[doc(alias = "grGreatBay_801F4518")]
-#[doc(alias = "grGreatBay_801F451C")]
-#[doc(alias = "grGreatBay_801F4690")]
-#[doc(alias = "grGreatBay_801F545C")]
-#[doc(alias = "grGreatBay_801F5988")]
-#[doc(alias = "grGreatBay_801F59F8")]
-#[doc(alias = "grGreatBay_801F59FC")]
-#[doc(alias = "grGreatBay_801F5D48")]
-pub fn empty(_r: &mut Running, _gobj: GObjId) {}
-
-/// Creates one of the stage's objects and sets it up, `grGreatBay_801F4300`: as the other
-/// stages do, but Tingle's process runs at priority 5.
-#[doc(alias = "grGreatBay_801F4300")]
-pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
-    let cb = callbacks(map_id);
-    let gobj = setup::stage_gobj(r, map_id, frame)?;
-    let g = ground_of(r.game, gobj);
-    let gp = &mut r.game.grounds[g.0];
-    gp.unread_8 = None;
-    gp.unread_c = None;
-    r.game.world.setup_gx_link(gobj, CodeRef(0x801C_5DB0), 3, 0);
-    if cb.callback3 != 0 {
-        r.game.grounds[g.0].callback3 = Some(CodeRef(cb.callback3));
-    }
-    if cb.on_init != 0 {
-        super::super::code::run_proc(r, gobj, CodeRef(cb.on_init));
-    }
-    if cb.gobj_proc != 0 {
-        let pri = if map_id == MAP_TINGLE { 5 } else { 4 };
-        r.game.world.setup_proc(gobj, CodeRef(cb.gobj_proc), pri);
-    }
-    Some(gobj)
-}
-
-/// The stage's objects' setup functions and processes, by map id (`grGb_StageCallbacks`).
-pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
-    &GREATBAY_CALLBACKS[map_id as usize]
-}
-
-/// Great Bay's setup, `grGreatBay_801F4240`: its parameters, maps 0, 3, 4, 2, 1, 9 (which makes
-/// the giants) and 10, camera limits and blast zones.
-#[doc(alias = "grGreatBay_801F4240")]
-pub fn on_init(r: &mut Running) {
-    r.game.gr.greatbay_yakumono = super::ground::yakumono_param(r.game);
-    r.game.stage_info.bits.own_entry_points = false;
-    r.game.stage_info.bits.keeps_spawn_point = true;
-    for map_id in [0, 3, 4, 2, 1, 9, MAP_TINGLE] {
-        create(r, map_id, setup::SETUP_FRAME);
-    }
-    setup::measure_cam_bounds(r.game, r.data);
-    setup::measure_blast_zones(r.game, r.data);
-}
-
-/// `grGreatBay_801F423C` does nothing (only a demo runs it).
-#[doc(alias = "grGreatBay_801F423C")]
-pub fn on_demo_init(_r: &mut Running) {}
-
-/// `grGreatBay_801F42D0` does nothing.
-#[doc(alias = "grGreatBay_801F42D0")]
-pub fn on_load(_r: &mut Running) {}
-
-/// Great Bay's start, `grGreatBay_801F42D4`: the enemy spawner, without enemies.
-#[doc(alias = "grGreatBay_801F42D4")]
-pub fn on_start(r: &mut Running) {
-    zako::start(r.game, r.data, None);
-}
-
-fn map_id(game: &Game, gobj: GObjId) -> i32 {
-    game.grounds[ground_of(game, gobj).0].map_id
-}
-
-/// Map 0's setup, `stageGObj0_OnInit`: its animation.
-#[doc(alias = "stageGObj0_OnInit@801F4404")]
-pub fn init_main(r: &mut Running, gobj: GObjId) {
-    let m = map_id(r.game, gobj);
-    anime::start_map(r.game, r.data, gobj, m, 0);
 }
 
 /// The background's setup (map 3), `grGreatBay_801F4440`: its animation, looping.
@@ -277,7 +197,7 @@ pub fn init_turtle(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, Some(j), m);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let p = param(r.game);
-    let k = reg(p.f(r, p::KAME_SCALE));
+    let k = reg(p.f(r.data, p::KAME_SCALE));
     let s = r.game.objs.jobjs[j].scale;
     let s = Vec3::new(
         mem(fp::fmuls(reg(s.x), k)),
@@ -286,17 +206,17 @@ pub fn init_turtle(r: &mut Running, gobj: GObjId) {
     );
     jobj::set_scale(&mut r.game.objs.jobjs, j, s);
     let x = mem(fp::fadds(
-        reg(p.f(r, p::KAME_X)),
-        reg(p.f(r, p::KAME_X_OFFSET_INIT)),
+        reg(p.f(r.data, p::KAME_X)),
+        reg(p.f(r.data, p::KAME_X_OFFSET_INIT)),
     ));
-    let y = p.f(r, p::KAME_Y);
+    let y = p.f(r.data, p::KAME_Y);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.x = x);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
     let shell = nth_joint(r.game, gobj, 2).expect("jobj");
     let shell_y = r.game.objs.jobjs[shell].translate.y;
     let (b, a) = (
-        i32::from(p.h(r, p::KAME_WAIT_B)),
-        i32::from(p.h(r, p::KAME_WAIT_A)),
+        i32::from(p.h(r.data, p::KAME_WAIT_B)),
+        i32::from(p.h(r.data, p::KAME_WAIT_A)),
     );
     let v = r.game.grounds[g.0].u.greatbay();
     v.shell_height = shell_y;
@@ -358,8 +278,8 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
             if anime::finished(r.game, gobj, 0, 7) {
                 r.game.grounds[g.0].u.greatbay().state = 3;
                 let (b, a) = (
-                    i32::from(p.h(r, p::KAME_REBIRTH_B)),
-                    i32::from(p.h(r, p::KAME_REBIRTH_A)),
+                    i32::from(p.h(r.data, p::KAME_REBIRTH_B)),
+                    i32::from(p.h(r.data, p::KAME_REBIRTH_A)),
                 );
                 let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
                 r.game.grounds[g.0].u.greatbay().ticks = wait;
@@ -398,8 +318,8 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
             if anime::finished(r.game, gobj, 0, 7) {
                 r.game.grounds[g.0].u.greatbay().state = 0;
                 let (b, a) = (
-                    i32::from(p.h(r, p::KAME_WAIT_B)),
-                    i32::from(p.h(r, p::KAME_WAIT_A)),
+                    i32::from(p.h(r.data, p::KAME_WAIT_B)),
+                    i32::from(p.h(r.data, p::KAME_WAIT_A)),
                 );
                 let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
                 r.game.grounds[g.0].u.greatbay().ticks = wait;
@@ -427,9 +347,12 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
                 let dir = turtle_dir(r, dir as i32) as u8;
                 r.game.grounds[g.0].u.greatbay().set_dir(dir);
                 let x = |r: &mut Running, b: u32, a: u32| {
-                    let (b, a) = (reg(p.f(r, b)), reg(p.f(r, a)));
+                    let (b, a) = (reg(p.f(r.data, b)), reg(p.f(r.data, a)));
                     let off = grlib::rand_range(&mut r.game.objs.rng, fp::fctiwz(b), fp::fctiwz(a));
-                    mem(fp::fadds(reg(p.f(r, p::KAME_X)), fp::frsp(f64::from(off))))
+                    mem(fp::fadds(
+                        reg(p.f(r.data, p::KAME_X)),
+                        fp::frsp(f64::from(off)),
+                    ))
                 };
                 match dir {
                     1 | 3 => {
@@ -459,7 +382,7 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
     }
     let y = r.game.objs.jobjs[shell].translate.y;
     if reg(r.game.grounds[g.0].u.greatbay().shell_height) != reg(y) {
-        let y = mem(fp::fmuls(reg(y), reg(p.f(r, p::KAME_UD_SCALE))));
+        let y = mem(fp::fmuls(reg(y), reg(p.f(r.data, p::KAME_UD_SCALE))));
         jobj::set_srt(&mut r.game.objs.jobjs, shell, |o| o.translate.y = y);
         r.game.grounds[g.0].u.greatbay().shell_height = y;
     }
@@ -651,13 +574,13 @@ pub fn init_moon(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     anime::set_rate(r.game, gobj, 0, 7, 0.0, true);
     for (k, map) in (5..=8).enumerate() {
-        let giant = create(r, map, MOON_FRAME);
+        let giant = skeleton::create(r, &OBJECTS, map, MOON_FRAME);
         r.game.grounds[g.0].u.greatbay2().gobjs[k] = giant;
     }
     let p = param(r.game);
     let (b, a) = (
-        i32::from(p.h(r, p::MOON_FALL_WAIT_B)),
-        i32::from(p.h(r, p::MOON_FALL_WAIT_A)),
+        i32::from(p.h(r.data, p::MOON_FALL_WAIT_B)),
+        i32::from(p.h(r.data, p::MOON_FALL_WAIT_A)),
     );
     let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
     r.game.grounds[g.0].u.greatbay2().moon_wait = wait;
@@ -709,8 +632,8 @@ pub fn proc_moon(r: &mut Running, gobj: GObjId) {
             }
             let p = param(r.game);
             let (b, a) = (
-                i32::from(p.h(r, p::MOON_FALL_WAIT_B)),
-                i32::from(p.h(r, p::MOON_FALL_WAIT_A)),
+                i32::from(p.h(r.data, p::MOON_FALL_WAIT_B)),
+                i32::from(p.h(r.data, p::MOON_FALL_WAIT_A)),
             );
             let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
             r.game.grounds[g.0].u.greatbay2().moon_wait = wait;
@@ -755,7 +678,7 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
     let Some(j) = r.game.grounds[g.0].u.greatbay3().jobj else {
         return;
     };
-    let rate = |r: &Running, away: bool, a: u32, b: u32| reg(p.f(r, if away { a } else { b }));
+    let rate = |r: &Running, away: bool, a: u32, b: u32| reg(p.f(r.data, if away { a } else { b }));
     let v = r.game.grounds[g.0].u.greatbay3();
     let d = fp::fsubs(reg(v.translation.z), reg(v.tilt));
     let away = fp::fmuls(fp::fneg(reg(v.tilt)), d) < 0.0;
@@ -868,7 +791,7 @@ pub fn platform_touched(
 #[doc(alias = "grGreatBay_801F62F8")]
 pub fn turtle_dir(r: &mut Running, current: i32) -> i32 {
     let p = param(r.game);
-    let w = |r: &Running, i: u32| i32::from(p.h(r, p::KAME_DIR_PROB + 2 * i));
+    let w = |r: &Running, i: u32| i32::from(p.h(r.data, p::KAME_DIR_PROB + 2 * i));
     let mut i = 0;
     loop {
         let total = w(r, 0)
@@ -916,13 +839,13 @@ pub fn turtle_item(r: &mut Running, gobj: GObjId) -> bool {
         return false;
     }
     let p = param(r.game);
-    if reg(r.game.objs.rng.draw_f32()) > reg(p.f(r, p::KAME_ITEM_PROB)) {
+    if reg(r.game.objs.rng.draw_f32()) > reg(p.f(r.data, p::KAME_ITEM_PROB)) {
         return true;
     }
     let entry = |r: &Running, i: u32| {
         (
-            i32::from(p.h(r, p::ITEMS + 4 * i)),
-            i32::from(p.h(r, p::ITEMS + 4 * i + 2)),
+            i32::from(p.h(r.data, p::ITEMS + 4 * i)),
+            i32::from(p.h(r.data, p::ITEMS + 4 * i + 2)),
         )
     };
     let mut total = 0i32;

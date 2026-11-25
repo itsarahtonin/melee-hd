@@ -2,20 +2,20 @@
 //! `melee/it/kinds/ithitodeman.c`: out of the ball it follows the opponent with the lowest
 //! percent, keeping a random offset from them, then turns to face them and fires stars a few
 //! times, kicked back by each, and goes when it runs out (or a fighter it follows unloads).
+//! The way out and the star's launch are [`shooter`]'s, over [`STARYU`] and [`STAR`].
 
 use gekko_fp as fp;
 
-use super::super::item::{change, change_state, play_sfx, spawn_air};
+use super::super::item::{change, change_state, play_sfx};
 use super::super::pokemon::{self, attr_f32, attr_i32, effect_hitlag};
-use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib, owner};
+use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, owner};
+use super::shooter::{self, Release, Shot, ShotSound};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
-use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
-use crate::lb::sound_obj::SoundParams;
 use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802D_42C4;
@@ -69,23 +69,45 @@ const STAR_LEFT: i32 = 0x273A;
 /// A quarter turn, as the inline `HSD_JObjSetRotationY` takes it (`1.5707964f`).
 const QUARTER_TURN: f32 = std::f32::consts::FRAC_PI_2;
 
+/// Staryu's way out (state 2), landing to nothing; when its fall ends it follows.
+pub const STARYU: Release = Release {
+    out: 2,
+    hitlag: true,
+    posed: false,
+    landed: shooter::nothing,
+    fallen: Some(follow),
+};
+
+/// Its star: `x54` ahead, `x58` up, at `x50`, spawned without the top flag, with a sound
+/// panned its way. (`it_802D4C74` multiplies by its facing first: the same products, as
+/// neither is ever a NaN.)
+pub const STAR: Shot = Shot {
+    kind: ItKind::StaryuStar,
+    ahead: 0x54,
+    up: 0x58,
+    speed: 0x50,
+    flagged: false,
+    depth: None,
+    sound: ShotSound::Panned {
+        right: STAR_RIGHT,
+        left: STAR_LEFT,
+    },
+};
+
 /// Runs one of Staryu's or its star's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 => anim0(r, gobj),
-        COLL0 => coll0(r, gobj),
+        COLL0 | COLL1 | STAR_COLL => shooter::kept(r, gobj),
         ANIM1 => anim1(r, gobj),
-        COLL1 => coll1(r, gobj),
-        ANIM2 => anim2(r, gobj),
-        COLL2 => coll2(r, gobj),
+        ANIM2 => shooter::growing(r, gobj),
+        COLL2 => shooter::landing(r, gobj, &STARYU),
         STAR_DMG_DEALT => star_dmg_dealt(r, gobj),
         STAR_SHIELD_BOUNCED => star_shield_bounced(r, gobj),
         STAR_REFLECTED => star_reflected(r, gobj),
-        STAR_ABSORBED => star_absorbed(r, gobj),
-        STAR_HIT_SHIELD => star_hit_shield(r, gobj),
+        STAR_ABSORBED | STAR_HIT_SHIELD => shooter::gone(r, gobj),
         STAR_ANIM => star_anim(r, gobj),
-        STAR_COLL => star_coll(r, gobj),
         _ => return None,
     })
 }
@@ -95,13 +117,11 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
-        LANDED_NOTHING => landed_nothing(r, gobj),
+        LANDED_NOTHING | ACCESSORY | STAR_PHYS => shooter::nothing(r, gobj),
         PHYS0 => phys0(r, gobj),
         PHYS1 => phys1(r, gobj),
-        ACCESSORY => accessory(r, gobj),
-        PHYS2 => phys2(r, gobj),
+        PHYS2 => shooter::falling(r, gobj, &STARYU),
         STAR_SPAWNED => star_spawned(r, gobj),
-        STAR_PHYS => star_phys(r, gobj),
         _ => return false,
     }
     true
@@ -129,13 +149,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.cmd_var0 = 0;
     ip.cmd_var1 = 0;
-    enter_air(r, gobj);
+    shooter::enter_air(r, gobj, &STARYU);
     play_sfx(r, gobj, CRY, 0x7F, 0x40);
 }
-
-/// Lands out of the ball: nothing, `it_802D43AC`.
-#[doc(alias = "it_802D43AC")]
-pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `it_802D43B0` (`it_8026B894`): no fighter to follow any more,
 /// and it goes.
@@ -267,12 +283,6 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).vel.y = mem(y);
 }
 
-/// `it_802D48A8`: nothing.
-#[doc(alias = "it_802D48A8")]
-pub fn coll0(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
 /// Eases a speed toward `target`, `it_802D48B0`: by `accel` at most when farther than that,
 /// by `decel` at least when nearer than that, within `max` either way; the speed kept in
 /// `value` and returned.
@@ -338,7 +348,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
             let kick = attr_f32(r, gobj, 0x48);
             let ip = item_mut(r.game, gobj);
             ip.vel.x = mem(fp::fmuls(fp::fneg(reg(ip.facing_dir)), reg(kick)));
-            shoot(r, gobj);
+            shooter::shoot(r, gobj, &STAR);
             item_mut(r.game, gobj).cmd_var1 = 1;
         }
     }
@@ -360,90 +370,11 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     ip.vel.x = mem(v);
 }
 
-/// `itHitodeman_UnkMotion1_Coll`: nothing.
-#[doc(alias = "itHitodeman_UnkMotion1_Coll")]
-pub fn coll1(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// Its shooting state's `on_accessory`, `it_802D4B50`: nothing.
-#[doc(alias = "it_802D4B50")]
-pub fn accessory(_: &mut Running, _: GObjId) {}
-
-/// Into the air out of the ball, `it_802D4B54` (`Item_EnterAirStateWithHitlag`, state 2).
-#[doc(alias = "it_802D4B54")]
-pub fn enter_air(r: &mut Running, gobj: GObjId) {
-    maplib::enter_air(item_mut(r.game, gobj));
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
+/// Its fall out of the ball ended (`itHitodeman_UnkMotion2_Phys`'s end): stopped, following.
+fn follow(r: &mut Running, gobj: GObjId) {
+    lib2725::clear_velocity(r.game, gobj);
+    change_state(r, gobj, 0, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
-}
-
-/// `itHitodeman_UnkMotion2_Anim`: growing out of the ball.
-#[doc(alias = "itHitodeman_UnkMotion2_Anim")]
-pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::grow(r, gobj);
-    false
-}
-
-/// `itHitodeman_UnkMotion2_Phys`: falling out of the ball; at the end stopped, following.
-#[doc(alias = "itHitodeman_UnkMotion2_Phys")]
-pub fn phys2(r: &mut Running, gobj: GObjId) {
-    if pokemon::fall(r, gobj) {
-        lib2725::clear_velocity(r.game, gobj);
-        change_state(r, gobj, 0, change::ANIM_UPDATE);
-        effect_hitlag(r.game, gobj);
-    }
-}
-
-/// `itHitodeman_UnkMotion2_Coll`: lands out of the ball doing nothing.
-#[doc(alias = "itHitodeman_UnkMotion2_Coll")]
-pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::land(r, gobj, landed_nothing)
-}
-
-/// Fires a star, `it_802D4C74`: ahead (`x54`) and up (`x58`) of it at its facing's speed
-/// (`x50`), with the star's sound for the way it flies.
-#[doc(alias = "it_802D4C74")]
-pub fn shoot(r: &mut Running, gobj: GObjId) {
-    let (ahead, up, speed) = (
-        attr_f32(r, gobj, 0x54),
-        attr_f32(r, gobj, 0x58),
-        attr_f32(r, gobj, 0x50),
-    );
-    let ip = item(r.game, gobj);
-    let (pos, facing, own) = (ip.pos, ip.facing_dir, ip.owner);
-    let mut prev = pos;
-    prev.x = mem(fp::fmadds(reg(facing), reg(ahead), reg(prev.x)));
-    prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
-    let mut spawn = SpawnItem {
-        kind: ItKind::StaryuStar.id(),
-        ..Default::default()
-    };
-    spawn.prev_pos = prev;
-    spawn.pos = lib26b1::ecb_center(r.game, gobj);
-    spawn.facing_dir = facing;
-    spawn.damage = 0;
-    spawn.vel = Vec3::new(mem(fp::fmuls(reg(facing), reg(speed))), 0.0, 0.0);
-    spawn.owner = own;
-    spawn.maker = Some(gobj);
-    spawn.flags[0] &= !0x80;
-    spawn.ignore_id = 0;
-    if spawn_air(r, &mut spawn).is_some() {
-        let sfx = if facing == 1.0 { STAR_RIGHT } else { STAR_LEFT };
-        r.lb_create_sound_object(&SoundParams {
-            owner: gobj,
-            behavior: 1,
-            sfx_id: sfx,
-            start_vol: 0x7F,
-            end_vol: 0x7F,
-            pan_left: 0,
-            pan_right: 0x7F,
-            end_frame: 0x3C,
-            direction: 3.0,
-            track: 0,
-            voice: -1,
-        });
-    }
 }
 
 /// The star's `it_2725_Logic43_Spawned`: its life, not spinning, flying, not pickable, turned
@@ -479,18 +410,6 @@ pub fn star_reflected(r: &mut Running, gobj: GObjId) -> bool {
     pokemon::bounce_off_wall(r, gobj)
 }
 
-/// The star absorbed, `itHitodeman_Logic43_Absorbed`: gone.
-#[doc(alias = "itHitodeman_Logic43_Absorbed")]
-pub fn star_absorbed(_: &mut Running, _: GObjId) -> bool {
-    true
-}
-
-/// The star hitting a shield, `it_802D4F50`: gone.
-#[doc(alias = "it_802D4F50")]
-pub fn star_hit_shield(_: &mut Running, _: GObjId) -> bool {
-    true
-}
-
 /// The star forgets a GObj going away, `it_802D4F58` (`it_8026B894`).
 #[doc(alias = "it_802D4F58")]
 #[doc(alias("star_evt_unk"))]
@@ -507,24 +426,9 @@ pub fn star_fly(r: &mut Running, gobj: GObjId) {
     ef::spawn(r, 0x46C, Some(gobj), &[Arg::JObj(j), Arg::Float(1.0)]);
 }
 
-/// The star's `it_802D4FFC`: gone when its life runs out or once it has hit.
+/// The star's `it_802D4FFC`: gone when its life runs out ([`shooter::life_spent`]) or once it
+/// has hit.
 #[doc(alias = "it_802D4FFC")]
 pub fn star_anim(r: &mut Running, gobj: GObjId) -> bool {
-    let ip = item_mut(r.game, gobj);
-    let life = mem(fp::fsubs(reg(ip.life_timer), 1.0));
-    ip.life_timer = life;
-    if reg(life) <= 0.0 {
-        return true;
-    }
-    ip.cmd_var2 != 0
-}
-
-/// The star's `it_802D5044`: nothing.
-#[doc(alias = "it_802D5044")]
-pub fn star_phys(_: &mut Running, _: GObjId) {}
-
-/// The star's `it_802D5048`: nothing.
-#[doc(alias = "it_802D5048")]
-pub fn star_coll(_: &mut Running, _: GObjId) -> bool {
-    false
+    shooter::life_spent(r, gobj) || item(r.game, gobj).cmd_var2 != 0
 }

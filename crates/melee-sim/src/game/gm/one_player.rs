@@ -1156,8 +1156,8 @@ impl Running<'_> {
         }
         let sel = super::match_exit::selkind(t.ckind as u8);
         let (left, total) = (
-            i32::from(self.game.stage_info.targets_left),
-            i32::from(self.game.stage_info.target_count),
+            i32::from(self.game.stage_info.targets_left()),
+            i32::from(self.game.stage_info.target_count()),
         );
         let frames = end.frame_count;
         if left == 0 {

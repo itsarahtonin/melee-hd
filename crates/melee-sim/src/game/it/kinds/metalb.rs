@@ -1,9 +1,10 @@
 //! The Metal Box, `melee/it/kinds/itmetalb.c`: it falls and rests; the fighter that breaks it
-//! (or picks it up, `ftpickupitem_8009447C`) turns metal (`ftLib_ApplyMetalBox`).
+//! (or picks it up, `ftpickupitem_8009447C`) turns metal (`ftLib_ApplyMetalBox`). Its callbacks
+//! but the break are the power-ups' ([`powerup`]).
 
-use super::super::ground::{air, fall, ground_or_fall, ground_skid};
-use super::super::item::{change, change_state, is_fighter};
-use super::super::{coll, flag, item, item_mut, lib26b1, lib2725, maplib, set_flag};
+use super::super::item::is_fighter;
+use super::super::{coll, flag, item, item_mut};
+use super::powerup::{self, PowerUp};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
@@ -25,16 +26,25 @@ pub const ANIM4: u32 = 0x8029_56AC;
 pub const PHYS4: u32 = 0x8029_56B4;
 pub const COLL4: u32 = 0x8029_56B8;
 
+/// The Metal Box: its spawn clears its hurt flag; resting, it tilts with the floor.
+pub const METAL_BOX: PowerUp = PowerUp {
+    clears_hurt: true,
+    on_spawn: None,
+    tilts: true,
+    on_pickup: None,
+    on_drop: None,
+};
+
 /// Runs one of the Metal Box's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM3 | ANIM2 | ANIM4 => still(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL1 => coll1(r, gobj),
-        COLL3 => coll3(r, gobj),
+        ANIM0 | ANIM3 | ANIM2 | ANIM4 => powerup::still(r, gobj),
+        COLL0 => powerup::rests(r, gobj, &METAL_BOX),
+        COLL1 => powerup::lands(r, gobj),
+        COLL3 => powerup::vanishes(r, gobj),
         DMG_RECEIVED => dmg_received(r, gobj),
-        COLL4 => coll4(r, gobj),
+        COLL4 => powerup::skids(r, gobj),
         _ => return None,
     })
 }
@@ -43,90 +53,15 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => spawned(r, gobj),
-        PHYS0 | PHYS4 => idle(r, gobj),
-        PHYS1 | PHYS3 => gravity(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        DROPPED => dropped(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        SPAWNED => powerup::spawned(r, gobj, &METAL_BOX),
+        PHYS0 | PHYS4 => powerup::idle(r, gobj),
+        PHYS1 | PHYS3 => powerup::gravity(r, gobj),
+        PICKED_UP => powerup::picked_up(r, gobj, &METAL_BOX),
+        DROPPED => powerup::dropped(r, gobj, &METAL_BOX),
+        ENTERED_AIR => powerup::entered_air(r, gobj),
         _ => return false,
     }
     true
-}
-
-/// `itMetalB_Logic32_Spawned`: falling.
-#[doc(alias = "itMetalB_Logic32_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
-    fell(r, gobj);
-}
-
-/// Stops and rests, `it_802953FC`.
-#[doc(alias = "it_802953FC")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib2725::clear_velocity(r.game, gobj);
-    lib26b1::enable_pickup(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The states that animate nothing, `itMetalb_UnkMotion0_Anim` (2, 3 for 1 and 3, 4).
-#[doc(alias = "itMetalb_UnkMotion0_Anim")]
-#[doc(alias = "itMetalb_UnkMotion2_Anim")]
-#[doc(alias = "itMetalb_UnkMotion3_Anim")]
-#[doc(alias = "itMetalb_UnkMotion4_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itMetalb_UnkMotion0_Phys` and 4.
-#[doc(alias = "itMetalb_UnkMotion0_Phys")]
-#[doc(alias = "itMetalb_UnkMotion4_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itMetalb_UnkMotion0_Coll`: resting, it falls off ledges and tilts with the floor.
-#[doc(alias = "itMetalb_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    maplib::tilt_on_floor(r.game, r.data, gobj);
-    false
-}
-
-/// Falls, `it_80295498`.
-#[doc(alias = "it_80295498")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
-/// Gravity, `itMetalb_UnkMotion1_Phys` and 3.
-#[doc(alias = "itMetalb_UnkMotion1_Phys")]
-#[doc(alias = "itMetalb_UnkMotion3_Phys")]
-pub fn gravity(r: &mut Running, gobj: GObjId) {
-    super::gravity(r, gobj);
-}
-
-/// `itMetalb_UnkMotion1_Coll`: lands.
-#[doc(alias = "itMetalb_UnkMotion1_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
-    false
-}
-
-/// Held, `itMetalB_Logic32_PickedUp`.
-#[doc(alias = "itMetalB_Logic32_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-}
-
-/// Let go of, it falls, `itMetalB_Logic32_Dropped`.
-#[doc(alias = "itMetalB_Logic32_Dropped")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE | change::DROP_UPDATE);
-}
-
-/// `itMetalb_UnkMotion3_Coll`: thrown, gone when it touches anything.
-#[doc(alias = "itMetalb_UnkMotion3_Coll")]
-pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
-    air(r, gobj)
 }
 
 /// `itMetalB_Logic32_DmgReceived`: broken, it turns its breaker metal when that's a fighter
@@ -147,23 +82,4 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     }
     item_mut(r.game, gobj).attacker = None;
     true
-}
-
-/// Skidding off a slope, `itMetalB_Logic32_EnteredAir`.
-#[doc(alias = "itMetalB_Logic32_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, change::ANIM_UPDATE);
-}
-
-/// `itMetalb_UnkMotion4_Coll`: skidding, it stops or falls.
-#[doc(alias = "itMetalb_UnkMotion4_Coll")]
-pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
-}
-
-/// Forgets a GObj the box points to, `itMetalB_Logic32_EvtUnk` (`it_8026B894`).
-#[doc(alias = "itMetalB_Logic32_EvtUnk")]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
 }

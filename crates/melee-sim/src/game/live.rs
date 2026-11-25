@@ -191,7 +191,7 @@ impl Counters {
     pub fn of(g: &Game) -> Self {
         let d = &g.objs.psdisp;
         Counters {
-            coll_stamp: g.gr.coll_stamp,
+            coll_stamp: g.gr.coll_stamp(),
             coll_generation: super::gr::ground::generation(g),
             idnum: g.objs.generators.idnum,
             ps_frame: d.frame,
@@ -203,11 +203,8 @@ impl Counters {
     /// Puts the counters in `g`: a link's cached particle is the other game's, freed memory to
     /// this one, which reading stops (`psdisp::sort`) until the link is sorted again.
     pub fn put(&self, g: &mut Game) {
-        g.gr.coll_stamp = self.coll_stamp;
-        match &mut g.geometry {
-            Some(geo) => geo.set_generation(self.coll_generation),
-            None => g.gr.coll_generation = self.coll_generation,
-        }
+        g.gr.set_coll_stamp(self.coll_stamp);
+        super::gr::ground::set_generation(g, self.coll_generation);
         g.objs.generators.idnum = self.idnum;
         let d = &mut g.objs.psdisp;
         d.frame = self.ps_frame;
@@ -246,7 +243,7 @@ pub struct ConsoleAt {
 /// console's and stay its playback's in play.
 #[derive(Clone, Debug)]
 pub struct Carried {
-    pub arrows: ([super::structs::_GXColor; 4], [u8; 4]),
+    pub hud: super::hud::Carried,
     pub ef_ids: [u16; 8],
     pub start_points: [crate::vec::Vec3; 4],
     pub ft_track: super::structs::Item_FtTrack,
@@ -256,20 +253,22 @@ pub struct Carried {
 impl Carried {
     fn of(g: &Game) -> Self {
         Carried {
-            arrows: (g.hud.arrows.colors.clone(), g.hud.arrows.players),
+            hud: g.hud.carried(),
             ef_ids: g.ef.params.map(|p| p.gfx_id),
-            start_points: g.gr.start_points,
+            start_points: g.gr.start_points(),
             ft_track: g.it.ft_track.clone(),
             coll: g.coll.clone(),
         }
     }
 
     fn put(&self, g: &mut Game) {
-        (g.hud.arrows.colors, g.hud.arrows.players) = (self.arrows.0.clone(), self.arrows.1);
+        g.hud.take_carried(&self.hud);
         for (p, &id) in g.ef.params.iter_mut().zip(&self.ef_ids) {
             p.gfx_id = id;
         }
-        g.gr.start_points = self.start_points;
+        for (slot, &at) in self.start_points.iter().enumerate() {
+            g.gr.set_start_point(slot, at);
+        }
         g.it.ft_track.clone_from(&self.ft_track);
         g.coll.carry_from(&self.coll);
     }
@@ -356,28 +355,13 @@ impl Game {
                 p.idesc = q.idesc;
             }
         }
-        // The HUD's values the next match's setup leaves: the off-screen arrows' colors and
-        // slots (`un_802FE260` resets which are shown), the announcements' callbacks, lines
-        // and marks; their models and GObjs stay the menus'.
-        let (a, b) = (&mut self.hud.arrows, &live.hud.arrows);
-        (a.shown, a.sides, a.silent, a.sounding, a.sound_timer) =
-            (b.shown, b.sides, b.silent, b.sounding, b.sound_timer);
-        for (e, l) in self
-            .hud
-            .announcements
-            .iter_mut()
-            .zip(&live.hud.announcements)
-        {
-            let (gobj, model) = (e.gobj, e.model);
-            e.clone_from(l);
-            (e.gobj, e.model) = (gobj, model);
-        }
+        self.hud.take_match(&live.hud);
         self.bgflash.scale = live.bgflash.scale;
         self.gm.pause.slot = live.gm.pause.slot;
         self.ef.count = live.ef.count;
         self.ef.load_kind = live.ef.load_kind;
         Carried::of(live).put(self);
-        self.stage_info.bits.clone_from(&live.stage_info.bits);
+        self.stage_info.carry_bits_from(&live.stage_info);
         Counters::of(live).put(self);
     }
 
@@ -429,6 +413,7 @@ pub struct Timeline {
     pub game: [crate::input::controller::Status; 4],
     pub rumble: crate::input::rumble::Rumble,
     pub rumble_ahead: u32,
+    pub ahead_motors: [Option<crate::input::rumble::Motor>; 4],
 }
 
 impl Game {
@@ -444,6 +429,7 @@ impl Game {
             game: p.game,
             rumble: p.rumble.clone(),
             rumble_ahead: p.rumble_ahead,
+            ahead_motors: p.ahead_motors,
         }
     }
 
@@ -473,6 +459,7 @@ impl Game {
         if let Some(d) = self.rumble_data {
             p.rumble = at.rumble.with_data_in(d.archive);
             p.rumble_ahead = at.rumble_ahead;
+            p.ahead_motors = at.ahead_motors;
         }
     }
 }
@@ -659,7 +646,7 @@ pub struct DisplayPhase {
     /// The views a display pass would give the game camera after each of the last two ticks,
     /// the last first (on the stages that read them, [`Game::keeps_display_views`]; none in a
     /// camera mode that leaves the CObj alone), and the engine tick count
-    /// (`gm_80479D58.unk_0`) after the last.
+    /// (`gm_80479D58.ticks`, the C `unk_0`) after the last.
     pub views: [Option<super::camera::View>; 2],
     pub view_tick: u32,
     /// The same of playback's followed camera, after each of the last two ticks it took (the
