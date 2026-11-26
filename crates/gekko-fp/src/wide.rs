@@ -281,6 +281,9 @@ mod tests {
             {
                 assert!(taken > 50_000, "the wide lanes ran {taken} times");
             }
+            // Elsewhere the wide lanes never run; the count is only read above.
+            #[cfg(not(target_arch = "x86_64"))]
+            let _ = taken;
             set_fp_mode(FpMode::Hardware);
         }
     }
