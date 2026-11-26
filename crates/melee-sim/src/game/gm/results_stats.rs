@@ -197,16 +197,16 @@ pub fn stat_value(me: &MatchEnd, us: bool, getter: u32, slot: usize) -> i32 {
             // The peak height: in feet (a 30.4788 cm one) in English, else meters.
             if us {
                 let v = gekko_fp::fdivs(
-                    gekko_fp::frsp(f64::from(p.peak_height)),
+                    gekko_fp::frsp(f64::from(p.knockback_distance)),
                     f64::from(30.4788_f32),
                 );
                 f(crate::ppc::cvt_fp2unsigned(v))
             } else {
-                f(p.peak_height / 100)
+                f(p.knockback_distance / 100)
             }
         }
-        0x8017_B4D0 => f(p.air_time),
-        0x8017_B534 => f(p.ground_time),
+        0x8017_B4D0 => f(p.ground_time),
+        0x8017_B534 => f(p.air_time),
         0x8017_B598 => stat(i32::from(p.hit_percent)),
         0x8017_B5FC => f(p.ground_attacks),
         0x8017_B660 => f(p.air_attacks),

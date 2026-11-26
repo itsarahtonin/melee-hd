@@ -119,8 +119,8 @@ impl Running<'_> {
             let f = v.flags.get();
             if flag(ip.debug_flags, 0) && (f.others || f.owner) {
                 let sub = &mut v.sub;
-                let (a, b, x0) = (sub.prev_pos.get(), sub.pos.get(), sub.radius.get());
-                return coll_draw::coin_range(objs, a, b, x0, ip.scl, pass);
+                let (a, b, radius) = (sub.prev_pos.get(), sub.pos.get(), sub.radius.get());
+                return coll_draw::coin_range(objs, a, b, radius, ip.scl, pass);
             }
             return false;
         }

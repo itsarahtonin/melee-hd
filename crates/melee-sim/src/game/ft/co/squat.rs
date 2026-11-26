@@ -43,10 +43,10 @@ impl Running<'_> {
     pub fn enter_squat(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::SQUAT, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
-        let x5f0 = self.common().u32(0x5F0);
+        let name_tag_frames = self.common().u32(0x5F0);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(SQUAT_X0, 0);
-        fp.name_tag_timer = x5f0 as u16;
+        fp.name_tag_timer = name_tag_frames as u16;
     }
 
     /// `ftCo_Squat_Anim`: the crouch settles into its wait.
@@ -118,8 +118,8 @@ impl Running<'_> {
             }
         }
         if nametag {
-            let x5f0 = self.common().u32(0x5F0);
-            self.game.fighter_mut(gobj).name_tag_timer = x5f0 as u16;
+            let name_tag_frames = self.common().u32(0x5F0);
+            self.game.fighter_mut(gobj).name_tag_timer = name_tag_frames as u16;
         }
         match self.game.fighter(gobj).fighter_kind() {
             FighterKind::Link => self.link_shield_absorb(gobj),
@@ -235,10 +235,10 @@ impl Running<'_> {
             return self.hammer_pass_check(gobj);
         }
         if self.game.fighter(gobj).mv_i32(SQUAT_X0) == 0 && self.pass_input(gobj) {
-            let x470 = self.common().f32(0x470);
+            let pass_frames = self.common().f32(0x470);
             let fp = self.game.fighter_mut(gobj);
             fp.set_mv_i32(SQUAT_X0, 1);
-            fp.set_mv_f32(SQUAT_X4, reg(x470));
+            fp.set_mv_f32(SQUAT_X4, reg(pass_frames));
             return true;
         }
         false
@@ -281,8 +281,8 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
         self.clamp_air_drift(f);
-        let x46c = self.common().f32(0x46C);
-        self.game.fighters[f.0].self_vel.y = x46c;
+        let pass_vy = self.common().f32(0x46C);
+        self.game.fighters[f.0].self_vel.y = pass_vy;
         self.change_motion_state(gobj, msid, flags, anim_start, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.coll_data.update_floor_skip();

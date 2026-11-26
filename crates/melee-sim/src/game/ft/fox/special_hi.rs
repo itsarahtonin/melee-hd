@@ -47,8 +47,8 @@ const HALF_PI: f32 = std::f32::consts::FRAC_PI_2;
 const DEG_TO_RAD: f64 = 0.017_453_292_384_743_69;
 
 /// `stickGetDir`: the stick's distance from `x2`.
-fn stick_dir(x1: f64, x2: f64) -> f64 {
-    if x1 < x2 { fp::fneg(x1) } else { x1 }
+fn stick_dir(v: f64, threshold: f64) -> f64 {
+    if v < threshold { fp::fneg(v) } else { v }
 }
 
 impl Running<'_> {

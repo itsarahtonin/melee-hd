@@ -240,7 +240,7 @@ impl Running<'_> {
         if self.game.features() & 2 == 0 {
             return true;
         }
-        let mask = self.game.game_data.thing.save_data.prefs.stage_mask;
+        let mask = self.game.game_data.card.save_data.prefs.stage_mask;
         (1u32 << u32::from(switch)) & mask != 0
     }
 
@@ -720,14 +720,14 @@ impl Running<'_> {
             };
         }
         self.game.menu.cam = self.game.stagesel.cam;
-        let unk = self.sss_data().cursor_port;
+        let cursor_port = self.sss_data().cursor_port;
         let s = &mut self.game.stagesel;
         s.picked = 0;
         s.buttons = 0;
         s.stick_x = 0;
         s.stick_y = 0;
         s.hovered = NONE;
-        s.port = unk.wrapping_sub(1) as i8;
+        s.port = cursor_port.wrapping_sub(1) as i8;
         s.wait = 0x14;
         self.sss_camera();
         self.sss_lights();

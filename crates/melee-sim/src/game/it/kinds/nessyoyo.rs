@@ -342,7 +342,7 @@ pub fn drag(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) -> i32 {
         reg(attr_f32(r, gobj, attr::SIZE)),
         reg(owner_scale(r, gobj)),
     );
-    let (pull, unk3) = (
+    let (pull, stop_speed) = (
         reg(attr_f32(r, gobj, attr::PULL_STRENGTH)),
         reg(attr_f32(r, gobj, attr::UNK3_MOD)),
     );
@@ -358,10 +358,10 @@ pub fn drag(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) -> i32 {
     let facing = reg(item(r.game, gobj).facing_dir);
     let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
     let k = link_mut(r.game, l);
-    if abs(reg(k.vel.x)) < unk3 {
+    if abs(reg(k.vel.x)) < stop_speed {
         k.vel.x = mem(fp::fmadds(pull, facing, reg(k.vel.x)));
     } else {
-        k.vel.x = mem(fp::fmuls(unk3, facing));
+        k.vel.x = mem(fp::fmuls(stop_speed, facing));
     }
     if abs(reg(k.vel.y)) < gravity_mod {
         k.vel.y = mem(fp::fsubs(reg(k.vel.y), gravity));

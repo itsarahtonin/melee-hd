@@ -1171,8 +1171,8 @@ impl Running<'_> {
         status: bool,
     ) -> (i32, Run) {
         let start = self.clock_now();
-        let thing = &self.game.game_data.thing;
-        let memory = card_data_bytes(thing);
+        let card_data = &self.game.game_data.card;
+        let memory = card_data_bytes(card_data);
         let mut bufs = melee_save::exec::Bufs::default();
         for (i, f) in bufs.files.iter_mut().enumerate().skip(1) {
             *f = memory[file_span(i).0..].to_vec();
@@ -1214,7 +1214,7 @@ impl Running<'_> {
             let _ = len;
         }
         if after != memory {
-            self.game.game_data.thing = GmCardData::import(
+            self.game.game_data.card = GmCardData::import(
                 &Mem {
                     bytes: &after,
                     base: 0,
@@ -1301,7 +1301,7 @@ impl Running<'_> {
             let p = data.ptr(icons.at(4 * i)).expect("an icon image");
             (0..n as u32).map(|k| data.u8(p.at(k))).collect()
         };
-        let mut memory = card_data_bytes(&self.game.game_data.thing);
+        let mut memory = card_data_bytes(&self.game.game_data.card);
         memory.extend_from_slice(&after_card_data(&self.game.main_lib, &self.game.pads.lib));
         let mut bufs = melee_save::exec::Bufs::default();
         for (i, f) in bufs.files.iter_mut().enumerate().skip(1) {

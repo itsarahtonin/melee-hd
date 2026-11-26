@@ -186,7 +186,7 @@ impl Running<'_> {
     /// the stick's push capped at the jump's top speed, and the jump sound (`play`).
     #[doc(alias = "ftCo_800CB110")]
     pub fn jump_take_off(&mut self, gobj: GObjId, play: bool, jump_mul: f32) {
-        let x438 = reg(self.common().f32(0x438));
+        let vy_scale = reg(self.common().f32(0x438));
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(JUMP_X4, 0);
         fp.set_mv_f32(JUMP_MUL, reg(jump_mul));
@@ -196,7 +196,7 @@ impl Running<'_> {
             reg(fp.self_vel.x),
             fp::fmuls(reg(a.ground_to_air_jump_momentum_multiplier), m),
         ));
-        fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), x438));
+        fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), vy_scale));
         fp.self_vel.z = 0.0;
         let push = fp::fmuls(reg(fp.input.lstick[0].x), reg(a.jump_h_initial_velocity));
         let mut h = fp::fmuls(m, push);
@@ -492,11 +492,11 @@ impl Running<'_> {
         {
             return;
         }
-        let x0 = self.game.fighter(gobj).cmd_vars[0] != 0;
-        if x0 && self.peach_float_continue_check(gobj) {
+        let floating = self.game.fighter(gobj).cmd_vars[0] != 0;
+        if floating && self.peach_float_continue_check(gobj) {
             return;
         }
-        if !x0 {
+        if !floating {
             return;
         }
         self.parasol_check(gobj);

@@ -128,7 +128,7 @@ impl Game {
     /// (`x7A`'s top bit, and the character's bit in `x8.xC`).
     #[doc(alias = "gmMainLib_8015D00C")]
     pub fn mark_character_played(&mut self, selkind: u8) {
-        let s = &mut self.game_data.thing.save_data;
+        let s = &mut self.game_data.card.save_data;
         s.fighters[usize::from(selkind)].played_flags[0] |= 0x80;
         s.challenger_records.played |= 1i32 << selkind;
     }
@@ -167,14 +167,14 @@ impl Running<'_> {
             }
             self.game.vs.state.match_over = 1;
         }
-        let x0 = if self.game.vs.start.clear_scores {
+        let value = if self.game.vs.start.clear_scores {
             // `fn_8017F294`.
             self.game.one_player.clear.new_score as u32
         } else {
             self.game.vs.start.score
         };
         MatchExitInfo {
-            run_value: x0,
+            run_value: value,
             timer_seconds: self.game.vs.state.timer_seconds,
             stage_flag: u32::from(super::super::gr::ground::b1(self.game)),
             match_end: r,

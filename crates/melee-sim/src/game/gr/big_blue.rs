@@ -927,12 +927,12 @@ fn off_side(game: &Game) -> f64 {
 pub fn proc_platforms(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     for i in 0..3 {
-        let (idx, x1) = {
+        let (idx, state) = {
             let v = r.game.grounds[g.0].u.bigblue_manager();
             (v.data[i].index as i8, v.data[i].state as i8)
         };
         let j = r.game.grounds[g.0].u.bigblue_manager().jobjs[idx as usize];
-        match x1 {
+        match state {
             0 => {
                 if event(r.game, 0) != 0 {
                     let pm = param(r.game);
@@ -948,7 +948,7 @@ pub fn proc_platforms(r: &mut Running, gobj: GObjId) {
                 }
             }
             1 | 2 => {
-                if x1 == 1 && event(r.game, 0) == 0 {
+                if state == 1 && event(r.game, 0) == 0 {
                     r.game.grounds[g.0].u.bigblue_manager().data[i].state = 0;
                     continue;
                 }
@@ -1308,7 +1308,7 @@ pub fn platform_touched(
     gp: &mut super::super::structs::Ground,
     joint_id: i32,
     coll: &super::super::structs::CollData,
-    x50: i32,
+    weight: i32,
 ) {
     let k = coll.ecb_flags.b1234;
     if k != 1 && k != 3 {
@@ -1320,9 +1320,9 @@ pub fn platform_touched(
     };
     let v = gp.u.bigblue_manager();
     let j = v.jobjs[joint_index as usize];
-    let mut x50 = x50;
-    if fp::frsp(f64::from(x50)) > 1000.0 {
-        x50 = 1000;
+    let mut weight = weight;
+    if fp::frsp(f64::from(weight)) > 1000.0 {
+        weight = 1000;
     }
     let pos = objs.jobjs[j.expect("jobj")].translate;
     let dx = fp::fsubs(reg(pos.x), reg(coll.cur_pos.x));
@@ -1337,7 +1337,7 @@ pub fn platform_touched(
             }
             active = i + 1;
         }
-        let w = fp::fdivs(to_f(x50), 1000.0);
+        let w = fp::fdivs(to_f(weight), 1000.0);
         let d = &mut v.data[active];
         if reg(pos.x) < reg(coll.cur_pos.x) {
             d.push_left = mem(fp::fmadds(dist, w, reg(d.push_left)));

@@ -7,7 +7,7 @@ use gekko_fp as fp;
 use super::super::code::{run_fighter_cb, unported_call};
 use super::super::gm::DB_DEBUG_ROM;
 use super::super::state::Running;
-use super::anim::x594_bit;
+use super::anim::anim_bit;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
@@ -239,10 +239,10 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             g.end_cloak(gobj);
             return;
         }
-        let x7d0 = g.common().i32(0x7D0);
+        let cloak_full = g.common().i32(0x7D0);
         let fp = &g.game.fighters[f.0];
         if !fp.takes_damage_cloaked
-            && fp.cloak_frames == x7d0
+            && fp.cloak_frames == cloak_full
             && g.start_color_anim_unless_held(gobj, 0x7D)
         {
             g.game.fighters[f.0].cloak_look = true;
@@ -330,9 +330,9 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     }
     // `ftData_UnkMotionStates3`: Kirby's, Bowser's (his flame's refill) and Giga Bowser's.
     match fp.fighter_kind() {
-        FighterKind::Koopa => g.kp_unk_motion_states3(gobj),
-        FighterKind::Kirby => g.kb_unk_motion_states3(gobj),
-        FighterKind::GKoopa => g.gk_unk_motion_states3(gobj),
+        FighterKind::Koopa => g.kp_pre_state(gobj),
+        FighterKind::Kirby => g.kb_pre_state(gobj),
+        FighterKind::GKoopa => g.gk_pre_state(gobj),
         _ => {}
     }
     let fp = &mut g.game.fighters[f.0];
@@ -510,7 +510,7 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
             fp.frame_vel.y = mem(fp::fadds(reg(fp.frame_vel.y), reg(fp.kb_vel.y)));
             let bit = fp.throw_flag(2);
             fp.set_throw_flag(2, false);
-            if bit || g.part_35_rot_x_changed(f) || x594_bit(&g.game.fighters[f.0], 7) {
+            if bit || g.part_35_rot_x_changed(f) || anim_bit(&g.game.fighters[f.0], 7) {
                 let fp = &mut g.game.fighters[f.0];
                 fp.cur_pos = fp.cur_pos.sdk_add(fp.frame_vel);
                 fp.frame_vel = Vec3::default();

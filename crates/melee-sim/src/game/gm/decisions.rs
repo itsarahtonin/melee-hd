@@ -799,7 +799,7 @@ impl Game {
     /// (`gmMainLib_8015D94C`, `gmMainLib_8015D8D8`).
     #[doc(alias = "gm_8017219C")]
     pub fn message_waits(&self, n: u32) -> bool {
-        let s = &self.game_data.thing.save_data;
+        let s = &self.game_data.card.save_data;
         let bit = |w: &[u32; 3]| w[(n / 32) as usize] & (1 << (n % 32)) != 0;
         self.message_noted(n) && bit(&s.messages_pending)
     }

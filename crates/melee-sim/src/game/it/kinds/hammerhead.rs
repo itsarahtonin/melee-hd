@@ -159,13 +159,13 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itHammerhead_UnkMotion2_Anim")]
 #[doc(alias = "itHammerhead_UnkMotion3_Anim")]
 pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
-    let x34 = common_data(r.game).u32(r.data, super::super::data::common::X34);
+    let blink_frames = common_data(r.game).u32(r.data, super::super::data::common::X34);
     let ip = item_mut(r.game, gobj);
     ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    if reg(ip.life_timer) <= fp::frsp(f64::from(x34)) {
+    if reg(ip.life_timer) <= fp::frsp(f64::from(blink_frames)) {
         lib2725::flicker(r.game, r.data, gobj);
     }
     false
@@ -178,8 +178,8 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
     let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
     lib2725::fall(r.game, gobj, accel, max);
-    let x68 = common_data(r.game).f32(r.data, super::super::data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, super::super::data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }
 
 /// `itHammerhead_UnkMotion2_Coll`.

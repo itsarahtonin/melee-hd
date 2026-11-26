@@ -385,8 +385,8 @@ impl Running<'_> {
         let b = self.game.tou.bracket[i];
         let s = &mut self.game.tou.bracket[i].slots[slot];
         if b.playing != 0 {
-            let x3 = b.kind;
-            if x3 == 0 && b.seats != 0 {
+            let kind = b.kind;
+            if kind == 0 && b.seats != 0 {
                 let si = slot as i32;
                 let (x, y, y40) = match b.seats {
                     1 => {
@@ -446,7 +446,7 @@ impl Running<'_> {
             } else {
                 let si = slot as i32;
                 let x =
-                    b.x.wrapping_add(si.wrapping_mul(divw(b.width, i32::from(x3))));
+                    b.x.wrapping_add(si.wrapping_mul(divw(b.width, i32::from(kind))));
                 s.target_x = x;
                 s.x = x;
                 s.start_x = x;
@@ -456,7 +456,7 @@ impl Running<'_> {
                 s.y = y;
                 s.start_y = y;
                 s.target_y = b.y.wrapping_add(b.height.wrapping_mul(i32::from(b.opens)));
-                if x3 == 1 {
+                if kind == 1 {
                     let shift = match (entrants, i, slot) {
                         (6, 5, 1) => 0x46,
                         (0xC, 0xA, 0) | (0xC, 0xB, 1) => 0x3C,
@@ -473,9 +473,9 @@ impl Running<'_> {
                 }
             }
         }
-        let (x44, x48) = (s.x, s.y);
-        self.tou_set_tx(Some(j), mem(f(x44)));
-        self.tou_set_ty(Some(j), mem(fp::fneg(f(x48))));
+        let (icon_x, icon_y) = (s.x, s.y);
+        self.tou_set_tx(Some(j), mem(f(icon_x)));
+        self.tou_set_ty(Some(j), mem(fp::fneg(f(icon_y))));
     }
 
     /// `HSD_JObjSetTranslateX`.
@@ -528,9 +528,9 @@ impl Running<'_> {
                         let j = self.tou_icon(idx, i);
                         let n = reg(0.3);
                         let c = f(self.game.tou.slide);
-                        let x48 = f(b.slots[i].y);
-                        let fwd = fp::fnmadds(n, c, x48);
-                        let rev = fp::fmsubs(n, c, x48);
+                        let slot_y = f(b.slots[i].y);
+                        let fwd = fp::fnmadds(n, c, slot_y);
+                        let rev = fp::fmsubs(n, c, slot_y);
                         let y = if b.opens != 0 {
                             rev
                         } else {
@@ -630,10 +630,10 @@ impl Running<'_> {
                         continue;
                     }
                     let j = self.tou_icon(idx, k);
-                    let x40 = f(b.slots[k].target_y);
+                    let target_y = f(b.slots[k].target_y);
                     let n = reg(0.1);
-                    let up = fp::fnmadds(n, bounce, x40);
-                    let down = fp::fmsubs(n, bounce, x40);
+                    let up = fp::fnmadds(n, bounce, target_y);
+                    let down = fp::fmsubs(n, bounce, target_y);
                     let y = if b.opens != 0 {
                         down
                     } else {
@@ -1231,8 +1231,8 @@ impl Running<'_> {
     pub fn tou_reset_entrants(
         &mut self,
         opt: i32,
-        x1c: i32,
-        x20: i32,
+        with_camera: i32,
+        in_name_entry: i32,
         a3: u8,
         a4: u8,
         a5: u16,
@@ -1240,8 +1240,8 @@ impl Running<'_> {
     ) {
         let tm = &mut self.game.tou.tm;
         tm.cur_option = opt;
-        tm.with_camera = x1c;
-        tm.in_name_entry = x20;
+        tm.with_camera = with_camera;
+        tm.in_name_entry = in_name_entry;
         for (i, e) in tm.roster.iter_mut().enumerate() {
             e.handicap = a3;
             e.level = a4;
@@ -1426,8 +1426,8 @@ impl Running<'_> {
     pub fn tou_setup_match(&mut self) {
         self.load_announcer();
         let rules = self.game.game_data.rules.clone();
-        let prefs_freq = self.game.game_data.thing.save_data.prefs.item_freq;
-        let prefs_mask = self.game.game_data.thing.save_data.prefs.item_mask;
+        let prefs_freq = self.game.game_data.card.save_data.prefs.item_freq;
+        let prefs_mask = self.game.game_data.card.save_data.prefs.item_mask;
         let mut d = StartMeleeData {
             rules: super::super::vs_mode::rules_defaults(),
             ..StartMeleeData::default()

@@ -110,7 +110,7 @@ impl Running<'_> {
 
     /// `gmMainLib_8015CEFC`: whether the save has the event at place `n` cleared.
     pub fn event_cleared(&self, n: i32) -> bool {
-        self.game.game_data.thing.save_data.events_cleared & (1i64 << (n & 63)) != 0
+        self.game.game_data.card.save_data.events_cleared & (1i64 << (n & 63)) != 0
     }
 
     /// `mnEvent_8024CE74`: the last event the list can start a page on: 0x2A in a develop
@@ -133,7 +133,7 @@ impl Running<'_> {
             22..=26 => 0x14,
             50.. => {
                 // `gm_80162EC8`: any of the first 25 characters' records with `x7C.b5`.
-                let any = self.game.game_data.thing.save_data.fighters[..0x19]
+                let any = self.game.game_data.card.save_data.fighters[..0x19]
                     .iter()
                     .any(|f| f.records.adventure_cleared);
                 if any { 0x2A } else { 0x29 }
@@ -581,13 +581,13 @@ pub fn score_of(s: &super::super::structs::GmSaveData, n: i32) -> i32 {
 impl Running<'_> {
     /// `gmMainLib_8015CF5C`.
     pub fn event_score(&self, n: i32) -> i32 {
-        score_of(&self.game.game_data.thing.save_data, n)
+        score_of(&self.game.game_data.card.save_data, n)
     }
 
     /// `gmMainLib_8015CF70`: the save's score at place `n`.
     #[doc(alias = "gmMainLib_8015CF70")]
     pub fn set_event_score(&mut self, n: i32, v: i32) {
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         let n = n as usize;
         if n < 4 {
             s.event_scores[n] = v;

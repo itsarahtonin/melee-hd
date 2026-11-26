@@ -358,8 +358,8 @@ pub fn menu_block(game: &Game, data: &Archives, img: &mut Image, ud: &UserData) 
         UserData::MainMenuPanel(a) => game.menu.panels.get(&a).map(|d| {
             let mut l = Lay::leftover(img, data, a, 4);
             l.bytes(0, &[d.cur_menu, d.prev_menu]);
-            if let Some(x2) = d.leftover {
-                l.u8(2, x2);
+            if let Some(leftover) = d.leftover {
+                l.u8(2, leftover);
             }
             l.u8(3, d.state);
             l
@@ -529,7 +529,7 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
             .iter()
             .any(|(_, f)| f.dobj_list.data.is_some_and(|d| d.0 == slot));
         if !own && img.in_scene(lists, slot) {
-            x2040_list(game, data, img, super::handles::DObjListId(slot));
+            export_dobj_list(game, data, img, super::handles::DObjListId(slot));
         }
     }
     let bufs = std::any::type_name::<super::ft::anim_buf::AnimBuf>();
@@ -677,8 +677,8 @@ fn zako_slots(game: &Game, data: &Archives, img: &mut Image) {
         l.put_u16(a, s.point as u16);
         l.put_u16(a + 2, s.timer as u16);
         l.put_word(a + 4, cx.handle("GObjId", s.item.map(|g| g.0)));
-        if let Some(x8) = s.x8 {
-            l.put_u32(a + 8, x8 as u32);
+        if let Some(trophy) = s.trophy {
+            l.put_u32(a + 8, trophy as u32);
         }
     }
     l.put(img);
@@ -1399,8 +1399,8 @@ pub fn sound_obj(
         Some(d) => Lay::leftover(img, d, at, 0x48),
         None => Lay::new(at, 0x48),
     };
-    if let Some(x0) = o.leftover {
-        l.u32(0, x0);
+    if let Some(leftover) = o.leftover {
+        l.u32(0, leftover);
     }
     {
         let cx = Addrs { game, img };
@@ -1610,7 +1610,7 @@ pub fn effect(game: &Game, img: &mut Image, e: super::ef::EffectId) {
             o.is_async,
         ],
     );
-    for (i, b) in o.left.x2a.iter().enumerate() {
+    for (i, b) in o.left.unwritten.iter().enumerate() {
         if let Some(b) = *b {
             l.u8(0x2A + i as u32, b);
         }
@@ -1782,7 +1782,13 @@ pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId
 /// back (`HSD_ObjFree`, or with its scene's heap). Its owner writes only the entries it lists
 /// (`ft_800C85B8`, the hats' `ftParts_80075650`), each a DObj, never null, so an entry melee-sim
 /// holds as none is one the owner never wrote: what the block held.
-pub fn x2040_list(game: &Game, data: &Archives, img: &mut Image, list: super::handles::DObjListId) {
+#[doc(alias("x2040_list"))]
+pub fn export_dobj_list(
+    game: &Game,
+    data: &Archives,
+    img: &mut Image,
+    list: super::handles::DObjListId,
+) {
     let at = game.fighter_dobj_lists.addr(list.0);
     if at == 0 {
         return;

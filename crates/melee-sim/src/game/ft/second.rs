@@ -305,7 +305,7 @@ impl Running<'_> {
         let data = self.data;
         let fp = &self.game.fighters[f.0];
         let kind = fp.kind;
-        let flags = (super::bind::x594_word(fp.anim_bits) >> 9) & 0x1FFF;
+        let flags = (super::bind::anim_bits_word(fp.anim_bits) >> 9) & 0x1FFF;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let depth = self.bone(f, part).tree[0];

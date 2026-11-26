@@ -200,7 +200,8 @@ pub enum Held {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct EffectLeft {
     pub user_data: Held,
-    pub x2a: [Option<u8>; 2],
+    #[doc(alias("x2a"))]
+    pub unwritten: [Option<u8>; 2],
     pub pixels: u8,
 }
 
@@ -208,7 +209,7 @@ impl Default for EffectLeft {
     fn default() -> Self {
         EffectLeft {
             user_data: Held::Unknown,
-            x2a: [None; 2],
+            unwritten: [None; 2],
             pixels: 0,
         }
     }
@@ -296,7 +297,7 @@ impl Effect {
             }
         }
         for i in 0..2 {
-            if px & 0x10 << i != 0 && self.left.x2a[i].is_none() {
+            if px & 0x10 << i != 0 && self.left.unwritten[i].is_none() {
                 out.push((0x2A + i as u32, 0x2B + i as u32));
             }
         }

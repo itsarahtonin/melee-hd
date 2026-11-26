@@ -107,13 +107,13 @@ impl Running<'_> {
     /// `GetRumbleSettingOfPort`.
     #[doc(alias = "GetRumbleSettingOfPort")]
     pub fn port_rumble(&self, port: usize) -> u8 {
-        self.game.game_data.thing.save_data.prefs.rumble_enabled[port]
+        self.game.game_data.card.save_data.prefs.rumble_enabled[port]
     }
 
     /// `gmMainLib_SetRumbleEnabled`.
     #[doc(alias = "gmMainLib_SetRumbleEnabled")]
     pub fn set_port_rumble(&mut self, port: usize, on: u8) {
-        self.game.game_data.thing.save_data.prefs.rumble_enabled[port] = on;
+        self.game.game_data.card.save_data.prefs.rumble_enabled[port] = on;
     }
 
     /// The name tags' slot the list shows on `row` (`mnVibration_GetNameSlotRaw`), 0xFF for

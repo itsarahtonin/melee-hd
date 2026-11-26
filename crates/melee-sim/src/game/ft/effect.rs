@@ -115,8 +115,8 @@ impl Running<'_> {
             }
             p
         } else if part == PART_DATA {
-            let x8 = self.data.ptr(ft_data.at(8)).expect("ftData::x8");
-            i32::from(self.data.u8(x8.at(0x10)))
+            let model_desc = self.data.ptr(ft_data.at(8)).expect("ftData::x8");
+            i32::from(self.data.u8(model_desc.at(0x10)))
         } else if common {
             self.bone_index(&self.game.fighters[f.0], part)
         } else {
@@ -277,8 +277,8 @@ impl Running<'_> {
             let ft_data = self.game.fighters[f.0]
                 .ft_data
                 .expect("a fighter without data");
-            let x8 = self.data.ptr(ft_data.at(8)).expect("ftData::x8");
-            i32::from(self.data.u8(x8.at(0x12)))
+            let model_desc = self.data.ptr(ft_data.at(8)).expect("ftData::x8");
+            i32::from(self.data.u8(model_desc.at(0x12)))
         } else {
             bits(w, 6, 8) as i32
         };
@@ -345,10 +345,10 @@ impl Running<'_> {
                 self.play_sound_words(f, [w0, s[0] as u32, w2]);
             }
             if gfx_id != -1 {
-                let x8 = self.ft_model_desc(&self.game.fighters[f.0]);
-                let part = self
-                    .data
-                    .u8(x8.at(if bits(w0, 14, 1) == 0 { 0x13 } else { 0x14 }));
+                let model_desc = self.ft_model_desc(&self.game.fighters[f.0]);
+                let part =
+                    self.data
+                        .u8(model_desc.at(if bits(w0, 14, 1) == 0 { 0x13 } else { 0x14 }));
                 let zero = Vec3::new(0.0, 0.0, 0.0);
                 self.script_effect(gobj, gfx_id, i32::from(part), false, false, zero, zero);
             }

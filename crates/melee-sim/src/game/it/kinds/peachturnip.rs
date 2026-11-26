@@ -247,8 +247,8 @@ fn thrown(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itPeachturnip_UnkMotion3_Phys")]
 fn flying(r: &mut Running, gobj: GObjId) {
     falling(r, gobj);
-    let x68 = common_data(r.game).f32(r.data, common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }
 
 /// `itPeachturnip_UnkMotion3_Coll`: off a floor, wall or ceiling it bounces and falls

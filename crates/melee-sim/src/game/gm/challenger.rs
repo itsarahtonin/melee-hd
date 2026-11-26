@@ -69,11 +69,11 @@ impl Running<'_> {
     /// A trophy's notice taken up: its time and the save's mark when new, the trophy
     /// given (`Toy_SetUnlockState`).
     fn take_trophy_notice(&mut self, t: usize) {
-        let s = &self.game.game_data.thing.save_data;
+        let s = &self.game.game_data.card.save_data;
         if s.trophies[t / 32] & (1 << (t % 32)) == 0 {
             let now = self.clock_seconds();
             self.game.game_data.trophy_notices.times[t] = now;
-            self.game.game_data.thing.save_data.trophies[t / 32] |= 1 << (t % 32);
+            self.game.game_data.card.save_data.trophies[t / 32] |= 1 << (t % 32);
             self.add_trophy(t as i32, 1);
         }
     }
@@ -97,7 +97,7 @@ impl Running<'_> {
         self.mark_class_two_trophies();
         for i in 0..0x42u32 {
             if self.game.message_waits(i) {
-                let time = self.game.game_data.thing.save_data.message_times[i as usize];
+                let time = self.game.game_data.card.save_data.message_times[i as usize];
                 last = self.queue_notice(i as u16, n, 0, time, last);
                 self.game.prize.queued[i as usize] = 1;
                 n += 1;
@@ -116,7 +116,7 @@ impl Running<'_> {
         self.special_unlocks(0xFFFF);
         for i in 0..0x42u32 {
             if self.game.prize.queued[i as usize] == 0 && self.game.message_waits(i) {
-                let time = self.game.game_data.thing.save_data.message_times[i as usize];
+                let time = self.game.game_data.card.save_data.message_times[i as usize];
                 last = self.queue_notice(i as u16, n, 0, time, last);
                 n += 1;
             }

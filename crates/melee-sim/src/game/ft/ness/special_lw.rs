@@ -242,16 +242,20 @@ impl Running<'_> {
         self.ness_special_lw_check_release(gobj);
         self.ness_special_lw_count_lag(gobj);
         let f = self.game.fighter_id(gobj);
-        let unk1 = reg(self.ness_attr_f32(f, attr::PSI_MAGNET_UNK1));
+        let turn_frame = reg(self.ness_attr_f32(f, attr::PSI_MAGNET_UNK1));
         let fp = &mut self.game.fighters[f.0];
         let t = fp.mv_i32(mv::LW_TURN_FRAMES).wrapping_add(-1);
         fp.set_mv_i32(mv::LW_TURN_FRAMES, t);
-        if fp.cmd_vars[0] == 0 && fp::frsp(f64::from(t)) <= unk1 {
+        if fp.cmd_vars[0] == 0 && fp::frsp(f64::from(t)) <= turn_frame {
             fp.cmd_vars[0] = 1;
             fp.facing_dir = mem(fp::fneg(reg(fp.facing_dir)));
         }
         let z = reg(self.game.part_rot_y(f, 0));
-        let rot = fp::fnmsubs(f64::from(0.017_453_292_f32), fp::fdivs(180.0, unk1), z);
+        let rot = fp::fnmsubs(
+            f64::from(0.017_453_292_f32),
+            fp::fdivs(180.0, turn_frame),
+            z,
+        );
         self.game.part_set_rot_y(f, 0, mem(rot));
         if self.game.fighters[f.0].mv_i32(mv::LW_TURN_FRAMES) <= 0 {
             self.ness_special_lw_hold_ground_or_air(gobj);
@@ -336,7 +340,7 @@ impl Running<'_> {
     pub fn ness_absorb_decide_action(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let heal_mul = reg(self.ness_absorb_heal(gobj));
-        let unk2 = self.ness_attr_f32(f, attr::PSI_MAGNET_UNK2);
+        let hit_end_frame = self.ness_attr_f32(f, attr::PSI_MAGNET_UNK2);
         let fp = &mut self.game.fighters[f.0];
         let taken = fp::frsp(f64::from(fp.absorb.damage_taken));
         let mut heal = fp::frsp(f64::from(fp::fctiwz(fp::fmuls(taken, heal_mul))));
@@ -354,7 +358,7 @@ impl Running<'_> {
         fp.facing_dir = fp.absorb.hit_direction;
         let id = fp.motion_id;
         if (id != ms::SPECIAL_LW_HIT && id != ms::SPECIAL_AIR_LW_HIT)
-            || !(fp.cur_anim_frame <= unk2)
+            || !(fp.cur_anim_frame <= hit_end_frame)
         {
             let msid = if fp.ground_or_air == GA_GROUND {
                 ms::SPECIAL_LW_HIT

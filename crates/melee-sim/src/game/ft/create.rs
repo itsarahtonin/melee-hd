@@ -415,11 +415,11 @@ impl Running<'_> {
             .expect("a fighter without data");
         let attrs = self.data.ptr(d).expect("ftData::x0");
         let pickup = self.data.ptr(d.at(0x40)).expect("ftData::x40");
-        let x2c4 = self.data.ptr(d.at(0x50)).expect("ftData::x50");
+        let push_size_desc = self.data.ptr(d.at(0x50)).expect("ftData::x50");
         let fp = &mut self.game.fighters[f.0];
         fp.co_attrs = super::data::copy_from_data(self.data, attrs);
         fp.item_pickup = super::data::copy_from_data(self.data, pickup);
-        fp.push_size = super::data::copy_from_data(self.data, x2c4);
+        fp.push_size = super::data::copy_from_data(self.data, push_size_desc);
     }
 
     /// Loads the fighter's costume model as its GObj's joint tree,

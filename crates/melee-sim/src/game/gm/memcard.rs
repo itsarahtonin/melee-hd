@@ -117,7 +117,7 @@ impl Running<'_> {
         let b = self.game.boot_mode;
         // The enter data of the mode state the scene runs in: the boot's and the memory
         // card mode's (`load_data`), or the debug mode's (`memcard_enter_data`).
-        let (x0, chan, mode) = if self.debug_mode_scene() {
+        let (question, chan, mode) = if self.debug_mode_scene() {
             self.game.debug_mode.memcard_enter
         } else {
             (b.load_question, b.load_channel, b.load_mode)
@@ -131,7 +131,7 @@ impl Running<'_> {
             m.windows.is_empty(),
             "the last scene's windows weren't closed"
         );
-        m.question = x0 as i32;
+        m.question = question as i32;
         m.chan = chan;
         m.mode_id = mode;
         m.decision = i32::from(m.question != 0);

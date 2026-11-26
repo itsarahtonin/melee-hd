@@ -287,7 +287,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007D6A4")]
     pub fn touch_ground(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if super::super::anim::x594_bit(fp, 0) {
+        if super::super::anim::anim_bit(fp, 0) {
             fp.self_vel.x = mem(fp::fmuls(reg(fp.trans_n_offset.z), reg(fp.facing_dir)));
         }
         // `ftCommon_ClampGroundVel`.

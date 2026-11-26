@@ -275,7 +275,8 @@ impl Running<'_> {
     /// Each frame before the state's, `ftKb_Init_UnkMotionStates3` (`ftData_UnkMotionStates3`):
     /// Bowser's copied breath refills.
     #[doc(alias = "ftKb_Init_UnkMotionStates3")]
-    pub fn kb_unk_motion_states3(&mut self, gobj: GObjId) {
+    #[doc(alias("kb_unk_motion_states3"))]
+    pub fn kb_pre_state(&mut self, gobj: GObjId) {
         if matches!(
             FighterKind::from_id(self.game.fighter(gobj).u_i32(u::HAT_KIND)),
             Some(FighterKind::Koopa | FighterKind::GKoopa)
@@ -453,7 +454,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         0x800F_12C8 => g.kb_mewtwo_hat_off(gobj),
         0x800F_19AC => g.kb_copy_cleanup(gobj),
         0x800F_1A8C => g.kb_copy_hit_cleanup(gobj),
-        0x800F_1B6C => g.kb_unk_motion_states3(gobj),
+        0x800F_1B6C => g.kb_pre_state(gobj),
         0x800F_1D24 => g.kb_bump_timer(gobj),
         0x800F_1DAC => g.kb_bump_effects(gobj),
         0x800F_1F68 => g.kb_attack_dash_enter(gobj),

@@ -325,15 +325,15 @@ impl Running<'_> {
     /// The shield's absorb push, Link's or Young Link's, with his sound `sfx`.
     pub(in super::super) fn absorb_push_with(&mut self, gobj: GObjId, sfx: i32) {
         let f = self.game.fighter_id(gobj);
-        let xd8 = {
+        let press = {
             let d = self.game.fighters[f.0]
                 .ft_data
                 .expect("a fighter without data");
             let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
             self.data.f32(ext.at(attr::XD8 as u32))
         };
-        let x19a4 = self.game.fighters[f.0].shield_hit_damage;
-        let stun = self.shield_stun_frames(x19a4, xd8);
+        let shield_damage = self.game.fighters[f.0].shield_hit_damage;
+        let stun = self.shield_stun_frames(shield_damage, press);
         let mul = self.common().f32(0x294);
         let fp = &mut self.game.fighters[f.0];
         fp.gr_vel = mem(fp::fmuls(stun, reg(mul)));

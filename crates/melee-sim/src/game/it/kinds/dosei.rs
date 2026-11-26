@@ -531,8 +531,8 @@ pub fn anim5(_: &mut Running, _: GObjId) -> bool {
 #[doc(alias = "itDosei_UnkMotion5_Phys")]
 pub fn phys5(r: &mut Running, gobj: GObjId) {
     phys_fall(r, gobj);
-    let x68 = common_data(r.game).f32(r.data, super::super::data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, super::super::data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }
 
 /// Skids off a slope: from a walk (state 6), or else from a spawn (10),

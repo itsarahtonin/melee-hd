@@ -829,7 +829,7 @@ impl Recorder {
 #[doc(alias = "GetNameText")]
 fn name_tag_text(g: &Game, slot: u8) -> [u16; 8] {
     use super::gm::main_lib::NAMETAG_BANK_SIZE;
-    let banks = &g.game_data.thing.nametag_banks;
+    let banks = &g.game_data.card.nametag_banks;
     let tag = |s: usize| {
         banks
             .get(s / NAMETAG_BANK_SIZE)

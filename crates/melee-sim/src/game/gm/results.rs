@@ -201,15 +201,15 @@ impl Game {
             p.peak_damage = to_u32(t.peak_damage);
             let pl = self.player(s);
             p.walk_distance = to_u32(pl.ext.walked).wrapping_mul(10);
-            p.run_distance = to_u32(pl.ext.rose).wrapping_mul(10);
+            p.rise_distance = to_u32(pl.ext.rose).wrapping_mul(10);
             p.fall_distance = to_u32(pl.ext.fell).wrapping_mul(10);
-            p.peak_height = to_u32(pl.ext.knocked).wrapping_mul(10);
+            p.knockback_distance = to_u32(pl.ext.knocked).wrapping_mul(10);
             p.coins_collected = self.player_total_coins(s) as u32;
             p.coins_swiped = self.player_coins_knocked(s) as u32;
             p.coins_lost = self.player_coins_lost(s) as u32;
             let pl = self.player(s);
-            p.air_time = pl.ext.ground_frames / 60;
-            p.ground_time = pl.ext.air_frames / 60;
+            p.ground_time = pl.ext.ground_frames / 60;
+            p.air_time = pl.ext.air_frames / 60;
             p.ground_attacks = st.attacks.total.wrapping_sub(st.attacks.aerials_count);
             p.air_attacks = st.attacks.aerials_count;
             p.items_thrown = st.attacks.thrown_item_count;
@@ -368,7 +368,7 @@ impl Game {
             }
             let team = usize::from(r.player_standings[i].team);
             let score = r.player_standings[i].score;
-            let x30 = r.player_standings[i].sub_rank;
+            let sub_rank = r.player_standings[i].sub_rank;
             let stock = self.game_mode == GameMode::Stamina || r.match_kind == 1;
             let mut t = TeamStanding::of(r, team);
             if stock {
@@ -388,7 +388,7 @@ impl Game {
                 t.set_score(ts.wrapping_add(score));
             }
             let sub = t.subscore();
-            t.set_subscore((sub as u32).wrapping_add(x30) as i32);
+            t.set_subscore((sub as u32).wrapping_add(sub_rank) as i32);
             t.set_active();
         }
     }

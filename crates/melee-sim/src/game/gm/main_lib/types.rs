@@ -196,7 +196,9 @@ pub struct GameData {
     #[doc(alias("x1850"))]
     pub rules: GameRules,
     #[at(0x1868)]
-    pub thing: GmCardData,
+    /// The card's data, which the boot resets and the memory card scene loads.
+    #[doc(alias("thing"))]
+    pub card: GmCardData,
 }
 
 impl Default for GameData {
@@ -211,7 +213,7 @@ impl Default for GameData {
             vs: Default::default(),
             modes: Default::default(),
             rules: Default::default(),
-            thing: Default::default(),
+            card: Default::default(),
         }
     }
 }

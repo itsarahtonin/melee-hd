@@ -497,12 +497,12 @@ fn guard() {
             IN,
             |call, i, _| call.regs.gpr[4] = (i % 5) as u32,
             |g, o, _, call| {
-                g.guard_set_x20(o, call.regs.gpr[4] as i32);
+                g.guard_set_dash_throw_window(o, call.regs.gpr[4] as i32);
                 Ret::Nothing
             },
         ),
         gobj("ftCo_80091B9C", IN, |g, o| {
-            g.guard_set_x24(o);
+            g.guard_set_dash_grab_window(o);
             Ret::Nothing
         }),
     ]);

@@ -216,7 +216,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawn(
     r: &mut Running,
     ground: Option<GroundId>,
-    x0: i32,
+    number: i32,
     state: i32,
     joint: Option<JObjId>,
     pos: Option<Vec3>,
@@ -264,7 +264,7 @@ pub fn spawn(
     } else if let Some(p) = pos {
         v.anchor.set(Anchor::Point(p));
     }
-    v.hit_sound.set(x0 as i16);
+    v.hit_sound.set(number as i16);
     v.ground.set(ground);
     v.dealt.set(dealt);
     v.received.set(received);

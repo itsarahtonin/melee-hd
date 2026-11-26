@@ -794,8 +794,8 @@ impl Running<'_> {
             li.repeat_after = 3;
             li.held = 0;
         }
-        let x10 = fp::frsp(f64::from(self.game.toys.list.input.last_x));
-        if (x < 0.0 && x != x10) || self.toy_triggered() & 0x41 != 0 {
+        let last_x = fp::frsp(f64::from(self.game.toys.list.input.last_x));
+        if (x < 0.0 && x != last_x) || self.toy_triggered() & 0x41 != 0 {
             self.li().last_x = fp::fctiwz(x) as i8;
             let s = self.ls();
             s.sort -= 1;
@@ -807,7 +807,7 @@ impl Running<'_> {
             self.lb_audio_call(1);
             return;
         }
-        if (x > 0.0 && x != x10) || self.toy_triggered() & 0x22 != 0 {
+        if (x > 0.0 && x != last_x) || self.toy_triggered() & 0x22 != 0 {
             self.li().last_x = fp::fctiwz(x) as i8;
             let s = self.ls();
             s.sort += 1;

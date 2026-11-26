@@ -105,11 +105,11 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialS_Enter")]
     pub fn peach_special_s_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x34 = self.peach_attr_f32(f, attr::S_X34);
+        let start_speed = self.peach_attr_f32(f, attr::S_X34);
         let fp = &mut self.game.fighters[f.0];
         fp.motion_change_cb = Some(CodeRef(addr::S_RESET));
         fp.self_vel.y = 0.0;
-        fp.gr_vel = mem(fp::fmuls(reg(x34), reg(fp.facing_dir)));
+        fp.gr_vel = mem(fp::fmuls(reg(start_speed), reg(fp.facing_dir)));
         self.change_motion_state(gobj, ms::SPECIAL_S_START, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
     }
@@ -118,10 +118,10 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialAirS_Enter")]
     pub fn peach_special_air_s_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x40 = self.peach_attr_f32(f, attr::S_X40);
+        let hop = self.peach_attr_f32(f, attr::S_X40);
         let fp = &mut self.game.fighters[f.0];
         fp.motion_change_cb = Some(CodeRef(addr::S_RESET));
-        fp.self_vel.y = x40;
+        fp.self_vel.y = hop;
         self.change_motion_state(gobj, ms::SPECIAL_AIR_S_START, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
     }
@@ -288,7 +288,7 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialAirSJump_Phys")]
     pub fn peach_special_air_s_jump_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let (x54, x50, x58, x5c) = (
+        let (decel, gravity, late_gravity, max_fall) = (
             reg(self.peach_attr_f32(f, attr::S_X54)),
             reg(self.peach_attr_f32(f, attr::S_X50_GRAVITY)),
             reg(self.peach_attr_f32(f, attr::S_X58_GRAVITY)),
@@ -297,9 +297,9 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let late = fp.cmd_vars[1] != 0;
         if late {
-            Self::self_accel_deaccel(fp, x54);
+            Self::self_accel_deaccel(fp, decel);
         }
-        Self::fall(fp, if late { x58 } else { x50 }, x5c);
+        Self::fall(fp, if late { late_gravity } else { gravity }, max_fall);
     }
 
     /// `ftPe_SpecialAirSJump_Coll`: landing ends it in the explosion on the ground; a wall
@@ -426,13 +426,13 @@ impl Running<'_> {
     #[doc(alias = "enterAirEndSmash")]
     pub fn peach_special_air_s_end_smash(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let (x68, x6c) = (
+        let (cut_x, cut_y) = (
             reg(self.peach_attr_f32(f, attr::S_X68)),
             reg(self.peach_attr_f32(f, attr::S_X6C)),
         );
         let fp = &mut self.game.fighters[f.0];
-        fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), x68));
-        fp.self_vel.y = mem(fp::fdivs(reg(fp.self_vel.y), x6c));
+        fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), cut_x));
+        fp.self_vel.y = mem(fp::fdivs(reg(fp.self_vel.y), cut_y));
         let msid = if fp.cmd_vars[2] != 0 {
             ms::SPECIAL_AIR_S_END_1
         } else {

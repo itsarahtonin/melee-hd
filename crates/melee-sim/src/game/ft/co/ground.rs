@@ -347,7 +347,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Walk_Phys")]
     pub fn co_walk_phys(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (taper, x440) = (reg(c.f32(0x30)), reg(c.f32(0x440)));
+        let (taper, anim_scale) = (reg(c.f32(0x30)), reg(c.f32(0x440)));
         let fp = self.game.fighter_mut(gobj);
         let mul = reg(fp.mv_f32(WALK_ACCEL_MUL));
         let x = reg(fp.input.lstick[0].x);
@@ -367,7 +367,7 @@ impl Running<'_> {
                 accel = fp::fmuls(accel, fp::fmuls(fp::fsubs(1.0, frac), taper));
             }
         }
-        fp.set_mv_f32(WALK_X0, fp::fmuls(target, x440));
+        fp.set_mv_f32(WALK_X0, fp::fmuls(target, anim_scale));
         let friction = reg(fp.co_attrs.ground_friction);
         Self::ground_accel_dash_run(fp, mem(accel), mem(target), friction);
         self.self_movement_from_ground(gobj);
@@ -516,12 +516,13 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Dash_IASA")]
     pub fn co_dash_iasa(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (x44, x48, x4c, x54) = (c.f32(0x44), c.f32(0x48), c.f32(0x4C), reg(c.f32(0x54)));
+        let (smash_window, roll_window, dash_window, dash_friction) =
+            (c.f32(0x44), c.f32(0x48), c.f32(0x4C), reg(c.f32(0x54)));
         let fp = self.game.fighter(gobj);
         let frame = fp.cur_anim_frame;
         let smashed = fp.mv_i32(DASH_X4) != 0;
         let slow = 'slow: {
-            if smashed && frame <= x44 {
+            if smashed && frame <= smash_window {
                 if self.special_s_check(gobj) {
                     break 'slow true;
                 }
@@ -536,10 +537,10 @@ impl Running<'_> {
                     break 'slow true;
                 }
                 let frame = self.game.fighter(gobj).cur_anim_frame;
-                if frame <= x48 && self.escape_forward_check(gobj) {
+                if frame <= roll_window && self.escape_forward_check(gobj) {
                     break 'slow true;
                 }
-            } else if frame <= x4c {
+            } else if frame <= dash_window {
                 if self.special_s_check(gobj) {
                     break 'slow true;
                 }
@@ -557,7 +558,7 @@ impl Running<'_> {
                     break 'slow true;
                 }
                 let frame = self.game.fighter(gobj).cur_anim_frame;
-                let left = fp::fctiwz(fp::fsubs(reg(x4c), reg(frame)));
+                let left = fp::fctiwz(fp::fsubs(reg(dash_window), reg(frame)));
                 if self.guard_check_keep(gobj, left) {
                     break 'slow true;
                 }
@@ -569,7 +570,7 @@ impl Running<'_> {
                     break 'slow true;
                 }
                 if self.guard_check(gobj) {
-                    self.guard_set_x24(gobj);
+                    self.guard_set_dash_grab_window(gobj);
                     break 'slow true;
                 }
             }
@@ -591,7 +592,11 @@ impl Running<'_> {
             let friction = self.ground_friction_mul(fp);
             let fp = self.game.fighter_mut(gobj);
             let v = reg(fp.gr_vel);
-            fp.gr_vel = mem(fp::fmadds(fp::fneg(fp::fmuls(v, x54)), friction, v));
+            fp.gr_vel = mem(fp::fmadds(
+                fp::fneg(fp::fmuls(v, dash_friction)),
+                friction,
+                v,
+            ));
         }
     }
 
@@ -632,8 +637,8 @@ impl Running<'_> {
     #[doc(alias = "fn_800CA644")]
     pub fn run_check_after_turn(&mut self, gobj: GObjId) -> bool {
         if self.stick_forward(gobj, 0x58) {
-            let x430 = self.common().f32(0x430);
-            self.enter_run(gobj, x430, 0.0, 1.0);
+            let brake_frames = self.common().f32(0x430);
+            self.enter_run(gobj, brake_frames, 0.0, 1.0);
             return true;
         }
         false
@@ -701,9 +706,9 @@ impl Running<'_> {
             return;
         }
         if self.guard_check(gobj) {
-            let x410 = self.common().i32(0x410);
-            self.guard_set_x20(gobj, x410);
-            self.guard_set_x24(gobj);
+            let dash_throw_window = self.common().i32(0x410);
+            self.guard_set_dash_throw_window(gobj, dash_throw_window);
+            self.guard_set_dash_grab_window(gobj);
             return;
         }
         if self.appeal_check(gobj) || self.jump_check_relaxed(gobj) {
@@ -724,7 +729,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Run_Phys")]
     pub fn co_run_phys(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (taper, x440) = (reg(c.f32(0x5C)), reg(c.f32(0x440)));
+        let (taper, anim_scale) = (reg(c.f32(0x5C)), reg(c.f32(0x440)));
         let f = self.game.fighter_id(gobj);
         let friction = self.run_friction(&self.game.fighters[f.0]);
         let fp = &mut self.game.fighters[f.0];
@@ -738,7 +743,7 @@ impl Running<'_> {
                 ));
             }
         }
-        fp.set_mv_f32(RUN_X4, fp::fmuls(reg(target), x440));
+        fp.set_mv_f32(RUN_X4, fp::fmuls(reg(target), anim_scale));
         Self::ground_accel_dash_run(fp, accel, target, friction);
         self.self_movement_from_ground(gobj);
     }
@@ -904,14 +909,14 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         let pressed = fp.input.pressed_buttons;
-        let mut x1c = fp.mv_word(TURN_X1C);
+        let mut buffered = fp.mv_word(TURN_X1C);
         if pressed & PAD_A != 0 {
-            x1c |= PAD_A;
-            fp.set_mv_i32(TURN_X1C, x1c as i32);
+            buffered |= PAD_A;
+            fp.set_mv_i32(TURN_X1C, buffered as i32);
         }
         if pressed & PAD_B != 0 {
-            x1c |= PAD_B;
-            fp.set_mv_i32(TURN_X1C, x1c as i32);
+            buffered |= PAD_B;
+            fp.set_mv_i32(TURN_X1C, buffered as i32);
         }
         if fp.mv_i32(TURN_JUST_TURNED) != 0 {
             fp.set_mv_i32(TURN_JUST_TURNED, 0);

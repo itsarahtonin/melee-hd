@@ -215,9 +215,9 @@ pub fn hang(r: &mut Running, gobj: GObjId) {
 
 /// The tip's speed across turned back by the attributes' `x58`.
 fn bounce_back(r: &mut Running, l: ItemLinkId, a: Attrs) {
-    let x58 = a.f(r, attr::X58);
+    let bounce = a.f(r, attr::X58);
     let k = link_mut(r.game, l);
-    k.vel.x = mem(fp::fmuls(reg(k.vel.x), fp::fneg(x58)));
+    k.vel.x = mem(fp::fmuls(reg(k.vel.x), fp::fneg(bounce)));
 }
 
 /// Thrown, `fn_802BB44C`: the links follow the tip out; it bounces back off a wall
@@ -386,7 +386,7 @@ fn extend(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
 fn extend_falling(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
     let len = a.f(r, attr::LENGTH);
     let g = a.f(r, attr::GRAVITY);
-    let x34 = a.f(r, attr::X34);
+    let falloff = a.f(r, attr::X34);
     let k = link_mut(r.game, l);
     k.vel.y = mem(fp::fsubs(reg(k.vel.y), g));
     apply_vel(r.game, l);
@@ -395,7 +395,7 @@ fn extend_falling(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
     let out = strand::walk_out(r, l, at, len, None, true, |r, p, cur| {
         let k = link_mut(r.game, p);
         k.vel.y = mem(fp::fnmsubs(g, fall, reg(k.vel.y)));
-        fall = fp::fmuls(fall, x34);
+        fall = fp::fmuls(fall, falloff);
         apply_vel(r.game, p);
         follow(r, p, cur, len);
         move_coll(r.game, p);
@@ -421,20 +421,20 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     let a = Attrs::of(r, gobj);
     let n = a.count(r);
     let get = |r: &Running, off| a.f(r, off);
-    let (len, x10, x14, g) = (
+    let (len, friction, floor_friction, g) = (
         get(r, attr::LENGTH),
         get(r, attr::X10),
         get(r, attr::X14),
         get(r, attr::GRAVITY),
     );
-    let (x1c, x20, x24, x28, x2c) = (
+    let (push_x, push_y, max_vx, gravity_margin, max_vy) = (
         get(r, attr::X1C),
         get(r, attr::X20),
         get(r, attr::X24),
         get(r, attr::X28),
         get(r, attr::X2C),
     );
-    let (x30, x34, x38, x3c, x40, x44, dead) = (
+    let (arg_scale, falloff, push_ahead, push_behind, push_up, push_down, dead) = (
         get(r, attr::X30),
         get(r, attr::X34),
         get(r, attr::X38),
@@ -443,7 +443,7 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
         get(r, attr::X44),
         get(r, attr::DEAD_ZONE),
     );
-    let (x5c, x60) = (get(r, attr::X5C), get(r, attr::X60));
+    let (floor_bounce, floor_bounce_min) = (get(r, attr::X5C), get(r, attr::X60));
     let mut cur = l;
     let mut iter = lk(r.game, l).prev;
     while let Some(i) = iter {
@@ -472,9 +472,9 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     let hx = if abs(dx) > dead {
         let sign = if dx < fp::frsp(0.0) { -1 } else { 1 };
         if facing == f64::from(sign) {
-            mem(fp::fmuls(dx, x38))
+            mem(fp::fmuls(dx, push_ahead))
         } else {
-            mem(fp::fmuls(dx, x3c))
+            mem(fp::fmuls(dx, push_behind))
         }
     } else {
         0.0
@@ -482,52 +482,52 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     let hy = if abs(dy) > dead {
         let sign = if dy < fp::frsp(0.0) { -1 } else { 1 };
         if f64::from(sign) > fp::frsp(0.0) {
-            mem(fp::fmuls(dy, x40))
+            mem(fp::fmuls(dy, push_up))
         } else {
-            mem(fp::fmuls(dy, x44))
+            mem(fp::fmuls(dy, push_down))
         }
     } else {
         0.0
     };
-    let x1c_state = r.seak_special_s_hitbox_frames(parent_gobj);
+    let hitbox_frames = r.seak_special_s_hitbox_frames(parent_gobj);
     let v = item_mut(r.game, gobj).vars.seak_chain();
     v.history[0].set_x(hx);
     v.history[0].set_y(hy);
-    v.coll_state.set(x1c_state);
+    v.coll_state.set(hitbox_frames);
     // The first out link.
     let k = link_mut(r.game, cur);
-    k.vel.x = mem(fp::fmadds(reg(hx), x1c, reg(k.vel.x)));
-    k.vel.y = mem(fp::fmadds(reg(hy), x20, reg(k.vel.y)));
+    k.vel.x = mem(fp::fmadds(reg(hx), push_x, reg(k.vel.x)));
+    k.vel.y = mem(fp::fmadds(reg(hy), push_y, reg(k.vel.y)));
     let vx = reg(k.vel.x);
-    k.vel.x = if vx > x10 {
-        mem(fp::fsubs(vx, x10))
-    } else if vx < fp::fneg(x10) {
-        mem(fp::fadds(vx, x10))
+    k.vel.x = if vx > friction {
+        mem(fp::fsubs(vx, friction))
+    } else if vx < fp::fneg(friction) {
+        mem(fp::fadds(vx, friction))
     } else {
         0.0
     };
-    if abs(reg(k.vel.x)) > x24 {
+    if abs(reg(k.vel.x)) > max_vx {
         k.vel.x = if reg(k.vel.x) > fp::frsp(0.0) {
-            mem(x24)
+            mem(max_vx)
         } else {
-            mem(fp::fneg(x24))
+            mem(fp::fneg(max_vx))
         };
     }
     let vy = reg(k.vel.y);
-    if vy > fp::fsubs(g, x28) {
+    if vy > fp::fsubs(g, gravity_margin) {
         k.vel.y = mem(fp::fsubs(vy, g));
-    } else if vy < fp::fsubs(fp::fneg(g), x28) {
+    } else if vy < fp::fsubs(fp::fneg(g), gravity_margin) {
         k.vel.y = mem(fp::fadds(vy, g));
     }
-    if abs(reg(k.vel.y)) > x2c {
+    if abs(reg(k.vel.y)) > max_vy {
         k.vel.y = if reg(k.vel.y) > fp::frsp(0.0) {
-            mem(x2c)
+            mem(max_vy)
         } else {
-            mem(fp::fneg(x2c))
+            mem(fp::fneg(max_vy))
         };
     }
     apply_vel(r.game, cur);
-    let mut scale = fp::fmuls(fp::frsp(1.0), x34);
+    let mut scale = fp::fmuls(fp::frsp(1.0), falloff);
     let mut d = Vec3::default();
     if direction(lk(r.game, cur).pos, target, &mut d) > len {
         let k = link_mut(r.game, cur);
@@ -550,46 +550,46 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     while let Some(i) = iter {
         let idx = fp::fctiwz(fp::fmuls(0.5, fp::frsp(f64::from(counter + 1)))) as usize;
         let h = item_mut(r.game, gobj).vars.seak_chain().history[idx].get();
-        let mut ddx = fp::fmuls(scale, fp::fmuls(reg(h.x), x1c));
-        let ddy = fp::fmuls(scale, fp::fmuls(reg(h.y), x20));
+        let mut ddx = fp::fmuls(scale, fp::fmuls(reg(h.x), push_x));
+        let ddy = fp::fmuls(scale, fp::fmuls(reg(h.y), push_y));
         if use_arg != 0 {
-            ddx = fp::fmuls(ddx, x30);
+            ddx = fp::fmuls(ddx, arg_scale);
         }
         let k = link_mut(r.game, i);
         k.vel.x = mem(fp::fadds(reg(k.vel.x), ddx));
         k.vel.y = mem(fp::fadds(reg(k.vel.y), ddy));
-        let lim = fp::fmuls(x10, scale);
+        let lim = fp::fmuls(friction, scale);
         let vx = reg(k.vel.x);
         k.vel.x = if vx > lim {
             mem(fp::fsubs(vx, lim))
-        } else if vx < fp::fmuls(fp::fneg(x10), scale) {
+        } else if vx < fp::fmuls(fp::fneg(friction), scale) {
             mem(fp::fadds(vx, lim))
         } else {
             0.0
         };
-        if abs(reg(k.vel.x)) > fp::fmuls(x24, scale) {
+        if abs(reg(k.vel.x)) > fp::fmuls(max_vx, scale) {
             k.vel.x = if reg(k.vel.x) > fp::frsp(0.0) {
-                mem(fp::fmuls(x24, scale))
+                mem(fp::fmuls(max_vx, scale))
             } else {
-                mem(fp::fmuls(fp::fneg(x24), scale))
+                mem(fp::fmuls(fp::fneg(max_vx), scale))
             };
         }
         let vy_lim = fp::fmuls(g, scale);
         let vy = reg(k.vel.y);
-        if vy > fp::fsubs(vy_lim, x28) {
+        if vy > fp::fsubs(vy_lim, gravity_margin) {
             k.vel.y = mem(fp::fsubs(vy, vy_lim));
-        } else if vy < fp::fmsubs(fp::fneg(g), scale, x28) {
+        } else if vy < fp::fmsubs(fp::fneg(g), scale, gravity_margin) {
             k.vel.y = mem(fp::fadds(vy, vy_lim));
         }
-        if abs(reg(k.vel.y)) > fp::fmuls(x2c, scale) {
+        if abs(reg(k.vel.y)) > fp::fmuls(max_vy, scale) {
             k.vel.y = if reg(k.vel.y) > fp::frsp(0.0) {
-                mem(fp::fmuls(x2c, scale))
+                mem(fp::fmuls(max_vy, scale))
             } else {
-                mem(fp::fmuls(fp::fneg(x2c), scale))
+                mem(fp::fmuls(fp::fneg(max_vy), scale))
             };
         }
         counter += 1;
-        scale = fp::fmuls(scale, x34);
+        scale = fp::fmuls(scale, falloff);
         apply_vel(r.game, i);
         let env = if counter > mode {
             if counter % 5 == 0 {
@@ -608,15 +608,15 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
         env_flags = Some(env);
         if env != 0 {
             let k = link_mut(r.game, i);
-            if abs(reg(k.vel.y)) > x60 {
-                k.vel.y = mem(fp::fmuls(reg(k.vel.y), fp::fneg(x5c)));
+            if abs(reg(k.vel.y)) > floor_bounce_min {
+                k.vel.y = mem(fp::fmuls(reg(k.vel.y), fp::fneg(floor_bounce)));
             } else {
                 // `itSeakChain_clamp_x14`.
                 let vx = reg(k.vel.x);
-                k.vel.x = if vx > x14 {
-                    mem(fp::fsubs(vx, x14))
-                } else if vx < fp::fneg(x14) {
-                    mem(fp::fadds(vx, x14))
+                k.vel.x = if vx > floor_friction {
+                    mem(fp::fsubs(vx, floor_friction))
+                } else if vx < fp::fneg(floor_friction) {
+                    mem(fp::fadds(vx, floor_friction))
                 } else {
                     0.0
                 };

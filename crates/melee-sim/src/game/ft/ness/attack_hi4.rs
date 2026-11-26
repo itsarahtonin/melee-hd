@@ -348,7 +348,8 @@ impl Running<'_> {
     /// The yo-yo's spin rate through the charge, `ftNs_AttackHi4_YoyoSetUnkRate`: from the
     /// texture animation's base toward its speed.
     #[doc(alias = "ftNs_AttackHi4_YoyoSetUnkRate")]
-    pub fn ness_yoyo_set_unk_rate(&mut self, gobj: GObjId) {
+    #[doc(alias("ness_yoyo_set_unk_rate"))]
+    pub fn ness_yoyo_set_spin_rate(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let Some(yoyo) = self.game.fighters[f.0].u.gobj_at(u::YOYO) else {
             return;
@@ -527,7 +528,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::YOYO_CURRENT_FRAME).wrapping_add(1);
         fp.set_mv_i32(mv::YOYO_CURRENT_FRAME, n);
-        self.ness_yoyo_set_unk_rate(gobj);
+        self.ness_yoyo_set_spin_rate(gobj);
         self.ness_yoyo_check_timed_rehit(gobj);
         let duration = reg(self.ness_attr_f32(f, attr::YOYO_CHARGE_DURATION));
         let frame = fp::frsp(f64::from(
@@ -665,7 +666,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::ATTACK_HI4_YOYO_SET_VAR_ALL => g.ness_yoyo_set_var_all(gobj),
         addr::ATTACK_HI4_YOYO_APPLY_SMASH => g.ness_yoyo_apply_smash(gobj),
         addr::ATTACK_HI4_YOYO_SET_CHARGE_DAMAGE => g.ness_yoyo_set_charge_damage(gobj),
-        addr::ATTACK_HI4_YOYO_SET_UNK_RATE => g.ness_yoyo_set_unk_rate(gobj),
+        addr::ATTACK_HI4_YOYO_SET_UNK_RATE => g.ness_yoyo_set_spin_rate(gobj),
         addr::ATTACK_HI4_YOYO_CREATE_ITEM => g.ness_yoyo_create_item(gobj),
         addr::ATTACK_HI4_YOYO_ITEM_SET_FLAG => g.ness_yoyo_item_set_flag(gobj),
         addr::ATTACK_HI4_YOYO_ITEM_DESPAWN => g.ness_yoyo_item_despawn(gobj),

@@ -44,8 +44,9 @@ impl Running<'_> {
     /// `ftGk_Init_UnkMotionStates3`, each frame before his state's callbacks: Bowser's
     /// (the flame's refill).
     #[doc(alias = "ftGk_Init_UnkMotionStates3")]
-    pub fn gk_unk_motion_states3(&mut self, gobj: GObjId) {
-        self.kp_unk_motion_states3(gobj);
+    #[doc(alias("gk_unk_motion_states3"))]
+    pub fn gk_pre_state(&mut self, gobj: GObjId) {
+        self.kp_pre_state(gobj);
     }
 
     /// His creation, `ftGk_Init_OnLoad`: Bowser's attribute layout pushed
@@ -115,7 +116,7 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::UNK_MOTION_STATES3 => g.gk_unk_motion_states3(gobj),
+        addr::UNK_MOTION_STATES3 => g.gk_pre_state(gobj),
         addr::ON_ITEM_INVISIBLE => g.gk_on_item_invisible(gobj),
         addr::ON_ITEM_VISIBLE => g.gk_on_item_visible(gobj),
         addr::ON_KNOCKBACK_ENTER => g.gk_on_knockback_enter(gobj),

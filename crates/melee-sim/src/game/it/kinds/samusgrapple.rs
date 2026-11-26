@@ -289,7 +289,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// (1), else an air beam (2); before it, none, and the sequence starts again.
 fn on_spawn(r: &mut Running, beam: GObjId, owner: GObjId) {
     let fp = r.game.fighter(owner);
-    let x16 = if fp.u[0x14] >= 4 {
+    let hanging = if fp.u[0x14] >= 4 {
         if fp.ground_or_air == crate::game::ft::common::GA_GROUND {
             1
         } else {
@@ -298,10 +298,14 @@ fn on_spawn(r: &mut Running, beam: GObjId, owner: GObjId) {
     } else {
         0
     };
-    if x16 == 0 {
+    if hanging == 0 {
         r.game.fighter_mut(owner).u[0x14] = 0;
     }
-    item_mut(r.game, beam).vars.samus_grapple().hanging.set(x16);
+    item_mut(r.game, beam)
+        .vars
+        .samus_grapple()
+        .hanging
+        .set(hanging);
 }
 
 /// The beam's own animations, after its links.
@@ -317,9 +321,9 @@ fn after_links(r: &mut Running, beam: GObjId) {
 
 /// Hanging: the sequence's beam (`x16`) with Z held lengthens her hang a frame.
 fn on_hang(r: &mut Running, gobj: GObjId, f: GObjId) {
-    let x16 = item_mut(r.game, gobj).vars.samus_grapple().hanging.get();
+    let hanging = item_mut(r.game, gobj).vars.samus_grapple().hanging.get();
     let fp = r.game.fighter_mut(f);
-    if x16 != 0 && fp.input.held_buttons[0] & PAD_Z != 0 {
+    if hanging != 0 && fp.input.held_buttons[0] & PAD_Z != 0 {
         let v = fp::fadds(reg(fp.mv_f32(tether::MV_HANG)), 1.0);
         fp.set_mv_f32(tether::MV_HANG, v);
     }

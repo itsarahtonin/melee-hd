@@ -702,7 +702,7 @@ impl Running<'_> {
     pub fn tou_exit_sudden_death(&mut self) {
         // `gm_801629B4`: the Sudden Death's seconds added to the save's (`x1A44`).
         let secs = self.game.tou.sd_exit.match_end.frame_count / 60;
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.tournament_time = (s.tournament_time as u32).wrapping_add(secs) as i32;
         let mut sd = self.game.tou.sd_exit.match_end.clone();
         super::records::merge_sudden_death(&mut self.game.tou.exit.match_end, &mut sd);

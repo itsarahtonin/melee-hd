@@ -123,7 +123,7 @@ pub fn set_cam_depth(game: &mut Game, depth: f32, zoom: f32) {
 #[allow(clippy::too_many_arguments)]
 pub fn set_pause_cam(
     game: &mut Game,
-    x3c: f32,
+    unread_3c: f32,
     min: f32,
     init: f32,
     max: f32,
@@ -133,7 +133,7 @@ pub fn set_pause_cam(
     right: f32,
 ) {
     let c = &mut game.stage_info.cam_info;
-    c.unread_3c = x3c;
+    c.unread_3c = unread_3c;
     c.pausecam_zpos_min = min;
     c.pausecam_zpos_init = init;
     c.pausecam_zpos_max = max;

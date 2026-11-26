@@ -198,10 +198,10 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialAirHi_Enter")]
     pub fn peach_special_air_hi_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x84 = self.peach_attr_f32(f, attr::HI_X84);
+        let drift_scale = self.peach_attr_f32(f, attr::HI_X84);
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.y = 0.0;
-        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), reg(x84)));
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), reg(drift_scale)));
         self.change_motion_state(gobj, ms::SPECIAL_AIR_HI_START, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         self.peach_special_hi_start(gobj);
@@ -231,7 +231,7 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialAirHiStart_IASA")]
     pub fn peach_special_hi_start_iasa(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let (x78, x7c, x80) = (
+        let (turn_threshold, tilt_threshold, max_tilt) = (
             reg(self.peach_attr_f32(f, attr::HI_X78)),
             reg(self.peach_attr_f32(f, attr::HI_X7C)),
             reg(self.peach_attr_f32(f, attr::HI_X80)),
@@ -240,10 +240,10 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let x = reg(fp.input.lstick[0].x);
         let ax = abs(x);
-        if fp.cmd_vars[0] == 0 && ax > x7c {
+        if fp.cmd_vars[0] == 0 && ax > tilt_threshold {
             let deg = fp::frsp(fp::fmul(
-                x80,
-                fp::fdiv(fp::fsubs(ax, x7c), fp::fsub(1.0, x7c)),
+                max_tilt,
+                fp::fdiv(fp::fsubs(ax, tilt_threshold), fp::fsub(1.0, tilt_threshold)),
             ));
             let r = fp::fmuls(f64::from(0.017453292f32), deg);
             let rad = if x > 0.0 { fp::fneg(r) } else { r };
@@ -252,7 +252,7 @@ impl Running<'_> {
             }
         }
         let fp = &mut self.game.fighters[f.0];
-        if fp.take_throw_flag(3) && abs(reg(fp.input.lstick[0].x)) > x78 {
+        if fp.take_throw_flag(3) && abs(reg(fp.input.lstick[0].x)) > turn_threshold {
             self.face_stick(gobj);
             let facing = reg(self.game.fighters[f.0].facing_dir);
             let rot = mem(fp::frsp(fp::fmul(
@@ -278,20 +278,20 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialAirHiStart_Phys")]
     pub fn peach_special_air_hi_start_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let (x88, x8c) = (
+        let (slow_fall, motion_scale) = (
             reg(self.peach_attr_f32(f, attr::HI_X88)),
             reg(self.peach_attr_f32(f, attr::HI_X8C)),
         );
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
             self.air_anim_motion_angled(gobj);
             let v = &mut self.game.fighters[f.0].self_vel;
-            v.x = mem(fp::fmuls(reg(v.x), x8c));
-            v.y = mem(fp::fmuls(reg(v.y), x8c));
-            v.z = mem(fp::fmuls(reg(v.z), x8c));
+            v.x = mem(fp::fmuls(reg(v.x), motion_scale));
+            v.y = mem(fp::fmuls(reg(v.y), motion_scale));
+            v.z = mem(fp::fmuls(reg(v.z), motion_scale));
         } else {
             let fp = &mut self.game.fighters[f.0];
             let terminal = reg(fp.co_attrs.terminal_velocity);
-            Self::fall(fp, x88, terminal);
+            Self::fall(fp, slow_fall, terminal);
             self.self_accel_deaccel_quick_air(gobj);
         }
     }
@@ -333,11 +333,11 @@ impl Running<'_> {
     pub fn peach_special_hi_end_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             let f = self.game.fighter_id(gobj);
-            let (x70, x74) = (
+            let (drift, landing_lag) = (
                 self.peach_attr_f32(f, attr::HI_X70),
                 self.peach_attr_f32(f, attr::HI_X74),
             );
-            self.enter_fall_special(gobj, 0, 1, 0, x70, x74, 0.0, true);
+            self.enter_fall_special(gobj, 0, 1, 0, drift, landing_lag, 0.0, true);
         }
     }
 
@@ -368,14 +368,14 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialAirHiEnd_Phys")]
     pub fn peach_special_air_hi_end_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x8c = reg(self.peach_attr_f32(f, attr::HI_X8C));
+        let motion_scale = reg(self.peach_attr_f32(f, attr::HI_X8C));
         let vy = self.game.fighters[f.0].self_vel.y;
         self.air_anim_motion_angled(gobj);
         let fp = &mut self.game.fighters[f.0];
         let v = &mut fp.self_vel;
-        v.x = mem(fp::fmuls(reg(v.x), x8c));
-        v.y = mem(fp::fmuls(reg(v.y), x8c));
-        v.z = mem(fp::fmuls(reg(v.z), x8c));
+        v.x = mem(fp::fmuls(reg(v.x), motion_scale));
+        v.y = mem(fp::fmuls(reg(v.y), motion_scale));
+        v.z = mem(fp::fmuls(reg(v.z), motion_scale));
         fp.self_vel.y = vy;
         let (g, t) = (reg(fp.co_attrs.gravity), reg(fp.co_attrs.terminal_velocity));
         Self::fall(fp, g, t);

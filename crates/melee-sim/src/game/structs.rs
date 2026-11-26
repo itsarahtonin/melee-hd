@@ -497,8 +497,9 @@ impl Default for HurtCapsule {
 }
 
 /// `ft_800898B4_t`, 0x14 bytes.
+#[doc(alias("ft_800898B4_t"))]
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct ft_800898B4_t {
+pub struct HitRecord {
     /// +0x0
     #[doc(alias("x0"))]
     pub attacker_percent: i32,
@@ -551,9 +552,9 @@ pub struct ft_800898B4_t {
     pub forward_attack: bool,
 }
 
-impl Default for ft_800898B4_t {
+impl Default for HitRecord {
     fn default() -> Self {
-        ft_800898B4_t {
+        HitRecord {
             attacker_percent: 0,
             victim_percent: 0,
             kb_applied1: 0.0,

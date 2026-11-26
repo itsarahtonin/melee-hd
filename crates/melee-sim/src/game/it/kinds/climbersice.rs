@@ -135,8 +135,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PHYS_3 => {
             // `Item_ApplyFallingPhysics`.
             fall(r, gobj);
-            let x68 = common_data(r.game).f32(r.data, super::super::data::common::X68);
-            lib2725::clamp_fall(r.game, gobj, x68);
+            let max_fall = common_data(r.game).f32(r.data, super::super::data::common::X68);
+            lib2725::clamp_fall(r.game, gobj, max_fall);
             set_damage(r, gobj);
         }
         _ => return false,

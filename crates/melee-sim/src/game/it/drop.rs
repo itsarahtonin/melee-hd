@@ -110,8 +110,8 @@ pub fn spawn_at(r: &mut Running, from: Option<GObjId>, kind: i32, pos: Vec3) -> 
     };
     spawn.flags[0] |= 0x80;
     let g = spawn_air(r, &mut spawn)?;
-    let x70 = common_data(r.game).f32(r.data, common::X70);
-    super::lib2725::clamp_fall(r.game, g, x70);
+    let max_fall = common_data(r.game).f32(r.data, common::X70);
+    super::lib2725::clamp_fall(r.game, g, max_fall);
     Some(g)
 }
 
@@ -179,9 +179,9 @@ pub fn drop_coins(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Option<Vec3>) -
         Some(v) => v,
         None => {
             let rng = reg(r.game.objs.rng.draw_f32());
-            let x54 = reg(c.f32(r.data, super::data::common::X54));
+            let spread = reg(c.f32(r.data, super::data::common::X54));
             Vec3::new(
-                mem(fp::fmuls(x54, fp::fmuls(2.0, fp::fsubs(rng, 0.5)))),
+                mem(fp::fmuls(spread, fp::fmuls(2.0, fp::fsubs(rng, 0.5)))),
                 c.f32(r.data, 0x144),
                 0.0,
             )

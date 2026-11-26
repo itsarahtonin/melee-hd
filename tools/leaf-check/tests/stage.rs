@@ -1796,7 +1796,7 @@ fn ground_settings_and_queries() {
     q!(
         "Ground_801C0508",
         |c: &Ctx| fns::Ground_801C0508(c) as u32,
-        |r: &mut Running, _: &Maps| g::param_x4(r.game) as u32
+        |r: &mut Running, _: &Maps| g::shadow_intensity(r.game) as u32
     );
     set!(
         "Ground_SetParamY",

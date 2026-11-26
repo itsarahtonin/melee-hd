@@ -569,10 +569,10 @@ impl Running<'_> {
         let child = self.tou_child(Some(j));
         let mobj = self.tou_mobj(child);
         if cur == 0xA || cur == 0xC || cur == 0x10 {
-            let x2 = self.su().cursor;
-            self.tou_frame(child, mem(f(i32::from(x2))));
-            let xa = self.su().cursor_flash;
-            crate::hsd::mobj::req_anim(&mut self.game.objs, mobj, mem(f(i32::from(xa))));
+            let cursor = self.su().cursor;
+            self.tou_frame(child, mem(f(i32::from(cursor))));
+            let flash = self.su().cursor_flash;
+            crate::hsd::mobj::req_anim(&mut self.game.objs, mobj, mem(f(i32::from(flash))));
         } else {
             crate::hsd::mobj::req_anim(&mut self.game.objs, mobj, 6.0);
         }
@@ -589,13 +589,13 @@ impl Running<'_> {
             return;
         }
         self.tou_show(Some(j));
-        let xa = i32::from(self.su().cursor_flash);
+        let flash = i32::from(self.su().cursor_flash);
         match cur {
-            10 => self.tou_frame(Some(j), mem(f(xa))),
+            10 => self.tou_frame(Some(j), mem(f(flash))),
             11 => self.tou_frame(Some(j), 5.0),
-            12 => self.tou_frame(Some(j), mem(f(xa + 0x14))),
+            12 => self.tou_frame(Some(j), mem(f(flash + 0x14))),
             13..=15 => self.tou_frame(Some(j), 25.0),
-            16 => self.tou_frame(Some(j), mem(f(xa + 0x28))),
+            16 => self.tou_frame(Some(j), mem(f(flash + 0x28))),
             _ => {}
         }
     }
@@ -619,12 +619,12 @@ impl Running<'_> {
     /// A row's place in the list's twelve shown, its joint at its height (`fn_80191D38`'s and
     /// `fn_80191E9C`'s), or `None` for a row not shown.
     fn tou_row_place(&mut self, j: JObjId, idx: i32) -> bool {
-        let x3 = i32::from(self.su().scroll);
-        if idx < x3 || idx >= i32::from(self.game.tou.tm.entrant_count) || idx > x3 + 0xB {
+        let scroll = i32::from(self.su().scroll);
+        if idx < scroll || idx >= i32::from(self.game.tou.tm.entrant_count) || idx > scroll + 0xB {
             self.tou_hide(Some(j));
             return false;
         }
-        let y = fp::fnmsubs(reg(2.620_000_8), f(idx - x3), reg(12.800_008));
+        let y = fp::fnmsubs(reg(2.620_000_8), f(idx - scroll), reg(12.800_008));
         self.tou_move(j, 666.0, y, reg(0.1));
         true
     }
@@ -731,8 +731,8 @@ impl Running<'_> {
         let slot = self.tou_row();
         let e = self.game.tou.tm.roster[slot];
         if i32::from(e.icon) == hud {
-            let xa = i32::from(self.su().cursor_flash);
-            self.tou_frame(child2, mem(f(xa + 0xA)));
+            let flash = i32::from(self.su().cursor_flash);
+            self.tou_frame(child2, mem(f(flash + 0xA)));
         } else if self.tou_grid_shown(hud) {
             self.tou_frame(child2, 0.0);
         } else {
@@ -774,11 +774,11 @@ impl Running<'_> {
             self.tou_hide(Some(j));
             return;
         }
-        let xa = i32::from(self.su().cursor_flash);
-        self.tou_frame(Some(j), mem(f(xa)));
-        let x5 = i32::from(self.su().name_cursor);
-        let x = fp::fmadds(reg(7.189_999_6), f(x5 % 4), fp::fneg(reg(1.8)));
-        let y = fp::fnmsubs(reg(2.3), f(x5 / 4), reg(2.7));
+        let flash = i32::from(self.su().cursor_flash);
+        self.tou_frame(Some(j), mem(f(flash)));
+        let name_cursor = i32::from(self.su().name_cursor);
+        let x = fp::fmadds(reg(7.189_999_6), f(name_cursor % 4), fp::fneg(reg(1.8)));
+        let y = fp::fnmsubs(reg(2.3), f(name_cursor / 4), reg(2.7));
         self.tou_move(j, x, y, 666.0);
     }
 
@@ -804,12 +804,12 @@ impl Running<'_> {
         c2 = self.tou_next(c2);
         c2 = self.tou_next(c2);
         let c3 = self.tou_next(c2);
-        let xa = i32::from(self.su().cursor_flash);
+        let flash = i32::from(self.su().cursor_flash);
         if cur == 0xD {
             self.tou_frame(c, 0.0);
-            self.tou_frame(c3, mem(f(xa + 10)));
+            self.tou_frame(c3, mem(f(flash + 10)));
         } else {
-            self.tou_frame(c, mem(f(xa + 10)));
+            self.tou_frame(c, mem(f(flash + 10)));
             self.tou_frame(c3, 0.0);
         }
     }
@@ -902,17 +902,17 @@ impl Running<'_> {
             self.game.tou.tm.roster[i].icon = icon as u8;
             let n = super::super::super::playback::costume_count(ckind_of(icon) as u8);
             self.game.tou.tm.roster[i].color = self.game.objs.rng.below(i32::from(n)) as u8;
-            let (x2e, x2f) = (self.game.tou.tm.entrant_count, self.game.tou.tm.human_count);
-            if (i as i32) < i32::from(x2e) {
+            let (entrants, humans) = (self.game.tou.tm.entrant_count, self.game.tou.tm.human_count);
+            if (i as i32) < i32::from(entrants) {
                 self.game.tou.tm.present[i] = 1;
-                if (i as i32) < i32::from(x2f) {
+                if (i as i32) < i32::from(humans) {
                     let e = &mut self.game.tou.tm.roster[i];
                     e.slot_type = 0;
                     e.name = (i + 0x320) as u16;
                 } else {
                     let e = &mut self.game.tou.tm.roster[i];
                     e.slot_type = 1;
-                    e.name = ((i + 0x384) as u16).wrapping_sub(u16::from(x2f));
+                    e.name = ((i + 0x384) as u16).wrapping_sub(u16::from(humans));
                     let level = self.game.tou.tm.cpu_level();
                     if self.mt() == 0 && level == 0 {
                         let l = self.game.objs.rng.below(9) + 1;
@@ -933,14 +933,14 @@ impl Running<'_> {
         }
         if self.mt() == 0 {
             let start = i32::from(self.su().pads < 2);
-            let x2e = i32::from(self.game.tou.tm.entrant_count);
+            let entrants = i32::from(self.game.tou.tm.entrant_count);
             for _ in 0..0x3E8 {
-                let a = start + self.game.objs.rng.below(x2e - start);
-                let b = start + self.game.objs.rng.below(x2e - start);
-                let x37 = &mut self.game.tou.tm.roster;
-                let t = x37[a as usize].seat;
-                x37[a as usize].seat = x37[b as usize].seat;
-                x37[b as usize].seat = t;
+                let a = start + self.game.objs.rng.below(entrants - start);
+                let b = start + self.game.objs.rng.below(entrants - start);
+                let roster = &mut self.game.tou.tm.roster;
+                let t = roster[a as usize].seat;
+                roster[a as usize].seat = roster[b as usize].seat;
+                roster[b as usize].seat = t;
             }
         }
         let handicap = self.game.game_data.rules.handicap;
@@ -1728,15 +1728,15 @@ impl Running<'_> {
             }
         } else if b & PAD_DOWN != 0 {
             if cur != 0x10 || self.su().editing_handicap == 0 {
-                let x2e = i32::from(self.game.tou.tm.entrant_count);
+                let entrants = i32::from(self.game.tou.tm.entrant_count);
                 let pos = self.su().cursor;
                 if pos < 0xB {
-                    if i32::from(pos) + i32::from(self.su().scroll) < x2e - 1 {
+                    if i32::from(pos) + i32::from(self.su().scroll) < entrants - 1 {
                         self.lb_audio_call(2);
                         self.su().cursor += 1;
                         self.tou_texts(5);
                     }
-                } else if i32::from(pos) + i32::from(self.su().scroll) < x2e - 1 {
+                } else if i32::from(pos) + i32::from(self.su().scroll) < entrants - 1 {
                     self.lb_audio_call(2);
                     self.su().scroll += 1;
                     self.su().scroll_end = self.su().scroll_end.wrapping_add(1);

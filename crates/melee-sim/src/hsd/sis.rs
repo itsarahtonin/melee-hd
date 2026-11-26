@@ -1164,15 +1164,15 @@ impl SisLib {
             self.free(old_buf);
         }
         let tx = self.text(t).clone();
-        let xc = i32::from(gekko_fp::fctiwz(x) as i16);
-        let yc = i32::from(gekko_fp::fctiwz(y) as i16);
+        let px = i32::from(gekko_fp::fctiwz(x) as i16);
+        let py = i32::from(gekko_fp::fctiwz(y) as i16);
         let lfs = crate::fpu::reg;
         let head = [
             7,
-            (xc >> 8) as u8,
-            xc as u8,
-            (yc >> 8) as u8,
-            yc as u8,
+            (px >> 8) as u8,
+            px as u8,
+            (py >> 8) as u8,
+            py as u8,
             12,
             tx.text_color[0],
             tx.text_color[1],
@@ -1265,12 +1265,12 @@ impl SisLib {
         let Some(e) = self.entry_at(data, t, index) else {
             return;
         };
-        let xc = i32::from(gekko_fp::fctiwz(x) as i16);
-        let yc = i32::from(gekko_fp::fctiwz(y) as i16);
-        self.set_byte(e + 1, (xc >> 8) as u8);
-        self.set_byte(e + 2, xc as u8);
-        self.set_byte(e + 3, (yc >> 8) as u8);
-        self.set_byte(e + 4, yc as u8);
+        let px = i32::from(gekko_fp::fctiwz(x) as i16);
+        let py = i32::from(gekko_fp::fctiwz(y) as i16);
+        self.set_byte(e + 1, (px >> 8) as u8);
+        self.set_byte(e + 2, px as u8);
+        self.set_byte(e + 3, (py >> 8) as u8);
+        self.set_byte(e + 4, py as u8);
     }
 
     /// Sets entry `index`'s colour, `HSD_SisLib_803A74F0`.

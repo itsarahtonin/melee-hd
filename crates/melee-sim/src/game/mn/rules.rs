@@ -154,13 +154,13 @@ pub(crate) fn rules_shown(game: &Game, i: u8) -> bool {
 /// Whether the extra rules' option `i` is shown: friendly fire but in Tournament mode, the
 /// score display and the random stage switch once unlocked.
 pub(crate) fn rule_plus_shown(game: &Game, i: u8) -> bool {
-    let x186c = game.features();
+    let features = game.features();
     if game.machine.routing.curr_mode == GameMode::Tournament && i == 1 {
         return false;
     }
     match i {
-        3 => x186c & 1 != 0,
-        5 => x186c & 2 != 0,
+        3 => features & 1 != 0,
+        5 => features & 2 != 0,
         _ => true,
     }
 }

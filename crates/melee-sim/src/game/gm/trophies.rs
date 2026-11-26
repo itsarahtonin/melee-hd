@@ -139,7 +139,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_GetTrophyCategoryFlags")]
     #[doc(alias = "Toy_80311680")]
     pub fn hold_every_trophy(&mut self) {
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.trophy_flags = [0; TROPHY_COUNT];
         s.trophy_category_flags = 0;
         s.trophy_count = 0;
@@ -150,14 +150,14 @@ impl Running<'_> {
                 continue;
             }
             let class = self.trophy_class(&t, i);
-            let s = &mut self.game.game_data.thing.save_data;
+            let s = &mut self.game.game_data.card.save_data;
             s.trophy_count = s.trophy_count.wrapping_add(1);
             s.trophy_flags[i] = 1;
             if class as u32 > 1 && class != 8 && class != 3 {
                 s.trophy_flags[i] |= FLAG_UNWINNABLE;
             }
         }
-        self.game.game_data.thing.save_data.trophy_category_flags = 0xF4;
+        self.game.game_data.card.save_data.trophy_category_flags = 0xF4;
         self.game.toys.gallery.debug_unlocked = 1;
     }
 
@@ -169,10 +169,10 @@ impl Running<'_> {
         let t = self.trophy_tables();
         for i in 0..TROPHY_COUNT {
             if self.trophy_winnable(&t, i) && self.trophy_class(&t, i) == 2 {
-                self.game.game_data.thing.save_data.trophy_flags[i] |= FLAG_UNWINNABLE;
+                self.game.game_data.card.save_data.trophy_flags[i] |= FLAG_UNWINNABLE;
             }
         }
-        self.game.game_data.thing.save_data.trophy_category_flags |= 4;
+        self.game.game_data.card.save_data.trophy_category_flags |= 4;
         self.game.toys.table.categories |= 4;
     }
 
@@ -252,7 +252,7 @@ impl Running<'_> {
             if own {
                 self.game.toys.table.count = self.game.toys.table.count.wrapping_add(1);
             } else {
-                let s = &mut self.game.game_data.thing.save_data;
+                let s = &mut self.game.game_data.card.save_data;
                 s.trophy_count = s.trophy_count.wrapping_add(1);
             }
         }
@@ -267,7 +267,7 @@ impl Running<'_> {
             let t = &self.game.toys.table;
             t.categories | t.extra_categories
         } else {
-            self.game.game_data.thing.save_data.trophy_category_flags
+            self.game.game_data.card.save_data.trophy_category_flags
         };
         if categories & 0x80 == 0 && self.toy_total() >= 0xFA {
             self.game.toys.table.screen = 2;
@@ -313,7 +313,7 @@ impl Running<'_> {
         } else if own {
             &mut self.game.toys.table.categories
         } else {
-            &mut self.game.game_data.thing.save_data.trophy_category_flags
+            &mut self.game.game_data.card.save_data.trophy_category_flags
         };
         if clear {
             if *cats & bit != 0 {
@@ -346,7 +346,7 @@ impl Running<'_> {
             let t = &self.game.toys.table;
             t.categories | t.extra_categories
         } else {
-            self.game.game_data.thing.save_data.trophy_category_flags
+            self.game.game_data.card.save_data.trophy_category_flags
         };
         cats & (1 << class) != 0
     }
@@ -404,7 +404,7 @@ impl Running<'_> {
     pub fn stage_unlocked_inline(&self, stkind: u16) -> bool {
         match stage_unlock(stkind) {
             None => true,
-            Some(u) => self.game.game_data.thing.save_data.unlocked_stages & (1 << u[0]) != 0,
+            Some(u) => self.game.game_data.card.save_data.unlocked_stages & (1 << u[0]) != 0,
         }
     }
 
@@ -414,7 +414,7 @@ impl Running<'_> {
     pub fn unlock_stage(&mut self, stkind: u16) {
         if let Some(u) = stage_unlock(stkind) {
             self.note_special_message(u32::from(u[2]));
-            self.game.game_data.thing.save_data.unlocked_stages |= 1 << u[0];
+            self.game.game_data.card.save_data.unlocked_stages |= 1 << u[0];
             // The matches' view of the save follows it (All-Star's clear unlocks Battlefield
             // with no later sync in its tick).
             self.game.sync_unlocks();
@@ -437,7 +437,7 @@ impl Running<'_> {
             .audio
             .clock_read(self.data, crate::game::session::TB_READ);
         let now = self.session_seconds();
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.message_times[msg as usize] = now;
         s.messages_pending[word] |= bit;
         s.messages_noted[word] |= bit;

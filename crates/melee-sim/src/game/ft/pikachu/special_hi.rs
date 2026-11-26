@@ -432,18 +432,18 @@ impl Running<'_> {
             let floor = fp.coll_data.floor.normal;
             if !(reg(floor.angle_xy(dir)) < HALF_PI) && !self.pass_skip_floor(gobj) {
                 self.face_stick(gobj);
-                let x90 = reg(self.pk_attr_f32(f, attr::X90));
-                let x94 = reg(self.pk_attr_f32(f, attr::X94));
-                let x98 = reg(self.pk_attr_f32(f, attr::X98));
+                let zip_scale = reg(self.pk_attr_f32(f, attr::X90));
+                let zip_base = reg(self.pk_attr_f32(f, attr::X94));
+                let zip_decay = reg(self.pk_attr_f32(f, attr::X98));
                 let fp = &mut self.game.fighters[f.0];
                 fp.set_mv_f32(mv::HI_STICK_X, reg(s.x));
                 fp.set_mv_f32(mv::HI_STICK_Y, reg(s.y));
                 self.pk_special_hi_zip_frames(gobj);
                 let fp = &mut self.game.fighters[f.0];
-                fp.gr_vel = mem(fp::fmadds(x90, mag, x94));
+                fp.gr_vel = mem(fp::fmadds(zip_scale, mag, zip_base));
                 fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), reg(fp.facing_dir)));
                 if fp.mv_i32(mv::HI_SECOND) != 0 {
-                    fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), x98));
+                    fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), zip_decay));
                 }
                 self.pk_special_hi_zip_enter(gobj, ms::SPECIAL_HI_START1);
                 return;
@@ -482,18 +482,18 @@ impl Running<'_> {
             fp.set_mv_f32(mv::HI_STICK_Y, STICK_MAX);
         }
         self.pk_special_hi_zip_frames(gobj);
-        let x90 = reg(self.pk_attr_f32(f, attr::X90));
-        let x94 = reg(self.pk_attr_f32(f, attr::X94));
-        let x98 = reg(self.pk_attr_f32(f, attr::X98));
+        let zip_scale = reg(self.pk_attr_f32(f, attr::X90));
+        let zip_base = reg(self.pk_attr_f32(f, attr::X94));
+        let zip_decay = reg(self.pk_attr_f32(f, attr::X98));
         let fp = &mut self.game.fighters[f.0];
-        let speed = fp::fmadds(x90, mag, x94);
+        let speed = fp::fmadds(zip_scale, mag, zip_base);
         let t = fp::fmuls(speed, reg(math::cos(angle)));
         fp.self_vel.x = mem(fp::fmuls(reg(fp.facing_dir), t));
-        let speed = fp::fmadds(x90, mag, x94);
+        let speed = fp::fmadds(zip_scale, mag, zip_base);
         fp.self_vel.y = mem(fp::fmuls(speed, reg(math::sin(angle))));
         if fp.mv_i32(mv::HI_SECOND) != 0 {
-            fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), x98));
-            fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), x98));
+            fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), zip_decay));
+            fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), zip_decay));
         }
         self.pk_special_hi_zip_enter(gobj, ms::SPECIAL_AIR_HI_START1);
     }
@@ -577,11 +577,11 @@ impl Running<'_> {
     #[doc(alias = "ftPk_SpecialAirHiEnd_Phys")]
     pub fn pk_special_air_hi_end_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x9c = reg(self.pk_attr_f32(f, attr::X9C));
+        let drift_scale = reg(self.pk_attr_f32(f, attr::X9C));
         let fp = &mut self.game.fighters[f.0];
         if fp.cmd_vars[0] != 0 {
             Self::fall_basic(fp);
-            let max = fp::fmuls(x9c, reg(fp.co_attrs.air_drift_max));
+            let max = fp::fmuls(drift_scale, reg(fp.co_attrs.air_drift_max));
             Self::clamp_self_vel_x(fp, max);
         } else {
             let vy = reg(fp.self_vel.y);
@@ -649,10 +649,10 @@ impl Running<'_> {
     #[doc(alias = "ftPk_SpecialHi_MotionChangeUpdateVel_Unk0")]
     pub fn pk_special_hi_end_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let xa4 = reg(self.pk_attr_f32(f, attr::XA4));
+        let end_scale = reg(self.pk_attr_f32(f, attr::XA4));
         self.pk_special_hi_keep_vel(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.gr_vel = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_GR_VEL)), xa4));
+        fp.gr_vel = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_GR_VEL)), end_scale));
         self.change_motion_state(gobj, ms::SPECIAL_HI_END, 2, 0.0, 1.0, 0.0, None);
         self.game.fighters[f.0].turn_cb = Some(CodeRef(addr::SPECIAL_HI_UPDATE_VEL));
     }
@@ -662,11 +662,11 @@ impl Running<'_> {
     #[doc(alias = "ftPk_SpecialHi_MotionChangeUpdateVel_Unk1")]
     pub fn pk_special_hi_air_end_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let xa4 = reg(self.pk_attr_f32(f, attr::XA4));
+        let end_scale = reg(self.pk_attr_f32(f, attr::XA4));
         self.pk_special_hi_keep_vel(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.self_vel.x = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_VEL_X)), xa4));
-        fp.self_vel.y = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_VEL_Y)), xa4));
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_VEL_X)), end_scale));
+        fp.self_vel.y = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_VEL_Y)), end_scale));
         self.change_motion_state(gobj, ms::SPECIAL_AIR_HI_END, 2, 0.0, 1.0, 0.0, None);
         self.game.fighters[f.0].turn_cb = Some(CodeRef(addr::SPECIAL_HI_UPDATE_VEL));
     }

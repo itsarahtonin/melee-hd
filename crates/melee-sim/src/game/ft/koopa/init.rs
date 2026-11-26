@@ -26,7 +26,8 @@ impl Running<'_> {
     /// `ftKp_Init_UnkMotionStates3` (`ftData_UnkMotionStates3`, each frame before the state's
     /// callbacks): the flame's refill.
     #[doc(alias = "ftKp_Init_UnkMotionStates3")]
-    pub fn kp_unk_motion_states3(&mut self, gobj: GObjId) {
+    #[doc(alias("kp_unk_motion_states3"))]
+    pub fn kp_pre_state(&mut self, gobj: GObjId) {
         self.kp_refuel(gobj, &super::special_n::KOOPA);
     }
 
@@ -101,7 +102,7 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::UNK_MOTION_STATES3 => g.kp_unk_motion_states3(gobj),
+        addr::UNK_MOTION_STATES3 => g.kp_pre_state(gobj),
         addr::DAMAGE_CB => g.kp_damage_cb(gobj),
         addr::ON_ITEM_INVISIBLE => g.kp_on_item_invisible(gobj),
         addr::ON_ITEM_VISIBLE => g.kp_on_item_visible(gobj),

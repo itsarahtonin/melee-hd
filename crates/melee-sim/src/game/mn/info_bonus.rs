@@ -76,7 +76,7 @@ impl Running<'_> {
         if b.show_all != 0 {
             return true;
         }
-        let s = &self.game.game_data.thing.save_data;
+        let s = &self.game.game_data.card.save_data;
         super::super::gm::unlocks::bit(&s.bonuses_seen, &s.bonuses_seen_rest, u32::from(n))
     }
 

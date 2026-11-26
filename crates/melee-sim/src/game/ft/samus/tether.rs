@@ -181,11 +181,11 @@ impl Running<'_> {
         let m = self.game.objs.jobjs[hand.expect("his hand's joint")].mtx;
         let fp = self.game.fighter(gobj);
         let reach = fp::fmul(g.reach, reg(fp.facing_dir));
-        let x1 = mem(fp::frsp(fp::fmadd(reach, reg(fp.scale.y), reg(m.m[0][3]))));
-        let x0 = fp.coll_data.cur_pos.x;
+        let x_reach = mem(fp::frsp(fp::fmadd(reach, reg(fp.scale.y), reg(m.m[0][3]))));
+        let x_from = fp.coll_data.cur_pos.x;
         let y = m.m[1][3];
         let g = self.game.geometry.as_mut().expect("no collision geometry");
-        g.check_all_remap(-1, -1, x0, y, x1, y).is_some()
+        g.check_all_remap(-1, -1, x_from, y, x_reach, y).is_some()
     }
 
     /// The tether's sound on its frame `i` (shot, drawn in), if his character has one.

@@ -202,14 +202,14 @@ impl Running<'_> {
     /// first 30, or 30 from the picture's from 180 on), its texture animations stopped
     /// (`fn_80178BB4`'s three copies, on `x30`'s second display object).
     fn rp_title_texture(&mut self, anim: i32) {
-        let x30 = self
+        let title = self
             .game
             .results
             .data
             .title
             .expect("the panel's title joint");
         let data = self.data;
-        let t = self.rp_tobj(x30, true);
+        let t = self.rp_tobj(title, true);
         let a = t.and_then(|t| self.game.objs.tobjs[t].aobj);
         let objs = &mut self.game.objs;
         crate::hsd::tobj::req_anim(objs, t, mem(fp::frsp(f64::from(anim))));
@@ -230,7 +230,7 @@ impl Running<'_> {
                 mem(fp::fsubs(fp::fadds(30.0, s), 1.0)),
             );
         }
-        super::super::hud::status::stop_anim_type(objs, data, x30, 1, TOBJ_MASK);
+        super::super::hud::status::stop_anim_type(objs, data, title, 1, TOBJ_MASK);
     }
 
     /// The panel comes in, `fn_80178BB4`: the flames' fade (`fn_80179854`), the panel's model
@@ -344,16 +344,16 @@ impl Running<'_> {
         let r = Some(root);
         let columns = self.rp_node(r, 0x41);
         self.results_columns(columns);
-        let x24 = self.rp_node(r, 0x68);
-        self.game.results.data.rows_anchor = x24;
-        let x28 = self.rp_node(r, 0x69);
-        self.game.results.data.title_anchor = x28;
+        let rows_anchor = self.rp_node(r, 0x68);
+        self.game.results.data.rows_anchor = rows_anchor;
+        let title_anchor = self.rp_node(r, 0x69);
+        self.game.results.data.title_anchor = title_anchor;
         for i in 0..6 {
             let n = self.rp_node(r, i as i32 + 0x62);
             self.game.results.data.row_anchors[i] = n;
         }
-        let x30 = self.rp_node(r, 0xA);
-        self.game.results.data.title = x30;
+        let title = self.rp_node(r, 0xA);
+        self.game.results.data.title = title;
         for j in 0..4 {
             self.game.results.data.players[j].done = false;
             for (k, col) in COLUMNS.iter().enumerate() {
@@ -375,9 +375,13 @@ impl Running<'_> {
         if let Some(t) = self.game.results.data.title_text {
             self.destroy_text(t);
         }
-        let x28 = self.game.results.data.title_anchor;
-        let p =
-            crate::lb::joint::world_position(&mut self.game.objs, data, x28, Some(TITLE_OFFSET));
+        let title_anchor = self.game.results.data.title_anchor;
+        let p = crate::lb::joint::world_position(
+            &mut self.game.objs,
+            data,
+            title_anchor,
+            Some(TITLE_OFFSET),
+        );
         let t = self.create_text(0, 0, Vec3::new(p.x, -p.y, p.z), 12.0, 300.0);
         self.game.sis.reset_text(data, t, id);
     }
@@ -420,8 +424,9 @@ impl Running<'_> {
     #[doc(alias = "fn_80175C5C")]
     fn results_panel_texts(&mut self) {
         let data = self.data;
-        let x24 = self.game.results.data.rows_anchor;
-        let position = crate::lb::joint::world_position(&mut self.game.objs, data, x24, None);
+        let rows_anchor = self.game.results.data.rows_anchor;
+        let position =
+            crate::lb::joint::world_position(&mut self.game.objs, data, rows_anchor, None);
         for i in 0..6 {
             let j = self.game.results.data.row_anchors[i];
             let p = crate::lb::joint::world_position(&mut self.game.objs, data, j, None);
@@ -629,11 +634,11 @@ impl Running<'_> {
         let t = self.game.results.data.players[slot]
             .ko_time
             .expect("a column's time text");
-        let x6 = usize::from(self.game.results.data.team_best);
+        let team_best = usize::from(self.game.results.data.team_best);
         let p = &me.player_standings[slot];
-        let w = &me.player_standings[x6];
+        let w = &me.player_standings[team_best];
         if p.pkind != PlayerKind::None {
-            let dashes = x6 == slot
+            let dashes = team_best == slot
                 || (me.is_teams == 1
                     && me.team_standings[usize::from(p.team)].is_big_loser == 0
                     && (p.stocks > 0 || (p.match_frames == me.frame_count && w.stocks == 0)))
@@ -821,7 +826,7 @@ impl Running<'_> {
     fn results_name_tag(&self, tag: u8) -> Vec<u8> {
         use super::main_lib::NAMETAG_BANK_SIZE;
         let s = usize::from(tag);
-        let n = &self.game.game_data.thing.nametag_banks[s / NAMETAG_BANK_SIZE].inner
+        let n = &self.game.game_data.card.nametag_banks[s / NAMETAG_BANK_SIZE].inner
             [s % NAMETAG_BANK_SIZE];
         let mut b: Vec<u8> = n.namedata.iter().map(|&c| c as u8).collect();
         b.extend([
@@ -955,7 +960,7 @@ impl Running<'_> {
         let mut label_id = -1;
         let mut value_id = -1;
         let entry = (list.mode != 2).then(|| list.entries[idx as usize]);
-        let me_x44c = |r: &Self| r.results_end().decisions[slot].clone();
+        let my_decisions = |r: &Self| r.results_end().decisions[slot].clone();
         let nth = |values: &[u8], n: i32| -> usize {
             let mut n = n;
             let mut i = 0;
@@ -975,7 +980,7 @@ impl Running<'_> {
                 self.game.sis.reset_text(data, t[0], i32::from(e.value));
             }
         } else if idx & 1 == 1 && idx < i32::from(list.count) {
-            let x = me_x44c(self);
+            let x = my_decisions(self);
             let i = nth(&x.earned, idx / 2 + 1);
             let kind = super::decisions::decision_kind(i as i32);
             let us = super::super::gm::language_setting_is_us();
@@ -993,7 +998,7 @@ impl Running<'_> {
                 if idx & 1 == 0 {
                     let pair = idx / 2 - 1;
                     if pair >= 0 {
-                        let x = me_x44c(self);
+                        let x = my_decisions(self);
                         let i = nth(&x.earned, pair + 1);
                         let v = x.points[i];
                         value_id = if v < 0 {
@@ -1188,8 +1193,8 @@ impl Running<'_> {
     #[doc(alias = "fn_80175D34")]
     fn results_counts_away(&mut self) {
         let data = self.data;
-        let x24 = self.game.results.data.rows_anchor;
-        let pos = crate::lb::joint::world_position(&mut self.game.objs, data, x24, None);
+        let rows_anchor = self.game.results.data.rows_anchor;
+        let pos = crate::lb::joint::world_position(&mut self.game.objs, data, rows_anchor, None);
         for i in 0..4 {
             if let Some(t) = self.game.results.data.players[i].ko_count.take() {
                 self.destroy_text(t);

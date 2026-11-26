@@ -443,11 +443,11 @@ fn shown(r: &Running, kind: u8, sel: i32) -> bool {
 /// `mn_80229938`: whether a list's selection is shown by the save's unlock flags (`x186C`).
 #[doc(alias = "gmMainLib_8015EDD4")]
 #[doc(alias = "mn_80229938")]
-pub fn shown_with(x186c: u8, kind: u8, sel: i32) -> bool {
+pub fn shown_with(features: u8, kind: u8, sel: i32) -> bool {
     match (kind, sel) {
         // All-Star (`gmMainLib_8015EDD4`), the sound test (`gmMainLib_8015EE90`).
-        (REG, 2) => x186c & 4 != 0,
-        (DATA, 2) => x186c & 8 != 0,
+        (REG, 2) => features & 4 != 0,
+        (DATA, 2) => features & 8 != 0,
         (SETTINGS, 3) | (ONE_P, 2) => false,
         (TOY, s) => s != 2,
         _ => true,
@@ -461,8 +461,8 @@ fn shown_before(r: &Running, kind: u8, sel: i32) -> i32 {
 
 /// `mn_80229A04`: how many selections before `sel` are shown by the save's unlock flags.
 #[doc(alias = "mn_80229A04")]
-pub fn shown_before_with(x186c: u8, kind: u8, sel: i32) -> i32 {
-    (0..sel).filter(|&i| shown_with(x186c, kind, i)).count() as i32
+pub fn shown_before_with(features: u8, kind: u8, sel: i32) -> i32 {
+    (0..sel).filter(|&i| shown_with(features, kind, i)).count() as i32
 }
 
 /// `mn_8022C010`: a list's light color by its group (the main list's by its selection).
@@ -733,13 +733,13 @@ impl Running<'_> {
         jobj::req_anim_all(&mut self.game.objs, body, f);
         self.anim_all_j(body.expect("the panel"));
         let addr = crate::hsd::heap::mem_alloc(4);
-        let [x2] = super::leftover_bytes_known::<1>(self.data, addr + 2);
+        let [left] = super::leftover_bytes_known::<1>(self.data, addr + 2);
         self.game.menu.panels.insert(
             addr,
             PanelData {
                 cur_menu: cur,
                 prev_menu: cur,
-                leftover: x2,
+                leftover: left,
                 state: 0,
             },
         );
@@ -928,10 +928,10 @@ impl Running<'_> {
         if pics.is_empty() {
             return None;
         }
-        let x186c = self.game.features();
-        Some(if kind == MAIN && sel == 4 && x186c & 8 == 0 {
+        let features = self.game.features();
+        Some(if kind == MAIN && sel == 4 && features & 8 == 0 {
             LOCKED_DATA
-        } else if kind == ONE_P && sel == 0 && x186c & 4 == 0 {
+        } else if kind == ONE_P && sel == 0 && features & 4 == 0 {
             LOCKED_REG
         } else {
             pics[usize::from(sel)]
@@ -2068,7 +2068,7 @@ impl Running<'_> {
     /// `gm_801603B0`: the announcer's and the effects' volumes from the save's sound
     /// balance (`gmMainLib_8015ED74`, `lbAudioAx_80024614`, `lbAudioAx_800245F4`).
     pub(crate) fn menu_sound_balance(&mut self) {
-        let b = self.game.game_data.thing.save_data.prefs.sound_balance;
+        let b = self.game.game_data.card.save_data.prefs.sound_balance;
         self.game.audio.lb_apply_balance(b);
     }
 }

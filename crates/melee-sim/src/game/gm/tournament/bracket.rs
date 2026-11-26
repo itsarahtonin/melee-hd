@@ -199,7 +199,7 @@ impl Running<'_> {
     /// `fn_801642A0`: whether one stage at most can come up (the random switch's mask).
     #[doc(alias = "fn_801642A0")]
     fn tou_one_stage(&self) -> bool {
-        let mask = self.game.game_data.thing.save_data.prefs.stage_mask;
+        let mask = self.game.game_data.card.save_data.prefs.stage_mask;
         (0..0x1D).filter(|&i| (1u32 << i) & mask != 0).count() <= 1
     }
 
@@ -227,13 +227,13 @@ impl Running<'_> {
     fn tou_rank(&self) -> i32 {
         let tm = &self.game.tou.tm;
         let t = &RANKS[tm.entrants() as usize];
-        let x24 = tm.rounds;
-        if x24 > i32::from(t[5]) {
+        let rounds = tm.rounds;
+        if rounds > i32::from(t[5]) {
             return 6;
         }
         let mut r = 0;
         for j in (0..6).rev() {
-            if x24 <= i32::from(t[j]) {
+            if rounds <= i32::from(t[j]) {
                 r = j as i32;
             }
         }
@@ -708,12 +708,12 @@ impl Running<'_> {
     /// `fn_80198BA0`: the screen's counters, and each player of the match back to coming in.
     #[doc(alias = "fn_80198BA0")]
     fn br_reset(&mut self) {
-        let x2c = self.game.tou.tm.new_bracket;
+        let new_bracket = self.game.tou.tm.new_bracket;
         let n = usize::from(self.game.tou.tm.players_per_match);
         let b = self.br();
         b.step_frames = 0;
         b.bg = 0;
-        b.panel = if x2c != 0 { 0x50 } else { 0x5A };
+        b.panel = if new_bracket != 0 { 0x50 } else { 0x5A };
         b.title = 0;
         for i in 0..n {
             b.cleared[i] = 0;
@@ -838,8 +838,8 @@ impl Running<'_> {
                 crate::hsd::mobj::remove_anim_by_flags(&mut self.game.objs, mo, 4);
                 c = self.tou_next(c);
             }
-            let x30 = self.game.tou.tm.players_per_match;
-            let pos = match x30 {
+            let per_match = self.game.tou.tm.players_per_match;
+            let pos = match per_match {
                 4 => fp::fadds(73.0, fp::fmadds(240.0, f(i as i32), 152.0)),
                 3 => fp::fadds(73.0, fp::fmadds(240.0, f(i as i32), 270.0)),
                 _ => fp::fadds(73.0, fp::fmadds(240.0, fp::fmuls(2.0, f(i as i32)), 270.0)),
@@ -859,7 +859,7 @@ impl Running<'_> {
             let g = self.tou_model(false, mm, 0, 0x1A, 2, true, Some(PROC_BASE), rate);
             let j = self.tou_jobj(g);
             self.tou_set_index(g, i as i32);
-            let px = player_x(x30, i as i32);
+            let px = player_x(per_match, i as i32);
             self.tou_move(j, fp::fsubs(px, reg(2.799_999)), reg(6.8), reg(0.001));
             let c = self.tou_child(Some(j));
             let c = self.tou_next(c);
@@ -1301,10 +1301,10 @@ impl Running<'_> {
             let b = self.tou_triggered(i as i32);
             if b & (PAD_A | PAD_START) != 0 {
                 self.lb_audio_call(1);
-                let x44 = self.br().choice[i];
-                if x44 == 7 {
+                let choice = self.br().choice[i];
+                if choice == 7 {
                     self.br().choice[i] = 6;
-                } else if x44 == 8 {
+                } else if choice == 8 {
                     let np = usize::from(self.game.tou.tm.players_per_match);
                     let out = (0..np).filter(|&j| self.br().anims[j].state == 4).count() as i32;
                     if out < i32::from(self.game.tou.tm.players_per_match) - 1 {

@@ -646,7 +646,7 @@ impl Running<'_> {
             return (true, r5);
         }
         let r5 = Leftover::Unknown("ftCo_800ADE48");
-        let x18 = self.game.fighters[f.0].cpu.behavior;
+        let behavior = self.game.fighters[f.0].cpu.behavior;
         let ms = self.game.fighters[f.0].motion_id;
         // Each check: the behavior, whether the fighter is in it already, and whether it
         // switches to it.
@@ -658,35 +658,35 @@ impl Running<'_> {
             }};
         }
         // Leaving a barrel (`ftCo_MS_BarrelWait`, `ftCo_MS_Barrel`).
-        if x18 == CpuBehavior::Barrel {
+        if behavior == CpuBehavior::Barrel {
             return (true, r5);
         }
         if ms == 0x125 || ms == 0x154 {
             switch_to!(CpuBehavior::Barrel);
         }
         // Riding a Warp Star.
-        if x18 == CpuBehavior::WarpStar {
+        if behavior == CpuBehavior::WarpStar {
             return (true, r5);
         }
         if ms == 0x131 || ms == 0x132 {
             switch_to!(CpuBehavior::WarpStar);
         }
         // Lying down.
-        if x18 == CpuBehavior::GetUp {
+        if behavior == CpuBehavior::GetUp {
             return (true, r5);
         }
         if matches!(ms, 0xB7 | 0xB8 | 0xBF | 0xC0) {
             switch_to!(CpuBehavior::GetUp);
         }
         // On a ledge.
-        if x18 == CpuBehavior::Ledge {
+        if behavior == CpuBehavior::Ledge {
             return (true, r5);
         }
         if matches!(ms, 0xFC | 0xFD) {
             switch_to!(CpuBehavior::Ledge);
         }
         // Holding a fighter.
-        if x18 == CpuBehavior::Hold {
+        if behavior == CpuBehavior::Hold {
             return (true, r5);
         }
         if self.cpu_is_grabbing(f) {
@@ -698,17 +698,17 @@ impl Running<'_> {
         if self.cpu_falling_away(f) {
             switch_to!(CpuBehavior::Recover);
         }
-        let x18 = self.game.fighters[f.0].cpu.behavior;
+        let behavior = self.game.fighters[f.0].cpu.behavior;
         let fpp = &self.game.fighters[f.0];
         // Tumbling (`ftCo_MS_DamageFall`) at level 5 and up.
-        if x18 == CpuBehavior::Tumble {
+        if behavior == CpuBehavior::Tumble {
             return (true, r5);
         }
         if fpp.cpu.level >= 5 && fpp.motion_id == 0x26 {
             switch_to!(CpuBehavior::Tumble);
         }
         // Held.
-        if x18 == CpuBehavior::Mash {
+        if behavior == CpuBehavior::Mash {
             return (true, r5);
         }
         let ms = fpp.motion_id;

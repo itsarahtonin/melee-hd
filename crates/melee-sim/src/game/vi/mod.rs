@@ -1080,12 +1080,12 @@ pub fn load_scene_files(
             .expect("a kind's demo animations");
         for i in *lo..=*hi {
             let e = list.at(0x18 * i as u32);
-            let (x4, x8) = (data.u32(e.at(4)), data.u32(e.at(8)));
-            let off = base.wrapping_add(x4);
-            if x8 == 0 || game.ft.data.files.demo_anim(archive, off).is_some() {
+            let (anim_offset, anim_size) = (data.u32(e.at(4)), data.u32(e.at(8)));
+            let off = base.wrapping_add(anim_offset);
+            if anim_size == 0 || game.ft.data.files.demo_anim(archive, off).is_some() {
                 continue;
             }
-            let bytes = &data.get(archive).data()[off as usize..(off + x8) as usize];
+            let bytes = &data.get(archive).data()[off as usize..(off + anim_size) as usize];
             let a = Archive::parse(bytes).unwrap_or_else(|e| panic!("{name}'s {sym}: {e:?}"));
             let id = data.add(a);
             let loaded = &mut game.ft.data.files;

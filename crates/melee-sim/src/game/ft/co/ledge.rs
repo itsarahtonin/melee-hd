@@ -232,8 +232,8 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::CLIFF_CATCH, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         self.go_airborne(f);
-        let x5f0 = self.common().u32(0x5F0);
-        self.game.fighters[f.0].name_tag_timer = x5f0 as u16;
+        let name_tag_frames = self.common().u32(0x5F0);
+        self.game.fighters[f.0].name_tag_timer = name_tag_frames as u16;
         self.stop_dead(gobj);
         let fp = &mut self.game.fighters[f.0];
         fp.hanging = true;
@@ -328,8 +328,8 @@ impl Running<'_> {
         fp.grab_immune = 0x1FF;
         fp.hanging = true;
         fp.set_mv_i32(CLIFF_X8, 0);
-        let x4 = if reg(fp.dmg.percent) < pct { low } else { high };
-        fp.set_mv_f32(CLIFF_X4, reg(x4));
+        let hang_frames = if reg(fp.dmg.percent) < pct { low } else { high };
+        fp.set_mv_f32(CLIFF_X4, reg(hang_frames));
         self.set_intangible(gobj, intangible);
         self.game.fighter_mut(gobj).grab_immune = 0x1FF;
     }

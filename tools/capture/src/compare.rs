@@ -787,7 +787,7 @@ impl<'a> Comparer<'a> {
                 let path = format!("ft costume {kind}/{c}");
                 self.compare_data(&format!("{path} joint"), ours.joint, self.u32(e));
                 self.compare_data(&format!("{path} matanim"), ours.matanim, self.u32(e + 4));
-                self.check(&path, "x8", ours.x8, self.u32(e + 8));
+                self.check(&path, "x8", ours.cleared, self.u32(e + 8));
             }
             self.check(
                 "ft",

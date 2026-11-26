@@ -5,7 +5,7 @@
 use gekko_fp as fp;
 
 use super::super::state::Running;
-use super::super::structs::ft_800898B4_t;
+use super::super::structs::HitRecord;
 use super::bonus::Flag;
 use super::types::AttackStats;
 use crate::fpu::{mem, reg};
@@ -53,7 +53,7 @@ fn count_stats(s: &mut AttackStats, ev: [u8; 4]) {
 }
 
 /// [`count_stats`] on the statistics `x358` keeps as bytes (`x358_hits`), with its `x1A8`.
-fn count_stats_bytes(b: &mut [u8], ev: [u8; 4], x1a8: bool) {
+fn count_stats_bytes(b: &mut [u8], ev: [u8; 4], spike: bool) {
     let mut inc = |off: usize| {
         let v = u32::from_be_bytes(b[off..off + 4].try_into().unwrap()).wrapping_add(1);
         b[off..off + 4].copy_from_slice(&v.to_be_bytes());
@@ -71,7 +71,7 @@ fn count_stats_bytes(b: &mut [u8], ev: [u8; 4], x1a8: bool) {
             inc(off);
         }
     }
-    if x1a8 {
+    if spike {
         inc(0x1A8);
     }
 }
@@ -82,8 +82,8 @@ fn word_at(b: &[u8], off: usize) -> u32 {
 
 impl Running<'_> {
     /// An attack's record as `ft_800898B4_t`.
-    fn attack_record(&self, r: AttackRecord) -> ft_800898B4_t {
-        let (x0, x4, kb, xc, flags) = match r {
+    fn attack_record(&self, r: AttackRecord) -> HitRecord {
+        let (attacker_pct, victim_pct, kb, thrower, flags) = match r {
             AttackRecord::Fighter(g) => {
                 let a = &self.game.fighter(g).attack_record;
                 (
@@ -107,11 +107,11 @@ impl Running<'_> {
             }
         };
         let (a, b) = (flag_bits(flags[0]), flag_bits(flags[1]));
-        ft_800898B4_t {
-            attacker_percent: x0,
-            victim_percent: x4,
+        HitRecord {
+            attacker_percent: attacker_pct,
+            victim_percent: victim_pct,
             kb_applied1: kb,
-            item_thrower: xc,
+            item_thrower: thrower,
             spike: a[0],
             metal: a[1],
             bunny_hood: a[2],
@@ -169,12 +169,12 @@ impl Running<'_> {
         &mut self,
         attacker: Option<GObjId>,
         victim: GObjId,
-        x2070: u32,
+        attack_flags: u32,
         record: AttackRecord,
         instance: u16,
         prev_source: i32,
     ) {
-        let ev = x2070.to_be_bytes();
+        let ev = attack_flags.to_be_bytes();
         let id = ev[3];
         let vf = self.game.fighter(victim);
         let (vslot, vsub) = (i32::from(vf.player_idx), i32::from(vf.is_sub_fighter));
@@ -310,7 +310,7 @@ impl Running<'_> {
         vsub: i32,
         percent: f32,
         ev: [u8; 4],
-        rec: &ft_800898B4_t,
+        rec: &HitRecord,
         behind: bool,
     ) {
         let id = ev[3];
@@ -436,8 +436,8 @@ impl Running<'_> {
 
     /// `pl_8003EA40`: bonus 155 when the record names the victim's own slot.
     #[doc(alias = "pl_8003EA40")]
-    fn self_hit_bonus(&mut self, aslot: i32, vslot: i32, vsub: i32, xc: i32) {
-        if vsub != 0 || vslot != xc {
+    fn self_hit_bonus(&mut self, aslot: i32, vslot: i32, vsub: i32, thrower_slot: i32) {
+        if vsub != 0 || vslot != thrower_slot {
             return;
         }
         self.count_bonus(aslot, 155);
@@ -511,7 +511,7 @@ impl Running<'_> {
         attacker: Option<GObjId>,
         victim: GObjId,
         record: AttackRecord,
-        rec: ft_800898B4_t,
+        rec: HitRecord,
         behind: bool,
         prev_source: i32,
     ) {

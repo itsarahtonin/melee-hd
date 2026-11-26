@@ -144,8 +144,8 @@ impl Running<'_> {
             self.land(gobj);
         }
         self.change_motion_state(gobj, MS_WAIT_REVERSE, 0, 0.0, 1.0, 0.0, None);
-        let x5f0 = self.common().u32(0x5F0) as u16;
-        self.game.fighter_mut(gobj).name_tag_timer = x5f0;
+        let name_tag_frames = self.common().u32(0x5F0) as u16;
+        self.game.fighter_mut(gobj).name_tag_timer = name_tag_frames;
     }
 }
 

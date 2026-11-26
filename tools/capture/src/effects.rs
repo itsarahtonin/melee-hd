@@ -686,7 +686,7 @@ impl Comparer<'_> {
         if let ef::Held::Word(w) = e.left.user_data {
             self.check(path, "user_data's word", w, self.u32(t + 0x14));
         }
-        for (i, b) in e.left.x2a.iter().enumerate() {
+        for (i, b) in e.left.unwritten.iter().enumerate() {
             if let Some(b) = *b {
                 let off = 0x2A + i as u32;
                 self.check(path, &format!("x{off:X}"), b, self.u8(t + off));

@@ -123,14 +123,14 @@ impl Running<'_> {
         if deg > fp::frsp(359.0) {
             deg = fp::frsp(359.0);
         }
-        let x18 = reg(fp.mv_f32(mv::S_X18));
-        let mut d = fp::fsubs(deg, x18);
+        let angle = reg(fp.mv_f32(mv::S_X18));
+        let mut d = fp::fsubs(deg, angle);
         if d > fp::frsp(180.0) {
             d = fp::fsubs(d, fp::frsp(360.0));
         } else if d < fp::frsp(-180.0) {
             d = fp::fadds(d, fp::frsp(360.0));
         }
-        let mut v = fp::fmadds(d, ease, x18);
+        let mut v = fp::fmadds(d, ease, angle);
         if v > fp::frsp(360.0) {
             v = fp::fsubs(v, fp::frsp(360.0));
         } else if v < fp::frsp(0.0) {
@@ -142,8 +142,11 @@ impl Running<'_> {
         if push > fp::frsp(1.0) {
             push = fp::frsp(1.0);
         }
-        let x14 = reg(fp.mv_f32(mv::S_X14));
-        fp.set_mv_f32(mv::S_X14, fp::fmadds(ease, fp::fsubs(push, x14), x14));
+        let push_now = reg(fp.mv_f32(mv::S_X14));
+        fp.set_mv_f32(
+            mv::S_X14,
+            fp::fmadds(ease, fp::fsubs(push, push_now), push_now),
+        );
     }
 
     /// The swing's pose, `ftSk_SpecialS_80110610`: the swing animation at the eased angle's
@@ -216,9 +219,9 @@ impl Running<'_> {
         set_u_f32(fp, u::LSTICK_DELTA + 4, dy);
         let facing = reg(fp.facing_dir);
         let (dx, dy) = (reg(dx), reg(dy));
-        let x8 = fp.mv_i32(mv::S_X8);
-        if x8 > 0 {
-            fp.set_mv_i32(mv::S_X8, x8 - 1);
+        let swing_sfx_wait = fp.mv_i32(mv::S_X8);
+        if swing_sfx_wait > 0 {
+            fp.set_mv_i32(mv::S_X8, swing_sfx_wait - 1);
         } else if (facing == 1.0 && dx > reg(0.3)) || (facing == -1.0 && dx < reg(-0.3)) {
             self.fighter_play_sfx(f, SFX_SWING, 127, 64);
             self.game.fighters[f.0].set_mv_i32(mv::S_X8, 6);
@@ -227,9 +230,9 @@ impl Running<'_> {
             self.game.fighters[f.0].set_mv_i32(mv::S_X8, 12);
         }
         let fp = &mut self.game.fighters[f.0];
-        let xc = fp.mv_i32(mv::S_XC);
-        if xc > 0 {
-            fp.set_mv_i32(mv::S_XC, xc - 1);
+        let back_sfx_wait = fp.mv_i32(mv::S_XC);
+        if back_sfx_wait > 0 {
+            fp.set_mv_i32(mv::S_XC, back_sfx_wait - 1);
         } else {
             let sx = reg(fp.input.lstick[0].x);
             if (facing == 1.0 && dx < reg(-0.3) && sx < 0.0)
@@ -344,10 +347,10 @@ impl Running<'_> {
             set_u_f32(fp, u::HIT_POS_PREV + 12 * i, cur.x);
             set_u_f32(fp, u::HIT_POS_PREV + 12 * i + 4, cur.y);
         }
-        let x1c = fp.mv_i32(mv::S_X1C);
-        if x1c > 0 {
-            fp.set_mv_i32(mv::S_X1C, x1c - 1);
-            if x1c - 1 == 0 {
+        let hit_frames = fp.mv_i32(mv::S_X1C);
+        if hit_frames > 0 {
+            fp.set_mv_i32(mv::S_X1C, hit_frames - 1);
+            if hit_frames - 1 == 0 {
                 self.seak_special_s_hitboxes_off(gobj);
             }
         }
@@ -361,9 +364,9 @@ impl Running<'_> {
             }
         } else {
             let fp = &mut self.game.fighters[f.0];
-            let x20 = fp.mv_i32(mv::S_X20);
-            if x20 > 0 {
-                fp.set_mv_i32(mv::S_X20, x20 - 1);
+            let grace = fp.mv_i32(mv::S_X20);
+            if grace > 0 {
+                fp.set_mv_i32(mv::S_X20, grace - 1);
             } else {
                 fp.set_mv_i32(mv::S_X1C, 0);
                 self.seak_special_s_hitboxes_off(gobj);
@@ -525,8 +528,8 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::S_X0).wrapping_add(1);
         fp.set_mv_i32(mv::S_X0, n);
-        let x1c = reg(self.seak_attr_f32(f, attr::X1C));
-        if fp::frsp(f64::from(n)) == x1c {
+        let chain_out_frame = reg(self.seak_attr_f32(f, attr::X1C));
+        if fp::frsp(f64::from(n)) == chain_out_frame {
             self.seak_special_s_spawn_chain(gobj);
             let frames = fp::fctiwz(reg(self.seak_attr_f32(f, attr::X18)));
             self.game.fighters[f.0].set_mv_i32(mv::S_X1C, frames);
@@ -539,7 +542,7 @@ impl Running<'_> {
             }
         }
         let n = self.game.fighters[f.0].mv_i32(mv::S_X0);
-        if fp::frsp(f64::from(n)) == fp::fadds(x1c, 1.0) {
+        if fp::frsp(f64::from(n)) == fp::fadds(chain_out_frame, 1.0) {
             let chain = self
                 .seak_chain(gobj)
                 .expect("a thrown chain without a chain");
@@ -624,9 +627,9 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::S_X0).wrapping_add(1);
         fp.set_mv_i32(mv::S_X0, n);
-        let x14 = reg(self.seak_attr_f32(f, attr::X14));
+        let retract_after = reg(self.seak_attr_f32(f, attr::X14));
         let fp = &mut self.game.fighters[f.0];
-        if fp::frsp(f64::from(n)) > x14 && fp.mv_i32(mv::S_X4) != 0 {
+        if fp::frsp(f64::from(n)) > retract_after && fp.mv_i32(mv::S_X4) != 0 {
             fp.set_mv_i32(mv::S_X4, 0);
             return true;
         }
@@ -747,14 +750,14 @@ impl Running<'_> {
         let n = fp.mv_i32(mv::S_X0).wrapping_add(1);
         fp.set_mv_i32(mv::S_X0, n);
         let n = fp::frsp(f64::from(n));
-        let x28 = reg(self.seak_attr_f32(f, attr::X28));
-        if n < x28 {
+        let gone_frame = reg(self.seak_attr_f32(f, attr::X28));
+        if n < gone_frame {
             let chain = self.seak_chain(gobj);
             if n == reg(self.seak_attr_f32(f, attr::X24)) {
                 seakchain::to_retract(self, chain.expect("it_802BCF84 on a null chain"));
             }
             self.seak_special_s_chain_hits(gobj);
-        } else if n == x28 {
+        } else if n == gone_frame {
             let chain = self.seak_chain(gobj);
             seakchain::destroy(self, chain.expect("it_802BB20C on a null chain"));
         } else {

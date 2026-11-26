@@ -740,9 +740,9 @@ fn coll4(r: &mut Running, gobj: GObjId) -> bool {
 /// `itLinkArrow_Logic98_DmgDealt`: slowed by the attributes' `x14`, its trails gone, and gone.
 #[doc(alias = "itLinkArrow_Logic98_DmgDealt")]
 fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
-    let x14 = attr_f32(r, gobj, attr::X14);
+    let slow = attr_f32(r, gobj, attr::X14);
     let ip = item_mut(r.game, gobj);
-    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(x14)));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(slow)));
     remove_trails(r, gobj);
     true
 }

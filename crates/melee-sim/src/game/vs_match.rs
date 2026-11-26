@@ -1428,14 +1428,14 @@ pub fn load_results_files(
                 // others are the intros', endings' and waits' files'.
                 for i in 0..10 {
                     let e = list.at(0x18 * i);
-                    let (x4, x8) = (data.u32(e.at(4)), data.u32(e.at(8)));
-                    let off = base.wrapping_add(x4);
-                    if x8 == 0 || files.demo_anim(results, off).is_some() {
+                    let (anim_offset, anim_size) = (data.u32(e.at(4)), data.u32(e.at(8)));
+                    let off = base.wrapping_add(anim_offset);
+                    if anim_size == 0 || files.demo_anim(results, off).is_some() {
                         continue;
                     }
-                    let bytes = &data.get(results).data()[off as usize..(off + x8) as usize];
+                    let bytes = &data.get(results).data()[off as usize..(off + anim_size) as usize];
                     let a = Archive::parse(bytes)
-                        .unwrap_or_else(|e| panic!("{name}'s {sym}@{x4:#x}: {e:?}"));
+                        .unwrap_or_else(|e| panic!("{name}'s {sym}@{anim_offset:#x}: {e:?}"));
                     let id = data.add(a);
                     files.demo_anims.push((results, off, id));
                     // Named by its offset in the file (past the header), as the oracle finds

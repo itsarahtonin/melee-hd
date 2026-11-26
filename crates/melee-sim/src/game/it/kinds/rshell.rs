@@ -147,12 +147,12 @@ fn sign(v: f64) -> i32 {
 /// Lands from a throw: chases at the attributes' launch speed, `it_8028D090`.
 #[doc(alias = "it_8028D090")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    let x4 = attr(r, gobj, 4);
+    let launch = attr(r, gobj, 4);
     let b = item(r.game, gobj).kind_coll_box.clone();
     maplib::set_box(r.game, gobj, b);
     chase(r, gobj);
     let facing = item(r.game, gobj).facing_dir;
-    item_mut(r.game, gobj).vel.x = launch_speed(r, gobj, x4, facing);
+    item_mut(r.game, gobj).vel.x = launch_speed(r, gobj, launch, facing);
     lib2725::face_motion(r.game, gobj);
 }
 
@@ -174,8 +174,8 @@ fn push_for(msid: i32) -> Push {
 
 /// Goes on chasing when fast enough after a hit, else drops its hitboxes.
 fn after_push(r: &mut Running, gobj: GObjId, did_hit: bool, take: fn(&mut Game, GObjId)) {
-    let x10 = attr(r, gobj, 0x10);
-    if reg(item(r.game, gobj).vel.x).abs() > reg(x10) {
+    let chase_speed = attr(r, gobj, 0x10);
+    if reg(item(r.game, gobj).vel.x).abs() > reg(chase_speed) {
         take(r.game, gobj);
         if did_hit {
             hitbox::start_blink(r.game, gobj);
@@ -290,11 +290,11 @@ pub fn turn_back(r: &mut Running, gobj: GObjId) {
 /// Caps the speed at `xC`, `it_8028D4E4` (and the file's inline `itRshell_ClampVel`).
 #[doc(alias = "it_8028D4E4")]
 pub fn cap_speed(r: &mut Running, gobj: GObjId) {
-    let xc = attr(r, gobj, 0xC);
+    let max_speed = attr(r, gobj, 0xC);
     let ip = item_mut(r.game, gobj);
     let vx = reg(ip.vel.x);
-    if vx.abs() > reg(xc) {
-        ip.vel.x = mem(fp::fmuls(to_f32(sign(vx)), reg(xc)));
+    if vx.abs() > reg(max_speed) {
+        ip.vel.x = mem(fp::fmuls(to_f32(sign(vx)), reg(max_speed)));
     }
 }
 
@@ -314,13 +314,13 @@ pub fn launch_speed(r: &Running, gobj: GObjId, a: f32, b: f32) -> f32 {
 /// `it_3F14_Logic15_Spawned`.
 #[doc(alias = "it_3F14_Logic15_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let x3c = attr(r, gobj, 0x3C);
+    let hit_delay = attr(r, gobj, 0x3C);
     let hits = r.data.u32(shell::attr_ref(r, gobj, 0x54)) as i32;
     shell::start_life(r, gobj, &RED);
     let v = vars(r.game, gobj);
     v.hits_left.set(hits);
     v.hit.set(0);
-    v.hit_delay.set(x3c);
+    v.hit_delay.set(hit_delay);
     v.landings.set(1);
     v.bounced.set(false);
     v.accel.set(0.0);
@@ -330,12 +330,12 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// Comes to a stop, stompable, `it_8028D62C`.
 #[doc(alias = "it_8028D62C")]
 pub fn stopped(r: &mut Running, gobj: GObjId) {
-    let x3c = attr(r, gobj, 0x3C);
+    let hit_delay = attr(r, gobj, 0x3C);
     lib26b1::enable_pickup(r.game, gobj);
     hitbox::let_own_items_hit(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
     item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
-    vars(r.game, gobj).hit_delay.set(x3c);
+    vars(r.game, gobj).hit_delay.set(hit_delay);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     lib2725::make_stompable(r.game, gobj);
     item_mut(r.game, gobj).jumped_on = Some(CodeRef(JUMPED_ON));
@@ -357,16 +357,16 @@ pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Starts chasing in `msid` (the file's inline `itRshell_StopInit`, the speed capped).
 fn start_chase(r: &mut Running, gobj: GObjId, msid: i32) {
-    let (x3c, x44) = (attr(r, gobj, 0x3C), attr(r, gobj, 0x44));
+    let (hit_delay, trail) = (attr(r, gobj, 0x3C), attr(r, gobj, 0x44));
     lib26b1::disable_pickup(r.game, gobj);
     lib2725::clear_stomp(r.game, gobj);
     let life = common_data(r.game).u32(r.data, super::super::data::common::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
     item_mut(r.game, gobj).skid = 0;
     let v = vars(r.game, gobj);
-    v.hit_delay.set(x3c);
+    v.hit_delay.set(hit_delay);
     v.chase_delay.set(0.0);
-    v.trail.set(x44);
+    v.trail.set(trail);
     hitbox::let_own_items_hit(r.game, gobj);
     cap_speed(r, gobj);
     lib2725::face_motion(r.game, gobj);
@@ -418,21 +418,23 @@ pub fn phys5(r: &mut Running, gobj: GObjId) {
     if reg(vars(r.game, gobj).chase_delay.get()) <= 0.0 {
         let pos = item(r.game, gobj).pos;
         if let Some((_, target)) = owner::nearest_fighter(r.game, r.data, pos, None) {
-            let x8 = attr(r, gobj, 8);
+            let accel = attr(r, gobj, 8);
             let dir = sign(fp::fsubs(reg(target.x), reg(pos.x)));
             vars(r.game, gobj)
                 .accel
-                .set(mem(fp::fmuls(reg(x8), to_f32(dir))));
+                .set(mem(fp::fmuls(reg(accel), to_f32(dir))));
             accelerate(r, gobj);
-            let x10 = attr(r, gobj, 0x10);
+            let chase_speed = attr(r, gobj, 0x10);
             let ip = item(r.game, gobj);
-            if ip.hitboxes[0].hit.state == hitcapsule::DISABLED && reg(ip.vel.x).abs() <= reg(x10) {
+            if ip.hitboxes[0].hit.state == hitcapsule::DISABLED
+                && reg(ip.vel.x).abs() <= reg(chase_speed)
+            {
                 lib2725::start_hitbox(r.game, r.data, gobj, 0);
             }
             lib2725::face_motion(r.game, gobj);
         }
-        let x40 = attr(r, gobj, 0x40);
-        vars(r.game, gobj).chase_delay.set(x40);
+        let chase_delay = attr(r, gobj, 0x40);
+        vars(r.game, gobj).chase_delay.set(chase_delay);
     } else {
         accelerate(r, gobj);
         lib2725::face_motion(r.game, gobj);

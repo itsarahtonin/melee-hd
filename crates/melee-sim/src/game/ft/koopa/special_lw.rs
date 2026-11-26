@@ -68,13 +68,13 @@ impl Running<'_> {
     #[doc(alias = "ftKp_SpecialAirLw_Enter")]
     pub fn kp_special_air_lw_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let (x80, x84) = (
+        let (cut_x, cut_y) = (
             reg(self.kp_attr_f32(f, attr::X80)),
             reg(self.kp_attr_f32(f, attr::X84)),
         );
         let fp = &mut self.game.fighters[f.0];
-        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), x80));
-        fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), x84));
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), cut_x));
+        fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), cut_y));
         self.change_motion_state(gobj, ms::SPECIAL_AIR_LW, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         self.kp_lw_reset(gobj);
@@ -112,15 +112,15 @@ impl Running<'_> {
     #[doc(alias = "ftKp_SpecialAirLw_Phys")]
     pub fn kp_special_air_lw_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x8c = reg(self.kp_attr_f32(f, attr::X8C));
-        let x90 = reg(self.kp_attr_f32(f, attr::X90));
-        let x88 = reg(self.kp_attr_f32(f, attr::X88));
-        let x94 = self.kp_attr_f32(f, attr::X94);
+        let gravity = reg(self.kp_attr_f32(f, attr::X8C));
+        let max_fall = reg(self.kp_attr_f32(f, attr::X90));
+        let drift_decel = reg(self.kp_attr_f32(f, attr::X88));
+        let min_vy = self.kp_attr_f32(f, attr::X94);
         let fp = &mut self.game.fighters[f.0];
-        Self::fall(fp, x8c, x90);
-        Self::self_accel_deaccel(fp, x88);
-        if fp.self_vel.y < x94 || fp.cmd_vars[1] != 0 {
-            fp.self_vel.y = x94;
+        Self::fall(fp, gravity, max_fall);
+        Self::self_accel_deaccel(fp, drift_decel);
+        if fp.self_vel.y < min_vy || fp.cmd_vars[1] != 0 {
+            fp.self_vel.y = min_vy;
         }
         if fp.cmd_vars[1] != 0 {
             fp.self_vel.x = 0.0;

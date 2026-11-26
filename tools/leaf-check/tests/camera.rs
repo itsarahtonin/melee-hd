@@ -1245,8 +1245,8 @@ fn setters_and_getters() {
             c.set_draw_zones(b);
             c.set_hold_off_plane(b);
             c.set_shadows(b);
-            c.set_x39a_b0(b);
-            c.set_x39a_b1(b);
+            c.set_debug_switch_0(b);
+            c.set_debug_switch_1(b);
             c.set_draw_special_points(b);
             c.set_stage_visible(a.r(3) as i32);
             c.set_background_color(1, a.r(3) as u8, 3);
@@ -1280,7 +1280,7 @@ fn setters_and_getters() {
         },
         |r, _| {
             let c = &r.game.camera;
-            let bits = u32::from(c.x39a_b0()) | u32::from(c.x39a_b1()) << 1;
+            let bits = u32::from(c.debug_switch_0()) | u32::from(c.debug_switch_1()) << 1;
             vec![Out::R3(bits)]
         },
         |ctx, _| {

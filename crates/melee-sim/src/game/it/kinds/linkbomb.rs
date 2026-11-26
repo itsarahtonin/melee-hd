@@ -190,9 +190,9 @@ fn change_keeping_bone(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
 /// to the attributes' `xC`; a frame off its life; and before the last stretch, the bone sinks
 /// and tilts.
 fn burn(r: &mut Running, gobj: GObjId) {
-    let xc = attr_u32(r, gobj, attr::XC);
+    let last_stretch = attr_u32(r, gobj, attr::XC);
     let last = vars(r.game, gobj).flags.get().fuse_end;
-    if item(r.game, gobj).life_timer <= mem(fp::frsp(f64::from(xc))) && !last {
+    if item(r.game, gobj).life_timer <= mem(fp::frsp(f64::from(last_stretch))) && !last {
         let desc = article(item(r.game, gobj))
             .states(r.data)
             .expect("an article without states")
@@ -292,10 +292,10 @@ pub fn spawn(
     spawn.ignore_id = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let life = attr_u32(r, gobj, attr::LIFETIME);
-    let xc = attr_u32(r, gobj, attr::XC);
+    let last_stretch = attr_u32(r, gobj, attr::XC);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
     let scl = item(r.game, gobj).scl;
-    let span = fp::frsp(f64::from(life.wrapping_sub(xc)));
+    let span = fp::frsp(f64::from(life.wrapping_sub(last_stretch)));
     let v = vars(r.game, gobj);
     v.flags.set(LinkBombFlags {
         fuse_end: false,
@@ -340,8 +340,8 @@ fn phys_fall(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itLinkbomb_UnkMotion3_Phys")]
 fn phys_flying(r: &mut Running, gobj: GObjId) {
     phys_fall(r, gobj);
-    let x68 = common_data(r.game).f32(r.data, data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }
 
 /// Thrown, `it_8029E5D0` (state 2): its own and its owner's items can hit it, its hitboxes
@@ -371,9 +371,9 @@ fn fly(r: &mut Running, gobj: GObjId, msid: i32) {
 /// Whether it hits too hard and blows up (the file's `it_LinkBomb_Inline_VelocityCompare`):
 /// faster than the attributes' `x24` across or `x28` up or down.
 fn too_fast(r: &mut Running, gobj: GObjId, vel: Vec3) -> bool {
-    let (x24, x28) = (attr_f32(r, gobj, attr::X24), attr_f32(r, gobj, attr::X28));
+    let (max_vx, max_vy) = (attr_f32(r, gobj, attr::X24), attr_f32(r, gobj, attr::X28));
     let abs = |v: f32| if v < 0.0 { mem(fp::fneg(reg(v))) } else { v };
-    if abs(vel.x) > x24 || abs(vel.y) > x28 {
+    if abs(vel.x) > max_vx || abs(vel.y) > max_vy {
         explode(r, gobj);
         return true;
     }
@@ -416,7 +416,7 @@ fn to_roll(r: &mut Running, gobj: GObjId) {
 /// under `x30`.
 #[doc(alias = "itLinkbomb_UnkMotion4_Phys")]
 fn phys_roll(r: &mut Running, gobj: GObjId) {
-    let (x2c, x30) = (attr_f32(r, gobj, attr::X2C), attr_f32(r, gobj, attr::X30));
+    let (roll_decel, stop_speed) = (attr_f32(r, gobj, attr::X2C), attr_f32(r, gobj, attr::X30));
     let rolling = vars(r.game, gobj).flags.get().rolling == Some(true);
     if !rolling {
         return;
@@ -425,11 +425,11 @@ fn phys_roll(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let vx = ip.vel.x;
     if vx != 0.0 {
-        ip.vel.x = mem(fp::fmadds(reg(x2c), reg(dir), reg(vx)));
+        ip.vel.x = mem(fp::fmadds(reg(roll_decel), reg(dir), reg(vx)));
     }
     let vx = ip.vel.x;
     let abs = if vx < 0.0 { mem(fp::fneg(reg(vx))) } else { vx };
-    if abs < x30 {
+    if abs < stop_speed {
         ip.vel.x = 0.0;
     }
 }
@@ -476,11 +476,12 @@ fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).msid != 5 {
         let vel = item(r.game, gobj).vel;
         if !too_fast(r, gobj, vel) {
-            let (x1c, x20) = (attr_f32(r, gobj, attr::X1C), attr_f32(r, gobj, attr::X20));
+            let (bounce_vx, bounce_vy) =
+                (attr_f32(r, gobj, attr::X1C), attr_f32(r, gobj, attr::X20));
             let ip = item_mut(r.game, gobj);
             ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-            ip.vel.x = mem(fp::fmuls(reg(x1c), reg(ip.facing_dir)));
-            ip.vel.y = x20;
+            ip.vel.x = mem(fp::fmuls(reg(bounce_vx), reg(ip.facing_dir)));
+            ip.vel.y = bounce_vy;
         }
     }
     false
@@ -493,31 +494,31 @@ fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).msid == 5 {
         return false;
     }
-    let x10 = attr_u32(r, gobj, attr::X10) as i32;
-    if item(r.game, gobj).hit_damage >= x10 {
+    let blow_up_damage = attr_u32(r, gobj, attr::X10) as i32;
+    if item(r.game, gobj).hit_damage >= blow_up_damage {
         explode(r, gobj);
         return false;
     }
     if vars(r.game, gobj).flags.get().knocked {
         return false;
     }
-    let (x14, x18, x30) = (
+    let (knock_vx, knock_vy, stop_speed) = (
         attr_f32(r, gobj, attr::X14),
         attr_f32(r, gobj, attr::X18),
         attr_f32(r, gobj, attr::X30),
     );
-    if item(r.game, gobj).vel.x > x30 {
+    if item(r.game, gobj).vel.x > stop_speed {
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = mem(fp::fneg(reg(ip.damage_dir)));
-        ip.vel.x = mem(fp::fmuls(reg(x14), reg(ip.facing_dir)));
+        ip.vel.x = mem(fp::fmuls(reg(knock_vx), reg(ip.facing_dir)));
     } else {
         let rand = reg(r.game.objs.rng.draw_f32());
         let way = mem(fp::fmuls(2.0, fp::fsubs(rand, 0.5)));
-        item_mut(r.game, gobj).vel.x = mem(fp::fmuls(reg(x14), reg(way)));
+        item_mut(r.game, gobj).vel.x = mem(fp::fmuls(reg(knock_vx), reg(way)));
         lib2725::face_motion(r.game, gobj);
     }
     let ip = item_mut(r.game, gobj);
-    ip.vel.y = mem(fp::fmuls(reg(x18), reg(ip.facing_dir)));
+    ip.vel.y = mem(fp::fmuls(reg(knock_vy), reg(ip.facing_dir)));
     vars(r.game, gobj)
         .flags
         .update(|f| LinkBombFlags { knocked: true, ..f });

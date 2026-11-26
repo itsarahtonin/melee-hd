@@ -38,7 +38,7 @@ pub struct Attract {
 #[doc(alias = "gmMainLib_GetGamePrefs")]
 pub fn saved_rules(g: &crate::game::structs::GameData) -> (GameRules, GamePrefs) {
     let r = &g.rules;
-    let p = &g.thing.save_data.prefs;
+    let p = &g.card.save_data.prefs;
     let rules = GameRules {
         mode: r.mode,
         time_limit: r.time_limit,

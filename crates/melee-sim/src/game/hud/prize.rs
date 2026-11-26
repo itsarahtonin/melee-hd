@@ -339,7 +339,7 @@ impl Running<'_> {
             }
         }
         self.game.prize.song = new as u8;
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.messages_pending[usize::from(a / 32)] &= !(1 << (a % 32));
         self.game.prize.kind = message_kind(i32::from(a)) as u16;
         let t = self.game.prize.message.expect("the prize's message");

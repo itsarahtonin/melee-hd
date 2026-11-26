@@ -260,14 +260,14 @@ impl Running<'_> {
         if enemies == 0 {
             r.goes_on = true;
         }
-        let x8 = run.stage[0];
-        if x8 & 1 != 0 {
+        let run_flags = run.stage[0];
+        if run_flags & 1 != 0 {
             r.damage_display_fades = true;
         }
-        if x8 & 0x20 != 0 {
+        if run_flags & 0x20 != 0 {
             r.allows_continue = true;
         }
-        if x8 & 0x80 != 0 {
+        if run_flags & 0x80 != 0 {
             run.counters[0] = 5;
             match run.stage[1] {
                 1 => {
@@ -290,11 +290,16 @@ impl Running<'_> {
                 _ => {}
             }
         }
-        let stocks = if x8 & 0x80 != 0 { 1 } else { run.player.stocks };
+        let stocks = if run_flags & 0x80 != 0 {
+            1
+        } else {
+            run.player.stocks
+        };
         let ckind = run.player.ckind;
         let player_ckind = if ckind == CharacterKind::Zelda && run.counters[6] != 0 {
             CharacterKind::Seak as u8
-        } else if x8 & 0x80 != 0 && run.stage[1] == 1 && ckind == CharacterKind::IceClimbers {
+        } else if run_flags & 0x80 != 0 && run.stage[1] == 1 && ckind == CharacterKind::IceClimbers
+        {
             CharacterKind::Popo as u8
         } else {
             ckind as u8
@@ -352,7 +357,7 @@ impl Running<'_> {
                 None => 0,
             };
         }
-        if x8 & 8 != 0 && run.counters[5] == 0 {
+        if run_flags & 8 != 0 && run.counters[5] == 0 {
             run.counters[0] = 3;
             let mut horde = enemies as i32;
             let (mut special_stage, mut special_mode) = (0, 0);
@@ -394,14 +399,14 @@ impl Running<'_> {
             );
             super::opponents::point_rules(&mut start.rules);
             run.counters[5] = 0;
-            if x8 & 4 != 0 {
+            if run_flags & 4 != 0 {
                 self.game.gm.opponents.set_metal();
             }
             if special_mode == 1 {
                 self.game.gm.opponents.set_flag_ae0();
                 start.players[0].attrs_scaled = true;
             }
-        } else if x8 & 8 != 0 {
+        } else if run_flags & 8 != 0 {
             super::opponents::point_rules(&mut start.rules);
             run.counters[5] = 0;
         }
@@ -411,7 +416,7 @@ impl Running<'_> {
         for i in 0..3 {
             let kind = chars[i];
             if kind != NONE {
-                if x8 & 8 != 0 {
+                if run_flags & 8 != 0 {
                     if let Some(g) = run.getters[1] {
                         enemy_level = Self::one_player_getter(Some(g), count, level, 0);
                     }
@@ -437,14 +442,14 @@ impl Running<'_> {
                 p.attack_ratio = attack;
                 p.defense_ratio = defense;
                 p.color = colors[i];
-                if x8 & 2 != 0 {
+                if run_flags & 2 != 0 {
                     p.model_scale = 2.0;
                     p.sfx_size = 2;
                 } else {
                     p.model_scale = 1.0;
                     p.sfx_size = 0;
                 }
-                if x8 & 4 != 0 {
+                if run_flags & 4 != 0 {
                     p.vs_metal = true;
                     p.cpu_kind = 0x1B;
                 }
@@ -477,10 +482,10 @@ impl Running<'_> {
         for p in start.players.iter_mut().skip(player_idx) {
             p.slot_type = 3;
         }
-        if x8 & 0x40 != 0 {
+        if run_flags & 0x40 != 0 {
             run.counters[0] = 7;
-        } else if x8 & 1 != 0 {
-            run.counters[0] = if x8 & 8 != 0 && arg3 > 1 { 4 } else { 2 };
+        } else if run_flags & 1 != 0 {
+            run.counters[0] = if run_flags & 8 != 0 && arg3 > 1 { 4 } else { 2 };
         }
         if boss_count != 0 {
             let r = &mut start.rules;
@@ -624,12 +629,12 @@ impl Running<'_> {
     pub fn one_player_match_exit(&mut self, run: &mut OnePlayerRun, game_over: u8) -> bool {
         use super::results_exit::add_u32_saturating as add;
         let e = &self.game.one_player.match_exit;
-        let (end, x0) = (e.match_end.clone(), e.run_value);
+        let (end, run_value) = (e.match_end.clone(), e.run_value);
         let p = &end.player_standings[0];
         run.coins = add(u32::from(run.coins), u32::from(p.coins)) as u16;
         self.results_add_coins(i32::from(p.coins));
         run.damage_taken = add(run.damage_taken as u32, p.damage_taken) as i32;
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
         if run.stage[0] & 0x80 == 0 {
             run.frames = add(run.frames, end.frame_count);
@@ -651,7 +656,7 @@ impl Running<'_> {
             // the menu.
             let sel = super::match_exit::selkind(run.player.ckind as u8);
             let mode = self.game.game_mode;
-            let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
+            let rec = &mut self.game.game_data.card.save_data.fighters[usize::from(sel)].records;
             let best = match GameMode::of(mode) {
                 GameMode::Classic => Some(&mut rec.classic_score),
                 GameMode::Adventure => Some(&mut rec.adventure_score),
@@ -689,7 +694,7 @@ impl Running<'_> {
                 return false;
             }
         }
-        run.score = x0 as i32;
+        run.score = run_value as i32;
         run.counters[4] = 0;
         true
     }
@@ -703,13 +708,13 @@ impl Running<'_> {
         let round = usize::from((id >> 3) & 0x1F);
         let (first, _) = super::one_player::ALLSTAR_ROUNDS[round];
         let e = &self.game.one_player.match_exit;
-        let (x8, percent, frames) = (
+        let (stage_flag, percent, frames) = (
             e.stage_flag,
             e.match_end.player_standings[0].percent,
             e.match_end.frame_count,
         );
         let o = &mut self.game.one_player;
-        o.allstar_results[first] = if x8 != 0 { 2 } else { 1 };
+        o.allstar_results[first] = if stage_flag != 0 { 2 } else { 1 };
         o.allstar.damage = percent;
         o.allstar.frames = o.allstar.frames.wrapping_add(frames);
         let mut run = self.game.one_player.allstar.base;
@@ -878,7 +883,7 @@ impl Running<'_> {
             let challenger = self.challenger_by_characters();
             let p = run.player;
             let sel = super::match_exit::selkind(p.ckind as u8);
-            let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
+            let rec = &mut self.game.game_data.card.save_data.fighters[usize::from(sel)].records;
             // `fn_80162BFC`, `fn_80162DF8`, `fn_80162FF4`: the mode's high score, a word
             // compared unsigned.
             let best = match GameMode::of(self.game.game_mode) {
@@ -946,7 +951,7 @@ impl Running<'_> {
         self.toy_table_sync(true);
         match mode {
             GameMode::AdventureEnding => {
-                let s = &mut self.game.game_data.thing.save_data;
+                let s = &mut self.game.game_data.card.save_data;
                 // `gmMainLib_8015D25C`: cleared, and this run's clear in `x14`'s mask.
                 s.fighters[usize::from(sel)].records.adventure_cleared = true;
                 s.challenger_records.adventure_cleared |= 1 << sel;
@@ -966,7 +971,7 @@ impl Running<'_> {
                 }
             }
             GameMode::ClassicEnding => {
-                let s = &mut self.game.game_data.thing.save_data;
+                let s = &mut self.game.game_data.card.save_data;
                 // `gmMainLib_8015D134`: cleared, and this run's clear in `x10`'s mask.
                 s.fighters[usize::from(sel)].records.classic_cleared = true;
                 s.challenger_records.classic_cleared |= 1 << sel;
@@ -1004,7 +1009,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D418")]
     fn allstar_clear_records(&mut self, run: &OnePlayerRun, sel: u8, stocks: u8) {
         let p = run.player;
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.fighters[usize::from(sel)].records.all_star_cleared = true;
         s.challenger_records.all_star_cleared |= 1 << sel;
         let rec = &mut s.fighters[usize::from(sel)].records;
@@ -1014,7 +1019,7 @@ impl Running<'_> {
         if !self.stage_unlocked(0x1F) {
             self.unlock_stage(0x1F);
         }
-        let rec = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
+        let rec = &mut self.game.game_data.card.save_data.fighters[usize::from(sel)].records;
         if rec.all_star_level < p.cpu_level {
             rec.all_star_level = p.cpu_level;
         }
@@ -1045,7 +1050,7 @@ impl Running<'_> {
     fn one_player_enter_game_over(&mut self, run: &OnePlayerRun, kind: u8) {
         const COSTS: [[u16; 5]; 3] = [[1, 2, 3, 5, 10], [1, 2, 3, 5, 10], [10; 5]];
         // `gm_801623D8`: the save's coins.
-        let coins = self.game.game_data.thing.save_data.coins as u16;
+        let coins = self.game.game_data.card.save_data.coins as u16;
         let d = &mut self.game.one_player.game_over;
         d.score = run.score as u32;
         d.from_mode = u32::from(kind);

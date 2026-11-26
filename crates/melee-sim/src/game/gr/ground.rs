@@ -601,7 +601,8 @@ pub fn set_scale(game: &mut Game, y: f32) {
 
 /// The stage parameters' `x4`, or 128 without them, `Ground_801C0508`.
 #[doc(alias = "Ground_801C0508")]
-pub fn param_x4(game: &Game) -> i32 {
+#[doc(alias("param_x4"))]
+pub fn shadow_intensity(game: &Game) -> i32 {
     game.gr
         .param
         .as_ref()

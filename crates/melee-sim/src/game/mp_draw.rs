@@ -333,13 +333,13 @@ impl Running<'_> {
         let c = self.game.objs.cobjs.current.expect("the game camera");
         crate::hsd::display::lobj_setup_init(&mut self.game.objs, self.data, c);
         push(self, MapDraw::Setup { hsd: false });
-        if self.game.camera.x39a_b0() {
+        if self.game.camera.debug_switch_0() {
             for (kind, color) in TERRAIN_PALETTE {
                 self.map_matching_lines(kind, 0xFF, color);
             }
             // `mp_Terrain_Basic`.
             self.map_matching_lines(0, 0xFF, [0x80, 0x80, 0x80, 0xFF]);
-        } else if self.game.camera.x39a_b1() {
+        } else if self.game.camera.debug_switch_1() {
             use crate::mp::{LINE_LEDGE, LINE_PLATFORM};
             self.map_matching_lines(LINE_LEDGE, LINE_LEDGE, [0xFF, 0x40, 0x40, 0xFF]);
             self.map_matching_lines(LINE_PLATFORM, LINE_PLATFORM, [0x40, 0x40, 0xFF, 0xFF]);

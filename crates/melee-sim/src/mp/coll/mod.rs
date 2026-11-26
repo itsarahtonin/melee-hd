@@ -525,7 +525,7 @@ pub trait CollHooks<K: Kinds> {
         user_data: Option<K::UserData>,
         joint_id: i32,
         coll: &mut CollData,
-        x50: i32,
+        weight: i32,
         kind: i32,
         dy: f32,
     );
@@ -1383,9 +1383,9 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             let (cb, data) = self.g.ledge_callback(joint);
             if let Some(cb) = cb {
                 let kind = if landed { 1 } else { 2 };
-                let x50 = fp::fctiwz(reg(cd.weight));
+                let weight = fp::fctiwz(reg(cd.weight));
                 self.hooks
-                    .joint_callback(self.g, cb, data, joint, cd, x50, kind, dy);
+                    .joint_callback(self.g, cb, data, joint, cd, weight, kind, dy);
             }
         }
     }
@@ -1401,9 +1401,9 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         if joint != -1 {
             let (cb, data) = self.g.ledge_callback(joint);
             if let Some(cb) = cb {
-                let x50 = fp::fctiwz(reg(cd.weight));
+                let weight = fp::fctiwz(reg(cd.weight));
                 self.hooks
-                    .joint_callback(self.g, cb, data, joint, cd, x50, 3, 0.0);
+                    .joint_callback(self.g, cb, data, joint, cd, weight, 3, 0.0);
             }
         }
     }
@@ -1414,9 +1414,9 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         if joint != -1 {
             let (cb, data) = self.g.callback(joint);
             if let Some(cb) = cb {
-                let x50 = fp::fctiwz(reg(cd.weight));
+                let weight = fp::fctiwz(reg(cd.weight));
                 self.hooks
-                    .joint_callback(self.g, cb, data, joint, cd, x50, 0, dy);
+                    .joint_callback(self.g, cb, data, joint, cd, weight, 0, dy);
             }
         }
     }

@@ -386,7 +386,7 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     let part = |r: &Running, n| nth_joint(r.game, gobj, n);
-    let (x38, x44) = ([part(r, 4), part(r, 5), part(r, 6)], part(r, 7));
+    let (scenery, scenery2) = ([part(r, 4), part(r, 5), part(r, 6)], part(r, 7));
     let int_jobj = part(r, 3);
     assert!(int_jobj.is_some(), "grrcruise.c: gp->u.scroll.int_jobj");
     let cam_jobj = part(r, 2);
@@ -395,8 +395,8 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
     let ctr = ctr_jobj.expect("grrcruise.c: gp->u.scroll.ctr_jobj");
     let center = r.game.objs.jobjs[ctr].translate;
     let v = r.game.grounds[g.0].u.scroll();
-    v.scenery = x38;
-    v.scenery2 = x44;
+    v.scenery = scenery;
+    v.scenery2 = scenery2;
     v.int_jobj = int_jobj;
     v.cam_jobj = cam_jobj;
     v.ctr_jobj = ctr_jobj;
@@ -664,15 +664,15 @@ pub fn deck_touched(
     root: Option<JObjId>,
     g: GroundId,
     coll: &CollData,
-    x50: i32,
+    weight: i32,
 ) {
     let kind = u32::from(coll.ecb_flags.b1234);
     if kind != 1 && kind != 2 && kind != 3 {
         return;
     }
-    let mut x50 = x50;
-    if fp::frsp(f64::from(x50)) > 1000.0 {
-        x50 = 1000;
+    let mut weight = weight;
+    if fp::frsp(f64::from(weight)) > 1000.0 {
+        weight = 1000;
     }
     let pivot = root.and_then(|r| super::ground::nth_joint_below(&objs.jobjs, r, 8));
     let pos = world_position(objs, data, pivot, None);
@@ -681,7 +681,7 @@ pub fn deck_touched(
     let dist = crate::math::sqrt_reg(fp::fmadds(dy, dy, fp::fmuls(dx, dx)));
     let v = grounds[g.0].u.rcruise();
     if dist > 4.0 {
-        let w = fp::fdivs(fp::frsp(f64::from(x50)), 1000.0);
+        let w = fp::fdivs(fp::frsp(f64::from(weight)), 1000.0);
         if reg(pos.x) < reg(coll.cur_pos.x) {
             v.pull_left = mem(fp::fmadds(dist, w, reg(v.pull_left)));
         } else {

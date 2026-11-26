@@ -468,13 +468,13 @@ pub fn fell(r: &mut Running, gobj: GObjId) {
 /// Floats up to open (state 3), `it_8028A544`.
 #[doc(alias = "it_8028A544")]
 pub fn rise(r: &mut Running, gobj: GObjId) {
-    let (x18, x1c) = (attr_f(r, gobj, 0x18), attr_f(r, gobj, 0x1C));
+    let (hop, wait_frames) = (attr_f(r, gobj, 0x18), attr_f(r, gobj, 0x1C));
     let ip = item_mut(r.game, gobj);
     ip.vel.z = 0.0;
     ip.vel.x = 0.0;
-    ip.vel.y = x18;
+    ip.vel.y = hop;
     let v = ip.vars.kusudama();
-    v.timer.set(fp::fctiwz(reg(x1c)));
+    v.timer.set(fp::fctiwz(reg(wait_frames)));
     v.opened.set(1);
     maplib::enter_air(item_mut(r.game, gobj));
     hitbox::set_hit_ids(r.game, gobj);

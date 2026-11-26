@@ -112,7 +112,7 @@ fn set_target_best(rec: &mut crate::game::structs::TrophyRecords, sel: u8, v: i3
 /// `x1C`, `gmMainLib_8015EDB0`'s `x4`).
 pub fn record_target_clear(game: &mut crate::game::state::Game, sel: u8, frames: u32) {
     let bit = 1i32 << sel;
-    let rec = &mut game.game_data.thing.save_data.trophy_records;
+    let rec = &mut game.game_data.card.save_data.trophy_records;
     if rec.target_cleared & bit == 0 {
         set_target_best(rec, sel, frames as i32);
         rec.target_cleared |= bit;
@@ -120,12 +120,12 @@ pub fn record_target_clear(game: &mut crate::game::state::Game, sel: u8, frames:
         set_target_best(rec, sel, frames as i32);
     }
     game.game_data
-        .thing
+        .card
         .save_data
         .challenger_records
         .target_cleared |= bit;
     game.game_data
-        .thing
+        .card
         .save_data
         .stage_unlock_records
         .target_cleared |= bit;
@@ -727,9 +727,9 @@ impl Running<'_> {
             self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
-        let x5 = self.save_one_player_choice(GameMode::Classic);
+        let start_stage = self.save_one_player_choice(GameMode::Classic);
         self.classic_pick_matchups();
-        self.set_next_game_mode_state_id(x5 << 3);
+        self.set_next_game_mode_state_id(start_stage << 3);
         self.load_announcer_bank();
     }
 
@@ -903,8 +903,8 @@ impl Running<'_> {
             self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
-        let x5 = self.save_one_player_choice(GameMode::Adventure);
-        self.set_next_game_mode_state_id(x5 << 3);
+        let start_stage = self.save_one_player_choice(GameMode::Adventure);
+        self.set_next_game_mode_state_id(start_stage << 3);
         self.load_announcer_bank();
     }
 
@@ -966,8 +966,8 @@ impl Running<'_> {
             self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
-        let x5 = self.save_one_player_choice(GameMode::AllStar);
-        self.set_next_game_mode_state_id(x5.wrapping_mul(8) & 0xF8);
+        let start_stage = self.save_one_player_choice(GameMode::AllStar);
+        self.set_next_game_mode_state_id(start_stage.wrapping_mul(8) & 0xF8);
         self.load_announcer_bank();
         let round = self.game.game_data.vs.all_star.round;
         self.allstar_round_setup(usize::from(round));
@@ -1153,7 +1153,7 @@ impl Running<'_> {
         let end = self.game.one_player.target_exit.match_end.clone();
         let t = self.game.game_data.vs.event.target_test.clone();
         let slot = self.game.one_player.target_slot;
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.one_player_time = (s.one_player_time as u32).wrapping_add(end.frame_count / 60) as i32;
         self.results_add_coins(i32::from(end.player_standings[0].coins));
         if end.outcome == super::match_exit::OUTCOME_RETRY {
@@ -1170,18 +1170,18 @@ impl Running<'_> {
             record_target_clear(self.game, sel, frames);
         }
         let mut improved = false;
-        let x7c = &mut self.game.game_data.thing.save_data.fighters[usize::from(sel)].records;
-        if !x7c.target_cleared {
+        let records = &mut self.game.game_data.card.save_data.fighters[usize::from(sel)].records;
+        if !records.target_cleared {
             if left == 0 {
-                x7c.target_cleared = true;
+                records.target_cleared = true;
                 improved = true;
-                x7c.target_record = frames;
-            } else if x7c.target_record < total.wrapping_sub(left) as u32 {
-                x7c.target_record = total.wrapping_sub(left) as u32;
+                records.target_record = frames;
+            } else if records.target_record < total.wrapping_sub(left) as u32 {
+                records.target_record = total.wrapping_sub(left) as u32;
             }
         } else if left == 0 {
-            if x7c.target_record > frames {
-                x7c.target_record = frames;
+            if records.target_record > frames {
+                records.target_record = frames;
             }
             improved = true;
         }
@@ -1238,7 +1238,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D0F4")]
     #[doc(alias = "gmMainLib_8015D21C")]
     pub(super) fn all_cleared_one_mode(&self) -> bool {
-        let r = &self.game.game_data.thing.save_data.challenger_records;
+        let r = &self.game.game_data.card.save_data.challenger_records;
         [r.target_cleared, r.classic_cleared, r.adventure_cleared]
             .into_iter()
             .any(|w| (0..0x19).all(|i| i == 3 || w & (1 << i) != 0))
@@ -1252,7 +1252,7 @@ impl Running<'_> {
         let w = self
             .game
             .game_data
-            .thing
+            .card
             .save_data
             .stage_unlock_records
             .target_cleared;
@@ -1268,7 +1268,7 @@ impl Running<'_> {
     #[doc(alias = "gm_80173AA4")]
     #[doc(alias = "gmMainLib_8015D640")]
     fn target_trophies(&mut self) {
-        let rec = &self.game.game_data.thing.save_data.trophy_records;
+        let rec = &self.game.game_data.card.save_data.trophy_records;
         if !(0..0x19).all(|i| rec.target_cleared & (1 << i) != 0) {
             return;
         }
@@ -1621,7 +1621,7 @@ pub const ADVENTURE_CSS: u8 = 0x70;
 impl super::super::state::Game {
     /// A character's 1P records (`GetPersistentFighterData(hud)->x7C`).
     pub fn record_1p(&self, hud: u8) -> &crate::game::structs::FighterRecords {
-        &self.game_data.thing.save_data.fighters[usize::from(hud)].records
+        &self.game_data.card.save_data.fighters[usize::from(hud)].records
     }
 
     /// A character's high score in Classic, Adventure or All-Star (`mode` 0 to 2):

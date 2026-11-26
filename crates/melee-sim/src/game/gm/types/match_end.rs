@@ -109,15 +109,20 @@ pub struct MatchPlayerData {
     #[at(0x50)]
     #[doc(alias("x50"))]
     pub walk_distance: u32,
+    /// Ten times the distance risen in the air (the player's stats' `rose`; wave 5 named it a
+    /// run's).
     #[at(0x54)]
     #[doc(alias("x54"))]
-    pub run_distance: u32,
+    #[doc(alias("run_distance"))]
+    pub rise_distance: u32,
     #[at(0x58)]
     #[doc(alias("x58"))]
     pub fall_distance: u32,
+    /// Ten times the distance knockback carried the player (the player's stats' `knocked`).
     #[at(0x5C)]
     #[doc(alias("x5C"))]
-    pub peak_height: u32,
+    #[doc(alias("peak_height"))]
+    pub knockback_distance: u32,
     #[at(0x60)]
     #[doc(alias("x60"))]
     pub coins_collected: u32,
@@ -127,13 +132,16 @@ pub struct MatchPlayerData {
     #[at(0x68)]
     #[doc(alias("x68"))]
     pub coins_lost: u32,
-    /// Seconds from the player's stats' timers (`pl_80040CB4`, `pl_80040CD8`).
+    /// Seconds on the ground, from the player's stats' timers (`pl_80040CB4`, `pl_80040CD8`).
     #[at(0x6C)]
     #[doc(alias("x6C"))]
-    pub air_time: u32,
+    #[doc(alias("air_time"))]
+    pub ground_time: u32,
+    /// Seconds in the air.
     #[at(0x70)]
     #[doc(alias("x70"))]
-    pub ground_time: u32,
+    #[doc(alias("ground_time"))]
+    pub air_time: u32,
     #[at(0x74)]
     #[doc(alias("x74"))]
     pub ground_attacks: u32,

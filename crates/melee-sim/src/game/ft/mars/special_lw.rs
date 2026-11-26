@@ -55,9 +55,9 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialAirLw_Enter")]
     pub fn mars_special_air_lw_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x4c = reg(self.mars_attr_f32(f, attr::X4C));
+        let cut_x = reg(self.mars_attr_f32(f, attr::X4C));
         let fp = &mut self.game.fighters[f.0];
-        fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), x4c));
+        fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), cut_x));
         fp.self_vel.y = 0.0;
         self.mars_special_lw_start(gobj, ms::SPECIAL_AIR_LW);
     }
@@ -241,12 +241,12 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialLw_80139140")]
     pub fn mars_special_lw_counter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let x5c = reg(self.mars_attr_f32(f, attr::X5C));
+        let damage_scale = reg(self.mars_attr_f32(f, attr::X5C));
         let fp = &mut self.game.fighters[f.0];
         fp.facing_dir = fp.specialn_facing_dir;
         let dmg = fp.shield_hit_damage;
         if dmg > 0 {
-            let n = fp::fctiwz(fp::fmuls(fp::frsp(f64::from(dmg)), x5c));
+            let n = fp::fctiwz(fp::fmuls(fp::frsp(f64::from(dmg)), damage_scale));
             fp.set_mv_i32(mv::LW_X0, n);
         }
         let third = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0)));

@@ -2313,22 +2313,26 @@ impl CameraState {
     }
 
     #[doc(alias = "Camera_80030B38")]
-    pub fn set_x39a_b0(&mut self, on: bool) {
+    #[doc(alias("set_x39a_b0"))]
+    pub fn set_debug_switch_0(&mut self, on: bool) {
         self.cam.debug_switch_0 = on;
     }
 
     #[doc(alias = "Camera_80030B50")]
-    pub fn x39a_b0(&self) -> bool {
+    #[doc(alias("x39a_b0"))]
+    pub fn debug_switch_0(&self) -> bool {
         self.cam.debug_switch_0
     }
 
     #[doc(alias = "Camera_80030B64")]
-    pub fn set_x39a_b1(&mut self, on: bool) {
+    #[doc(alias("set_x39a_b1"))]
+    pub fn set_debug_switch_1(&mut self, on: bool) {
         self.cam.debug_switch_1 = on;
     }
 
     #[doc(alias = "Camera_80030B7C")]
-    pub fn x39a_b1(&self) -> bool {
+    #[doc(alias("x39a_b1"))]
+    pub fn debug_switch_1(&self) -> bool {
         self.cam.debug_switch_1
     }
 
@@ -2539,10 +2543,10 @@ pub fn debug_follow(game: &mut Game, data: &Archives, slot: i32) {
     d.follow_fov = fov;
     d.follow_eye_offset = eye - interest;
     let o = d.follow_eye_offset;
-    let x2 = fp::fmuls(reg(o.x), reg(o.x));
+    let xx = fp::fmuls(reg(o.x), reg(o.x));
     let sq = fp::fadds(
         fp::fmuls(reg(o.z), reg(o.z)),
-        fp::fadds(x2, fp::fmuls(reg(o.y), reg(o.y))),
+        fp::fadds(xx, fp::fmuls(reg(o.y), reg(o.y))),
     );
     let f = fp::fdivs(dist, reg(math::sqrt(mem(sq))));
     d.follow_eye_offset.x = mem(fp::fmuls(reg(o.x), f));

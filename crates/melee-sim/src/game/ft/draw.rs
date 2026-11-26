@@ -414,9 +414,10 @@ impl Running<'_> {
         };
         let target = Vec3::new(cpu.destination.x, cpu.destination.y, 0.0);
         let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-        let (x55c, x560, x568) = (reg(cpu.hurt_behind), reg(cpu.hurt_ahead), reg(cpu.hurt_top));
-        let (x6c, x74) = (cpu.attack_reach_0.clone(), cpu.attack_reach_1.clone());
-        let (flash, x7c, plan) = (cpu.attacking, cpu.frame_counter, cpu.behavior);
+        let (hurt_behind, hurt_ahead, hurt_top) =
+            (reg(cpu.hurt_behind), reg(cpu.hurt_ahead), reg(cpu.hurt_top));
+        let (reach0, reach1) = (cpu.attack_reach_0.clone(), cpu.attack_reach_1.clone());
+        let (flash, frame_counter, plan) = (cpu.attacking, cpu.frame_counter, cpu.behavior);
         let (px, py) = (reg(pos.x), reg(pos.y));
         let objs = &mut self.game.objs;
         coll_draw::push(
@@ -431,14 +432,18 @@ impl Running<'_> {
             },
         );
         let (back, front) = if reg(facing) > 0.0 {
-            (x560, x55c)
+            (hurt_ahead, hurt_behind)
         } else {
-            (x55c, x560)
+            (hurt_behind, hurt_ahead)
         };
-        let a = Vec3::new(mem(fp::fsubs(px, back)), mem(fp::fadds(py, x568)), pos.z);
+        let a = Vec3::new(
+            mem(fp::fsubs(px, back)),
+            mem(fp::fadds(py, hurt_top)),
+            pos.z,
+        );
         let b = Vec3::new(mem(fp::fadds(px, front)), pos.y, pos.z);
         let color = if flash {
-            match x7c % 3 {
+            match frame_counter % 3 {
                 1 => [0xFF, 0xFF, 0, 0xFF],
                 2 => [0, 0, 0, 0],
                 _ => [0xFF, 0xFF, 0xFF, 0xFF],
@@ -451,26 +456,26 @@ impl Running<'_> {
             let (a, b) = if reg(facing) > 0.0 {
                 (
                     Vec3::new(
-                        mem(fp::fadds(px, reg(x6c.x))),
-                        mem(fp::fadds(py, reg(x74.y))),
+                        mem(fp::fadds(px, reg(reach0.x))),
+                        mem(fp::fadds(py, reg(reach1.y))),
                         pos.z,
                     ),
                     Vec3::new(
-                        mem(fp::fadds(px, reg(x74.x))),
-                        mem(fp::fadds(py, reg(x6c.y))),
+                        mem(fp::fadds(px, reg(reach1.x))),
+                        mem(fp::fadds(py, reg(reach0.y))),
                         pos.z,
                     ),
                 )
             } else {
                 (
                     Vec3::new(
-                        mem(fp::fsubs(px, reg(x74.x))),
-                        mem(fp::fadds(py, reg(x74.y))),
+                        mem(fp::fsubs(px, reg(reach1.x))),
+                        mem(fp::fadds(py, reg(reach1.y))),
                         pos.z,
                     ),
                     Vec3::new(
-                        mem(fp::fsubs(px, reg(x6c.x))),
-                        mem(fp::fadds(py, reg(x6c.y))),
+                        mem(fp::fsubs(px, reg(reach0.x))),
+                        mem(fp::fadds(py, reg(reach0.y))),
                         pos.z,
                     ),
                 )

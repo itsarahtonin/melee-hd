@@ -147,9 +147,9 @@ impl Running<'_> {
         let j = self.bone_joint(gobj, PART_FIRE);
         let mut pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         pos.z = 0.0;
-        let x20 = self.zelda_attr_f32(f, 0x20);
+        let reach = self.zelda_attr_f32(f, 0x20);
         let facing = self.game.fighters[f.0].facing_dir;
-        pos.x = mem(fp::fmadds(reg(x20), reg(facing), reg(pos.x)));
+        pos.x = mem(fp::fmadds(reg(reach), reg(facing), reg(pos.x)));
         pos.y = mem(fp::fadds(reg(pos.y), reg(self.zelda_attr_f32(f, 0x24))));
         let fire = zeldadinfire::spawn(self, gobj, pos, facing);
         self.set_zelda_din_fire(gobj, fire);
@@ -239,11 +239,11 @@ impl Running<'_> {
         self.game.part_set_rot_x(f, 0, 0.0);
         if !self.anim_frames_remaining(gobj) {
             self.zelda_special_s_reset(gobj);
-            let x34 = self.zelda_attr_f32(f, attr::X34);
-            if x34 == 0.0 {
+            let landing = self.zelda_attr_f32(f, attr::X34);
+            if landing == 0.0 {
                 self.enter_fall(gobj);
             } else {
-                self.fall_special(gobj, 1.0, x34);
+                self.fall_special(gobj, 1.0, landing);
             }
         }
     }

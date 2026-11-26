@@ -309,13 +309,13 @@ impl Running<'_> {
     /// The inhale's start's shared part.
     fn kb_n_start(&mut self, gobj: GObjId, msid: i32, grab: u32, item: u32) {
         let f = self.game.fighter_id(gobj);
-        let unk = self.kb_attr_i16(f, attr::JUMP_UNK);
+        let min_loop_frames = self.kb_attr_i16(f, attr::JUMP_UNK);
         let fp = &mut self.game.fighters[f.0];
         fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
         fp.set_u_i32(u::N_XE0, 4);
-        fp.u[u::N_XE4..u::N_XE4 + 2].copy_from_slice(&unk.to_be_bytes());
+        fp.u[u::N_XE4..u::N_XE4 + 2].copy_from_slice(&min_loop_frames.to_be_bytes());
         for (msid, off) in [
             (HAMMER_FALL, u::N_XE8),
             (HAMMER_JUMP, u::N_XEC),
@@ -520,12 +520,19 @@ impl Running<'_> {
 
     /// A ground switch to `msid` from the same frame, his cleanups after (`death`) and the
     /// catch flags.
-    fn kb_n_switch_air(&mut self, gobj: GObjId, msid: i32, flags: u32, death: bool, x1a6a: bool) {
+    fn kb_n_switch_air(
+        &mut self,
+        gobj: GObjId,
+        msid: i32,
+        flags: u32,
+        death: bool,
+        catch_flags: bool,
+    ) {
         self.fox_ground_to_air(gobj, msid, flags);
         if death {
             self.kb_set_death_cbs(gobj);
         }
-        if x1a6a {
+        if catch_flags {
             self.kb_set_catch_flags(gobj, 0x1FF);
         }
     }
@@ -536,13 +543,13 @@ impl Running<'_> {
         msid: i32,
         flags: u32,
         death: bool,
-        x1a6a: bool,
+        catch_flags: bool,
     ) {
         self.fox_air_to_ground(gobj, msid, flags);
         if death {
             self.kb_set_death_cbs(gobj);
         }
-        if x1a6a {
+        if catch_flags {
             self.kb_set_catch_flags(gobj, 0x1FF);
         }
     }
@@ -960,9 +967,9 @@ impl Running<'_> {
     }
 
     /// Into `msid` with what he holds.
-    fn kb_n_held_action(&mut self, gobj: GObjId, msid: i32, flags: u32, x2222: bool) {
+    fn kb_n_held_action(&mut self, gobj: GObjId, msid: i32, flags: u32, no_turn: bool) {
         self.change_motion_state(gobj, msid, flags, 0.0, 1.0, 0.0, None);
-        if x2222 {
+        if no_turn {
             self.game.fighter_mut(gobj).no_turn = true;
         }
         self.kb_set_death_cbs(gobj);

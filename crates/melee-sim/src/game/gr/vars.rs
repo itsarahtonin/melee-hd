@@ -3855,19 +3855,23 @@ impl GroundVars {
                 part: m.u16(at + 2) as i16,
             }),
             VarsKind::Greens => {
-                let (x4, x8) = (m.u32(at + 4), m.u32(at + 8));
+                let (grid_at, blocks_at) = (m.u32(at + 4), m.u32(at + 8));
                 let grid = (0..30u32).map(|i| {
-                    let a = x4 + 0xC * i;
+                    let a = grid_at + 0xC * i;
                     crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8))
                 });
                 GroundVars::Greens(GreensVars {
                     flags: m.u32(at),
-                    grid_addr: x4,
-                    blocks_addr: x8,
+                    grid_addr: grid_at,
+                    blocks_addr: blocks_at,
                     wait: m.u32(at + 0xC) as i32,
-                    grid: if x4 != 0 { grid.collect() } else { Vec::new() },
-                    blocks: if x8 != 0 {
-                        import_greens_blocks(m, x8, cx)
+                    grid: if grid_at != 0 {
+                        grid.collect()
+                    } else {
+                        Vec::new()
+                    },
+                    blocks: if blocks_at != 0 {
+                        import_greens_blocks(m, blocks_at, cx)
                     } else {
                         Vec::new()
                     },
@@ -7888,12 +7892,12 @@ impl Mirror for GroundVars {
                 if ours != theirs {
                     cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
                 }
-                if let Some(x100) = v.next_gun
-                    && x100 != m.u32(at + 0x3C) as i32
+                if let Some(next_gun) = v.next_gun
+                    && next_gun != m.u32(at + 0x3C) as i32
                 {
                     cx.mismatch(
                         &format!("{p}.x100"),
-                        format!("{x100}"),
+                        format!("{next_gun}"),
                         format!("{}", m.u32(at + 0x3C) as i32),
                     );
                 }
@@ -9156,26 +9160,26 @@ impl Mirror for GroundVars {
             GroundVars::Greens(v) => {
                 // The blocks' addresses come from the allocator model, 0 without it (the leaf
                 // checks): then their contents compare at memory's.
-                let (x4, x8) = (m.u32(at + 4), m.u32(at + 8));
+                let (grid, blocks) = (m.u32(at + 4), m.u32(at + 8));
                 let ours = (v.flags, v.wait);
                 let theirs = (m.u32(at), m.u32(at + 0xC) as i32);
                 let addrs = |o: u32, t: u32| o == t || o == 0 && t != 0;
-                if ours != theirs || !addrs(v.grid_addr, x4) || !addrs(v.blocks_addr, x8) {
+                if ours != theirs || !addrs(v.grid_addr, grid) || !addrs(v.blocks_addr, blocks) {
                     cx.mismatch(
                         &format!("{path}.greens"),
                         format!("{:x?}", (v.flags, v.grid_addr, v.blocks_addr, v.wait)),
-                        format!("{:x?}", (theirs.0, x4, x8, theirs.1)),
+                        format!("{:x?}", (theirs.0, grid, blocks, theirs.1)),
                     );
                 }
-                if x4 != 0 && v.grid.len() == 30 {
+                if grid != 0 && v.grid.len() == 30 {
                     for (i, c) in v.grid.iter().enumerate() {
                         let p = format!("{path}.greens.x4[{i}]");
-                        c.compare(m, x4 + 0xC * i as u32, &p, cx);
+                        c.compare(m, grid + 0xC * i as u32, &p, cx);
                     }
                 }
-                if x8 != 0 && v.blocks.len() == 30 {
+                if blocks != 0 && v.blocks.len() == 30 {
                     for (i, b) in v.blocks.iter().enumerate() {
-                        compare_greens_block(cx, m, x8 + 0x20 * i as u32, path, i, b);
+                        compare_greens_block(cx, m, blocks + 0x20 * i as u32, path, i, b);
                     }
                 }
             }

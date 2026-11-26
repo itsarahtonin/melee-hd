@@ -167,7 +167,7 @@ pub fn clear_tree_flags(game: &mut Game, j: Option<JObjId>, flags: u32) {
 #[allow(clippy::too_many_arguments)]
 pub fn stage_item(
     r: &mut super::super::state::Running,
-    x0: i32,
+    number: i32,
     state: i32,
     g: super::super::handles::GroundId,
     joint: Option<JObjId>,
@@ -178,7 +178,7 @@ pub fn stage_item(
     super::super::it::kinds::yaku::spawn(
         r,
         Some(g),
-        x0,
+        number,
         state,
         joint,
         None,
@@ -195,7 +195,7 @@ pub fn stage_item(
 #[allow(clippy::too_many_arguments)]
 pub fn stage_item_at(
     r: &mut super::super::state::Running,
-    x0: i32,
+    number: i32,
     state: i32,
     g: super::super::handles::GroundId,
     pos: crate::vec::Vec3,
@@ -207,7 +207,7 @@ pub fn stage_item_at(
     super::super::it::kinds::yaku::spawn(
         r,
         Some(g),
-        x0,
+        number,
         state,
         None,
         Some(pos),

@@ -439,7 +439,7 @@ impl Running<'_> {
         let idx = self.event();
         let e = self.event_entry(idx).expect("the event's entry");
         let p0 = e.player(self, 0).expect("the event's first player");
-        let x44 = if self.data.u8(p0) as i8 != 0x21 { 0 } else { 1 };
+        let load_kind = if self.data.u8(p0) as i8 != 0x21 { 0 } else { 1 };
         let stkind = i32::from(self.data.u16(e.evinit(self).at(6)));
         let mut chars = [0x21i8; 4];
         let mut colors = [0u8; 4];
@@ -449,7 +449,7 @@ impl Running<'_> {
                 colors[i] = self.data.u8(p.at(3));
             }
         }
-        let mut x45 = 0;
+        let mut crowd_copies = 0;
         if e.kind(self) == 1 {
             let b = e.evbonus(self).expect("the event's crowd");
             chars[1] = self.data.u8(b) as i8;
@@ -458,14 +458,14 @@ impl Running<'_> {
             } else {
                 0xFF
             };
-            x45 = u8::from(self.data.u8(b.at(0x17)) == 1);
+            crowd_copies = u8::from(self.data.u8(b.at(0x17)) == 1);
         }
         let ev = &mut self.game.game_data.vs.event;
-        ev.load_kind = x44;
+        ev.load_kind = load_kind;
         ev.stage = stkind;
         ev.chars = chars;
         ev.colors = colors;
-        ev.crowd_kirby_copies = x45;
+        ev.crowd_kirby_copies = crowd_copies;
         let round = ev.round;
         match idx {
             9 | 19 | 29 | 39 | 48 => {
@@ -496,8 +496,11 @@ impl Running<'_> {
                 }
             }
             43 => {
-                let x4 = e.params(self).expect("the event's parameters");
-                let p = self.data.ptr(x4.at(4)).expect("the event's third player");
+                let params = e.params(self).expect("the event's parameters");
+                let p = self
+                    .data
+                    .ptr(params.at(4))
+                    .expect("the event's third player");
                 let (c, col) = (self.data.u8(p) as i8, self.data.u8(p.at(3)));
                 let ev = &mut self.game.game_data.vs.event;
                 ev.chars[2] = c;
@@ -569,9 +572,9 @@ impl Running<'_> {
         {
             self.game.gm.opponents.on_join = Some(super::super::handles::CodeRef(f));
         }
-        let x15 = d.u8(b.at(0x15));
-        if x15 != 0 {
-            self.game.gm.opponents.more_flag6 = x15;
+        let more_flag6 = d.u8(b.at(0x15));
+        if more_flag6 != 0 {
+            self.game.gm.opponents.more_flag6 = more_flag6;
         }
     }
 
@@ -957,14 +960,14 @@ impl Running<'_> {
                 best = cur;
                 self.set_event_score(i32::from(level), best);
             }
-            self.game.game_data.thing.save_data.events_cleared |= 1i64 << level;
+            self.game.game_data.card.save_data.events_cleared |= 1i64 << level;
         }
         let (coins, frames) = {
             let ev = &self.game.game_data.vs.event;
             (ev.coins, ev.play_frames)
         };
         self.results_add_coins(coins);
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.one_player_time = (s.one_player_time as u32).wrapping_add(frames as u32 / 60) as i32;
         let place = event_place(level);
         let kind = if cleared {
@@ -979,7 +982,7 @@ impl Running<'_> {
             0x21
         };
         if level == event_place(0x32) && me.player_standings[0].stocks == 3 {
-            note_final_event_all_stocks(&mut self.game.game_data.thing.save_data);
+            note_final_event_all_stocks(&mut self.game.game_data.card.save_data);
         }
         if cleared {
             let all = (0..i32::from(EVENTS)).all(|i| self.event_cleared(i));
@@ -1065,8 +1068,11 @@ impl Running<'_> {
                 }
             }
             43 => {
-                let x4 = e.params(self).expect("the event's parameters");
-                let p = self.data.ptr(x4.at(4)).expect("the event's third player");
+                let params = e.params(self).expect("the event's parameters");
+                let p = self
+                    .data
+                    .ptr(params.at(4))
+                    .expect("the event's third player");
                 let kind =
                     super::super::pl::player::ckind_ftkind(i32::from(self.data.u8(p) as i8), 0);
                 self.load_fighter_costume(kind, ev.colors[2]);
@@ -1154,8 +1160,8 @@ impl Running<'_> {
                 )
             }
             43 => {
-                let x4 = e.params(self).expect("the event's parameters");
-                let p = d.ptr(x4.at(4)).expect("the event's third player");
+                let params = e.params(self).expect("the event's parameters");
+                let p = d.ptr(params.at(4)).expect("the event's third player");
                 (vec![with(p)], false)
             }
             _ if e.kind(self) == 1 => {
@@ -1385,8 +1391,8 @@ impl Running<'_> {
     #[doc(alias = "gm_801BC9E8")]
     fn event_coins_proc(&mut self, gobj: GObjId) {
         let e = self.event_entry(self.event()).expect("the event's entry");
-        let x4 = e.params(self).expect("the event's coins");
-        let target = self.data.u32(x4);
+        let coins = e.params(self).expect("the event's coins");
+        let target = self.data.u32(coins);
         if self.game.player_coins(0) as u32 >= target {
             self.event_success(gobj);
             return;
@@ -1532,9 +1538,10 @@ impl Running<'_> {
     fn event_egg_proc(&mut self, gobj: GObjId) {
         if self.game.game_data.vs.event.proc_counter == 0 {
             let e = self.event_entry(self.event()).expect("the event's entry");
-            let x4 = e.params(self).expect("the egg's place");
+            let egg_at = e.params(self).expect("the egg's place");
             let d = self.data;
-            let pos = crate::vec::Vec3::new(d.f32(x4), d.f32(x4.at(4)), d.f32(x4.at(8)));
+            let pos =
+                crate::vec::Vec3::new(d.f32(egg_at), d.f32(egg_at.at(4)), d.f32(egg_at.at(8)));
             super::super::it::kinds::evyoshiegg::spawn(self, pos);
             self.game.game_data.vs.event.proc_counter += 1;
         }
@@ -1608,8 +1615,11 @@ impl Running<'_> {
     #[doc(alias = "gm_801BC670")]
     fn event_round_won(&mut self) {
         let e0 = self.event_entry(0).expect("the first event's entry");
-        let x4 = e0.params(self).expect("the first event's parameters");
-        let (min, wait) = (self.data.u32(x4) as i32, self.data.u32(x4.at(4)) as i32);
+        let params = e0.params(self).expect("the first event's parameters");
+        let (min, wait) = (
+            self.data.u32(params) as i32,
+            self.data.u32(params.at(4)) as i32,
+        );
         let secs = self.game.vs_timer_seconds() as i32;
         let frames = i32::from(self.game.vs_timer_frames());
         let sheik = self.game.player_fighter_kind(0) == FighterKind::Seak;
@@ -1652,8 +1662,8 @@ impl Running<'_> {
         ev.proc_counter -= 1;
         if ev.proc_counter < 0 {
             let e0 = self.event_entry(0).expect("the first event's entry");
-            let x4 = e0.params(self).expect("the first event's parameters");
-            let frames = self.data.u32(x4.at(4)) as i32;
+            let params = e0.params(self).expect("the first event's parameters");
+            let frames = self.data.u32(params.at(4)) as i32;
             self.game.bgflash.fade_to_black(frames);
             gobj::free(self, gobj);
         }
@@ -1735,9 +1745,9 @@ impl Running<'_> {
             self.event_round_wait(gobj);
             return;
         }
-        let x18 = self.game.game_data.vs.event.proc_state;
+        let proc_state = self.game.game_data.vs.event.proc_state;
         if round == 0 {
-            match x18 {
+            match proc_state {
                 0 if self.game.player_stocks(1) <= 0 => {
                     self.game.game_data.vs.event.proc_state = 1;
                     let p = self.event_player(self.event_round(e, 2));
@@ -1760,7 +1770,7 @@ impl Running<'_> {
                 _ => {}
             }
         } else {
-            match x18 {
+            match proc_state {
                 0 if self.game.player_stocks(1) <= 0 => {
                     self.game.game_data.vs.event.proc_state = 1;
                     let p = self.event_player(self.event_round(e, 4));
@@ -1786,8 +1796,11 @@ impl Running<'_> {
     fn event_joiner_proc(&mut self, gobj: GObjId) {
         let idx = self.event();
         let e = self.event_entry(idx).expect("the event's entry");
-        let x4 = e.params(self).expect("the event's parameters");
-        let joiner = self.data.ptr(x4.at(4)).expect("the event's third player");
+        let params = e.params(self).expect("the event's parameters");
+        let joiner = self
+            .data
+            .ptr(params.at(4))
+            .expect("the event's third player");
         let p1 = e.player(self, 1).expect("the event's second player");
         let kinds = [
             self.game.player_ckind(0),
@@ -1804,7 +1817,7 @@ impl Running<'_> {
             self.event_fail(gobj);
             return;
         }
-        if !joined && self.game.vs_timer_seconds() >= self.data.u32(x4) {
+        if !joined && self.game.vs_timer_seconds() >= self.data.u32(params) {
             self.game.game_data.vs.event.proc_counter = 1;
             let mut p = self.event_player(joiner);
             p.color = self.game.game_data.vs.event.colors[2];

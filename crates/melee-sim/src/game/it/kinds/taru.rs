@@ -157,9 +157,13 @@ fn spill(r: &mut Running, gobj: GObjId) {
 
 /// Whether it breaks with an item in it: `x0` in `x0 + x4`.
 fn has_item(r: &mut Running, gobj: GObjId) -> bool {
-    let x0 = container::attr_i(r, gobj, &OPENING, 0);
-    let x4 = container::attr_i(r, gobj, &OPENING, 4);
-    r.game.objs.rng.below(x0.wrapping_add(x4)) < x0
+    let item_weight = container::attr_i(r, gobj, &OPENING, 0);
+    let empty_weight = container::attr_i(r, gobj, &OPENING, 4);
+    r.game
+        .objs
+        .rng
+        .below(item_weight.wrapping_add(empty_weight))
+        < item_weight
 }
 
 /// Breaks: splinters, then opens with an item or empty.
@@ -203,7 +207,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// flat, it faces its way and the model turns with the speed; in the air it just spins.
 #[doc(alias = "it_802874F0")]
 pub fn roll(r: &mut Running, gobj: GObjId) {
-    let (x20, x24, x28, x2c) = (
+    let (max_speed, slope_accel, flat_decel, stop_speed) = (
         attr_f(r, gobj, 0x20),
         attr_f(r, gobj, 0x24),
         attr_f(r, gobj, 0x28),
@@ -219,18 +223,18 @@ pub fn roll(r: &mut Running, gobj: GObjId) {
     }
     let slope = v.normal.x();
     if abs(slope) > f64::from(0.1_f32) {
-        if abs(v.roll_speed.get()) < reg(x2c) {
+        if abs(v.roll_speed.get()) < reg(stop_speed) {
             v.roll_speed
-                .update(|old| mem(fp::fmadds(reg(slope), reg(x24), reg(old))));
+                .update(|old| mem(fp::fmadds(reg(slope), reg(slope_accel), reg(old))));
         }
-    } else if abs(v.roll_speed.get()) < reg(x28) {
+    } else if abs(v.roll_speed.get()) < reg(flat_decel) {
         v.roll_speed.set(0.0);
     } else if reg(v.roll_speed.get()) > 0.0 {
         v.roll_speed
-            .update(|old| mem(fp::fsubs(reg(old), reg(x28))));
+            .update(|old| mem(fp::fsubs(reg(old), reg(flat_decel))));
     } else {
         v.roll_speed
-            .update(|old| mem(fp::fadds(reg(old), reg(x28))));
+            .update(|old| mem(fp::fadds(reg(old), reg(flat_decel))));
     }
     let s = reg(v.roll_speed.get());
     let f = reg(ip.facing_dir);
@@ -238,9 +242,9 @@ pub fn roll(r: &mut Running, gobj: GObjId) {
         ip.facing_dir = mem(fp::fmuls(f, -1.0));
     }
     let v = ip.vars.taru();
-    if abs(v.roll_speed.get()) > reg(x20) {
+    if abs(v.roll_speed.get()) > reg(max_speed) {
         v.roll_speed
-            .set(mem(fp::fmuls(reg(x20), reg(ip.facing_dir))));
+            .set(mem(fp::fmuls(reg(max_speed), reg(ip.facing_dir))));
     }
     let v = ip.vars.taru();
     let (speed, up) = (v.roll_speed.get(), v.normal.y());
@@ -335,10 +339,10 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Bounces off the floor by the attributes' `x58`.
 fn bounce(r: &mut Running, gobj: GObjId) {
-    let x58 = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::X58);
+    let bounce = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::X58);
     let ip = item_mut(r.game, gobj);
     maplib::enter_air(ip);
-    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), -reg(x58)));
+    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), -reg(bounce)));
 }
 
 /// `itTaru_UnkMotion1_Coll`: falling, it stops on a soft landing and bounces on a hard one.
@@ -347,8 +351,8 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     if air(r, gobj) {
         maplib::enter_ground(item_mut(r.game, gobj));
         play_sfx(r, gobj, 0x104, 0x7F, 0x40);
-        let x34 = attr_f(r, gobj, OPENING.drop_limit);
-        if abs(item(r.game, gobj).vel.y) < reg(x34) {
+        let drop_limit = attr_f(r, gobj, OPENING.drop_limit);
+        if abs(item(r.game, gobj).vel.y) < reg(drop_limit) {
             (OPENING.settles)(r, gobj);
         } else {
             bounce(r, gobj);
@@ -393,14 +397,14 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTaru_UnkMotion3_Anim")]
 #[doc(alias = "itTaru_UnkMotion4_Anim")]
 pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
-    let x34 = common_data(r.game).u32(r.data, super::super::data::common::X34);
+    let blink_frames = common_data(r.game).u32(r.data, super::super::data::common::X34);
     let ip = item_mut(r.game, gobj);
     ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     if reg(ip.life_timer) <= 0.0 {
         effect::spawn_simple(r, gobj, 0x421);
         return true;
     }
-    if reg(item(r.game, gobj).life_timer) <= fp::frsp(f64::from(x34)) {
+    if reg(item(r.game, gobj).life_timer) <= fp::frsp(f64::from(blink_frames)) {
         lib2725::flicker(r.game, r.data, gobj);
     }
     false
@@ -421,13 +425,13 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
     if air(r, gobj) {
         maplib::enter_ground(item_mut(r.game, gobj));
         play_sfx(r, gobj, 0x104, 0x7F, 0x40);
-        let x34 = attr_f(r, gobj, OPENING.drop_limit);
-        if abs(item(r.game, gobj).vel.y) > reg(x34) {
+        let drop_limit = attr_f(r, gobj, OPENING.drop_limit);
+        if abs(item(r.game, gobj).vel.y) > reg(drop_limit) {
             return container::hit(r, gobj, &OPENING);
         }
-        let x5c = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::X5C);
+        let bounce_min = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::X5C);
         let ip = item_mut(r.game, gobj);
-        if abs(ip.vel.y) < reg(x5c) {
+        if abs(ip.vel.y) < reg(bounce_min) {
             let speed = mem(fp::fmuls(reg(ip.facing_dir), abs(ip.vel.x)));
             ip.vars.taru().roll_speed.set(speed);
             land_rolling(r, gobj);
@@ -487,7 +491,7 @@ pub fn phys5(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTaru_UnkMotion4_Coll")]
 pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, let_go);
-    let (x2c, x30) = (attr_f(r, gobj, 0x2C), attr_f(r, gobj, 0x30));
+    let (break_speed, wall_bounce) = (attr_f(r, gobj, 0x2C), attr_f(r, gobj, 0x30));
     let ip = item_mut(r.game, gobj);
     if ip.ground_or_air != 1 {
         let floor = crate::mp::coll::FLOOR_PUSH | crate::mp::coll::FLOOR_HUG;
@@ -499,13 +503,13 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
         }
         let walls = crate::mp::coll::LEFT_WALL_MASK | crate::mp::coll::RIGHT_WALL_MASK;
         if ip.coll.env_flags & walls != 0 {
-            if abs(ip.vars.taru().roll_speed.get()) > reg(x2c) {
+            if abs(ip.vars.taru().roll_speed.get()) > reg(break_speed) {
                 return container::hit(r, gobj, &OPENING);
             }
             ip.facing_dir = -ip.facing_dir;
             let v = ip.vars.taru();
             v.roll_speed
-                .update(|old| mem(-fp::fmuls(reg(old), reg(x30))));
+                .update(|old| mem(-fp::fmuls(reg(old), reg(wall_bounce))));
             let (speed, up) = (v.roll_speed.get(), v.normal.y());
             ip.vel.x = mem(fp::fmuls(reg(speed), reg(up)));
             hitbox::set_hit_ids(r.game, gobj);
@@ -520,8 +524,8 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys4(r: &mut Running, gobj: GObjId) {
     roll(r, gobj);
     turn(r, gobj);
-    let x1c = attr_f(r, gobj, 0x1C);
-    if abs(vars(r.game, gobj).roll_speed.get()) > reg(x1c) {
+    let hit_speed = attr_f(r, gobj, 0x1C);
+    if abs(vars(r.game, gobj).roll_speed.get()) > reg(hit_speed) {
         rolling(r, gobj);
         hitbox::set_hit_ids(r.game, gobj);
     }
@@ -537,21 +541,21 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     if vars(r.game, gobj).hit.get() != 0 {
         return false;
     }
-    let (x8, xc, x10) = (
+    let (knock_odds, break_damage, push_scale) = (
         attr_f(r, gobj, 8),
         attr_f(r, gobj, OPENING.damage_limit),
         attr_f(r, gobj, 0x10),
     );
-    if to_f32(item(r.game, gobj).damage_taken) >= reg(xc) {
+    if to_f32(item(r.game, gobj).damage_taken) >= reg(break_damage) {
         break_open(r, gobj);
         return false;
     }
     let msid = item(r.game, gobj).msid;
     if msid == 0 {
-        if r.game.objs.rng.below(fp::fctiwz(reg(x8))) == 0 {
+        if r.game.objs.rng.below(fp::fctiwz(reg(knock_odds))) == 0 {
             let ip = item_mut(r.game, gobj);
             ip.facing_dir = mem(-reg(ip.damage_dir));
-            let push = fp::fmuls(to_f32(ip.hit_damage), reg(x10));
+            let push = fp::fmuls(to_f32(ip.hit_damage), reg(push_scale));
             let f = ip.facing_dir;
             ip.vars.taru().roll_speed.set(mem(fp::fmuls(reg(f), push)));
             coll::take_attacker(r.game, gobj);
@@ -559,7 +563,7 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
         }
     } else if (msid as u32).wrapping_sub(4) <= 1 {
         let ip = item_mut(r.game, gobj);
-        let push = fp::fmuls(to_f32(ip.hit_damage), reg(x10));
+        let push = fp::fmuls(to_f32(ip.hit_damage), reg(push_scale));
         let away = -reg(ip.damage_dir);
         let v = ip.vars.taru();
         v.roll_speed

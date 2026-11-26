@@ -223,10 +223,13 @@ impl Running<'_> {
         };
         let data = fp.ft_data.expect("a fighter without data");
         self.game.fighters[f.0].dynamics_num = 3;
-        let x2c = self.data.ptr(data.at(0x2C)).expect("ftData::x2C");
+        let dynamics_list = self.data.ptr(data.at(0x2C)).expect("ftData::x2C");
         for i in 0..2u32 {
             let bone = set * 2 + 1 + i;
-            let bones = self.data.ptr(x2c.at(4)).expect("ftDynamics bones");
+            let bones = self
+                .data
+                .ptr(dynamics_list.at(4))
+                .expect("ftDynamics bones");
             let entry = bones.at(0x18 * bone);
             let steps = self.data.u32(entry) as i32;
             let mut cur = self.game.fighters[f.0]

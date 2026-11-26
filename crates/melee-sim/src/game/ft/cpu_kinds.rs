@@ -41,8 +41,8 @@ impl Running<'_> {
             self.cpu_healing_item_target(f)
         };
         self.game.fighters[f.0].cpu.item_target = item;
-        let x50 = self.cpu_enemy_item_target(f);
-        self.game.fighters[f.0].cpu.enemy_item = x50;
+        let enemy_item = self.cpu_enemy_item_target(f);
+        self.game.fighters[f.0].cpu.enemy_item = enemy_item;
     }
 
     /// Computer kind 9, `ftCo_800B00F8` (Classic's Very Easy opponents; Events 4, 15, 25, 27
@@ -495,8 +495,8 @@ impl Running<'_> {
         self.cpu_fear_flags(f, false, [true, true, true, true, true, false]);
         let (target, lr) = self.cpu_find_target_lr(f);
         self.game.fighters[f.0].cpu.target = target;
-        let x50 = self.cpu_enemy_item_target(f);
-        self.game.fighters[f.0].cpu.enemy_item = x50;
+        let enemy_item = self.cpu_enemy_item_target(f);
+        self.game.fighters[f.0].cpu.enemy_item = enemy_item;
         self.cpu_near_target_kind(f);
         if self.cpu_should_act(f) {
             let to = self

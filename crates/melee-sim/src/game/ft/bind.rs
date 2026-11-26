@@ -26,8 +26,9 @@ const ANIM_MASK: u32 = 0xFB7F;
 const MAX_JOINT_DEPTH: usize = 30;
 
 /// The fighter's `x594` as a word.
-pub fn x594_word(x594: [u8; 4]) -> u32 {
-    u32::from_be_bytes(x594)
+#[doc(alias("x594_word"))]
+pub fn anim_bits_word(bits: [u8; 4]) -> u32 {
+    u32::from_be_bytes(bits)
 }
 
 /// A walk's stack of ancestors, at most `N` deep, held inline.
@@ -202,7 +203,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006FE08")]
     fn bind_figatree(&mut self, f: FighterId, blend: bool) {
         let fp = &self.game.fighters[f.0];
-        if fp.kind as u32 != x594_word(fp.anim_bits) & 0x3F {
+        if fp.kind as u32 != anim_bits_word(fp.anim_bits) & 0x3F {
             self.bind_figatree_remapped(f, blend);
         } else {
             let tree = fp.action_tree.expect("no figatree");
@@ -216,7 +217,7 @@ impl Running<'_> {
     pub fn bind_own_figatree(&mut self, f: FighterId, blend: bool, tree: DataRef) {
         let data = self.data;
         let kind = self.game.fighters[f.0].kind;
-        let flags = (x594_word(self.game.fighters[f.0].anim_bits) >> 9) & 0x1FFF;
+        let flags = (anim_bits_word(self.game.fighters[f.0].anim_bits) >> 9) & 0x1FFF;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let mut i = 0;
@@ -258,7 +259,7 @@ impl Running<'_> {
         let data = self.data;
         let fp = &self.game.fighters[f.0];
         let tree = fp.action_tree.expect("no figatree");
-        let word = x594_word(fp.anim_bits);
+        let word = anim_bits_word(fp.anim_bits);
         let (bits, from) = ((word >> 9) & 0x1FFF, (word & 0x3F) as i32);
         let to = fp.kind;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
@@ -335,7 +336,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006F954")]
     fn bind_part_figatree(&mut self, f: FighterId, part: i32, blend: bool) {
         let fp = &self.game.fighters[f.0];
-        if fp.kind as u32 != x594_word(fp.anim_bits) & 0x3F {
+        if fp.kind as u32 != anim_bits_word(fp.anim_bits) & 0x3F {
             self.bind_part_figatree_remapped(f, part, blend);
         } else {
             let tree = fp.action_tree.expect("no figatree");
@@ -349,7 +350,7 @@ impl Running<'_> {
     fn bind_part_own_figatree(&mut self, f: FighterId, part: i32, blend: bool, tree: DataRef) {
         let data = self.data;
         let kind = self.game.fighters[f.0].kind;
-        let bits = (x594_word(self.game.fighters[f.0].anim_bits) >> 9) & 0x1FFF;
+        let bits = (anim_bits_word(self.game.fighters[f.0].anim_bits) >> 9) & 0x1FFF;
         let depth = self.bone(f, part).tree[0];
         let buf = self.game.fighters[f.0].main_anim_buf;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
@@ -400,7 +401,7 @@ impl Running<'_> {
         let data = self.data;
         let fp = &self.game.fighters[f.0];
         let tree = fp.action_tree.expect("no figatree");
-        let word = x594_word(fp.anim_bits);
+        let word = anim_bits_word(fp.anim_bits);
         let (bits, from) = ((word >> 9) & 0x1FFF, (word & 0x3F) as i32);
         let to = fp.kind;
         let depth = self.bone(f, part).tree[0];

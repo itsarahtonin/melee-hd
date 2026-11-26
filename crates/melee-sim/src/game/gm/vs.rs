@@ -1029,9 +1029,9 @@ impl Running<'_> {
         self.game.vs.state.match_result = outcome;
         if outcome != OUTCOME_RETRY && self.game.gm.db_level >= super::DB_DEBUG_ROM {
             self.game.clear_db_pause_flag(1);
-            let xd = self.game.vs.start.end_wait;
-            if xd > 1 {
-                self.game.vs.state.end_frames = xd - 1;
+            let end_wait = self.game.vs.start.end_wait;
+            if end_wait > 1 {
+                self.game.vs.state.end_frames = end_wait - 1;
             }
             self.vs_end();
             self.lb_audio_reset_flush();
@@ -1861,31 +1861,31 @@ impl Game {
         self.set_player_attack_ratio(slot, d.attack_ratio);
         self.set_player_defense_ratio(slot, d.defense_ratio);
         self.set_player_more_flags_bit1(slot, u8::from(d.voice_muted));
-        let x4 = &mut self.vs.state.fighters[slot as usize].flags[0];
-        let set = |x4: &mut u8, bit: u8, on: bool| {
+        let flags = &mut self.vs.state.fighters[slot as usize].flags[0];
+        let set = |flags: &mut u8, bit: u8, on: bool| {
             if on {
-                *x4 |= bit;
+                *flags |= bit;
             } else {
-                *x4 &= !bit;
+                *flags &= !bit;
             }
         };
-        set(x4, 0x40, d.unread_c_b3);
-        set(x4, 0x80, d.vs_metal);
+        set(flags, 0x40, d.unread_c_b3);
+        set(flags, 0x80, d.vs_metal);
         self.set_player_is_metal(slot, u8::from(d.vs_metal));
-        let x4 = &mut self.vs.state.fighters[slot as usize].flags[0];
-        set(x4, 0x20, d.vs_invisible);
+        let flags = &mut self.vs.state.fighters[slot as usize].flags[0];
+        set(flags, 0x20, d.vs_invisible);
         self.set_player_flags_bit6(slot, u8::from(d.vs_invisible));
         self.set_player_flags_bit7(slot, 0);
         self.set_player_flags_ae_bit0(slot, u8::from(d.attrs_scaled));
         self.set_player_more_flags_bit3(slot, u8::from(!d.no_offscreen_damage));
         self.set_player_more_flags_bit4(slot, u8::from(d.no_magnifier));
         self.set_player_more_flags_bit5(slot, u8::from(d.dies_up));
-        let x4 = &mut self.vs.state.fighters[slot as usize].flags[0];
-        set(x4, 0x10, d.shows_hearts);
+        let flags = &mut self.vs.state.fighters[slot as usize].flags[0];
+        set(flags, 0x10, d.shows_hearts);
         self.set_player_more_flags_bit6(slot, d.sfx_size);
         self.set_player_facing(slot, crate::fpu::mem(f64::from(d.spawn_dir)));
-        let x4 = &mut self.vs.state.fighters[slot as usize].flags[0];
-        set(x4, 0x04, d.hp_explodes);
+        let flags = &mut self.vs.state.fighters[slot as usize].flags[0];
+        set(flags, 0x04, d.hp_explodes);
     }
 
     /// The match's state from its `StartMeleeData`, `fn_8016DCC0`: the rules, the clock,

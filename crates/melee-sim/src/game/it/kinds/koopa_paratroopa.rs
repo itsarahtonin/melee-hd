@@ -211,13 +211,16 @@ pub fn fly(r: &mut Running, gobj: GObjId) {
     let facing = reg(item(r.game, gobj).facing_dir);
     match get(r, gobj, off::KIND) {
         0 => {
-            let x10 = attr_i32(r, gobj, 0x10);
-            let x10sq = x10.wrapping_mul(x10);
-            let xc = reg(attr_f32(r, gobj, 0xC));
+            let hop_frames = attr_i32(r, gobj, 0x10);
+            let hop_frames_sq = hop_frames.wrapping_mul(hop_frames);
+            let hop_height = reg(attr_f32(r, gobj, 0xC));
             let ip = item_mut(r.game, gobj);
             ip.vel.x = mem(fp::fmuls(facing, speed));
             ip.vel.y = 0.0;
-            let a = fp::fmuls(fp::fneg(1.0), fp::fdivs(fp::fmuls(2.0, xc), to_f32(x10sq)));
+            let a = fp::fmuls(
+                fp::fneg(1.0),
+                fp::fdivs(fp::fmuls(2.0, hop_height), to_f32(hop_frames_sq)),
+            );
             set_f32(r, gobj, off::X30, mem(a));
         }
         1 => {
@@ -234,25 +237,31 @@ pub fn fly(r: &mut Running, gobj: GObjId) {
                 ),
             );
             set_f32(r, gobj, off::X2C, mem(accel));
-            let x24 = attr_i32(r, gobj, 0x1C) / 2;
+            let bob_frames = attr_i32(r, gobj, 0x1C) / 2;
             let half_height = fp::fdivs(reg(attr_f32(r, gobj, 0x18)), to_f32(2));
-            set(r, gobj, off::X24, x24);
+            set(r, gobj, off::X24, bob_frames);
             item_mut(r.game, gobj).vel.y = mem(fp::fmuls(
                 fp::fneg(1.0),
-                fp::fdivs(half_height, to_f32(x24)),
+                fp::fdivs(half_height, to_f32(bob_frames)),
             ));
-            let a = fp::fdivs(fp::fmuls(2.0, half_height), to_f32(x24.wrapping_mul(x24)));
+            let a = fp::fdivs(
+                fp::fmuls(2.0, half_height),
+                to_f32(bob_frames.wrapping_mul(bob_frames)),
+            );
             set_f32(r, gobj, off::X30, mem(a));
         }
         2 => {
-            let x20 = attr_i32(r, gobj, 0x24) / 2;
+            let bob_frames = attr_i32(r, gobj, 0x24) / 2;
             let half_height = fp::fdivs(reg(attr_f32(r, gobj, 0x20)), to_f32(2));
-            set(r, gobj, off::X20, x20);
+            set(r, gobj, off::X20, bob_frames);
             item_mut(r.game, gobj).vel.y = mem(fp::fmuls(
                 fp::fneg(1.0),
-                fp::fdivs(half_height, to_f32(x20)),
+                fp::fdivs(half_height, to_f32(bob_frames)),
             ));
-            let a = fp::fdivs(fp::fmuls(2.0, half_height), to_f32(x20.wrapping_mul(x20)));
+            let a = fp::fdivs(
+                fp::fmuls(2.0, half_height),
+                to_f32(bob_frames.wrapping_mul(bob_frames)),
+            );
             set_f32(r, gobj, off::X30, mem(a));
         }
         _ => {}
@@ -367,13 +376,13 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
     if landed {
         match get(r, gobj, off::KIND) {
             0 => {
-                let x10 = attr_i32(r, gobj, 0x10);
+                let hop_frames = attr_i32(r, gobj, 0x10);
                 let dir = reg(item(r.game, gobj).facing_dir);
-                let xc = reg(attr_f32(r, gobj, 0xC));
+                let hop_height = reg(attr_f32(r, gobj, 0xC));
                 let speed = reg(zako::walk_speed(r, gobj));
                 let ip = item_mut(r.game, gobj);
                 ip.vel.x = mem(fp::fmuls(dir, speed));
-                ip.vel.y = mem(fp::fdivs(xc, to_f32(x10)));
+                ip.vel.y = mem(fp::fdivs(hop_height, to_f32(hop_frames)));
             }
             1 => {
                 let ip = item_mut(r.game, gobj);
@@ -527,17 +536,17 @@ pub fn unwing(r: &mut Running, gobj: GObjId) {
     lib2725::clear_stomp(r.game, gobj);
     hitbox::clear_hit_ids(r.game, gobj);
     spawn_koopa(r, gobj);
-    let x28 = attr_f32(r, gobj, 0x28);
-    set(r, gobj, off::X20, fp::fctiwz(reg(x28)));
-    let x2c = attr_i32(r, gobj, 0x2C);
-    set(r, gobj, off::X28, x2c);
+    let flutter_frames = attr_f32(r, gobj, 0x28);
+    set(r, gobj, off::X20, fp::fctiwz(reg(flutter_frames)));
+    let flicker_frames = attr_i32(r, gobj, 0x2C);
+    set(r, gobj, off::X28, flicker_frames);
     set(r, gobj, off::X44, 0);
-    let (x30, x34) = (reg(attr_f32(r, gobj, 0x30)), reg(attr_f32(r, gobj, 0x34)));
+    let (drift_from, drift_to) = (reg(attr_f32(r, gobj, 0x30)), reg(attr_f32(r, gobj, 0x34)));
     let abs = |x: f64| if x < 0.0 { fp::fneg(x) } else { x };
-    let range = fp::fctiwz(fp::fadds(abs(x30), abs(x34)));
+    let range = fp::fctiwz(fp::fadds(abs(drift_from), abs(drift_to)));
     let step = |r: &mut Running| {
         let mut n = r.game.objs.rng.below(range);
-        let mut val = x30;
+        let mut val = drift_from;
         while n != 0 {
             val = fp::fadds(val, reg(0.1_f32));
             n = n.wrapping_sub(1);
@@ -558,8 +567,8 @@ pub fn unwing(r: &mut Running, gobj: GObjId) {
 pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
     let t = get(r, gobj, off::X28);
     if t == 0 {
-        let x2c = attr_i32(r, gobj, 0x2C);
-        set(r, gobj, off::X28, x2c);
+        let flicker_frames = attr_i32(r, gobj, 0x2C);
+        set(r, gobj, off::X28, flicker_frames);
         let toggle = get(r, gobj, off::X44) ^ 1;
         set(r, gobj, off::X44, toggle);
         let (b18, b11) = (bone(r, gobj, 18), bone(r, gobj, 11));
@@ -586,8 +595,8 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
     jobj::set_srt(&mut r.game.objs.jobjs, b18, |o| {
         o.translate.z = mem(fp::fadds(reg(o.translate.z), drift));
     });
-    let (x38, x3c) = (attr_f32(r, gobj, 0x38), attr_f32(r, gobj, 0x3C));
-    lib2725::fall(r.game, gobj, x38, x3c);
+    let (gravity, max_fall) = (attr_f32(r, gobj, 0x38), attr_f32(r, gobj, 0x3C));
+    lib2725::fall(r.game, gobj, gravity, max_fall);
 }
 
 /// The wings' collision, `itPatapata_UnkMotion4_Coll`: after `x20` frames they go

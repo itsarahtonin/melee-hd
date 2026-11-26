@@ -83,7 +83,7 @@ fn shared(v: &mut ItemVars) -> Vars<'_> {
         grown: &mut v.scale,
         reflected: &mut v.frames,
         owner: &mut v.owner,
-        xde4: &mut v.unread_e4,
+        cleared: &mut v.unread_e4,
     }
 }
 
@@ -159,11 +159,11 @@ pub fn let_go(r: &mut Running, gobj: GObjId) {
 
 /// The flash's own start: up and away at its angle.
 fn rise(r: &mut Running, gobj: GObjId) {
-    let unk1 = reg(attr_f32(r, gobj, attr::UNK1));
+    let angle_deg = reg(attr_f32(r, gobj, attr::UNK1));
     let rise = reg(attr_f32(r, gobj, attr::PEAK_RISE_HEIGHT));
     let ip = item_mut(r.game, gobj);
     let angle = mem(fp::fmadds(
-        fp::fmuls(f64::from(0.017_453_292_f32), unk1),
+        fp::fmuls(f64::from(0.017_453_292_f32), angle_deg),
         reg(ip.facing_dir),
         fp::frsp(fp::fdiv(std::f64::consts::PI, 2.0)),
     ));

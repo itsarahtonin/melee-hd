@@ -58,8 +58,8 @@ impl Running<'_> {
     fn hold_bone_joint(&self, gobj: GObjId) -> Option<JObjId> {
         let fp = self.game.fighter(gobj);
         let d = fp.ft_data.expect("a fighter without data");
-        let x8 = self.data.ptr(d.at(8)).expect("ftData::x8");
-        let i = self.data.u8(x8.at(0x11));
+        let model_desc = self.data.ptr(d.at(8)).expect("ftData::x8");
+        let i = self.data.u8(model_desc.at(0x11));
         self.bone_joint(gobj, i32::from(i))
     }
 
@@ -504,8 +504,8 @@ impl Running<'_> {
             super::throw::unconstrain(&mut self.game.objs, xj);
             let fp = self.game.fighter_mut(held);
             fp.held_in_model = false;
-            let x2174 = fp.thrown_trans;
-            jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
+            let thrown_trans = fp.thrown_trans;
+            jobj::set_translate(&mut self.game.objs.jobjs, xj, thrown_trans);
             pos
         };
 
@@ -990,7 +990,7 @@ impl Running<'_> {
         let bone = self.bone(f, bone_idx).joint;
         let model = Running::model_scale(fp);
         let gf = self.game.fighter_id(grabber);
-        let scale = mem(fp::fdivs(reg(self.ys_attr_x120(gf)), model));
+        let scale = mem(fp::fdivs(reg(self.ys_swallowed_scale(gf)), model));
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.hurt_capsules[0];
         h.capsule.bone_idx = bone_idx;

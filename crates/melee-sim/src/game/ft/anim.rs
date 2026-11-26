@@ -23,7 +23,8 @@ const PART_35: i32 = 0x35;
 const X_ROT_N: i32 = 2;
 
 /// The fighter's `x594` bits, most significant first.
-pub fn x594_bit(fp: &Fighter, bit: u32) -> bool {
+#[doc(alias("x594_bit"))]
+pub fn anim_bit(fp: &Fighter, bit: u32) -> bool {
     fp.anim_bits[0] & (0x80 >> bit) != 0
 }
 
@@ -66,7 +67,7 @@ impl Running<'_> {
         let i = self.bone_index(fp, PART_35) as usize;
         match self.bones(f).get(i) {
             Some(b) => b.joint,
-            None if !x594_bit(fp, 5) => None,
+            None if !anim_bit(fp, 5) => None,
             None => crate::game::code::unported_call(&format!(
                 "ftAnim_8006EBA4's part 0x35 past the parts of fighter kind {} (parts[{i}], compared with x594 bit 5)",
                 fp.kind
@@ -100,7 +101,7 @@ impl Running<'_> {
         self.game.objs.aobj_f1 = Some(0.0);
         if self.game.fighters[f.0].anim_blend_frames == 0.0 {
             jobj::clear_flags_all(&mut self.game.objs.jobjs, Some(root), USE_QUATERNION);
-            if x594_bit(&self.game.fighters[f.0], 0) {
+            if anim_bit(&self.game.fighters[f.0], 0) {
                 let fp = &self.game.fighters[f.0];
                 let p35 = self.part_35_joint(f);
                 let trans = self.bone(f, self.bone_index(fp, TRANS_N)).joint;
@@ -124,7 +125,7 @@ impl Running<'_> {
                 t_inv = fp::fsubs(1.0, t);
             }
             self.anim_part_tree(f, 0);
-            if x594_bit(&self.game.fighters[f.0], 0) {
+            if anim_bit(&self.game.fighters[f.0], 0) {
                 let fp = &self.game.fighters[f.0];
                 let p35 = self.part_35_joint(f);
                 let trans = self.bone(f, self.bone_index(fp, TRANS_N)).interp_joint;
@@ -143,7 +144,7 @@ impl Running<'_> {
                 self.copy_parts(f, TRANS_N);
             }
         }
-        if x594_bit(&self.game.fighters[f.0], 2) {
+        if anim_bit(&self.game.fighters[f.0], 2) {
             match self.anim_frame(gobj) {
                 Some(frame) => {
                     let fp = &mut self.game.fighters[f.0];
@@ -204,7 +205,7 @@ impl Running<'_> {
     ) {
         aobj::init_end_callback(&mut self.game.objs.aobjs);
         let scale_of = |fp: &Fighter| {
-            if !x594_bit(fp, 6) {
+            if !anim_bit(fp, 6) {
                 Self::model_scale(fp)
             } else {
                 reg(fp.co_attrs.model_scaling)
@@ -234,7 +235,7 @@ impl Running<'_> {
                 fp.prev_trans_n_offset = fp.trans_n_offset;
                 fp.trans_n_offset = fp.trans_n_pos - fp.prev_trans_n_pos;
                 jobj::set_translate(&mut self.game.objs.jobjs, j, Vec3::default());
-            } else if x594_bit(&self.game.fighters[f.0], 5) && jobj == p35 {
+            } else if anim_bit(&self.game.fighters[f.0], 5) && jobj == p35 {
                 jobj::anim(
                     &mut self.game.objs,
                     self.data,
@@ -261,7 +262,7 @@ impl Running<'_> {
             jobj = next_in_tree(&self.game.objs.jobjs, j, None);
         }
         let fp = &mut self.game.fighters[f.0];
-        if x594_bit(fp, 5) {
+        if anim_bit(fp, 5) {
             let d = fp.trans_n_pos - fp.part_35_pos;
             fp.trans_n_pos = fp.part_35_pos;
             fp.prev_trans_n_pos = fp.prev_part_35_pos;
@@ -714,13 +715,13 @@ impl Running<'_> {
         // `ftAnim_80070200` on `ftData::x8->x8`.
         let fp = &self.game.fighters[f.0];
         let data = fp.ft_data.expect("a fighter without data");
-        let x8 = self.data.ptr(data.at(8)).expect("ftData::x8").at(8);
-        let n = self.data.u32(x8);
+        let tobj_count = self.data.ptr(data.at(8)).expect("ftData::x8").at(8);
+        let n = self.data.u32(tobj_count);
         assert!(
             n <= 5,
             "the original's assertion failed: fighter tobj num over!"
         );
-        let table = self.data.ptr(x8.at(4)).expect("ftData_x8_x8::xC");
+        let table = self.data.ptr(tobj_count.at(4)).expect("ftData_x8_x8::xC");
         let costume = u32::from(fp.costume_id);
         // A character without texture animations (Samus, Captain Falcon) has none for any
         // costume: the list is null, and so is what the fighter keeps.

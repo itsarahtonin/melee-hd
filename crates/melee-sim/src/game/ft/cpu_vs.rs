@@ -568,8 +568,8 @@ impl Running<'_> {
             self.cpu_common_item_target(f, ItKind::COMMON_END.id())
         };
         self.game.fighters[f.0].cpu.item_target = item;
-        let x50 = self.cpu_enemy_item_target(f);
-        self.game.fighters[f.0].cpu.enemy_item = x50;
+        let enemy_item = self.cpu_enemy_item_target(f);
+        self.game.fighters[f.0].cpu.enemy_item = enemy_item;
     }
 
     /// The character's distance threshold (`Fighter_804D64FC->x20[kind]`).

@@ -59,7 +59,7 @@ impl Running<'_> {
     /// where it stands (the floor below it unless that floor is one some stages exclude), its
     /// recorded inputs and buffers cleared, and its reach.
     #[doc(alias = "ftCo_800A101C")]
-    pub fn init_cpu(&mut self, f: FighterId, kind: i32, level: i32, x14: i32) {
+    pub fn init_cpu(&mut self, f: FighterId, kind: i32, level: i32, spawn_arg: i32) {
         let fp = &mut self.game.fighters[f.0];
         let c = &mut fp.cpu;
         if fp.kind == FighterKind::Nana {
@@ -71,7 +71,7 @@ impl Running<'_> {
             c.walk_far = 40.0;
         }
         c.level = level;
-        c.spawn_arg = x14;
+        c.spawn_arg = spawn_arg;
         use CpuBehavior as B;
         let (behavior, default, alt) = match CpuKind::from_id(c.kind) {
             Some(CpuKind::Walk | CpuKind::EnemyAgain) => (B::Pace, B::Pace, B::Idle),

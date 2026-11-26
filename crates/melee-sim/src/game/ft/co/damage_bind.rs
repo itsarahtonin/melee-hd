@@ -36,7 +36,7 @@ impl Running<'_> {
         let slot = i32::from(self.game.fighters[f.0].player_idx);
         let rank = self.player_rank(slot).wrapping_add(1);
         let c = self.common();
-        let (x658, x65c, x660, x664, x668, x66c) = (
+        let (base, per_handicap, handicap_ref, per_place, place_ref, per_percent) = (
             reg(c.f32(0x658)),
             reg(c.f32(0x65C)),
             reg(c.f32(0x660)),
@@ -44,12 +44,12 @@ impl Running<'_> {
             reg(c.f32(0x668)),
             reg(c.f32(0x66C)),
         );
-        let place = fp::fmuls(x664, fp::fsubs(x668, fp::frsp(f64::from(rank))));
+        let place = fp::fmuls(per_place, fp::fsubs(place_ref, fp::frsp(f64::from(rank))));
         let handicap = self.game.player_handicap(slot);
-        let hand = fp::fsubs(x660, fp::frsp(f64::from(handicap)));
-        let t = fp::fadds(fp::fmadds(x65c, hand, x658), place);
+        let hand = fp::fsubs(handicap_ref, fp::frsp(f64::from(handicap)));
+        let t = fp::fadds(fp::fmadds(per_handicap, hand, base), place);
         let fp = &mut self.game.fighters[f.0];
-        let timer = fp::fmadds(reg(fp.dmg.percent), x66c, t);
+        let timer = fp::fmadds(reg(fp.dmg.percent), per_percent, t);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
         fp.mash_stick_y = 0;

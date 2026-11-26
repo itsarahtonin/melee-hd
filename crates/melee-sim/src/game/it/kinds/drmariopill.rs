@@ -322,8 +322,8 @@ fn motion0_phys(r: &mut Running, gobj: GObjId) {
     let accel = a.f32(r.data, data::attr::FALL_SPEED);
     let max = a.f32(r.data, data::attr::FALL_SPEED_MAX);
     lib2725::fall(r.game, gobj, accel, max);
-    let x68 = common_data(r.game).f32(r.data, data::common::X68);
-    lib2725::clamp_fall(r.game, gobj, x68);
+    let max_fall = common_data(r.game).f32(r.data, data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
 }
 
 /// `itDrmariopill_UnkMotion0_Coll`: it stays in the air; when it meets the stage it bounces,

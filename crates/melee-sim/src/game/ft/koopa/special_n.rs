@@ -162,16 +162,16 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let j = self.bone_joint(gobj, p.mouth_bone);
         let mut v = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, p.mouth);
-        let x24 = reg(self.kp_n_attr_f32(gobj, p, attr::X24));
-        let x28 = reg(self.kp_n_attr_f32(gobj, p, attr::X28));
+        let mouth_x = reg(self.kp_n_attr_f32(gobj, p, attr::X24));
+        let mouth_y = reg(self.kp_n_attr_f32(gobj, p, attr::X28));
         let fp = &self.game.fighters[f.0];
         let scale = reg(fp.scale.y);
         v.x = mem(fp::fmadds(
             scale,
-            fp::fmuls(x24, reg(fp.facing_dir)),
+            fp::fmuls(mouth_x, reg(fp.facing_dir)),
             reg(v.x),
         ));
-        v.y = mem(fp::fmadds(x28, scale, reg(v.y)));
+        v.y = mem(fp::fmadds(mouth_y, scale, reg(v.y)));
         let dir = self.kp_flame_dir(gobj);
         let fp = &self.game.fighters[f.0];
         let (facing, id) = (fp.facing_dir, fp.mv_i32(mv::N_ATTACK_ID) as u32);
@@ -185,10 +185,10 @@ impl Running<'_> {
             self.renew_attack_instance(gobj);
         }
         if self.game.fighters[f.0].mv_i32(mv::N_X14) % 3 == 0 {
-            let x1c = reg(self.kp_n_attr_f32(gobj, p, attr::X1C));
-            let x18 = reg(self.kp_n_attr_f32(gobj, p, attr::X18));
+            let min_size = reg(self.kp_n_attr_f32(gobj, p, attr::X1C));
+            let max_size = reg(self.kp_n_attr_f32(gobj, p, attr::X18));
             let size = reg(self.game.fighters[f.0].u_f32(p.u + u::FLAME_SIZE));
-            let ratio = fp::fdivs(fp::fsubs(size, x1c), fp::fsubs(x18, x1c));
+            let ratio = fp::fdivs(fp::fsubs(size, min_size), fp::fsubs(max_size, min_size));
             let koopa = !p.sfx_by_kind || self.game.fighters[f.0].kind == FighterKind::Koopa;
             let sfx = if ratio < f64::from(0.3333_f32) {
                 if koopa { 0x24A2B } else { 0x1D4F3 }
@@ -216,25 +216,25 @@ impl Running<'_> {
         let motion = self.game.fighter(gobj).motion_id;
         let first = p.states + ms::SPECIAL_N_START;
         if !(first..first + 6).contains(&motion) {
-            let (x8, x10) = (
+            let (speed_regen, max_speed) = (
                 self.kp_n_attr_f32(gobj, p, attr::X8),
                 self.kp_n_attr_f32(gobj, p, attr::X10),
             );
-            let (xc, x18) = (
+            let (size_regen, max_size) = (
                 self.kp_n_attr_f32(gobj, p, attr::XC),
                 self.kp_n_attr_f32(gobj, p, attr::X18),
             );
             let (speed, size) = (p.u + u::FLAME_SPEED, p.u + u::FLAME_SIZE);
             let fp = self.game.fighter_mut(gobj);
-            let s = mem(fp::fadds(reg(fp.u_f32(speed)), reg(x8)));
+            let s = mem(fp::fadds(reg(fp.u_f32(speed)), reg(speed_regen)));
             fp.set_u_f32(speed, s);
-            if fp.u_f32(speed) > x10 {
-                fp.set_u_f32(speed, x10);
+            if fp.u_f32(speed) > max_speed {
+                fp.set_u_f32(speed, max_speed);
             }
-            let s = mem(fp::fadds(reg(fp.u_f32(size)), reg(xc)));
+            let s = mem(fp::fadds(reg(fp.u_f32(size)), reg(size_regen)));
             fp.set_u_f32(size, s);
-            if fp.u_f32(size) > x18 {
-                fp.set_u_f32(size, x18);
+            if fp.u_f32(size) > max_size {
+                fp.set_u_f32(size, max_size);
             }
         }
     }
@@ -382,7 +382,7 @@ impl Running<'_> {
         } else if third {
             self.kp_flame(gobj, p);
         }
-        let (x14, x1c) = (
+        let (min_speed, min_size) = (
             self.kp_n_attr_f32(gobj, p, attr::X14),
             self.kp_n_attr_f32(gobj, p, attr::X1C),
         );
@@ -392,13 +392,13 @@ impl Running<'_> {
         fp.set_mv_i32(mv::N_X0, if n >= 3 { 0 } else { n });
         let s = mem(fp::fsubs(reg(fp.u_f32(speed)), 1.0));
         fp.set_u_f32(speed, s);
-        if fp.u_f32(speed) < x14 {
-            fp.set_u_f32(speed, x14);
+        if fp.u_f32(speed) < min_speed {
+            fp.set_u_f32(speed, min_speed);
         }
         let s = mem(fp::fsubs(reg(fp.u_f32(size)), 1.0));
         fp.set_u_f32(size, s);
-        if fp.u_f32(size) < x1c {
-            fp.set_u_f32(size, x1c);
+        if fp.u_f32(size) < min_size {
+            fp.set_u_f32(size, min_size);
         }
         let t = fp.mv_i32(mv::N_TIMER).wrapping_add(1);
         fp.set_mv_i32(mv::N_TIMER, t);

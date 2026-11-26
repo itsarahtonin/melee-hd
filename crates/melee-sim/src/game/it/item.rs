@@ -240,12 +240,12 @@ pub fn bump_count(n: &mut super::super::structs::ItemCounts, hold_kind: i32, del
 /// Counts an item out, `Item_802675A8`.
 #[doc(alias = "Item_802675A8")]
 pub fn uncount(game: &mut Game, gobj: GObjId) {
-    let (hold_kind, x18) = {
+    let (hold_kind, spawn_origin) = {
         let ip = super::item(game, gobj);
         (ip.hold_kind, ip.spawn_origin)
     };
     bump_count(&mut game.it.counts, hold_kind, -1);
-    if super::super::gm::is_training(game) && x18 == 1 {
+    if super::super::gm::is_training(game) && spawn_origin == 1 {
         game.it.counts.training_items = game.it.counts.training_items.wrapping_sub(1);
     }
 }
@@ -253,7 +253,7 @@ pub fn uncount(game: &mut Game, gobj: GObjId) {
 /// Counts a new item in, `Item_802676F4` (the Pokémon aren't counted here).
 #[doc(alias = "Item_802676F4")]
 pub fn count(game: &mut Game, gobj: GObjId) {
-    let (hold_kind, kind, x18) = {
+    let (hold_kind, kind, spawn_origin) = {
         let ip = super::item(game, gobj);
         (ip.hold_kind, ip.kind, ip.spawn_origin)
     };
@@ -267,7 +267,7 @@ pub fn count(game: &mut Game, gobj: GObjId) {
         Some(HoldKind::Food) => super::lib2725::count_food(game),
         _ => {}
     }
-    if super::super::gm::is_training(game) && x18 == 1 {
+    if super::super::gm::is_training(game) && spawn_origin == 1 {
         game.it.counts.training_items = game.it.counts.training_items.wrapping_add(1);
     }
 }
@@ -445,7 +445,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.flags.flags.spin_axis = a.spin_axis(data);
     ip.grab_offset = a.vec2(data, attr::X30);
     ip.grab_range = a.vec2(data, attr::GRAB_RANGE);
-    ip.flags.flags.keeps_clear = a.x1_4(data);
+    ip.flags.flags.keeps_clear = a.keeps_clear(data);
     ip.push_box = a.ecb(data, attr::ECB);
     ip.push_box_base = a.ecb(data, attr::ECB);
     ip.flags.flags.clear_of_fighters = true;
@@ -841,8 +841,8 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     lib2725::init_spin(r.game, gobj);
     let pos = super::item(r.game, gobj).pos;
     set_translate(r.game, model.expect("an item without a model"), pos);
-    let x6c = common_data(r.game).f32(r.data, common::X6C);
-    lib2725::clamp_fall(r.game, gobj, x6c);
+    let max_fall = common_data(r.game).f32(r.data, common::X6C);
+    lib2725::clamp_fall(r.game, gobj, max_fall);
     lib2725::clear_hitboxes(r.game, r.data, gobj);
     coll::set_hurtbox_state(r.game, gobj, coll::HURT_ENABLED);
     coll::clear_random_push(r.game, gobj);
@@ -1260,7 +1260,7 @@ pub fn proc_anim(r: &mut Running, gobj: GObjId) {
     }
     let ip = super::item(r.game, gobj);
     if ip.flags.flags.pickup && ip.kind < ItKind::COMMON_END && !flag(ip.status_flags, 3) {
-        let x34 = common_data(r.game).u32(r.data, common::X34);
+        let blink_frames = common_data(r.game).u32(r.data, common::X34);
         let ip = item_mut(r.game, gobj);
         ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
         if reg(ip.life_timer) <= 0.0 {
@@ -1268,7 +1268,7 @@ pub fn proc_anim(r: &mut Running, gobj: GObjId) {
             destroy(r, gobj);
             return;
         }
-        if reg(ip.life_timer) <= fp::frsp(f64::from(x34)) {
+        if reg(ip.life_timer) <= fp::frsp(f64::from(blink_frames)) {
             lib2725::flicker(r.game, r.data, gobj);
         }
     }
@@ -1305,8 +1305,8 @@ pub fn vec_add(a: Vec3, b: Vec3) -> Vec3 {
 /// callback, then its velocity, the floor's motion and the blast zones.
 #[doc(alias = "Item_802697D4")]
 pub fn proc_phys(r: &mut Running, gobj: GObjId) {
-    let x9 = super::item(r.game, gobj).flags.flags.in_hitlag;
-    if !x9 && let Some(cb) = super::item(r.game, gobj).physics_updated {
+    let in_hitlag = super::item(r.game, gobj).flags.flags.in_hitlag;
+    if !in_hitlag && let Some(cb) = super::item(r.game, gobj).physics_updated {
         call(r, gobj, cb);
     }
     let ip = super::item(r.game, gobj);
@@ -1778,10 +1778,10 @@ pub fn enter_hitlag(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     ip.flags.flags.in_hitlag = true;
-    let (victim, x8) = (ip.atk_victim, ip.flags.flags.clank_hitlag);
+    let (victim, clank_hitlag) = (ip.atk_victim, ip.flags.flags.clank_hitlag);
     if let Some(v) = victim
         && is_item(r.game, victim)
-        && !x8
+        && !clank_hitlag
     {
         item_mut(r.game, v).flags.flags.clank_hitlag = true;
         enter_hitlag(r, v);
@@ -1796,10 +1796,10 @@ pub fn exit_hitlag(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     ip.flags.flags.in_hitlag = false;
-    let (victim, x8) = (ip.atk_victim, ip.flags.flags.clank_hitlag);
+    let (victim, clank_hitlag) = (ip.atk_victim, ip.flags.flags.clank_hitlag);
     if let Some(v) = victim
         && is_item(r.game, victim)
-        && !x8
+        && !clank_hitlag
     {
         end_clank_hitlag(r, v);
     }
@@ -1989,9 +1989,9 @@ pub fn stop_sfx2(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_8026B0B4")]
 pub fn stop_all_sfx(r: &mut Running, gobj: GObjId) {
     r.lb_stop_owned_sound_objects(gobj);
-    let xd6c = super::item(r.game, gobj).sfx;
-    if xd6c != NO_SFX {
-        r.lb_stop_owned_sound_object(gobj, xd6c);
+    let sfx = super::item(r.game, gobj).sfx;
+    if sfx != NO_SFX {
+        r.lb_stop_owned_sound_object(gobj, sfx);
         item_mut(r.game, gobj).sfx = NO_SFX;
     }
     for second in [false, true] {

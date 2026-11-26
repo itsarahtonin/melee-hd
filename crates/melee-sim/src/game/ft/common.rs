@@ -451,7 +451,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007DD7C")]
     fn nudge_from_others(&mut self, gobj: GObjId, v: Vec3) {
         let c = self.common();
-        let (x450, x454) = (reg(c.f32(0x450)), reg(c.f32(0x454)));
+        let (nudge_x, nudge_z) = (reg(c.f32(0x450)), reg(c.f32(0x454)));
         let mut seen_self = false;
         let mut cur = self.game.world.first_in(FIGHTER_P_LINK);
         while let Some(o) = cur {
@@ -487,18 +487,18 @@ impl Running<'_> {
             let signed = |neg: bool, v: f64| if neg { fp::fneg(v) } else { v };
             let nv = &mut self.game.fighter_mut(gobj).nudge_vel;
             let dx = if d != 0.0 {
-                signed(d < 0.0, x450)
+                signed(d < 0.0, nudge_x)
             } else {
-                signed(seen_self, x450)
+                signed(seen_self, nudge_x)
             };
             nv.x = mem(fp::fadds(reg(nv.x), dx));
             let dz = fp::fsubs(reg(v.z), reg(p.z));
             let dy = if dz != 0.0 {
-                signed(dz < 0.0, x454)
+                signed(dz < 0.0, nudge_z)
             } else if d != 0.0 {
-                signed(d < 0.0, x454)
+                signed(d < 0.0, nudge_z)
             } else {
-                signed(seen_self, x454)
+                signed(seen_self, nudge_z)
             };
             nv.y = mem(fp::fadds(reg(nv.y), dy));
         }
@@ -525,9 +525,9 @@ impl Running<'_> {
                 );
                 let abs = if d < 0.0 { fp::fneg(d) } else { d };
                 if abs < fp::fadds(reg(mine.y), reg(theirs.y)) {
-                    let x45c = reg(self.common().f32(0x45C));
+                    let nudge_down = reg(self.common().f32(0x45C));
                     let nv = &mut self.game.fighter_mut(gobj).nudge_vel;
-                    nv.y = mem(fp::fsubs(reg(nv.y), x45c));
+                    nv.y = mem(fp::fsubs(reg(nv.y), nudge_down));
                 }
             }
         }

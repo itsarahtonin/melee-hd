@@ -245,22 +245,22 @@ impl Running<'_> {
         let stats = &t.actions;
         let aerials = stats.hits.aerials_count;
         let atk_thrown = stats.attacks.thrown_item_count;
-        let atk_x1a8 = stats.attacks.spikes_count;
+        let atk_spikes = stats.attacks.spikes_count;
         let hit_counts = stats.hits.by_attack_counts;
         let atk_counts = stats.attacks.by_attack_counts;
         let hit_thrown = stats.hits.thrown_item_count;
         let hit_specials = stats.hits.specials_count;
-        let hit_x1a0 = stats.hits.strikes_count;
-        let hit_x1a8 = stats.hits.spikes_count;
-        let x358_x1a8 = hits_word(stats, 0x1A8);
+        let hit_strikes = stats.hits.strikes_count;
+        let hit_spikes = stats.hits.spikes_count;
+        let landed_spikes = hits_word(stats, 0x1A8);
         let attacks_total = stats.attacks.total;
         let hits_total = stats.hits.total;
-        let x358_total = hits_word(stats, 0);
-        let x358_counts: [u32; 100] = core::array::from_fn(|i| hits_count(stats, i));
-        let (x56c, x574) = (stats.back_hits, stats.down_hits);
-        let (xc60, xc64, xc74, xc94) =
+        let landed_total = hits_word(stats, 0);
+        let landed_counts: [u32; 100] = core::array::from_fn(|i| hits_count(stats, i));
+        let (back_hits, down_hits) = (stats.back_hits, stats.down_hits);
+        let (damage_taken, peak_damage, scope_damage, star_falls) =
             (t.damage_taken, t.peak_damage, t.scope_damage, t.star_falls);
-        let (xd04, xd0c, xdc8, dd1) = (
+        let (longest_without_dealing, longest_without_taking, hits_flag, dd1) = (
             p.ext.longest_without_dealing,
             p.ext.longest_without_taking,
             p.ext.hits_flag,
@@ -273,7 +273,7 @@ impl Running<'_> {
         if hit_specials != 0 && hit_specials == hits_total {
             flags.push(0x21);
         }
-        if hit_x1a0 != 0 && hit_x1a0 == hits_total {
+        if hit_strikes != 0 && hit_strikes == hits_total {
             flags.push(0x22);
         }
         if hits_total != 0 && (1..100).all(|i| (0x33..=0x3D).contains(&i) || hit_counts[i] == 0) {
@@ -326,7 +326,7 @@ impl Running<'_> {
         {
             let (mut count, mut min, mut max) = (0i32, 0i32, 0i32);
             let mut skipped = false;
-            for &c in &x358_counts[1..100] {
+            for &c in &landed_counts[1..100] {
                 if c != 0 {
                     count = count.wrapping_add(1);
                     if c > max as u32 {
@@ -376,29 +376,29 @@ impl Running<'_> {
                     .set_bonus_flag(player, if n == 1 { 0x18 } else { 0x17 });
             }
         }
-        if hits_total != 0 && average(single(x56c), single(hits_total)) >= self.plco_f32(0x8) {
+        if hits_total != 0 && average(single(back_hits), single(hits_total)) >= self.plco_f32(0x8) {
             self.game.set_bonus_flag(player, 3);
         }
-        if hits_total != 0 && x574 == hits_total {
+        if hits_total != 0 && down_hits == hits_total {
             self.game.set_bonus_flag(player, 5);
         } else if hits_total >= self.plco_u32(0xC)
-            && average(single(x574), single(hits_total)) >= self.plco_f32(0x10)
+            && average(single(down_hits), single(hits_total)) >= self.plco_f32(0x10)
         {
             self.game.set_bonus_flag(player, 4);
         }
-        if attacks_total == 0 && xc60 == 0.0 {
+        if attacks_total == 0 && damage_taken == 0.0 {
             self.game.set_bonus_flag(player, 0x64);
         } else {
             if attacks_total == 0 {
                 self.game.set_bonus_flag(player, 0x60);
-            } else if xd04 >= self.plco_u32(0x54) {
+            } else if longest_without_dealing >= self.plco_u32(0x54) {
                 self.game.set_bonus_flag(player, 0x2F);
-            } else if xd04 >= self.plco_u32(0x50) {
+            } else if longest_without_dealing >= self.plco_u32(0x50) {
                 self.game.set_bonus_flag(player, 0x2E);
             }
-            if xc60 == 0.0 {
+            if damage_taken == 0.0 {
                 self.game.set_bonus_flag(player, 0x62);
-            } else if xd0c >= self.plco_u32(0xF0) {
+            } else if longest_without_taking >= self.plco_u32(0xF0) {
                 self.game.set_bonus_flag(player, 0x61);
             }
         }
@@ -406,20 +406,20 @@ impl Running<'_> {
             .wrapping_add(self.game.one_player_falls() as u32);
         if falls == 0 {
             self.game.set_bonus_flag(player, 0x63);
-        } else if falls == xc94 as u32 {
+        } else if falls == star_falls as u32 {
             self.game.set_bonus_flag(player, 0x66);
         }
         if bit(dd1, 0) && bit(dd1, 1) && bit(dd1, 2) && bit(dd1, 3) {
             self.game.set_bonus_flag(player, 0x86);
         }
-        if atk_x1a8 != 0
-            && atk_x1a8 == x358_x1a8
-            && hit_x1a8 == self.game.player(player).stale_moves.bonuses[6]
+        if atk_spikes != 0
+            && atk_spikes == landed_spikes
+            && hit_spikes == self.game.player(player).stale_moves.bonuses[6]
         {
             self.game.set_bonus_flag(player, 8);
         }
         if !self.game.bonus_teams() {
-            let dmg = f64::from(fp::fctiwz(reg(xc64)));
+            let dmg = f64::from(fp::fctiwz(reg(peak_damage)));
             let dmg = fp::frsp(dmg);
             let f = if dmg >= 400.0 {
                 Some(0x20)
@@ -440,21 +440,21 @@ impl Running<'_> {
                 self.game.set_bonus_flag(player, f);
             }
         }
-        if xdc8 != 0 {
-            if x358_total == attacks_total {
+        if hits_flag != 0 {
+            if landed_total == attacks_total {
                 self.game.set_bonus_flag(player, 0xD);
-            } else if average(single(x358_total), single(attacks_total)) >= self.plco_f32(0x20) {
+            } else if average(single(landed_total), single(attacks_total)) >= self.plco_f32(0x20) {
                 self.game.set_bonus_flag(player, 0xC);
             }
         }
         {
             let sum_attacks = Game::attack_count_sum(&|i| atk_counts[i], 1, 0x10);
-            let sum_x358 = Game::attack_count_sum(&|i| x358_counts[i], 1, 0x10);
-            if sum_x358 != 0 && sum_attacks == sum_x358 && !bit(dd1, 4) {
+            let sum_landed = Game::attack_count_sum(&|i| landed_counts[i], 1, 0x10);
+            if sum_landed != 0 && sum_attacks == sum_landed && !bit(dd1, 4) {
                 self.game.set_bonus_flag(player, 0x23);
             }
         }
-        if reg(xc74) >= self.plco_f32(0x160) {
+        if reg(scope_damage) >= self.plco_f32(0x160) {
             self.game.set_bonus_flag(player, 0xAA);
         }
         if self.game.combo_average(player) >= self.plco_f32(0x0) {
@@ -463,10 +463,10 @@ impl Running<'_> {
         if self.has_normal_attack(gobj, 2) {
             let atk1 = atk_counts[1];
             if atk1 != 0 && atk1 == atk_counts[2] {
-                let hit1 = x358_counts[1];
-                if hit1 == x358_counts[2] && atk1 == hit1 {
+                let hit1 = landed_counts[1];
+                if hit1 == landed_counts[2] && atk1 == hit1 {
                     if self.has_normal_attack(gobj, 3) {
-                        if atk1 == atk_counts[3] && atk1 == x358_counts[3] {
+                        if atk1 == atk_counts[3] && atk1 == landed_counts[3] {
                             self.game.set_bonus_flag(player, 0x19);
                         }
                     } else {
@@ -530,14 +530,14 @@ impl Running<'_> {
         let hi = |id| by_attack_hi(s, id);
         let (h65, h67, h68, h6c, h6d, h6e) =
             (hi(0x65), hi(0x67), hi(0x68), hi(0x6C), hi(0x6D), hi(0x6E));
-        let (xce4, xce8, xc60, xc98, xca0) = (
+        let (strong_hits_taken, ledge_catches, damage_taken, stage_damage, victim_percent_sum) = (
             t.strong_hits_taken,
             t.ledge_catches,
             t.damage_taken,
             t.stage_damage,
             t.victim_percent_sum,
         );
-        let (xd14, xd2c, xd8c, xd94, dd0, dd1) = (
+        let (long_streak_frames, nudged_frames, opponent_distance, center_distance, dd0, dd1) = (
             p.ext.long_streak_frames,
             p.ext.nudged_frames,
             p.ext.opponent_distance,
@@ -552,7 +552,7 @@ impl Running<'_> {
         if h65 == 0 {
             flags.push(0x32);
         }
-        if xd14 == 0 {
+        if long_streak_frames == 0 {
             flags.push(0x33);
         }
         if h68 == 0 && h67 == 0 {
@@ -579,14 +579,17 @@ impl Running<'_> {
         for f in flags.drain(..) {
             self.game.set_bonus_flag(player, f);
         }
-        if xce4 != 0 && average(single(xce8), single(xce4)) >= self.plco_f32(0x9C) {
+        if strong_hits_taken != 0
+            && average(single(ledge_catches), single(strong_hits_taken)) >= self.plco_f32(0x9C)
+        {
             self.game.set_bonus_flag(player, 0x47);
         }
-        if reg(xc60) >= self.plco_f32(0xD0) && average(reg(xc98), reg(xc60)) >= self.plco_f32(0xCC)
+        if reg(damage_taken) >= self.plco_f32(0xD0)
+            && average(reg(stage_damage), reg(damage_taken)) >= self.plco_f32(0xCC)
         {
             self.game.set_bonus_flag(player, 0x57);
         }
-        if !self.game.bonus_teams() && xd2c == 0 {
+        if !self.game.bonus_teams() && nudged_frames == 0 {
             self.game.set_bonus_flag(player, 0x6B);
         }
         if !super::super::gm::is_super_sudden_death(self.game) && self.game.player_count() >= 3 {
@@ -600,7 +603,7 @@ impl Running<'_> {
             }
             if sum != 0.0 && n != 0 {
                 let avg = average(sum, fp::frsp(f64::from(n)));
-                if reg(xca0) >= fp::fmuls(avg, self.plco_f32(0xF4)) {
+                if reg(victim_percent_sum) >= fp::fmuls(avg, self.plco_f32(0xF4)) {
                     self.game.set_bonus_flag(player, 0x65);
                 }
             }
@@ -609,12 +612,15 @@ impl Running<'_> {
         // The two bonuses by the camera's width average: under Slippi's rules also taken with
         // playback's (`live::PlaybackCamera`), a different outcome noted (design call 9).
         let scales = (self.plco_f32(0x104), self.plco_f32(0x114));
-        let (far, near) = width_bonuses(reg(xd8c), reg(xd94), scales, width);
+        let (far, near) =
+            width_bonuses(reg(opponent_distance), reg(center_distance), scales, width);
         let timed = self.game.vs_frame_count() >= self.plco_u32(0x108);
         if timed && far {
             self.game.set_bonus_flag(player, 0x69);
         }
-        if self.game.vs_frame_count() >= self.plco_u32(0x110) && reg(xd8c) < self.plco_f32(0x10C) {
+        if self.game.vs_frame_count() >= self.plco_u32(0x110)
+            && reg(opponent_distance) < self.plco_f32(0x10C)
+        {
             self.game.set_bonus_flag(player, 0x6A);
         }
         if near {
@@ -622,7 +628,12 @@ impl Running<'_> {
         }
         let p = &self.game.display_phase.playback;
         if self.game.rules.notes_playback() && p.on {
-            let theirs = width_bonuses(reg(xd8c), reg(xd94), scales, reg(p.average_width()));
+            let theirs = width_bonuses(
+                reg(opponent_distance),
+                reg(center_distance),
+                scales,
+                reg(p.average_width()),
+            );
             if width_bonuses_differ(timed, (far, near), theirs) {
                 let tick = self.game.scene.game_ticks;
                 self.game.display_phase.note(tick);
@@ -640,7 +651,7 @@ impl Running<'_> {
         let s = &t.actions;
         let attack = s.attacks.by_attack_counts;
         let hit = s.hits.by_attack_counts;
-        let (xc6c, xc70) = (t.damage_dealt, t.pummel_damage);
+        let (damage_dealt, pummel_damage) = (t.damage_dealt, t.pummel_damage);
         if attack[STATS_CATCH] != 0 {
             if attack[STATS_CATCH] >= self.plco_u32(0x3C) && hit[STATS_CATCH] == 0 {
                 self.game.set_bonus_flag(player, 0x26);
@@ -666,7 +677,9 @@ impl Running<'_> {
         if (STATS_THROW_F..STATS_CARGO_THROW_F).all(|i| attack[i] != 0) {
             self.game.set_bonus_flag(player, 0x28);
         }
-        if xc6c > 0.0 && average(reg(xc70), reg(xc6c)) >= self.plco_f32(0x48) {
+        if damage_dealt > 0.0
+            && average(reg(pummel_damage), reg(damage_dealt)) >= self.plco_f32(0x48)
+        {
             self.game.set_bonus_flag(player, 0x2B);
         }
     }
@@ -677,7 +690,17 @@ impl Running<'_> {
     fn tally_time(&mut self, player: i32) {
         let p = self.game.player(player);
         let e = &p.ext;
-        let (xd14, xd1c, xd20, xd24, xd28, xd2c, xd30, xd38, xd3c) = (
+        let (
+            long_streak_frames,
+            attack_0x68_frames,
+            air_frames,
+            ground_frames,
+            steep_frames,
+            nudged_frames,
+            edge_frames,
+            screw_attack_frames,
+            saturn_frames,
+        ) = (
             e.long_streak_frames,
             e.attack_0x68_frames,
             e.air_frames,
@@ -692,32 +715,35 @@ impl Running<'_> {
         let frames = self.game.vs_frame_count();
         if frames != 0 {
             let f = single(frames);
-            if average(single(xd14), f) >= self.plco_f32(0x60) {
+            if average(single(long_streak_frames), f) >= self.plco_f32(0x60) {
                 self.game.set_bonus_flag(player, 0x34);
             }
-            if average(single(xd1c), f) >= self.plco_f32(0x68) {
+            if average(single(attack_0x68_frames), f) >= self.plco_f32(0x68) {
                 self.game.set_bonus_flag(player, 0x36);
             }
-            if average(single(xd20), f) >= self.plco_f32(0x6C) {
+            if average(single(air_frames), f) >= self.plco_f32(0x6C) {
                 self.game.set_bonus_flag(player, 0x37);
             }
-            if xd24 != 0 && average(single(xd28), single(xd24)) >= self.plco_f32(0x5C) {
+            if ground_frames != 0
+                && average(single(steep_frames), single(ground_frames)) >= self.plco_f32(0x5C)
+            {
                 self.game.set_bonus_flag(player, 0x30);
             }
-            if !self.game.bonus_teams() && average(single(xd2c), f) >= self.plco_f32(0x78) {
+            if !self.game.bonus_teams() && average(single(nudged_frames), f) >= self.plco_f32(0x78)
+            {
                 self.game.set_bonus_flag(player, 0x3C);
             }
-            if average(single(xd30), f) >= self.plco_f32(0xE8) {
+            if average(single(edge_frames), f) >= self.plco_f32(0xE8) {
                 self.game.set_bonus_flag(player, 0x5D);
             }
         }
         if bit(dd0, 3) && bit(dd0, 4) && bit(dd0, 5) && bit(dd0, 6) {
             self.game.set_bonus_flag(player, 0x5E);
         }
-        if xd38 >= self.plco_u32(0x164) {
+        if screw_attack_frames >= self.plco_u32(0x164) {
             self.game.set_bonus_flag(player, 0xAB);
         }
-        if xd3c >= self.plco_u32(0x16C) {
+        if saturn_frames >= self.plco_u32(0x16C) {
             self.game.set_bonus_flag(player, 0xB4);
         }
     }
@@ -741,8 +767,8 @@ impl Running<'_> {
         if g.items_logged2_total(player) == g.it.spawned as u32 {
             flags.push(0x9F);
         }
-        let x6d08 = g.it.foods_spawned;
-        if x6d08 != 0 && x6d08 as u32 == g.items_logged2(player, 18) {
+        let foods_spawned = g.it.foods_spawned;
+        if foods_spawned != 0 && foods_spawned as u32 == g.items_logged2(player, 18) {
             flags.push(0xA0);
         }
         let kinds = (0..39)

@@ -102,8 +102,8 @@ impl Running<'_> {
     /// The shield's joint, `parts[ftData::x8->x11]`.
     pub(super) fn shield_joint(&self, gobj: GObjId) -> Option<JObjId> {
         let f = self.game.fighter_id(gobj);
-        let x8 = self.ft_model_desc(&self.game.fighters[f.0]);
-        let part = self.data.u8(x8.at(0x11));
+        let model_desc = self.ft_model_desc(&self.game.fighters[f.0]);
+        let part = self.data.u8(model_desc.at(0x11));
         self.bones(f)[part as usize].joint
     }
 
@@ -138,7 +138,7 @@ impl Running<'_> {
             return reg(fp.co_attrs.initial_shield_size);
         }
         let c = self.common();
-        let (start, x264, x2d4, x2d8) = (
+        let (start, min_size, hard_scale, light_scale) = (
             reg(c.f32(0x260)),
             reg(c.f32(0x264)),
             reg(c.f32(0x2D4)),
@@ -146,9 +146,13 @@ impl Running<'_> {
         );
         let n1 = fp::fmuls(
             fp::fdivs(reg(fp.shield_health), start),
-            fp::fmadds(reg(fp.lightshield_amount), fp::fsubs(x2d8, x2d4), x2d4),
+            fp::fmadds(
+                reg(fp.lightshield_amount),
+                fp::fsubs(light_scale, hard_scale),
+                hard_scale,
+            ),
         );
-        let n3 = fp::fmadds(fp::fsubs(1.0, x264), n1, x264);
+        let n3 = fp::fmadds(fp::fsubs(1.0, min_size), n1, min_size);
         fp::fmuls(n3, reg(fp.co_attrs.initial_shield_size))
     }
 
@@ -195,8 +199,8 @@ impl Running<'_> {
         if mag > 1.0 {
             mag = 1.0;
         }
-        let x4 = reg(fp.mv_f32(GUARD_X4));
-        fp.set_mv_f32(GUARD_X4, fp::fmadds(ease, fp::fsubs(mag, x4), x4));
+        let lean = reg(fp.mv_f32(GUARD_X4));
+        fp.set_mv_f32(GUARD_X4, fp::fmadds(ease, fp::fsubs(mag, lean), lean));
     }
 
     /// The shield's pose and bubble while it's up, `ftCo_80091E78`: the tilt animation
@@ -214,8 +218,8 @@ impl Running<'_> {
         let ft_data = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without data");
-        let x20 = self.data.ptr(ft_data.at(0x20)).expect("ftData x20");
-        let poses = self.data.ptr(x20).expect("ftData x20->x0");
+        let pose_table = self.data.ptr(ft_data.at(0x20)).expect("ftData x20");
+        let poses = self.data.ptr(pose_table).expect("ftData x20->x0");
         let hold = self.data.ptr(poses.at(8));
         let t = reg(t);
         if self.game.fighters[f.0].mv_f32(GUARD_X4) != 0.0 {
@@ -281,12 +285,12 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800921DC")]
     pub fn shield_start(&mut self, gobj: GObjId) {
         self.shield_effect(gobj, 1047);
-        let x268 = self.common().f32(0x268);
+        let min_hold = self.common().f32(0x268);
         let fp = self.game.fighter_mut(gobj);
         fp.effect_once = true;
         fp.set_mv_i32(GUARD_XC, 0);
         fp.set_mv_f32(GUARD_X0, 0.0);
-        fp.set_mv_f32(GUARD_X10, reg(x268));
+        fp.set_mv_f32(GUARD_X10, reg(min_hold));
         fp.set_mv_f32(GUARD_X8, 10.0);
         fp.set_mv_f32(GUARD_X4, 0.0);
         fp.set_mv_f32(GUARD_X2C, 0.0);
@@ -367,10 +371,10 @@ impl Running<'_> {
             self.fighter_play_sfx(f, 129, 127, 64);
             return true;
         }
-        let x10 = reg(fp.mv_f32(GUARD_X10));
-        if x10 > 0.0 {
-            let x10 = fp::fsubs(x10, 1.0);
-            fp.set_mv_f32(GUARD_X10, if x10 < 0.0 { 0.0 } else { x10 });
+        let hold_left = reg(fp.mv_f32(GUARD_X10));
+        if hold_left > 0.0 {
+            let hold_left = fp::fsubs(hold_left, 1.0);
+            fp.set_mv_f32(GUARD_X10, if hold_left < 0.0 { 0.0 } else { hold_left });
         }
         false
     }
@@ -385,11 +389,11 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        let (x0, frames) = (fp.mv_f32(GUARD_X0), fp.guard_on_frames);
-        if x0 >= frames {
+        let (frame, frames) = (fp.mv_f32(GUARD_X0), fp.guard_on_frames);
+        if frame >= frames {
             self.enter_guard(gobj);
         } else {
-            self.shield_pose(gobj, mem(fp::fdivs(reg(x0), reg(frames))));
+            self.shield_pose(gobj, mem(fp::fdivs(reg(frame), reg(frames))));
         }
     }
 
@@ -571,13 +575,13 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80092ED8")]
     pub fn shield_stun_frames(&self, damage: i32, light: f32) -> f64 {
         let c = self.common();
-        let (a, b, x2e4, x2e8) = (
+        let (a, b, hard_press, light_press) = (
             reg(c.f32(0x28C)),
             reg(c.f32(0x290)),
             reg(c.f32(0x2E4)),
             reg(c.f32(0x2E8)),
         );
-        let press = fp::fmadds(reg(light), fp::fsubs(x2e8, x2e4), x2e4);
+        let press = fp::fmadds(reg(light), fp::fsubs(light_press, hard_press), hard_press);
         fp::fmadds(
             a,
             fp::fmuls(fp::frsp(f64::from(damage)), fp::fsubs(1.0, press)),
@@ -605,14 +609,15 @@ impl Running<'_> {
         self.set_anim_rate(gobj, mem(fp::fdivs(fp::fadds(reg(0.1f32), end), len)));
         if !cape {
             let c = self.common();
-            let (x294, x298, x2bc) = (reg(c.f32(0x294)), reg(c.f32(0x298)), reg(c.f32(0x2BC)));
+            let (push_scale, max_push, unpowered_scale) =
+                (reg(c.f32(0x294)), reg(c.f32(0x298)), reg(c.f32(0x2BC)));
             let fp = self.game.fighter_mut(gobj);
-            let mut v = fp::fmuls(len, x294);
+            let mut v = fp::fmuls(len, push_scale);
             if !fp.powershield {
-                v = fp::fmuls(v, x2bc);
+                v = fp::fmuls(v, unpowered_scale);
             }
-            if v > x298 {
-                v = x298;
+            if v > max_push {
+                v = max_push;
             }
             fp.gr_vel = mem(if fp.specialn_facing_dir < 0.0 {
                 v
@@ -629,7 +634,7 @@ impl Running<'_> {
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn guard_set_off_hitlag(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (min, window, scale, x4c0) = (
+        let (min, window, scale, sdi_unit) = (
             reg(c.f32(0x4B0)),
             c.i32(0x4B4),
             reg(c.f32(0x4B8)),
@@ -649,7 +654,7 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter_mut(gobj);
-        let s = fp::fmuls(x4c0, fp::fmuls(x, scale));
+        let s = fp::fmuls(sdi_unit, fp::fmuls(x, scale));
         let (nx, ny) = (fp.coll_data.floor.normal.x, fp.coll_data.floor.normal.y);
         fp.cur_pos.x = mem(fp::fmadds(reg(ny), s, reg(fp.cur_pos.x)));
         fp.cur_pos.y = mem(fp::fmadds(fp::fneg(reg(nx)), s, reg(fp.cur_pos.y)));
@@ -660,14 +665,15 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800932DC")]
     pub fn guard_set_off_post_hitlag(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (min, x4bc, x4c0) = (reg(c.f32(0x4B0)), reg(c.f32(0x4BC)), reg(c.f32(0x4C0)));
+        let (min, nudge_scale, sdi_unit) =
+            (reg(c.f32(0x4B0)), reg(c.f32(0x4BC)), reg(c.f32(0x4C0)));
         let fp = self.game.fighter_mut(gobj);
         if fp.ground_or_air != GA_GROUND {
             return;
         }
         let x = reg(fp.input.lstick[0].x);
         if abs(x) >= min {
-            let s = fp::fmuls(x4c0, fp::fmuls(x, x4bc));
+            let s = fp::fmuls(sdi_unit, fp::fmuls(x, nudge_scale));
             let (nx, ny) = (fp.coll_data.floor.normal.x, fp.coll_data.floor.normal.y);
             fp.cur_pos.x = mem(fp::fmadds(reg(ny), s, reg(fp.cur_pos.x)));
             fp.cur_pos.y = mem(fp::fmadds(fp::fneg(reg(nx)), s, reg(fp.cur_pos.y)));
@@ -717,10 +723,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009370C")]
     pub fn powershield_reflect_shape(&mut self, gobj: GObjId, on_reflect: CodeRef) {
         let f = self.game.fighter_id(gobj);
-        let x8 = self.ft_model_desc(&self.game.fighters[f.0]);
+        let model_desc = self.ft_model_desc(&self.game.fighters[f.0]);
         let c = self.common();
         let d = ReflectDesc {
-            bone: i32::from(self.data.u8(x8.at(0x11))),
+            bone: i32::from(self.data.u8(model_desc.at(0x11))),
             max_damage: gekko_fp::fctiwz(reg(self.game.fighters[f.0].shield_health)),
             offset: Vec3::new(0.0, 0.0, 0.0),
             size: c.f32(0x2A8),
@@ -808,14 +814,14 @@ impl Running<'_> {
     /// The powershield's flags and timers (`x221C`, `mv` x14 and x18).
     fn powershield_timers(&mut self, gobj: GObjId) {
         let c = self.common();
-        let (x2a4, x2b4) = (c.f32(0x2A4), c.f32(0x2B4));
+        let (reflect_frames, window_frames) = (c.f32(0x2A4), c.f32(0x2B4));
         let fp = self.game.fighter_mut(gobj);
         fp.powershield_early = true;
         fp.powershield_late = true;
         fp.powershield = true;
         fp.set_mv_i32(GUARD_X1C, 0);
-        fp.set_mv_f32(GUARD_X14, reg(x2a4));
-        fp.set_mv_f32(GUARD_X18, reg(x2b4));
+        fp.set_mv_f32(GUARD_X14, reg(reflect_frames));
+        fp.set_mv_f32(GUARD_X18, reg(window_frames));
     }
 
     /// A powershield from a press, `ftCo_800939B4` (Yoshi has his own; Marth also puts his
@@ -896,9 +902,9 @@ impl Running<'_> {
     /// hold.
     #[doc(alias = "ftCo_80094138")]
     pub fn guard_release_window(&mut self, gobj: GObjId) {
-        let x2b8 = self.common().i32(0x2B8);
+        let release_window = self.common().i32(0x2B8);
         let fp = self.game.fighter_mut(gobj);
-        fp.set_mv_i32(GUARD_X1C, x2b8);
+        fp.set_mv_i32(GUARD_X1C, release_window);
         fp.set_mv_f32(GUARD_X10, 0.0);
     }
 

@@ -92,8 +92,8 @@ pub fn reset(game: &mut Game, gobj: GObjId) {
     for i in 0..3 {
         v.set_word(i, 0);
     }
-    clear_x1c(game, gobj);
-    clear_x1e(game, gobj);
+    clear_clear_of_fighters(game, gobj);
+    clear_pushed_by_enemies(game, gobj);
 }
 
 /// An enemy's common variables (`itZako_ItemVars`), the first words of its kind's member: its
@@ -223,19 +223,22 @@ pub fn bytes(game: &mut Game, gobj: GObjId) -> &mut PokemonVars {
 
 /// `it_80275210`.
 #[doc(alias = "it_80275210")]
-pub fn set_x1c(game: &mut Game, gobj: GObjId) {
+#[doc(alias("set_x1c"))]
+pub fn set_clear_of_fighters(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).flags.flags.clear_of_fighters = true;
 }
 
 /// `it_80275228`.
 #[doc(alias = "it_80275228")]
-pub fn clear_x1c(game: &mut Game, gobj: GObjId) {
+#[doc(alias("clear_x1c"))]
+pub fn clear_clear_of_fighters(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).flags.flags.clear_of_fighters = false;
 }
 
 /// `it_80275240`.
 #[doc(alias = "it_80275240")]
-pub fn clear_x1e(game: &mut Game, gobj: GObjId) {
+#[doc(alias("clear_x1e"))]
+pub fn clear_pushed_by_enemies(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).flags.flags.pushed_by_enemies = false;
 }
 
@@ -420,8 +423,8 @@ fn align(r: &mut Running, gobj: GObjId, normal: Vec3, facing: f64, frames: f64) 
         v.set_normal(normal);
         v.set_word(0, fp::fctiwz(frames));
     }
-    let x8 = v.normal();
-    let turn = reg(up.angle_xy(x8));
+    let kept_normal = v.normal();
+    let turn = reg(up.angle_xy(kept_normal));
     let (x, y) = if turn < reg(NEW_SURFACE) || v.word(0) < 2 {
         (reg(normal.x), reg(normal.y))
     } else {
@@ -786,8 +789,8 @@ pub fn trophy_roll(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
         let pos = super::lib26b1::ecb_center(r.game, gobj);
         let coin = super::kinds::trophycoin::spawn(r, None, pos, id, 0)?;
         let f = reg(r.game.objs.rng.draw_f32());
-        let x54 = reg(super::item::common_data(r.game).f32(r.data, 0x54));
-        let vx = fp::fmuls(x54, fp::fmuls(2.0, fp::fsubs(f, 0.5)));
+        let spread = reg(super::item::common_data(r.game).f32(r.data, 0x54));
+        let vx = fp::fmuls(spread, fp::fmuls(2.0, fp::fsubs(f, 0.5)));
         let vy = super::item::attr_of(item(r.game, coin)).f32(r.data, 0x18);
         let ip = item_mut(r.game, coin);
         ip.vel.x = mem(vx);

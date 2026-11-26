@@ -100,7 +100,7 @@ impl GameData {
     /// `lbLang_GetSavedLanguage`.
     #[doc(alias = "lbLang_GetSavedLanguage")]
     pub fn saved_language(&self) -> u8 {
-        self.thing.save_data.prefs.saved_language
+        self.card.save_data.prefs.saved_language
     }
 
     /// `lbLang_SetLanguageSetting`.
@@ -115,27 +115,27 @@ impl GameData {
     #[doc(alias = "lbLang_SetSavedLanguage")]
     pub fn set_saved_language(&mut self, language: u8) {
         if language < 2 {
-            self.thing.save_data.prefs.saved_language = language;
+            self.card.save_data.prefs.saved_language = language;
         }
     }
 
     /// The name tag `slot` (`GetPersistentNameData`).
     pub fn name_tag(&mut self, slot: usize) -> &mut NameTagData {
         let s = slot as u8 as usize;
-        &mut self.thing.nametag_banks[s / NAMETAG_BANK_SIZE].inner[s % NAMETAG_BANK_SIZE]
+        &mut self.card.nametag_banks[s / NAMETAG_BANK_SIZE].inner[s % NAMETAG_BANK_SIZE]
     }
 
     /// `gm_IncrementPowerCount`: the times the console was switched on with the save.
     #[doc(alias = "gm_IncrementPowerCount")]
     pub fn increment_power_count(&mut self) {
-        let c = &mut self.thing.save_data.power_count;
+        let c = &mut self.card.save_data.power_count;
         *c = c.wrapping_add(1);
     }
 
     /// `gm_801623FC`: the current score, and the records it beats.
     #[doc(alias = "gm_801623FC")]
     pub fn set_score(&mut self, score: u32) {
-        let s = &mut self.thing.save_data;
+        let s = &mut self.card.save_data;
         if score > s.most_coins as u32 {
             s.most_coins = score as i32;
         }
@@ -218,7 +218,7 @@ impl Running<'_> {
     /// `setupAudioVideo`: the sound settings from the save (`lbAudioAx_80028690`), and the
     /// video mode its deflicker setting picks (`gmMainLib_8015F500`: the frontend's).
     fn setup_audio_video(&mut self, bank: Option<&crate::lb::audio::SoundBank>) {
-        let prefs = &self.game.game_data.thing.save_data.prefs;
+        let prefs = &self.game.game_data.card.save_data.prefs;
         let settings = crate::lb::audio::SavedSound {
             us: prefs.saved_language == LANG_US,
             balance: prefs.sound_balance,
@@ -238,7 +238,7 @@ impl Running<'_> {
     #[doc(alias = "mnName_8023749C")]
     pub fn reset_card_file(&mut self, file: usize, at_boot: bool) {
         if file == 1 {
-            let s = &mut self.game.game_data.thing.save_data;
+            let s = &mut self.game.game_data.card.save_data;
             s.fighters.iter_mut().for_each(clear_fighter);
             // `memzero` from the trophy count up to the characters' records, and the
             // trophies' own reset (`Toy_80311960`), which clears the same flags and the
@@ -255,14 +255,14 @@ impl Running<'_> {
                 assert!(gift >= 0, "a class 2 trophy to give");
                 self.add_trophy(gift, 1);
             }
-            self.game.game_data.thing.save_data.prefs = default_prefs();
+            self.game.game_data.card.save_data.prefs = default_prefs();
             // `lbLang_GetLanguageSetting` is 0 or 1 on any disc: the saved language follows
             // it (`lang` is left unset otherwise, `docs/melee-bugs.md`).
             let lang = self.game.game_data.language;
             assert!(lang < 2, "gmMainLib_8015F600 with language {lang}");
             self.game.game_data.set_saved_language(lang);
             // `memzero` of the save data up to the options.
-            let s = &mut self.game.game_data.thing.save_data;
+            let s = &mut self.game.game_data.card.save_data;
             let mut fresh = GmSaveData::default();
             std::mem::swap(&mut fresh.prefs, &mut s.prefs);
             fresh.trophy_count = s.trophy_count;
@@ -320,20 +320,20 @@ impl Running<'_> {
     #[doc(alias = "gm_8017297C")]
     #[doc(alias = "gm_801741FC")]
     pub fn debug_unlock_all(&mut self) {
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         s.unlocked_features = 0xFF;
         s.unlocked_characters |= (1 << 11) - 1;
         s.unlocked_stages |= (1 << 11) - 1;
         for i in 0..0x42 {
             if !self.message_noted(i) {
                 let now = self.clock_seconds();
-                let s = &mut self.game.game_data.thing.save_data;
+                let s = &mut self.game.game_data.card.save_data;
                 s.message_times[i as usize] = now;
                 s.messages_noted[(i / 32) as usize] |= 1 << (i % 32);
                 s.messages_pending[(i / 32) as usize] &= !(1 << (i % 32));
             }
         }
-        let s = &mut self.game.game_data.thing.save_data;
+        let s = &mut self.game.game_data.card.save_data;
         for i in 0..0x12C {
             s.trophies[i / 32] |= 1 << (i % 32);
         }
@@ -372,7 +372,7 @@ impl Game {
     /// The matches' view of the save ([`super::Unlocks`]) brought up to date with the card's
     /// data, keeping the players' codes on it.
     pub fn sync_unlocks(&mut self) {
-        let s = &self.game_data.thing.save_data;
+        let s = &self.game_data.card.save_data;
         let u = &mut self.gm.unlocks;
         u.characters = s.unlocked_characters;
         u.stages = s.unlocked_stages;
@@ -392,7 +392,7 @@ impl Game {
         let flags = if super::is_1p_mode(self) || self.game_mode == GameMode::TrophyLottery {
             &self.toys.table.flags
         } else {
-            &self.game_data.thing.save_data.trophy_flags
+            &self.game_data.card.save_data.trophy_flags
         };
         i32::from(flags[id] as u8)
     }

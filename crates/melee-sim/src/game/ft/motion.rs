@@ -10,7 +10,7 @@ use super::super::code::run_fighter_cb;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::super::structs::Fighter;
-use super::anim::x594_bit;
+use super::anim::anim_bit;
 use super::common::GA_GROUND;
 use super::{MotionState, motion_table};
 use crate::fpu::{mem, reg};
@@ -123,7 +123,7 @@ impl Running<'_> {
         }
         // A demo's animation: where `ftData_80085B98` placed it in main memory.
         if let Some(i) = demo_index(fp, entry) {
-            return self.game.ft.data.demo_x14[fp.kind as usize][i];
+            return self.game.ft.data.demo_anim_addrs[fp.kind as usize][i];
         }
         let kind = self.anim_entry_kind(fp.kind, entry);
         let file = self.game.ft.anim_files[kind as usize]
@@ -325,11 +325,14 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007B4E0")]
     fn reset_hurtboxes(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        let x30 = self
+        let hurtbox_desc = self
             .data
             .ptr(fp.ft_data.expect("a fighter without data").at(0x30))
             .expect("ftData's hurtboxes");
-        let inits = self.data.ptr(x30.at(4)).expect("hurtbox descriptions");
+        let inits = self
+            .data
+            .ptr(hurtbox_desc.at(4))
+            .expect("hurtbox descriptions");
         let v = |at: DataRef| crate::vec::Vec3 {
             x: self.data.f32(at),
             y: self.data.f32(at.at(4)),
@@ -381,13 +384,13 @@ impl Running<'_> {
                 continue;
             }
             let fp = &self.game.fighters[f.0];
-            let x1c = self
+            let part_anims = self
                 .data
                 .ptr(fp.ft_data.expect("a fighter without data").at(0x1C))
                 .expect("ftData's part animations");
             let set = self
                 .data
-                .ptr(x1c.at(4 * i as u32))
+                .ptr(part_anims.at(4 * i as u32))
                 .expect("a part animation");
             let n = u32::from(self.data.u16(set.at(2)));
             let list = self.data.ptr(set.at(4));
@@ -669,16 +672,16 @@ impl Running<'_> {
                 }
             }
             // `ftColl_8007B760`.
-            let x134 = self.common().i32(0x134);
+            let min_intangible = self.common().i32(0x134);
             let fp = &mut self.game.fighters[f.0];
-            if x134 > fp.intangible_frames {
-                fp.intangible_frames = x134;
+            if min_intangible > fp.intangible_frames {
+                fp.intangible_frames = min_intangible;
             }
             fp.timed_hit_status = 2;
             self.start_color_anim(gobj, 9, 0);
             self.game.fighters[f.0].damage_col_anim = false;
         }
-        let x4cc = self.common().u32(0x4CC) as u16;
+        let combo_window = self.common().u32(0x4CC) as u16;
         {
             let fp = &mut self.game.fighters[f.0];
             // `ftCommon_8007E2F4`.
@@ -698,7 +701,7 @@ impl Running<'_> {
             }
             if flags & SKIP_HIT_STUN == 0 && fp.in_hitstun {
                 fp.in_hitstun = false;
-                fp.combo_window = x4cc;
+                fp.combo_window = combo_window;
             }
             fp.is_sleeping = false;
             fp.out_of_play = false;
@@ -786,8 +789,8 @@ impl Running<'_> {
                 self.game.fighters[f.0].tumble_early = false;
             }
             self.game.fighters[f.0].special_air_used = false;
-            let x2140 = self.game.fighters[f.0].lowest_y;
-            self.keep_lowest_dip(slot, sub, x2140);
+            let lowest_y = self.game.fighters[f.0].lowest_y;
+            self.keep_lowest_dip(slot, sub, lowest_y);
             let fp = &mut self.game.fighters[f.0];
             fp.lowest_y = 0.0;
             fp.used_tether = false;
@@ -835,8 +838,9 @@ impl Running<'_> {
             && ms.move_bits & 0x0040_0000 != 0
             && self.game.fighters[f.0].dmg.source_attack == -1
         {
-            let x814 = self.common().i32(0x814);
-            self.game.fighters[f.0].dmg.source_attack = if x814 > 0 { x814 } else { 1 };
+            let source_attack = self.common().i32(0x814);
+            self.game.fighters[f.0].dmg.source_attack =
+                if source_attack > 0 { source_attack } else { 1 };
         }
         let prev_attack = self.game.fighters[f.0].attack_flags;
         self.set_attack_id(f, ms.move_bits >> 24);
@@ -864,7 +868,7 @@ impl Running<'_> {
         fp.freeze_rate_step = speed;
         fp.cur_anim_frame = mem(fp::fsubs(reg(start), reg(fp.frame_speed_mul)));
         fp.cmd_frame_offset = 0.0;
-        let anim_flags = x594_bit(fp, 0) || x594_bit(fp, 5);
+        let anim_flags = anim_bit(fp, 0) || anim_bit(fp, 5);
         if fp.anim_id != -1 {
             let bone_index = ((u32::from(u16::from_be_bytes([fp.anim_bits[2], fp.anim_bits[3]]))
                 >> 6)
@@ -916,12 +920,12 @@ impl Running<'_> {
                     }
                     self.anim_joints(gobj);
                     let fp = &mut self.game.fighters[f.0];
-                    if x594_bit(fp, 0) {
+                    if anim_bit(fp, 0) {
                         fp.prev_trans_n_offset = Default::default();
                         fp.trans_n_offset = Default::default();
                         fp.prev_trans_n_pos = fp.trans_n_pos;
                     }
-                    if x594_bit(fp, 5) {
+                    if anim_bit(fp, 5) {
                         fp.prev_part_35_offset = Default::default();
                         fp.part_35_offset = Default::default();
                         fp.prev_part_35_pos = fp.part_35_pos;
@@ -954,7 +958,7 @@ impl Running<'_> {
                 }
                 let fp = &mut self.game.fighters[f.0];
                 let grounded = fp.ground_or_air == GA_GROUND;
-                if x594_bit(fp, 0) {
+                if anim_bit(fp, 0) {
                     if start == 0.0 {
                         fp.prev_trans_n_offset = Default::default();
                         fp.trans_n_offset = Default::default();
@@ -965,7 +969,7 @@ impl Running<'_> {
                         fp.gr_vel = v;
                     }
                 }
-                if x594_bit(fp, 5) {
+                if anim_bit(fp, 5) {
                     if start == 0.0 {
                         fp.prev_part_35_offset = Default::default();
                         fp.part_35_offset = Default::default();
@@ -999,7 +1003,7 @@ impl Running<'_> {
             fp.anim_blend_frame = 0.0;
         }
         let fp = &mut self.game.fighters[f.0];
-        if anim_flags && !x594_bit(fp, 0) {
+        if anim_flags && !anim_bit(fp, 0) {
             // `ftCommon_ClampGroundVel`.
             let max = reg(fp.co_attrs.dash_max_velocity);
             let v = reg(fp.gr_vel);

@@ -356,7 +356,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "it_8029A89C" => flower::set_size(g, gobj, f1()),
         "it_8029A8F4" => flower::set_offset(g, gobj, vec_at(r(4))),
-        "it_80274ECC" => it::lib2725::set_xd09(g.game, gobj, r(4) as u8 != 0),
+        "it_80274ECC" => it::lib2725::set_no_catch(g.game, gobj, r(4) as u8 != 0),
         "it_802701BC" => it::coll::grab_fighters(g, gobj),
         "it_8026F3D4" => {
             it::drop::drop_contents(g, gobj, r(5) as i32, r(6) & 1 != 0);

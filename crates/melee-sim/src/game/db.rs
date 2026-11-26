@@ -762,8 +762,8 @@ impl Running<'_> {
             c.set_draw_zones(step.3);
             self.db_ground_flag(step.4);
             let c = &mut self.game.camera;
-            c.set_x39a_b0(step.5);
-            c.set_x39a_b1(step.6);
+            c.set_debug_switch_0(step.5);
+            c.set_debug_switch_1(step.6);
             c.set_draw_special_points(step.7);
             if !(1..=6).contains(&self.game.db.stage_visuals) {
                 self.game.db.stage_visuals = 0;

@@ -11,7 +11,7 @@
 
 use crate::game::handles::CodeRef;
 use crate::game::mirror::{Export, MemMut};
-use crate::game::structs::ft_800898B4_t;
+use crate::game::structs::HitRecord;
 use crate::hsd::gobj::GObjId;
 use crate::state_eq::{Diff, StateEq, StateHasher};
 
@@ -542,7 +542,7 @@ pub struct StaleMoveTable {
     pub last_ko_attack: [u8; 4],
     #[at(0xCC0)]
     #[doc(alias("xCC0"))]
-    pub last_ko_hit: ft_800898B4_t,
+    pub last_ko_hit: HitRecord,
     #[at(0xCD4)]
     #[doc(alias("xCD4"))]
     pub last_ko_instance: u16,
@@ -841,11 +841,11 @@ pub struct StatsExt {
     #[at(0xD1C)]
     #[doc(alias("xD1C"))]
     pub attack_0x68_frames: u32,
-    /// Frames airborne (what the results keep as `ground_time`, `x70`).
+    /// Frames airborne (the results' `air_time`, `x70`, the decomp's `ground_time`).
     #[at(0xD20)]
     #[doc(alias("xD20"))]
     pub air_frames: u32,
-    /// Frames on the ground (what the results keep as `air_time`, `x6C`).
+    /// Frames on the ground (the results' `ground_time`, `x6C`, the decomp's `air_time`).
     #[at(0xD24)]
     #[doc(alias("xD24"))]
     pub ground_frames: u32,
@@ -930,7 +930,7 @@ pub struct StatsExt {
     #[doc(alias("xD74"))]
     pub walked: f32,
     /// How far it rose in the air under its own power (what the results keep as
-    /// `run_distance`, the decomp's name).
+    /// `rise_distance`, the decomp's `run_distance`).
     #[at(0xD78)]
     #[doc(alias("xD78"))]
     pub rose: f32,
@@ -938,7 +938,8 @@ pub struct StatsExt {
     #[at(0xD7C)]
     #[doc(alias("xD7C"))]
     pub fell: f32,
-    /// How far knockback carried it (what the results keep as `peak_height`).
+    /// How far knockback carried it (the results' `knockback_distance`, the decomp's
+    /// `peak_height`).
     #[at(0xD80)]
     #[doc(alias("xD80"))]
     pub knocked: f32,

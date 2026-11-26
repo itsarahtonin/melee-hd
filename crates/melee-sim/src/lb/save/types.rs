@@ -203,11 +203,15 @@ pub struct GmStats {
     #[at(0x28)]
     pub walk_distance: i32,
     #[at(0x2C)]
-    pub run_distance: i32,
+    /// The matches' distances risen in the air (`MatchPlayerData::rise_distance`'s sum).
+    #[doc(alias("run_distance"))]
+    pub rise_distance: i32,
     #[at(0x30)]
     pub fall_distance: i32,
     #[at(0x34)]
-    pub peak_height: i32,
+    /// The distances knockback carried (`MatchPlayerData::knockback_distance`'s sum).
+    #[doc(alias("peak_height"))]
+    pub knockback_distance: i32,
     #[at(0x38)]
     pub coins_collected: i32,
     #[at(0x3C)]

@@ -65,7 +65,7 @@ impl Running<'_> {
         let shadow = self.game.fighters[f.0].shadow.shadow;
         crate::hsd::shadow::remove(&mut self.game.objs, shadow);
         let fp = &self.game.fighters[f.0];
-        let (accessory, skeleton, x2184, lights) = (
+        let (accessory, skeleton, mushroom_joint, lights) = (
             fp.accessory,
             fp.anim_skeleton,
             fp.mushroom_scale_joint,
@@ -75,7 +75,7 @@ impl Running<'_> {
             crate::hsd::jobj::remove_all(&mut self.game.objs, accessory);
         }
         crate::hsd::jobj::remove_all(&mut self.game.objs, skeleton);
-        crate::hsd::jobj::unref(&mut self.game.objs, x2184);
+        crate::hsd::jobj::unref(&mut self.game.objs, mushroom_joint);
         self.forget_kind_flag(gobj, f);
         crate::hsd::lobj::remove_all(&mut self.game.objs, lights);
         let fp = &self.game.fighters[f.0];
@@ -109,7 +109,9 @@ impl Running<'_> {
     fn free_dobj_list(&mut self, list: super::super::handles::DObjListId) {
         let g = &*self.game;
         let data = self.data;
-        crate::hsd::export::with_image(|img| super::super::export::x2040_list(g, data, img, list));
+        crate::hsd::export::with_image(|img| {
+            super::super::export::export_dobj_list(g, data, img, list)
+        });
         let at = self.game.fighter_dobj_lists.addr(list.0);
         crate::hsd::heap::obj_free(crate::hsd::heap::Kind::FighterX2040, at);
         self.game.fighter_dobj_lists.free(list.0);
@@ -145,16 +147,16 @@ impl Running<'_> {
     /// shares its `x61C`, `ftData_800859A8`.
     #[doc(alias = "ftData_800859A8")]
     fn forget_kind_flag(&mut self, gobj: GObjId, f: FighterId) {
-        let x61c = self.game.fighters[f.0].slot_word;
-        if x61c == -1 {
+        let slot_word = self.game.fighters[f.0].slot_word;
+        if slot_word == -1 {
             return;
         }
         for (_, id) in self.fighters_with(gobj, f) {
-            if id != f && self.game.fighters[id.0].slot_word == x61c {
+            if id != f && self.game.fighters[id.0].slot_word == slot_word {
                 return;
             }
         }
-        self.game.ft.data.slot_words[x61c as usize].flags &= !0x80;
+        self.game.ft.data.slot_words[slot_word as usize].flags &= !0x80;
     }
 
     /// The unload's `HSD_ObjFree`s: the two animation buffers, the parts table, the DObj

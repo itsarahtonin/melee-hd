@@ -190,8 +190,8 @@ pub fn wobble(r: &mut Running, gobj: GObjId) {
             play_sfx1(r, gobj, SFX_WOBBLE[i as usize], 127, 64);
         }
         let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();
-        let x40 = fp::fadds(reg(v.wobble_size.get()), reg(v.wobble_step.get()));
-        v.wobble_size.set(mem(x40));
+        let wobble = fp::fadds(reg(v.wobble_size.get()), reg(v.wobble_step.get()));
+        v.wobble_size.set(mem(wobble));
         v.wobble_offset.set_x(0.0);
         let s = reg(math::sin(v.wobble_angle.get()));
         let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();

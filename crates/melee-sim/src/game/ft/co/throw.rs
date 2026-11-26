@@ -300,7 +300,7 @@ impl Running<'_> {
         vf.dmg.element = hit.element;
         // `ftColl_80078710`: the attack's record, the facing word as the keep flag.
         let af = self.game.fighter(gobj);
-        let (akind, x2070, instance) = (
+        let (akind, attack_flags, instance) = (
             af.kind,
             u32::from_be_bytes(af.attack_flags),
             af.attack_record.record_id,
@@ -310,7 +310,7 @@ impl Running<'_> {
             victim,
             1,
             akind,
-            x2070,
+            attack_flags,
             super::super::super::pl::trick::AttackRecord::Fighter(gobj),
             instance,
             true,
@@ -335,8 +335,8 @@ impl Running<'_> {
             unconstrain(&mut self.game.objs, xj);
             let fp = &mut self.game.fighters[h.0];
             fp.held_in_model = false;
-            let x2174 = fp.thrown_trans;
-            jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
+            let thrown_trans = fp.thrown_trans;
+            jobj::set_translate(&mut self.game.objs.jobjs, xj, thrown_trans);
             let fp = &self.game.fighters[h.0];
             if place {
                 pos.x = mem(fp::fmadds(

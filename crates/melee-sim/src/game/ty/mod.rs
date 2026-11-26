@@ -188,7 +188,7 @@ impl Running<'_> {
         if self.toy_own_table() {
             &self.game.toys.table.flags
         } else {
-            &self.game.game_data.thing.save_data.trophy_flags
+            &self.game.game_data.card.save_data.trophy_flags
         }
     }
 
@@ -196,7 +196,7 @@ impl Running<'_> {
         if self.toy_own_table() {
             &mut self.game.toys.table.flags
         } else {
-            &mut self.game.game_data.thing.save_data.trophy_flags
+            &mut self.game.game_data.card.save_data.trophy_flags
         }
     }
 
@@ -206,7 +206,7 @@ impl Running<'_> {
         if self.toy_own_table() {
             i32::from(self.game.toys.table.count)
         } else {
-            i32::from(self.game.game_data.thing.save_data.trophy_count)
+            i32::from(self.game.game_data.card.save_data.trophy_count)
         }
     }
 

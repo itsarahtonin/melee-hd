@@ -833,17 +833,17 @@ pub fn find_track_end(r: &mut Running, j: Option<JObjId>, t: f32) -> (f32, Vec3)
 #[doc(alias = "grMuteCity_801F0D20")]
 pub fn follow_track(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let (right, xd8) = {
+    let (right, right_end) = {
         let v = r.game.grounds[g.0].u.mute_city();
         (v.spline_jobj2, v.right_end)
     };
-    let (t, a) = find_track_end(r, right, xd8);
+    let (t, a) = find_track_end(r, right, right_end);
     r.game.grounds[g.0].u.mute_city().right_end = t;
-    let (left, xd4) = {
+    let (left, left_end) = {
         let v = r.game.grounds[g.0].u.mute_city();
         (v.spline_jobj, v.left_end)
     };
-    let (t, b) = find_track_end(r, left, xd4);
+    let (t, b) = find_track_end(r, left, left_end);
     r.game.grounds[g.0].u.mute_city().left_end = t;
     r.game.geometry_mut().settle_vertices(TRACK_JOINT);
     let mode = r.game.grounds[g.0].u.mute_city().ends();
@@ -1234,11 +1234,11 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let car_root = jobj_of(r.game, car_gobj);
     let _ = super::ground::scale(r.game);
-    let (xd4, xd8, left, right) = {
+    let (left_end, right_end, left, right) = {
         let v = r.game.grounds[g.0].u.mute_city();
         (v.left_end, v.right_end, v.spline_jobj, v.spline_jobj2)
     };
-    let mid = fp::fmuls(reg(0.5), fp::fadds(reg(xd4), reg(xd8)));
+    let mid = fp::fmuls(reg(0.5), fp::fadds(reg(left_end), reg(right_end)));
     let mid_next = fp::fadds(1.0, mid);
     let cam = r.game.camera.position();
     let mut j = car_root.and_then(|c| r.game.objs.jobjs[c].child);

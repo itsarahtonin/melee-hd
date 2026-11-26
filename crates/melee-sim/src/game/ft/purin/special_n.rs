@@ -497,11 +497,11 @@ impl Running<'_> {
     pub fn rollout_enter(&mut self, gobj: GObjId, r: &Rollout) {
         self.ro_start(gobj, r, r.ms.start_r, r.ms.start_l);
         let f = self.game.fighter_id(gobj);
-        let x44 = self.ro_f32(f, r, attr::N_X44);
+        let ground_speed = self.ro_f32(f, r, attr::N_X44);
         let fp = &mut self.game.fighters[f.0];
         fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
-        fp.set_mv_f32(mv::N_X1C, reg(x44));
+        fp.set_mv_f32(mv::N_X1C, reg(ground_speed));
     }
 
     /// `ftPr_SpecialAirN_Enter`, `ftKb_SpecialNPr_80101618`.
@@ -510,13 +510,13 @@ impl Running<'_> {
     pub fn rollout_air_enter(&mut self, gobj: GObjId, r: &Rollout) {
         self.ro_start(gobj, r, r.ms.air_start_r, r.ms.air_start_l);
         let f = self.game.fighter_id(gobj);
-        let (g, x54) = (
+        let (g, air_speed) = (
             self.ro_f32(f, r, attr::N_AIR_GRAVITY),
             self.ro_f32(f, r, attr::N_X54),
         );
         let fp = &mut self.game.fighters[f.0];
         fp.anim_vel.y = g;
-        fp.set_mv_f32(mv::N_X1C, reg(x54));
+        fp.set_mv_f32(mv::N_X1C, reg(air_speed));
     }
 
     /// The start's end into the charge, its animation stopped (`ftPr_SpecialNStart_Anim`,
@@ -947,12 +947,12 @@ impl Running<'_> {
         let scale = fp::fmuls(accel, reg(floor));
         let nx = reg(fp.coll_data.floor.normal.x);
         let slope = if nx < 0.0 { fp::fneg(nx) } else { nx };
-        let x1c = reg(fp.mv_f32(mv::N_X1C));
-        let influence = fp::fmuls(slope_mul, fp::fmuls(x1c, slope));
+        let speed = reg(fp.mv_f32(mv::N_X1C));
+        let influence = fp::fmuls(slope_mul, fp::fmuls(speed, slope));
         let push = if nx > 0.0 {
-            fp::fadds(x1c, influence)
+            fp::fadds(speed, influence)
         } else {
-            fp::fsubs(x1c, influence)
+            fp::fsubs(speed, influence)
         };
         fp.gr_vel = mem(fp::fmadds(scale, push, reg(fp.gr_vel)));
         fp.anim_vel.y = 0.0;
@@ -1209,8 +1209,8 @@ impl Running<'_> {
             self.ro_roll_cbs(f, r);
             self.ro_roll(f);
             self.ro_top_side_on(f);
-            let x54 = self.ro_f32(f, r, attr::N_X54);
-            self.set_mvf(f, mv::N_X1C, reg(x54));
+            let air_speed = self.ro_f32(f, r, attr::N_X54);
+            self.set_mvf(f, mv::N_X1C, reg(air_speed));
         }
     }
 
@@ -1305,7 +1305,7 @@ impl Running<'_> {
             fp.set_mv_f32(mv::N_DIR, fp::fneg(reg(d)));
         }
         if coll {
-            let (bounce, low, x44, deadzone) = (
+            let (bounce, low, ground_speed, deadzone) = (
                 self.ro_f(f, r, attr::N_BOUNCE),
                 self.ro_f(f, r, attr::N_BOUNCE_MIN),
                 self.ro_f32(f, r, attr::N_X44),
@@ -1346,7 +1346,7 @@ impl Running<'_> {
                     ]
                 };
                 spawn(self, 0x3FF, Some(gobj), &args);
-                self.set_mvf(f, mv::N_X1C, reg(x44));
+                self.set_mvf(f, mv::N_X1C, reg(ground_speed));
             } else {
                 let x = reg(self.game.fighters[f.0].input.lstick[0].x);
                 let ax = if x < 0.0 { fp::fneg(x) } else { x };
