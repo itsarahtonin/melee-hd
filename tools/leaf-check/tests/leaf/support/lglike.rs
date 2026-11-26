@@ -51,7 +51,8 @@ impl Character {
     }
 
     fn base(&self) -> String {
-        self.var("CALLS").unwrap_or_else(|| self.calls.to_owned())
+        self.var("CALLS")
+            .unwrap_or_else(|| melee_local_data::ssbm_rs_local(self.calls))
     }
 
     fn wanted(&self, name: &str) -> bool {
