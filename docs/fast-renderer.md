@@ -964,3 +964,91 @@ JOBS=3 MELEE_HD=target/release/melee-hd bash tools/bench/collect-pipelines.sh RE
 - **Renderers making the same pipelines**: a match's renderer made while the menus' is still making the lists (a cold first run) makes those not yet shared again on its own threads.
 - **A 144 Hz display at 4K**, as before.
 - **The CPU frame's 1 ms** (records from the `Draw` list, the frame's end): not started this round.
+
+## Profile at 4K (2026-11-25)
+
+Where a frame's time goes at Sarah's target (3840 by 2160, 144 fps on the worker's GTX 1080 Ti, every displayed frame within 6.94 ms at the 99th percentile with the present and the GPU's wait, with frames between ticks), and design call 6's condition: does building the draw records limit the fast renderer? F6 stays parked; nothing here uses it.
+
+**What "building the records" is today.** The fast renderer doesn't build records from the `Draw` list yet: each displayed frame (three a tick here) goes through the GX stream. The game thread builds the frame's stream from the `Draw` list and the state, blended between ticks (melee-render's `Frames::build`), and hands it in pieces to a stream thread made for the frame, which runs it (melee-gx's parsing and registers, reads of the address space, and the threaded renderer's per-draw work: state changes, textures, mesh lookups) into what the render thread encodes. So the records are built by those two threads together, and a frame's drawing (`draw` in the bench) is their work: the build and the run overlap, and the frame is handed over when the stream thread finishes. The render thread encodes, the submission thread submits (wgpu and the driver), the transform threads decode, transform and light vertices on the CPU (melee-gx's vertex code), and the GPU draws while the next frame is drawn (one frame in flight).
+
+**How it was measured.** The paced bench (`melee-hd --bench`) on the worker's exclusive runner (2026-11-26 00:28 to 01:05 UTC: quietness preflight 1.1% CPU, 0% GPU; Performance power profile and `perf_event_paranoid` 1 checked before each group), `perf/fast-profile` at `71e3e5af` (batch 16's tip and a measurement hook only: the CSV's new `build`, `stream`, `tick_sim` and `tick_keep` columns, the game thread's build until its last piece, the stream thread's time running the pieces, and on a tick's first frame the tick before it and its prediction or keeping), `release` with line tables (design call 10), the GTX 1080 Ti through Vulkan, internal 5x (EFB 2920 by 2400), one frame in flight (`MELEE_BENCH_IN_FLIGHT=1`), Extrapolate (the player's default) at 3 frames a tick, 1,980 ticks, a cache folder of its own warmed by one pass over every scene first (no frame measured made a pipeline). Nine scenes: the six bench matches, Fountain of Dreams (`Game_20260129T214216`, F6's worst case), a four-player match with items at very high (`metal-cloak-rc`, Donkey Kong, Fox, Dr. Mario and Mr. Game & Watch on Rainbow Cruise, metal and cloaked fighters; its replay ends at tick 1,279) and Brinstar (`oracle-m4/stage-brinstar`). Two rounds, the order turned round; one round each of Interpolate at 3 and Extrapolate at 2, and 3,600 ticks of `fox-marth-ps` and Brinstar (Pokémon Stadium's transformations, Brinstar's acid). Then `perf record -e task-clock -F 2000 -g --switch-events -k CLOCK_MONOTONIC` on a frame-pointer build of the same commit (five scenes): every frame's stream thread (one is made per frame, so the k-th is the CSV's k-th row; 5,937 of 5,937 matched) gives the frame's window, and the context switches say when each thread ran and what the stream thread waited for.
+
+**Two ways to count a frame.** The bench's own number, "with presenting", is a frame's drawing, the present's submission and the wait for the frame before on the GPU. A tick's first frame (`k` 0) also follows the tick and, with Extrapolate, its prediction, all on the game thread before its drawing starts: "with its tick" adds them, so it is the time between that frame's present and the one before, as the player has it. The game thread's own path (the tick, the prediction, the drawing and the present's submission, without the GPU's wait, which a player paced at 144 Hz mostly doesn't have: the GPU's 3 to 5 ms finish inside the interval) is what no GPU can hide.
+
+### Each scene (the worker, Extrapolate, 3 frames a tick, both rounds)
+
+Milliseconds; "over" counts the frames over 6.94 ms. The match's first frame (9 to 16 ms with presenting, 43 to 70 with its tick: the first tick's own 20 ms and the first prediction's) is in the counts and the maxima.
+
+| Scene | With presenting: p50, p99, max; over | With its tick: p50, p99; over (of frames) | The game thread's path on a tick's frame: p50, p99 | Drawing, mean (the game thread's build; the stream thread) | A tick: simulation + prediction | The GPU a frame: p50, p99 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 3.44 / 3.43, 3.99 / 3.99, 9.3 / 9.3; 1 / 1 | 3.61 / 3.61, 4.75 / 5.17; 4 / 3 (of 5,937) | 3.25 / 3.32, 5.51 / 5.78 | 1.69 / 1.75 (0.9; 1.3) | 1.03 + 0.75 | 3.25, 3.59 |
+| `fox-marth-fd` | 3.35 / 3.33, 3.74 / 3.78, 9.6 / 9.1; 1 / 1 | 3.52 / 3.53, 5.29 / 5.13; 6 / 2 | 3.38 / 3.44, 5.90 / 5.85 | 1.69 / 1.72 (0.9; 1.3) | 1.06 + 0.81 | 3.18, 3.29 |
+| `fox-marth-bf` | 3.06 / 3.06, 3.69 / 3.68, 9.1 / 9.2; 2 / 1 | 3.44 / 3.44, 5.20 / 5.08; 8 / 2 | 3.41 / 3.40, 5.95 / 5.57 | 1.78 / 1.76 (0.9; 1.3) | 1.05 + 0.78 | 3.08, 3.30 |
+| `fox-marth-ps` | 3.92 / 3.91, 5.69 / 5.69, 13.9 / 13.3; 2 / 2 | 4.13 / 4.12, 6.24 / 6.08; 21 / 19 | 3.95 / 3.96, 6.97 / 6.91 | 2.09 / 2.10 (1.1; 1.8) | 1.12 + 0.95 | 3.58, 5.13 |
+| `ganon-captain-fd` | 3.46 / 3.45, 4.13 / 4.12, 9.1 / 14.0; 1 / 1 | 3.59 / 3.59, 5.32 / 5.45; 7 / 6 | 3.43 / 3.47, 6.01 / 6.03 | 1.69 / 1.70 (0.9; 1.3) | 1.11 + 0.81 | 3.22, 3.73 |
+| `ics-peach-ps` | 4.40 / 4.39, 5.91 / 5.90, 14.3 / 15.7; 2 / 2 | 4.81 / 4.82, 6.59 / 6.82; 31 / 51 | 4.36 / 4.38, 7.14 / 7.54 | 2.16 / 2.18 (1.0; 2.0) | 1.24 + 1.09 | 4.24, 5.16 |
+| Fountain of Dreams | 3.01 / 2.97, 4.51 / 4.49, 10.7 / 13.0; 2 / 1 | 3.80 / 3.79, 6.30 / 6.40; 11 / 12 | 4.52 / 4.55, 6.72 / 6.79 | 2.37 / 2.38 (1.3; 2.1) | 1.14 + 1.03 | 3.16, 3.70 |
+| Four players, items (`metal-cloak-rc`) | 3.55 / 3.60, 6.06 / 6.06, 12.2 / 12.5; 3 / 2 | 5.66 / 5.66, 8.21 / 8.62; 177 / 196 (of 3,837) | 6.11 / 6.07, 8.90 / 9.87 | 2.80 / 2.80 (1.8; 2.3) | 1.70 + 1.81 | 3.92, 5.29 |
+| Brinstar | 3.19 / 3.27, 3.78 / 3.73, 11.2 / 11.8; 2 / 1 | 3.48 / 3.48, 5.48 / 5.37; 9 / 3 | 3.74 / 3.63, 6.02 / 5.89 | 1.75 / 1.69 (1.0; 1.4) | 1.14 + 0.95 | 3.11, 3.38 |
+
+The other runs, one round each (with its tick: p99; over): **Interpolate** at 3 (no prediction; keeping a tick's transforms 0.04 to 0.08 ms): `fox-fox-fd` 4.32, 2; `fox-marth-fd` 4.18, 1; `fox-marth-bf` 4.14, 2; `fox-marth-ps` 5.78, 5; `ganon-captain-fd` 4.53, 4; `ics-peach-ps` 5.96, 13; Fountain of Dreams 5.42, 4; the four-player match 6.96, 40; Brinstar 4.50, 3. **Extrapolate at 2** (120 Hz): Fountain of Dreams 6.10, 9; `fox-marth-ps` 6.09, 14; the four-player match 8.06, 89 (of 2,558); Brinstar 4.99, 3. **3,600 ticks**: `fox-marth-ps` 6.11, 22 (the GPU's p50 3.85 over the longer run, its p99 5.07, the transformations); Brinstar 5.65, 23. The frame-pointer build without perf (Fountain of Dreams) is within the plain build's spread (6.35, 18), and under perf the same scene's numbers move by 0.1 to 0.2 ms.
+
+**Without the tick, every scene meets the target** in steady play: with presenting, p99 3.7 to 6.1 ms; over 6.94 ms only the match's first frame and 0 to 2 single frames a run, 7.1 to 7.9 ms, at the same few ticks each run (`fox-marth-ps` 1158, `ics-peach-ps` 179 and 730: what first shows there; Brinstar's long run one of 11.4). The GPU's frame at 4K is 3.1 to 5.3 ms at p99, finished while the next frame is drawn. **With the tick on its frame**, the four-player match misses it: 4.6 to 5.1% of its frames over, all but one a tick's first, p99 8.2 to 8.6 ms; `ics-peach-ps` sits at the line (p99 6.6 to 6.8, 31 to 51 over); the rest are within (p99 4.8 to 6.4, 2 to 21 over).
+
+### Where a frame's drawing goes (the perf runs)
+
+The stream thread's life per frame, from its context switches: running, waiting for the game thread's next piece, waiting for the render thread (the copy to the XFB), and the spawn, join and frame end around it. Milliseconds, means over every frame; the threads' time on the processor per frame beside it.
+
+| Scene | Drawing | The stream thread running | Waiting for the build | Waiting for the render thread | Spawn, join, end | The game thread's build (on the CPU) | Render; submission; transform threads (on the CPU, all four) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Fountain of Dreams | 2.48 | 2.24 (90%) | 0.13 | 0.006 | 0.11 | 1.32 (1.28) | 1.13; 1.65; 1.85 |
+| `fox-marth-ps` | 2.23 | 1.99 (89%) | 0.12 | 0.005 | 0.12 | 1.12 (1.06) | 0.85; 1.35; 1.53 |
+| Four players, items | 2.89 | 2.54 (88%) | 0.24 | 0.005 | 0.12 | 1.77 (1.71) | 1.23; 1.84; 2.03 |
+| Brinstar | 1.79 | 1.54 (86%) | 0.14 | 0.005 | 0.11 | 0.97 (0.92) | 0.71; 1.05; 1.04 |
+| `fox-fox-fd` | 1.81 | 1.44 (80%) | 0.25 | 0.002 | 0.11 | 0.93 (0.88) | 0.55; 0.85; 0.96 |
+
+(The stream thread's running is its life less its waits: perf records no switch-out after a thread exits, so its last stretch is counted that way.)
+
+- **The stream thread is the drawing's critical path**: running 80 to 90% of the frame's drawing, waiting for the render thread almost never (0.002 to 0.009 ms a frame: the render, submission and transform threads keep ahead), and for the game thread's build 0.1 to 0.25 ms. The game thread's build (0.9 to 1.8 ms) runs beside it and ends first.
+- **What the stream thread runs** (its samples, by the nearest crate of ours to the leaf): melee-gx parsing the stream and keeping its registers and deltas 44 to 59%, melee-render's address space (`Space::locate`, `view`, `read`: what the stream's commands point at) 17 to 21%, the threaded renderer's per-draw work (`Threaded::draw`, `changes`, `send_textures`, `copy::hash_footprint`, the mesh lookups) 19 to 36%.
+- **The game thread** on Fountain of Dreams: the stream's build 37% of its samples, the simulation's tick 29%, the prediction 14%, the display pass 5%, wgpu and the driver (the present) 6%.
+- Off the critical path: the submission thread (wgpu-core 51%, the driver 33%), the render thread's encoding, and the transform threads (1.0 to 2.0 ms a frame among four: melee-gx's vertex decoding, transforms and lighting for the vertices the CPU still builds).
+
+**The frames over 6.94 ms with their tick** (the game thread's path; the perf runs and the deciding runs alike, on the four scenes with more than a handful): the tick 1.4 to 2.0 ms, the prediction 1.1 to 2.0, the drawing 3.7 to 4.9 (the stream thread running 90 to 97% of it), the present 0.1 to 0.3. Their drawing is the frame's largest part, about half of it, and the slower of the tick frames' drawings (3.7 to 3.8 ms on the four-player match against its mean of 2.8), but none is over from its drawing alone: it's the three in a row on the game thread.
+
+### Design call 6: is building the records the limit?
+
+**What fraction of the frame**: drawing, the records' building as the fast renderer does it today (the GX stream built, then run into the renderer's records), is 1.7 to 2.9 ms a frame on average: about 95% of the game thread's path on a frame between ticks, 50 to 80% of a frame with presenting (the rest the wait for the GPU's frame before), and about half of a tick's first frame's path (46 to 56% at the median), where the tick and the prediction take the rest. On the critical path to present it is the stream thread's running (87 to 93% of a tick's frame's drawing), not the build on the game thread, which it overlaps.
+
+**Is it the limit for the frames over 6.94 ms?** It's their largest single cost (3.7 to 4.9 of about 7.5 ms), but not their limit alone: the frames between ticks, which draw the same records, are within the target in every scene (the game thread's path p99 3.0 to 5.3 ms), and the frames over are a tick's first, where the tick and Extrapolate's prediction (together 1.8 to 3.9 ms) come before the drawing on the same thread. Without the tick and the prediction on it, a tick's frame is a frame between ticks, within the target everywhere; halving the drawing brings the four-player match's frames over to about 5.9 ms on average, but not all of its tail (p99 8.9 to 9.9 less about 1.9).
+
+**F7's condition is not met.** What the profile puts on the critical path is the presentation side's detour through the GX stream (melee-gx's parsing and the address space's reads are 60 to 80% of the stream thread's running), not where the records are built. Building them in melee-sim would run that work in the display pass, once a tick, on the tick's own frame (and again in the prediction's tick under Extrapolate), the frames that are already over, while the frames between ticks would still need records built for their blend each frame (F6's matrix blending stays parked). Records built from the `Draw` list on the presentation side, design call 6's own seam, take the same detour out without touching the simulation. F7 stays as written: only if a later profile shows records built from the `Draw` list are the limit.
+
+### What limits the target today, and the next steps
+
+The top three costs on the critical path of the frames that miss (a tick's first frame, the four-player match and `ics-peach-ps`):
+
+| Cost on those frames | Candidate next step (not built) | Expected gain, from this profile | Size |
+| --- | --- | --- | --- |
+| The drawing: the stream thread running the GX stream into records, 3.7 to 4.9 ms (2.2 to 2.9 on average) | Records from the `Draw` list on the presentation side, no GX stream between: the display pass's draws and the state straight into the renderer's per-draw work | melee-gx's share and the address space's (60 to 80% of the stream thread's running, about 0.9 to 2.0 ms a frame on average and 2.1 to 3.8 on the frames over), less the records' own building, which the game thread's build (0.9 to 1.8 ms) bounds today; every frame, between ticks too | L |
+| The tick before the frame, 1.0 to 1.9 ms (1.8 to 2.0 on the frames over) | The tick on a thread of its own, beside the tick before's last frame between ticks, the drawing reading what it needs from the blend's capture rather than the live state | the tick off the frame's path: the four-player match's tick frame from p99 8.9 to 9.9 ms to about 7.2 to 8.2; with the next row, toward the frames between ticks' 5.3 | M to L |
+| Extrapolate's prediction, 0.8 to 1.9 ms (restoring the copy 0.3, the predicted tick 0.6 to 1.2, keeping its transforms) | The prediction on a thread of its own beside the tick's first frame (only the frame after needs it) | as Interpolate shows (no prediction on the tick's frame): the four-player match's frames over 177 to 196 to 40, its p99 with the tick 8.2 to 8.6 to 7.0, `ics-peach-ps`'s 31 to 51 to 13 | M |
+
+Smaller, not on those frames' path: the stream thread made and joined each frame (0.1 ms a frame, S); the transform threads' 1.0 to 2.0 ms of CPU vertex work a frame (the low-end target's, not this one's); the submission thread's wgpu and driver time (1 to 1.8 ms a frame, beside the frame). The GPU's 3.1 to 5.3 ms at p99 isn't limiting with a frame in flight.
+
+**Rulesets.** A replay plays under its own recorded rules (`--ruleset` sets only a console's power-on), so the scenes cover both: Fountain of Dreams is a Slippi replay under Slippi's rules, the bench matches, the oracle match and the four-player recording are Vanilla's. The renderer's work doesn't depend on the ruleset, and the ticks show no difference between them (1.03 to 1.24 ms on the Vanilla matches, 1.14 on Fountain of Dreams).
+
+**The window** (the player fullscreen on the worker's 1080p 60 Hz panel at internal 5x, Extrapolate, uncapped: `--refresh 1000 --present immediate`, which falls back to Mailbox there; one run each): the four-player match 170.7 frames a second, frame time p50 5.30 ms and p99 11.7, its tick 1.89 ms and the CPU's build 3.35 at p50, the GPU 4.38 ms a frame; the same split as the bench, with the swap chain's waits on top (p95 2.5 ms). Fountain of Dreams' and `fox-marth-ps`' window runs aren't comparable: their pipelines were made again during the runs (995 and 1,675 at 242 and 128 ms each on the shader threads, the window's player not finding the bench's driver cache), so their p99s (11.0 and 10.1 ms) are partly that. The bench's numbers decide.
+
+**Indicative, on this PC** (the RTX 5070 Ti, other agents' work running; these decide nothing): `fox-marth-ps`, 300 ticks, the same bench: the drawing p50 1.69 ms, the stream thread's running 1.2 to 1.4 ms of it.
+
+The commands (the worker's scripts, kept with the raw CSVs and perf reports outside the repository, in the coordinator's `handoffs/fast-profile-files`):
+
+```sh
+# Each scene: the CSV with the build, stream and tick columns, one frame in flight.
+MELEE_BENCH_IN_FLIGHT=1 MELEE_BENCH_FRAMES=out.csv melee-hd --disc D --replay R --bench 1980 \
+    --size 3840x2160 --renderer fast --high-refresh extrapolate --frames-per-tick 3
+# The profile: a frame-pointer build (RUSTFLAGS="-C force-frame-pointers=yes"), the same arguments.
+perf record -e task-clock -F 2000 -g --switch-events -k CLOCK_MONOTONIC -- melee-hd ...
+perf script -F comm,tid,time,period,event,ip,sym,dso --show-task-events --show-switch-events
+```

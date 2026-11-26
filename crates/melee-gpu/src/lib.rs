@@ -2034,9 +2034,9 @@ impl Renderer {
 
     /// Clears `rect` of the EFB as a copy with the clear bit does: color, alpha and depth as
     /// their updates are enabled. A target the clear leaves as clearing all of it would is
-    /// cleared by the next render pass's load operation instead (as melee-unlocked's D3D12
-    /// backend clears natively): in a match every clear, as each covers what's been drawn and
-    /// the rest of the EFB holds its values. What's left is drawn as a rectangle.
+    /// cleared by the next render pass's load operation instead: in a match every clear, as each
+    /// covers what's been drawn and the rest of the EFB holds its values. What's left is drawn as
+    /// a rectangle.
     fn clear(&mut self, state: &State, rect: [u32; 4]) {
         let blend = state.bp[0x41];
         let format = bits(state.bp[0x43], 0, 3);
