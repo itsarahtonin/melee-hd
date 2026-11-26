@@ -1080,7 +1080,7 @@ mod tests {
     #[test]
     fn playback_layouts_are_the_models() {
         if std::env::var("SSBM_DISC").is_err() {
-            eprintln!("no SSBM_DISC: skipping");
+            melee_local_data::skip!("no SSBM_DISC: skipping");
             return;
         }
         let dir =
@@ -1127,7 +1127,7 @@ mod tests {
         let dir =
             std::env::var_os("BENCH_DIR").map_or_else(melee_local_data::bench_dir, PathBuf::from);
         if std::env::var("SSBM_DISC").is_err() {
-            eprintln!("no SSBM_DISC: skipping");
+            melee_local_data::skip!("no SSBM_DISC: skipping");
             return;
         }
         let mut failures = Vec::new();
@@ -1197,7 +1197,7 @@ mod tests {
         use melee_sim::game::gm::vs_mode::{GamePrefs, ITEM_SWITCH_KINDS, NO_ITEM_KIND};
         use melee_sim::game::vs_match::Player;
         if std::env::var("SSBM_DISC").is_err() {
-            eprintln!("no SSBM_DISC: skipping");
+            melee_local_data::skip!("no SSBM_DISC: skipping");
             return;
         }
         on_sim_thread(|| {

@@ -16,7 +16,7 @@ use crate::Session;
 fn every_roster_stage_plays() {
     crate::on_game_stack(|| {
         let Some(path) = std::env::var_os("SSBM_DISC") else {
-            eprintln!("skipped: SSBM_DISC names no disc");
+            melee_local_data::skip!("skipped: SSBM_DISC names no disc");
             return;
         };
         let disc = Disc::open(&path).expect("the disc");
@@ -82,7 +82,7 @@ fn every_roster_stage_plays() {
 fn every_offered_stage_plays_with_items() {
     crate::on_game_stack(|| {
         let Some(path) = std::env::var_os("SSBM_DISC") else {
-            eprintln!("skipped: SSBM_DISC names no disc");
+            melee_local_data::skip!("skipped: SSBM_DISC names no disc");
             return;
         };
         let disc = Disc::open(&path).expect("the disc");
@@ -150,7 +150,7 @@ fn every_offered_special_mode_plays() {
         use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules, Special};
         use melee_sim::game::special_audit;
         let Some(path) = std::env::var_os("SSBM_DISC") else {
-            eprintln!("skipped: SSBM_DISC names no disc");
+            melee_local_data::skip!("skipped: SSBM_DISC names no disc");
             return;
         };
         let disc = Disc::open(&path).expect("the disc");
@@ -231,7 +231,7 @@ fn live_slow_mo_keeps_its_sounds() {
         use melee_sim::game::playback::SoundLog;
         use melee_sim::game::state::Event;
         let Some(path) = std::env::var_os("SSBM_DISC") else {
-            eprintln!("skipped: SSBM_DISC names no disc");
+            melee_local_data::skip!("skipped: SSBM_DISC names no disc");
             return;
         };
         let disc = Disc::open(&path).expect("the disc");

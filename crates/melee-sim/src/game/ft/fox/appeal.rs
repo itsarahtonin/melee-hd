@@ -39,10 +39,9 @@ pub fn by_attack_hi(s: &ActionStats, id: i32) -> u32 {
 }
 
 impl Running<'_> {
-    /// A call into code another part of the port owns, which a check stands in for (feature
-    /// `stubs`); else `run`.
+    /// A call into code another part of the port owns, which a check stands in for
+    /// (`code::stubs`); else `run`.
     fn appeal_seam(&mut self, _f: u32, args: &[Val], run: impl FnOnce(&mut Self) -> Val) -> Val {
-        #[cfg(feature = "stubs")]
         if let Some(v) = super::super::super::code::stubbed(_f, args) {
             return v;
         }

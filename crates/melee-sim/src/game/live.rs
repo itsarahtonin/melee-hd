@@ -321,7 +321,6 @@ impl Game {
     /// before setting; and the image knows nothing of the main heap, which the console's match
     /// held (`docs/oracle.md`, "Past a live match's handback").
     pub fn take_match_statics(&mut self, live: &Game, entry: &ConsoleAt) {
-        #[cfg(feature = "oracle-hooks")]
         if super::oracle_hooks::handback_statics_off() {
             return;
         }

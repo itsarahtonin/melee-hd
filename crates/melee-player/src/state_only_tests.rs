@@ -137,7 +137,7 @@ fn the_state_only_pass_writes_the_same_state_in_matches() {
 fn the_state_only_pass_writes_the_same_state_in_a_session() {
     crate::on_game_stack(|| {
         let Some((disc, path)) = crate::live_tests::pause_fd() else {
-            eprintln!("skipped: no disc or no ruleset sessions");
+            melee_local_data::skip!("skipped: no disc or no ruleset sessions");
             return;
         };
         let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");

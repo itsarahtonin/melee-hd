@@ -35,7 +35,7 @@ fn diff_of(trace: &str, replay: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(trace).exists()
         || !std::path::Path::new(replay).exists()
     {
-        eprintln!("no trace ({trace}), replay ({replay}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), replay ({replay}) or SSBM_DISC: skipping");
         return None;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))

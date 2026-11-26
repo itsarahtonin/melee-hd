@@ -30,7 +30,7 @@ fn session_in(dir: &str, name: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
@@ -171,7 +171,7 @@ fn wire_frames_hide_a_held_item_and_never_show_one() {
     use melee_sim::game::ft::co::ids::ms;
 
     let Ok(path) = std::env::var("SSBM_DISC") else {
-        eprintln!("no SSBM_DISC: skipping");
+        melee_local_data::skip!("no SSBM_DISC: skipping");
         return;
     };
     let disc = Disc::open(path).expect("the disc");
@@ -631,7 +631,9 @@ fn the_third_unlock_sessions_run_clean_to_their_cards_after() {
             || !std::path::Path::new(&trace).exists()
             || !std::path::Path::new(&inputs).exists()
         {
-            eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+            melee_local_data::skip!(
+                "no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping"
+            );
             return;
         }
         let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
@@ -681,7 +683,9 @@ fn the_fourth_unlock_sessions_run_clean_to_their_cards_after() {
             || !std::path::Path::new(&trace).exists()
             || !std::path::Path::new(&inputs).exists()
         {
-            eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+            melee_local_data::skip!(
+                "no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping"
+            );
             return;
         }
         let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
@@ -785,7 +789,7 @@ fn recording(name: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
@@ -846,7 +850,7 @@ fn sarahs_all_star_clear_runs_clean_to_its_card_after() {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
@@ -935,7 +939,7 @@ fn adventures_giga_bowser_path_runs_clean_to_its_card_after() {
 fn adventures_giga_bowser_path_rolls_back_each_scene_with_fighters() {
     let inputs = ssbm_rs_local("lockstep/m6-adventure-dbg/adv-giga-vh.inputs");
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&inputs).exists() {
-        eprintln!("no recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no recording ({inputs}) or SSBM_DISC: skipping");
         return;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))

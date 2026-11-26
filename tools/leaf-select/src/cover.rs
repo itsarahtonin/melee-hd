@@ -67,8 +67,9 @@ fn json_str(line: &str, after: &str, key: &str) -> Option<String> {
     None
 }
 
-/// Builds leaf-check's test binaries instrumented into `target_dir` (those of `tests`, or all
-/// with none named): each test's binary, with those an earlier build made kept.
+/// Builds leaf-check's test binary instrumented into `target_dir` (`tests` names families, all
+/// of them in the one binary; none builds every test target), with those an earlier build made
+/// kept.
 pub fn build(
     root: &Path,
     target_dir: &Path,
@@ -103,10 +104,7 @@ pub fn build(
         .args(if tests.is_empty() {
             vec!["--tests".to_owned()]
         } else {
-            tests
-                .iter()
-                .flat_map(|t| ["--test".to_owned(), t.clone()])
-                .collect()
+            vec!["--test".to_owned(), crate::crates::BINARY.to_owned()]
         })
         .args([
             "-j",
@@ -204,8 +202,8 @@ pub struct RunOpts {
     pub stdout: bool,
 }
 
-/// Runs `job` from its instrumented binary `exe` as the verification runs a test binary (from
-/// leaf-check's directory, `--test-threads=threads`), its log in `reach_dir/logs`, and records
+/// Runs `job` from the instrumented binary `exe` as the verification runs it (its family's
+/// tests, `NAME::`, from leaf-check's directory, `--test-threads=threads`), its log in `reach_dir/logs`, and records
 /// its reach if it passed.
 pub fn run(tree: &Tree, job: &Job, exe: &Path, reach_dir: &Path, o: &RunOpts) -> Ran {
     let root = &tree.root;
@@ -232,6 +230,7 @@ pub fn run(tree: &Tree, job: &Job, exe: &Path, reach_dir: &Path, o: &RunOpts) ->
         cmd.stdout(log.try_clone().unwrap()).stderr(log);
     }
     let status = cmd
+        .args(job.filter())
         .arg(format!("--test-threads={}", o.threads))
         .current_dir(&leaf)
         .envs(job.env())
@@ -392,13 +391,13 @@ pub fn run_all(
                     let Some(job) = queue.lock().unwrap().pop() else {
                         break;
                     };
-                    let r = match exes.get(&job.test) {
+                    let r = match exes.get(crate::crates::BINARY) {
                         Some(exe) => run(tree, job, exe, reach_dir, o),
                         None => Ran {
                             job: job.name.clone(),
                             passed: false,
                             secs: 0,
-                            note: "no binary for its test in the coverage build".into(),
+                            note: "no leaf-check binary in the coverage build".into(),
                         },
                     };
                     if !r.passed {

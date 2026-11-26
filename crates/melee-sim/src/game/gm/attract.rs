@@ -263,7 +263,6 @@ impl Running<'_> {
     ) {
         // `fn_8016E730`'s entry, its argument the enter data: the oracle's test hook
         // (`oracle_hooks`), which does nothing in the player, which never installs one.
-        #[cfg(feature = "oracle-hooks")]
         crate::game::oracle_hooks::reach(
             self.game,
             crate::game::oracle_hooks::Entry::MatchStart { scene_mode },

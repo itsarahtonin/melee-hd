@@ -700,6 +700,7 @@ fn image_objects(game: &Game) -> Vec<(&'static str, u32, u32, u32, bool)> {
 
 pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
+    let (mut rollback, mut shortcut) = (0usize, false);
     let mut past_end = 0u32;
     let (mut survey, mut leftovers_report) = (false, false);
     let mut card_path: Option<PathBuf> = None;
@@ -762,6 +763,15 @@ pub fn session(args: &[&str]) -> ExitCode {
             // Ticks run past the trace's end, uncompared, to see where melee-hd stops when the
             // original's run ended in a fault (a Melee crash the trace can't hold).
             "--past" => past_end = it.next().and_then(|t| t.parse().ok()).expect("--past N"),
+            // session-sync's rollback check on this run's own straight play (`Rollbacks`), and
+            // its launcher's shortcut check: one run where the verify ran two.
+            "--rollback" => {
+                rollback = it
+                    .next()
+                    .and_then(|n| n.parse().ok())
+                    .expect("--rollback N")
+            }
+            "--shortcut" => shortcut = true,
             "--all" => all = true,
             // Under the Slippi ruleset, each live match's recording written into DIR as
             // `NAME-N.slp` (`game::live`).
@@ -969,6 +979,14 @@ pub fn session(args: &[&str]) -> ExitCode {
     // The boot's and the menus' statics compare from power-on: an import (`--from`) doesn't
     // bring them in.
     crate::diff::COMPARE_MENUS.with(|c| c.set(from.is_none()));
+    if (rollback > 0 || shortcut)
+        && (from.is_some() || past_end > 0 || after_handback != After::No || mutation.is_some())
+    {
+        eprintln!(
+            "--rollback and --shortcut run from power-on, without --from, --past, --after-handback or --mutate"
+        );
+        return ExitCode::from(2);
+    }
     // A session from power-on news its objects in a heap the earlier scenes used.
     if from.is_none() {
         melee_capture::leftovers::enable(survey);
@@ -991,11 +1009,18 @@ pub fn session(args: &[&str]) -> ExitCode {
         slp_dir,
         live_model,
         after_handback,
+        rollback,
+        shortcut,
+        rollback_failed: std::cell::Cell::new(false),
         name: Path::new(inputs_path)
             .file_stem()
             .map_or_else(|| "session".into(), |n| n.to_string_lossy().into_owned()),
     };
-    run.play(setup)
+    let code = run.play(setup);
+    if run.rollback_failed.get() {
+        return ExitCode::FAILURE;
+    }
+    code
 }
 
 /// The class objects melee-sim holds live against the allocator model's classes' counts, which
@@ -1106,11 +1131,18 @@ struct Run<'a> {
     live_model: bool,
     /// Whether the comparison goes on past the first live match's handback, and how.
     after_handback: After,
+    /// `--rollback N`: session-sync's rollback check of N ticks on this run (0: none).
+    rollback: usize,
+    /// `--shortcut`: session-sync's check of the launcher's shortcut at each VS match.
+    shortcut: bool,
+    /// Whether the rollback check or the shortcut's failed.
+    rollback_failed: std::cell::Cell<bool>,
     name: String,
 }
 
 impl Run<'_> {
     fn play(&self, setup: Setup) -> ExitCode {
+        let rb_setup = (self.rollback > 0 || self.shortcut).then(|| setup.clone());
         let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
         let disc = Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
         let index = melee_capture::disc_index(&disc);
@@ -1271,6 +1303,16 @@ impl Run<'_> {
         melee_sim::game::oracle_hooks::set_fresh_counters(
             self.mutation == Some(Mutation::FreshCounters),
         );
+        // `--rollback`: session-sync's check, on this run's straight play. Each tick is
+        // compared with the trace before its display pass, so the rollback after it waits
+        // for that pass (the next step's start, `pending`), as session-sync's checks a tick
+        // with its pass.
+        let mut rb = rb_setup.map(|setup| {
+            crate::session_sync::Rollbacks::new(setup, &s, self.rollback, self.shortcut)
+        });
+        let mut pending: Option<melee_sim::game::vs_match::Frame> = None;
+        let mut rb_stop: Option<String> = None;
+        let mut step_stop: Option<(u32, String)> = None;
         // Power-on leaves the image at tick 0, the first step's.
         let mut held = self.from.is_none();
         let mut compared = 0;
@@ -1317,6 +1359,13 @@ impl Run<'_> {
                 match advance(&mut image, next) {
                     Some(t) => t,
                     None => {
+                        if let Some(rb) = rb.as_mut()
+                            && let Err(why) =
+                                rollback_after(rb, &mut s, &mut render_due, &mut pending, &console)
+                        {
+                            rb_stop = Some(why);
+                            break None;
+                        }
                         println!("the trace ends after tick {}", next - 1);
                         for k in 0..self.past_end {
                             let stepped = catch_unwind(AssertUnwindSafe(|| {
@@ -1345,6 +1394,17 @@ impl Run<'_> {
             if self.heap_log.is_some() {
                 melee_sim::hsd::heap::log_mark(&format!("T {t}"));
             }
+            if let Some(rb) = rb.as_mut() {
+                if let Err(why) =
+                    rollback_after(rb, &mut s, &mut render_due, &mut pending, &console)
+                {
+                    rb_stop = Some(why);
+                    break None;
+                }
+                if !rb.read_out(console.next, console.reads.len()) {
+                    rb.before(&s, console.next);
+                }
+            }
             let stepped = catch_unwind(AssertUnwindSafe(|| {
                 if render_due {
                     s.render();
@@ -1354,9 +1414,20 @@ impl Run<'_> {
             let ended = match stepped {
                 Ok((f, due)) => {
                     render_due = due;
-                    f.ended
+                    let ended = f.ended;
+                    if rb
+                        .as_mut()
+                        .is_some_and(|rb| !rb.read_out(console.next, usize::MAX))
+                    {
+                        pending = Some(f);
+                    }
+                    ended
                 }
-                Err(p) => break Some(Stop::Seam(panic_text(&p))),
+                Err(p) => {
+                    let why = panic_text(&p);
+                    step_stop = Some((t, why.clone()));
+                    break Some(Stop::Seam(why));
+                }
             };
             let live = s.in_live_match();
             if live != in_live {
@@ -1699,6 +1770,31 @@ impl Run<'_> {
                 stop => self.report(stop, compared, &at),
             };
         }
+        if let Some(rb) = rb.as_mut() {
+            // A run with no live match plays on as session-sync's to the recording's last
+            // read, rolled back, uncompared past the trace; one with a live match is
+            // rolled back to its comparison's end (`run_on` plays the rest).
+            if stop.is_none() && rb_stop.is_none() && live_from.is_none() {
+                rb_stop = rollback_on(rb, &mut s, &mut render_due, &mut pending, &mut console);
+            }
+            let line = match &step_stop {
+                Some((t, why)) if rb_stop.is_none() => Some(format!(
+                    "{} ticks checked in {} matches, no difference; the session stopped in tick {t}: {why}",
+                    rb.checked, rb.matches
+                )),
+                _ => None,
+            };
+            crate::session_sync::report_matches(&rb.match_ticks);
+            if rb.shortcut_failed() {
+                self.rollback_failed.set(true);
+            } else if let Some(line) = line {
+                println!("{line}");
+            } else {
+                let (line, ok) = rb.summary(rb_stop.as_deref(), rb.played());
+                println!("{line}");
+                self.rollback_failed.set(!ok);
+            }
+        }
         if live_from.is_none() {
             return self.report(stop, compared, &at);
         }
@@ -1742,6 +1838,61 @@ impl Run<'_> {
                     println!("  {line}");
                 }
                 ExitCode::FAILURE
+            }
+        }
+    }
+}
+
+/// `--rollback`'s step for the tick the run last stepped (`pending`): its frame's display pass
+/// if one is due, then session-sync's rollback check of it. `Err` names the first difference.
+fn rollback_after(
+    rb: &mut crate::session_sync::Rollbacks,
+    s: &mut Session,
+    render_due: &mut bool,
+    pending: &mut Option<melee_sim::game::vs_match::Frame>,
+    console: &Console,
+) -> Result<(), String> {
+    let Some(mut f) = pending.take() else {
+        return Ok(());
+    };
+    if std::mem::take(render_due) {
+        match catch_unwind(AssertUnwindSafe(|| s.render())) {
+            Ok(draws) => f.draws = draws,
+            Err(p) => return Err(format!("the display pass stopped: {}", panic_text(&p))),
+        }
+    }
+    rb.after(s, console.next, f, console.reads, console.disc)
+}
+
+/// `--rollback` past the trace's end (or a session's stop of the comparison): the straight run
+/// plays on, uncompared, to the recording's last read, each tick rolled back as session-sync's.
+/// The first difference, or none.
+fn rollback_on(
+    rb: &mut crate::session_sync::Rollbacks,
+    s: &mut Session,
+    render_due: &mut bool,
+    pending: &mut Option<melee_sim::game::vs_match::Frame>,
+    console: &mut Console,
+) -> Option<String> {
+    loop {
+        if let Err(why) = rollback_after(rb, s, render_due, pending, console) {
+            return Some(why);
+        }
+        if rb.read_out(console.next, console.reads.len()) {
+            return None;
+        }
+        rb.before(s, console.next);
+        match catch_unwind(AssertUnwindSafe(|| s.step_tick(console))) {
+            Ok((f, due)) => {
+                *render_due = due;
+                *pending = Some(f);
+            }
+            Err(p) => {
+                return Some(format!(
+                    "the session stopped in tick {} past the trace: {}",
+                    rb.played(),
+                    panic_text(&p)
+                ));
             }
         }
     }

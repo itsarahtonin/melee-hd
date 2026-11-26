@@ -32,7 +32,7 @@ const WARM_UP: u32 = 8;
 #[test]
 fn tick_6279_of_ganon_captain_fd_draws_whole() {
     let Some(path) = std::env::var_os("SSBM_DISC") else {
-        eprintln!("skipped: SSBM_DISC names no disc");
+        melee_local_data::skip!("skipped: SSBM_DISC names no disc");
         return;
     };
     // Not without a GPU, or on a software adapter, which draws gx.wgsl wrong.

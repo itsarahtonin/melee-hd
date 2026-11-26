@@ -52,7 +52,7 @@ pub(crate) fn powered_on(args: &crate::Args, path: &std::path::Path) -> Session 
 fn a_ruleset_session_plays_as_the_bare_one() {
     crate::on_game_stack(|| {
         let Some((disc, path)) = pause_fd() else {
-            eprintln!("skipped: no disc or no ruleset sessions");
+            melee_local_data::skip!("skipped: no disc or no ruleset sessions");
             return;
         };
         let rec = Recording::read(&path).unwrap();
@@ -134,7 +134,7 @@ fn a_slippi_replay_plays_in_slippis_float_mode() {
     }
     crate::on_game_stack(|| {
         let Ok(disc) = std::env::var("SSBM_DISC") else {
-            eprintln!("skipped: no disc");
+            melee_local_data::skip!("skipped: no disc");
             return;
         };
         let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");
@@ -194,7 +194,7 @@ fn draw(
 fn a_live_match_draws_with_its_own_frame_builder() {
     crate::on_game_stack(|| {
         let Some((disc, path)) = pause_fd() else {
-            eprintln!("skipped: no disc or no ruleset sessions");
+            melee_local_data::skip!("skipped: no disc or no ruleset sessions");
             return;
         };
         let Some((instance, adapter)) = melee_gpu::testing::instance_and_adapter() else {

@@ -29,7 +29,7 @@ fn paths() -> Option<(String, String)> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     Some((trace, inputs))
@@ -91,7 +91,7 @@ fn session_at(trace: &str, inputs: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     Some(session_with(&trace, &inputs, args))
@@ -266,7 +266,7 @@ fn card_session(name: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     Some(session_with(&trace, &inputs, args))
@@ -351,7 +351,7 @@ fn v2_session(name: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     Some(session_with(&trace, &inputs, args))
@@ -540,7 +540,7 @@ fn scripted_session(dir: &str, name: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     Some(session_with(&trace, &inputs, args))
@@ -572,7 +572,7 @@ fn a_save_ends_attached_until_its_unmount() {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return;
     }
     let out = session_with(&trace, &inputs, &["--heap"]);
@@ -592,7 +592,7 @@ fn a_save_written_through_an_audio_frame() {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return;
     }
     let out = session_with(&trace, &inputs, &["--heap"]);
@@ -783,7 +783,7 @@ fn rules_session(name: &str, args: &[&str]) -> Option<String> {
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
-        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     Some(session_with(&trace, &inputs, args))
@@ -1042,7 +1042,7 @@ fn the_vanilla_runs_from_power_on() {
 fn session_sync(dir: &str, name: &str, args: &[&str]) -> Option<String> {
     let inputs = ssbm_rs_local(&format!("lockstep/{dir}/{name}.inputs"));
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&inputs).exists() {
-        eprintln!("no recording ({inputs}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no recording ({inputs}) or SSBM_DISC: skipping");
         return None;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
@@ -1107,7 +1107,7 @@ fn camera_mode_takes_and_saves_a_snapshot() {
     let trace = ssbm_rs_local("traces/session/2026-10-06_17-11-18.trc");
     let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_17-11-18.inputs");
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
         return;
     }
     let out = session_with(&trace, &inputs, &["--all", "--heap"]);
@@ -1120,7 +1120,7 @@ fn camera_mode_takes_and_saves_a_snapshot() {
 fn a_snapshot_lands_on_the_card_as_the_consoles() {
     let next = ssbm_rs_local("lockstep/recordings/2026-10-06_17-13-21.card");
     if !std::path::Path::new(&next).exists() {
-        eprintln!("no card ({next}): skipping");
+        melee_local_data::skip!("no card ({next}): skipping");
         return;
     }
     let out_card =
@@ -1565,7 +1565,7 @@ fn the_album_of_a_recorded_session() {
     let trace = ssbm_rs_local("traces/session/2026-10-06_17-13-21.trc");
     let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_17-13-21.inputs");
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
         return;
     }
     let out = session_with(&trace, &inputs, &["--all", "--heap"]);

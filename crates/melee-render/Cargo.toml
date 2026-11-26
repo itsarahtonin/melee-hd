@@ -22,3 +22,5 @@ mutation = []
 
 [dev-dependencies]
 melee-slippi = { path = "../melee-slippi" }
+# A check that skips without its data fails under MELEE_CHECKS_REQUIRE_DATA (`melee_local_data::skip!`).
+melee-local-data = { path = "../../tools/local-data" }

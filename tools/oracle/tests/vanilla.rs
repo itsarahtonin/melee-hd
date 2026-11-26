@@ -49,7 +49,7 @@ fn players() -> [Player; 2] {
 /// model's main heap moved by `shift` bytes; none without the disc.
 fn addresses(stage: u16, shift: u32) -> Option<Vec<u32>> {
     let Ok(path) = std::env::var("SSBM_DISC") else {
-        eprintln!("no SSBM_DISC: skipping");
+        melee_local_data::skip!("no SSBM_DISC: skipping");
         return None;
     };
     let disc = Disc::open(&path).unwrap();
@@ -100,7 +100,7 @@ fn vs_heap(trace: &str, args: &[&str]) -> Option<(bool, String)> {
 fn vs_heap_with(trace: &str, players: &[&str], args: &[&str]) -> Option<(bool, String)> {
     let trace = ssbm_rs_local(trace);
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
-        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        melee_local_data::skip!("no trace ({trace}) or SSBM_DISC: skipping");
         return None;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))

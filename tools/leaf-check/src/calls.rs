@@ -202,10 +202,11 @@ fn run_checks(
     quiet_unported_panics();
     let paths = saved_calls(dir, func);
     let Some(index) = disc_index() else {
-        eprintln!("SSBM_DISC is unset: skipping {func}'s saved calls");
+        melee_local_data::skip!("SSBM_DISC is unset: skipping {func}'s saved calls");
         return Vec::new();
     };
     if paths.is_empty() {
+        // A set without this function's calls is one of many a check runs, not missing data.
         eprintln!(
             "no saved calls of {func}: skipping ({})",
             melee_capture::pack::holdings(dir)
@@ -523,10 +524,11 @@ pub fn run_variants(
 pub fn run_variants_in(dir: &str, func: &str, variants: &[Variant]) -> Vec<Vec<Report>> {
     let paths = saved_calls(dir, func);
     let Some(index) = disc_index() else {
-        eprintln!("SSBM_DISC is unset: skipping {func}'s saved calls");
+        melee_local_data::skip!("SSBM_DISC is unset: skipping {func}'s saved calls");
         return variants.iter().map(|_| Vec::new()).collect();
     };
     if paths.is_empty() {
+        // A set without this function's calls is one of many a check runs, not missing data.
         eprintln!(
             "no saved calls of {func}: skipping ({})",
             melee_capture::pack::holdings(dir)
@@ -727,7 +729,7 @@ pub fn debug_round_trips(base: &Path, skip: &dyn Fn(&str) -> bool) {
         }
     }
     if calls.is_empty() {
-        eprintln!("no debug sets in {}: skipping", base.display());
+        melee_local_data::skip!("no debug sets in {}: skipping", base.display());
         return;
     }
     let (unknown, failed) = round_trips(&calls, index);

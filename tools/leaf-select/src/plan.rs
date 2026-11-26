@@ -1,20 +1,23 @@
-//! The leaf-check jobs: each test binary, or each shard of the binaries `shards.txt` splits
-//! (`NAME.KofN`, run with `LEAF_CHECK_SHARD=K/N`), and the sources each binary's own code
-//! comes from.
+//! The leaf-check jobs: each family of checks (a module of leaf-check's one test binary, run
+//! with the filter `NAME::`), or each shard of the families `shards.txt` splits (`NAME.KofN`,
+//! run with `LEAF_CHECK_SHARD=K/N`), and the sources each family's own code comes from.
 
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::crates::HARNESS;
+use crate::crates::{BINARY, HARNESS};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Job {
     /// `fox`, or `cpu_vs.2of6`.
     pub name: String,
-    /// The test binary: its target's name.
+    /// The family: its module in the test binary.
     pub test: String,
     /// `(K, N)`, K from 1.
     pub shard: Option<(usize, usize)>,
+    /// The other families whose names end in this one's, which its filter also matches
+    /// (`link::` matches `young_link::`'s tests): skipped.
+    pub skips: Vec<String>,
 }
 
 impl Job {
@@ -24,11 +27,23 @@ impl Job {
             .map(|(k, n)| vec![("LEAF_CHECK_SHARD".to_owned(), format!("{k}/{n}"))])
             .unwrap_or_default()
     }
+
+    /// The test binary's arguments that run the family's tests alone: its module's path as the
+    /// filter (libtest's filters match anywhere in a name), and `--skip` for each family that
+    /// filter also matches.
+    pub fn filter(&self) -> Vec<String> {
+        let mut v = vec![format!("{}::", self.test)];
+        for s in &self.skips {
+            v.extend(["--skip".to_owned(), format!("{s}::")]);
+        }
+        v
+    }
 }
 
-/// The test targets: `tests/NAME.rs` and `tests/NAME/main.rs`, sorted.
+/// The families: the test binary's modules `tests/leaf/NAME.rs` and `tests/leaf/NAME/mod.rs`,
+/// sorted (not `main.rs` or the shared `support`).
 pub fn tests(root: &Path) -> Vec<String> {
-    let dir = root.join(HARNESS).join("tests");
+    let dir = root.join(HARNESS).join("tests").join(BINARY);
     let mut out = Vec::new();
     for e in std::fs::read_dir(&dir)
         .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
@@ -37,10 +52,12 @@ pub fn tests(root: &Path) -> Vec<String> {
         let p = e.path();
         let name = e.file_name().to_string_lossy().into_owned();
         if p.is_dir() {
-            if p.join("main.rs").exists() {
+            if p.join("mod.rs").exists() {
                 out.push(name);
             }
-        } else if let Some(stem) = name.strip_suffix(".rs") {
+        } else if let Some(stem) = name.strip_suffix(".rs")
+            && stem != "main"
+        {
             out.push(stem.to_owned());
         }
     }
@@ -79,34 +96,44 @@ pub fn jobs(root: &Path) -> Vec<Job> {
         );
     }
     let mut out = Vec::new();
+    let all = tests.clone();
     for t in tests {
+        let skips: Vec<String> = (all.iter())
+            .filter(|g| **g != t && g.ends_with(t.as_str()))
+            .cloned()
+            .collect();
         match shards.iter().find(|(n, _)| *n == t) {
             Some(&(_, n)) => out.extend((1..=n).map(|k| Job {
                 name: format!("{t}.{k}of{n}"),
                 test: t.clone(),
                 shard: Some((k, n)),
+                skips: skips.clone(),
             })),
             None => out.push(Job {
                 name: t.clone(),
                 test: t,
                 shard: None,
+                skips,
             }),
         }
     }
     out
 }
 
-/// The files a test binary's own code comes from (relative to the repository): its file and
-/// the modules it takes in by `#[path]` (theirs too), or its directory's files. A `#[path]`
-/// that can't be followed takes in every support module.
+/// The files a family's own code comes from (relative to the repository): the binary's
+/// `main.rs`, the family's file or its directory's files, and the modules they take in by
+/// `#[path]` or from `crate::support` (theirs too). A `#[path]` that can't be followed takes in
+/// every support module.
 pub fn test_sources(root: &Path, test: &str) -> Vec<String> {
-    let tests = format!("{HARNESS}/tests");
+    let tests = format!("{HARNESS}/tests/{BINARY}");
     let dir = format!("{tests}/{test}");
-    if root.join(&dir).is_dir() {
-        return crate::index::rust_files(root, &dir, &|_| false);
-    }
     let mut out: BTreeSet<String> = BTreeSet::new();
-    let mut todo = vec![format!("{tests}/{test}.rs")];
+    let mut todo = vec![format!("{tests}/main.rs")];
+    if root.join(&dir).is_dir() {
+        todo.extend(crate::index::rust_files(root, &dir, &|_| false));
+    } else {
+        todo.push(format!("{tests}/{test}.rs"));
+    }
     while let Some(rel) = todo.pop() {
         if !out.insert(rel.clone()) {
             continue;
@@ -116,13 +143,34 @@ pub fn test_sources(root: &Path, test: &str) -> Vec<String> {
         };
         let here = rel.rsplit_once('/').map_or("", |(d, _)| d).to_owned();
         for line in text.lines() {
+            // `use crate::support::NAME` (`as ...`, or `::{...}` of one module).
+            if let Some(at) = line.find("crate::support::") {
+                let name: String = line[at + "crate::support::".len()..]
+                    .chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect();
+                let p = format!("{tests}/support/{name}.rs");
+                if root.join(&p).is_file() {
+                    todo.push(p);
+                } else {
+                    out.extend(crate::index::rust_files(
+                        root,
+                        &format!("{tests}/support"),
+                        &|_| false,
+                    ));
+                }
+                continue;
+            }
             let Some(at) = line.find("#[path") else {
                 continue;
             };
             let Some(p) = line[at..].split('"').nth(1) else {
                 continue;
             };
-            let candidates = [format!("{here}/{p}"), format!("{tests}/{p}")];
+            let candidates = [
+                normal(&format!("{here}/{p}")),
+                normal(&format!("{tests}/{p}")),
+            ];
             match candidates.iter().find(|c| root.join(c).is_file()) {
                 Some(c) => todo.push(c.clone()),
                 None => out.extend(crate::index::rust_files(
@@ -134,6 +182,21 @@ pub fn test_sources(root: &Path, test: &str) -> Vec<String> {
         }
     }
     out.into_iter().collect()
+}
+
+/// `rel` with its `..` segments taken out (`a/b/../c` is `a/c`).
+fn normal(rel: &str) -> String {
+    let mut out: Vec<&str> = Vec::new();
+    for part in rel.split('/') {
+        match part {
+            ".." => {
+                out.pop();
+            }
+            "." | "" => {}
+            p => out.push(p),
+        }
+    }
+    out.join("/")
 }
 
 #[cfg(test)]
@@ -165,11 +228,24 @@ mod tests {
     }
 
     #[test]
+    fn a_familys_filter_skips_the_families_it_also_matches() {
+        let jobs = jobs(&root());
+        let link = jobs.iter().find(|j| j.name == "link").unwrap();
+        assert_eq!(link.filter(), ["link::", "--skip", "young_link::"]);
+        let fox = jobs.iter().find(|j| j.name == "fox").unwrap();
+        assert_eq!(fox.filter(), ["fox::"]);
+    }
+
+    #[test]
     fn a_test_takes_in_its_path_modules() {
         let falco = test_sources(&root(), "falco");
-        assert!(falco.contains(&"tools/leaf-check/tests/falco.rs".to_owned()));
-        assert!(falco.contains(&"tools/leaf-check/tests/support/foxlike.rs".to_owned()));
-        assert!(!falco.contains(&"tools/leaf-check/tests/support/calike.rs".to_owned()));
-        assert!(test_sources(&root(), "mpcoll").len() > 1);
+        assert!(falco.contains(&"tools/leaf-check/tests/leaf/falco.rs".to_owned()));
+        assert!(falco.contains(&"tools/leaf-check/tests/leaf/main.rs".to_owned()));
+        assert!(falco.contains(&"tools/leaf-check/tests/leaf/support/foxlike.rs".to_owned()));
+        assert!(!falco.contains(&"tools/leaf-check/tests/leaf/support/calike.rs".to_owned()));
+        let mpcoll = test_sources(&root(), "mpcoll");
+        assert!(mpcoll.contains(&"tools/leaf-check/tests/leaf/mpcoll/mod.rs".to_owned()));
+        assert!(mpcoll.contains(&"tools/leaf-check/tests/leaf/mplib/state.rs".to_owned()));
+        assert!(mpcoll.contains(&"tools/leaf-check/tests/leaf/support/mpstage.rs".to_owned()));
     }
 }

@@ -309,7 +309,7 @@ mod tests {
             .map(|l| PathBuf::from(l).join("lockstep/recordings/2026-10-06_17-13-21.card"))
             .filter(|p| p.exists())
         else {
-            eprintln!("skipped: no SSBM_RS_LOCAL");
+            melee_local_data::skip!("skipped: no SSBM_RS_LOCAL");
             return;
         };
         let image = std::fs::read(card).unwrap();

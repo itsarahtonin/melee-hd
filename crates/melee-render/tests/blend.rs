@@ -158,7 +158,7 @@ fn play(disc: &Disc, to: u32, mut each: impl FnMut(u32, &Match, &[melee_sim::hsd
 
 fn disc() -> Option<Disc> {
     let Some(path) = std::env::var_os("SSBM_DISC") else {
-        eprintln!("skipped: SSBM_DISC names no disc");
+        melee_local_data::skip!("skipped: SSBM_DISC names no disc");
         return None;
     };
     Some(Disc::open(&path).expect("the disc"))

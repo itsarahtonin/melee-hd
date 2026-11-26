@@ -1040,7 +1040,7 @@ mod tests {
     #[test]
     fn lights_on_the_disc() {
         let Ok(path) = std::env::var("SSBM_DISC") else {
-            eprintln!("no SSBM_DISC: skipping");
+            melee_local_data::skip!("no SSBM_DISC: skipping");
             return;
         };
         let disc = Disc::open(&path).expect("the disc");
@@ -1098,7 +1098,7 @@ mod tests {
     #[test]
     fn executable_lights() {
         let Ok(path) = std::env::var("SSBM_DISC") else {
-            eprintln!("no SSBM_DISC: skipping");
+            melee_local_data::skip!("no SSBM_DISC: skipping");
             return;
         };
         let dol = Disc::open(&path)

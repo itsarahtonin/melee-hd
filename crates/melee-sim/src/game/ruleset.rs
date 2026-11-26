@@ -768,7 +768,6 @@ impl Game {
     /// what else its comparison finds.
     #[inline]
     pub fn dynamics_fix(&self) -> bool {
-        #[cfg(feature = "oracle-hooks")]
         if super::oracle_hooks::dynamics_fix_off() {
             return false;
         }

@@ -23,7 +23,7 @@ pub(crate) const REPLAY: &str = concat!(
 
 pub(crate) fn disc() -> Option<Disc> {
     let Some(path) = std::env::var_os("SSBM_DISC") else {
-        eprintln!("skipped: SSBM_DISC names no disc");
+        melee_local_data::skip!("skipped: SSBM_DISC names no disc");
         return None;
     };
     Some(Disc::open(&path).expect("the disc"))
@@ -206,7 +206,7 @@ fn predicting_with_held_controllers_changes_nothing() {
 fn predicting_a_ruleset_session_changes_nothing() {
     crate::on_game_stack(|| {
         let Some((disc, path)) = crate::live_tests::pause_fd() else {
-            eprintln!("skipped: no disc or no ruleset sessions");
+            melee_local_data::skip!("skipped: no disc or no ruleset sessions");
             return;
         };
         let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");

@@ -8,7 +8,12 @@
 //!   month), for the checks that play replays beyond the benchmark matches.
 //!
 //! Unset, a path under one names the variable and never exists, so the checks that need it
-//! skip (or, run on purpose with `--ignored`, fail) with a message naming it.
+//! skip (or, run on purpose with `--ignored`, fail) with a message naming it ([`skip!`]).
+//!
+//! `MELEE_CHECKS_REQUIRE_DATA=1` turns each such skip into a failure: a merge check or a verify
+//! that means to run a check on its data sets it, so a machine missing the data (the disc,
+//! ssbm-rs's captures or traces, the replays) fails the check instead of passing it by running
+//! nothing (the refactor's task 26).
 
 use std::path::{Path, PathBuf};
 use std::sync::Once;
@@ -34,6 +39,39 @@ pub fn ssbm_rs_local(rel: &str) -> String {
 pub fn slippi_replays(rel: &str) -> String {
     static NOTE: Once = Once::new();
     under(SLIPPI_REPLAYS, rel, &NOTE, "Slippi replays")
+}
+
+/// The variable that turns a check's skip for missing data into a failure.
+pub const REQUIRE_DATA: &str = "MELEE_CHECKS_REQUIRE_DATA";
+
+/// Whether `MELEE_CHECKS_REQUIRE_DATA` is set (to anything but empty or `0`).
+pub fn data_required() -> bool {
+    std::env::var(REQUIRE_DATA).is_ok_and(|v| !v.is_empty() && v != "0")
+}
+
+/// A check skipping for want of its data: `why` on stderr, or, with
+/// `MELEE_CHECKS_REQUIRE_DATA` set, a panic that fails the check ([`skip!`]).
+#[track_caller]
+pub fn skipped(why: std::fmt::Arguments) {
+    skip_or_fail(data_required(), why);
+}
+
+#[track_caller]
+fn skip_or_fail(required: bool, why: std::fmt::Arguments) {
+    if required {
+        panic!("{why}: {REQUIRE_DATA} is set, so a check without its data fails");
+    }
+    eprintln!("{why}");
+}
+
+/// `eprintln!`'s form for a check that skips without its data (the disc, `SSBM_RS_LOCAL`'s
+/// captures and traces, `SLIPPI_REPLAYS`): the message, or under `MELEE_CHECKS_REQUIRE_DATA` a
+/// failure ([`skipped`]). The caller returns as before.
+#[macro_export]
+macro_rules! skip {
+    ($($t:tt)*) => {
+        $crate::skipped(format_args!($($t)*))
+    };
 }
 
 /// The benchmark matches' replays, in the repository's `data/bench`.
@@ -109,6 +147,14 @@ mod tests {
         );
         assert_eq!(p, "<MELEE_LOCAL_DATA_TEST_UNSET unset>/calls/fox");
         assert!(!Path::new(&p).exists());
+    }
+
+    #[test]
+    fn a_skip_fails_when_data_is_required() {
+        let why = format_args!("no data here: skipping");
+        let fail = std::panic::AssertUnwindSafe(|| skip_or_fail(true, why));
+        assert!(std::panic::catch_unwind(fail).is_err());
+        skip_or_fail(false, why);
     }
 
     #[test]

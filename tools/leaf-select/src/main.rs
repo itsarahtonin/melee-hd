@@ -169,7 +169,7 @@ fn main() {
                 let lcov = std::fs::read_to_string(work.join("lcov.info"))
                     .unwrap_or_else(|e| panic!("{}: {e}", work.display()));
                 let data = std::fs::read_to_string(work.join("data.log")).unwrap_or_default();
-                let r = cover::record(&tree, j, &exes[&j.test], &lcov, &data);
+                let r = cover::record(&tree, j, &exes[crate::crates::BINARY], &lcov, &data);
                 println!(
                     "{}	{} units ran, {} named, {} signatures",
                     j.name,

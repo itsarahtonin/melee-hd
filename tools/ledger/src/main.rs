@@ -113,7 +113,13 @@ fn leaf_checked() -> BTreeMap<String, String> {
     rust_files(Path::new("tools/leaf-check/tests"), &mut files);
     let mut found = BTreeMap::new();
     for f in files {
-        let test = f.file_stem().unwrap().to_string_lossy().into_owned();
+        // A family's file (`tests/leaf/fox.rs`), or its directory's `mod.rs` (`tests/leaf/mpcoll`).
+        let named = if f.file_stem().is_some_and(|s| s == "mod") {
+            f.parent().unwrap()
+        } else {
+            f.as_path()
+        };
+        let test = named.file_stem().unwrap().to_string_lossy().into_owned();
         let text = std::fs::read_to_string(&f).unwrap();
         let mut rest = text.as_str();
         while let Some(at) = rest.find("fns::") {
