@@ -1,6 +1,9 @@
 //! The item core, `melee/it/item.c`: making items and their GObjs, the per-frame processes,
 //! state changes, and destroying items.
 
+use crate::game::camera::CmSubjectState;
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
@@ -783,7 +786,11 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     // `foobar3`: the camera follows some items.
     let cam = super::item(r.game, gobj).hit_flags.bits.b01;
     if cam != 0 {
-        let b = r.game.camera.alloc_box(if cam == 1 { 0 } else { 2 });
+        let b = r.game.camera.alloc_box(if cam == 1 {
+            CmSubjectState::Active
+        } else {
+            CmSubjectState::Auto
+        });
         item_mut(r.game, gobj).camera_box = Some(b);
         {
             let c = common_data(r.game);
@@ -845,7 +852,7 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let max_fall = common_data(r.game).f32(r.data, common::X6C);
     lib2725::clamp_fall(r.game, gobj, max_fall);
     lib2725::clear_hitboxes(r.game, r.data, gobj);
-    coll::set_hurtbox_state(r.game, gobj, coll::HURT_ENABLED);
+    coll::set_hurtbox_state(r.game, gobj, HurtCapsuleState::Enabled);
     coll::clear_random_push(r.game, gobj);
     {
         let ip = item_mut(r.game, gobj);
@@ -1597,7 +1604,7 @@ pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
         for i in 0..4 {
             let ip = super::item(r.game, gobj);
             let hit = &ip.hitboxes[i].hit;
-            if hit.state != 0 {
+            if hit.state != HitCapsuleState::Disabled {
                 let d = fp::fmadds(
                     reg(hit.damage),
                     reg(ip.reflect_damage_mul),

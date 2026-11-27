@@ -6,9 +6,9 @@
 //! The stage frames each float with a camera subject while it shows, and moves the collision
 //! vertices that ride on the floats' joints every tick.
 
+use crate::game::camera::CmSubjectState;
 use gekko_fp as fp;
 
-use super::super::camera;
 use super::super::handles::CodeRef;
 use super::super::state::{Game, Running};
 use super::super::structs::_GXColor;
@@ -412,7 +412,7 @@ pub fn init_subjects(r: &mut Running, gobj: GObjId) {
     while i < SUBJECTS
         && let Some(n) = node
     {
-        let b = r.game.camera.alloc_box(camera::ACTIVE);
+        let b = r.game.camera.alloc_box(CmSubjectState::Active);
         let v = r.game.grounds[g.0].u.pura_stage();
         v.subjects[i] = Some(b);
         v.jobjs[i] = Some(n);
@@ -421,9 +421,9 @@ pub fn init_subjects(r: &mut Running, gobj: GObjId) {
         let s = r.game.camera.subject_mut(b);
         s.pos = pos;
         s.state = if hidden {
-            camera::INACTIVE
+            CmSubjectState::Inactive
         } else {
-            camera::ACTIVE
+            CmSubjectState::Active
         };
         s.target_ext.v.x = 30.0;
         s.target_ext.v.y = -30.0;
@@ -450,9 +450,9 @@ pub fn update_subjects(r: &mut Running, gobj: GObjId) {
         let s = r.game.camera.subject_mut(b);
         s.pos = pos;
         s.state = if hidden {
-            camera::INACTIVE
+            CmSubjectState::Inactive
         } else {
-            camera::ACTIVE
+            CmSubjectState::Active
         };
     }
 }

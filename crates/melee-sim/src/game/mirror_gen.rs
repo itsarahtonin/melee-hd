@@ -13,6 +13,7 @@ use super::gr::GroundVars;
 use super::handles::*;
 use super::mirror::{Cx, Export, LayCx, LayOut, Mem, MemMut, Mirror, code};
 use super::structs::*;
+use crate::game::camera::{CameraMode, CmSubjectState};
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
@@ -35,7 +36,7 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
+use crate::lb::hitcapsule::{HitCapsuleState, HitJObj, HitOwner, HurtCapsuleState, Victim};
 use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -164,7 +165,7 @@ impl Mirror for HitCapsule {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         HitCapsule {
-            state: m.u32(at + 0x0) as i32,
+            state: HitCapsuleState::import(m, at + 0x0, cx),
             group: m.u32(at + 0x4),
             whole_damage: m.u32(at + 0x8),
             damage: f32::from_bits(m.u32(at + 0xc)),
@@ -223,13 +224,8 @@ impl Mirror for HitCapsule {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.state != m.u32(at + 0x0) as i32 {
-            cx.mismatch(
-                &format!("{path}.state"),
-                format!("{:?}", self.state),
-                format!("{:?}", m.u32(at + 0x0) as i32),
-            );
-        }
+        self.state
+            .compare(m, at + 0x0, &format!("{path}.state"), cx);
         if self.group != m.u32(at + 0x4) {
             cx.mismatch(
                 &format!("{path}.group (x4)"),
@@ -555,7 +551,7 @@ impl Mirror for HurtCapsule {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         HurtCapsule {
-            state: m.u32(at + 0x0) as i32,
+            state: HurtCapsuleState::import(m, at + 0x0, cx),
             a_offset: Vec3::import(m, at + 0x4, cx),
             b_offset: Vec3::import(m, at + 0x10, cx),
             scale: f32::from_bits(m.u32(at + 0x1c)),
@@ -576,13 +572,8 @@ impl Mirror for HurtCapsule {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.state != m.u32(at + 0x0) as i32 {
-            cx.mismatch(
-                &format!("{path}.state"),
-                format!("{:?}", self.state),
-                format!("{:?}", m.u32(at + 0x0) as i32),
-            );
-        }
+        self.state
+            .compare(m, at + 0x0, &format!("{path}.state"), cx);
         self.a_offset
             .compare(m, at + 0x4, &format!("{path}.a_offset"), cx);
         self.b_offset
@@ -986,7 +977,7 @@ impl Mirror for CmSubject {
             prev: cx
                 .import_handle("CameraBoxId", m.u32(at + 0x4))
                 .map(CameraBoxId),
-            state: m.u32(at + 0x8) as i32,
+            state: CmSubjectState::import(m, at + 0x8, cx),
             on_ledge: m.bits(at, 96, 1) != 0,
             force_inactive: m.bits(at, 97, 1) != 0,
             was_framed: m.bits(at, 98, 1) != 0,
@@ -1015,13 +1006,8 @@ impl Mirror for CmSubject {
             self.prev.map(|h| h.0),
             m.u32(at + 0x4),
         );
-        if self.state != m.u32(at + 0x8) as i32 {
-            cx.mismatch(
-                &format!("{path}.state"),
-                format!("{:?}", self.state),
-                format!("{:?}", m.u32(at + 0x8) as i32),
-            );
-        }
+        self.state
+            .compare(m, at + 0x8, &format!("{path}.state"), cx);
         if (self.on_ledge as u32) != m.bits(at, 96, 1) {
             cx.mismatch(
                 &format!("{path}.on_ledge"),
@@ -1076,7 +1062,7 @@ impl Mirror for CameraDebugMode {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         CameraDebugMode {
-            last_mode: m.u32(at + 0x0) as i32,
+            last_mode: CameraMode::import(m, at + 0x0, cx),
             ply_slot: m.u32(at + 0x4) as i32,
             follow_int_offset: Vec3::import(m, at + 0x8, cx),
             follow_eye_offset: Vec3::import(m, at + 0x14, cx),
@@ -1092,13 +1078,8 @@ impl Mirror for CameraDebugMode {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.last_mode != m.u32(at + 0x0) as i32 {
-            cx.mismatch(
-                &format!("{path}.last_mode"),
-                format!("{:?}", self.last_mode),
-                format!("{:?}", m.u32(at + 0x0) as i32),
-            );
-        }
+        self.last_mode
+            .compare(m, at + 0x0, &format!("{path}.last_mode"), cx);
         if self.ply_slot != m.u32(at + 0x4) as i32 {
             cx.mismatch(
                 &format!("{path}.ply_slot"),
@@ -9118,7 +9099,7 @@ impl LayOut for HitVictim {
 impl LayOut for HitCapsule {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_u32(at + 0x0, self.state as u32);
+        self.state.lay(l, at + 0x0, cx);
         l.put_u32(at + 0x4, self.group as u32);
         l.put_u32(at + 0x8, self.whole_damage as u32);
         l.put_u32(at + 0xc, self.damage.to_bits());
@@ -9180,7 +9161,7 @@ impl LayOut for HitCapsule {
 impl LayOut for HurtCapsule {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_u32(at + 0x0, self.state as u32);
+        self.state.lay(l, at + 0x0, cx);
         self.a_offset.lay(l, at + 0x4, cx);
         self.b_offset.lay(l, at + 0x10, cx);
         l.put_u32(at + 0x1c, self.scale.to_bits());

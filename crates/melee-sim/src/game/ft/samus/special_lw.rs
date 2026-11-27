@@ -3,6 +3,8 @@
 //! (`ftsamusspeciallw0.c`): her own bomb's blast throws her up and away from it in the jump
 //! state (`ms::SPECIAL_LW` and its aerial twin).
 
+use crate::game::ft::types::HurtHeight;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -14,7 +16,7 @@ use super::super::motion::flags;
 use super::{PART_TOP_N, PART_X_ROT_N, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule::{self, HURT_ENABLED, HURT_INTANGIBLE};
+use crate::lb::hitcapsule;
 use crate::vec::Vec3;
 
 /// `ftCommon_GroundAirColl_MF | Ft_MF_KeepColAnimHitStatus | Ft_MF_SkipHit | Ft_MF_SkipModel`:
@@ -23,8 +25,6 @@ const KEEP: u32 =
     0x0C4C_5080 | flags::KEEP_COL_ANIM_HIT_STATUS | flags::SKIP_HIT | flags::SKIP_MODEL;
 /// `JOBJ_HIDDEN`, the flags the bomb jump's switches pass.
 const KEEP_JUMP: u32 = 1 << 4;
-/// `HurtHeight_Mid`.
-const HURT_HEIGHT_MID: i32 = 1;
 /// `ftCo_MS_SquatWait`, a state the bomb starts from mid-animation.
 const MS_SQUAT_WAIT: i32 = 40;
 /// `M_PI / 2` as a float.
@@ -320,14 +320,14 @@ impl Running<'_> {
     #[doc(alias = "ftColl_HurtboxInit")]
     pub fn samus_ball_intangible(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.set_hurtbox_state(f, HURT_INTANGIBLE);
+        self.set_hurtbox_state(f, HurtCapsuleState::Intangible);
         let bone = self.bone_joint(gobj, PART_X_ROT_N);
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.hurt_capsules[0];
         h.capsule.bone_idx = PART_X_ROT_N;
-        h.height = HURT_HEIGHT_MID;
+        h.height = HurtHeight::Mid;
         h.is_grabbable = 0;
-        h.capsule.state = HURT_ENABLED;
+        h.capsule.state = HurtCapsuleState::Enabled;
         h.capsule.bone = bone;
         h.capsule.a_offset = Vec3::default();
         h.capsule.b_offset = Vec3::default();
@@ -339,7 +339,7 @@ impl Running<'_> {
     #[doc(alias = "ftSs_SpecialLw_8012AF38")]
     pub fn samus_ball_tangible(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.set_hurtbox_state(f, HURT_ENABLED);
+        self.set_hurtbox_state(f, HurtCapsuleState::Enabled);
     }
 
     /// The bomb's start (`ftSamus_SpecialLw_StartAction_inner`): the script's variables and
@@ -402,7 +402,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         if fp.cmd_vars[0] == 0 && fp.mv_i32(mv::INTANGIBLE) != 0 {
             let f = self.game.fighter_id(gobj);
-            self.set_hurtbox_state(f, HURT_ENABLED);
+            self.set_hurtbox_state(f, HurtCapsuleState::Enabled);
             self.game.fighter_mut(gobj).set_mv_i32(mv::INTANGIBLE, 0);
         }
     }

@@ -2,6 +2,7 @@
 
 use super::super::state::{Game, Running};
 use crate::game::ft::CpuKind;
+use crate::game::ft::types::SmashState;
 use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
 use crate::mp::coll::GroundOrAir;
@@ -288,7 +289,7 @@ impl Game {
     #[doc(alias = "ftLib_IsChargingSmash")]
     pub fn ft_is_charging_smash(&self, gobj: GObjId) -> bool {
         // `SmashState_Charging`.
-        self.fighter(gobj).smash_attrs.state == 2
+        self.fighter(gobj).smash_attrs.state == SmashState::Charging
     }
 
     /// Whether the fighter is on the ground or in the air, `ftLib_GetGroundAir`.

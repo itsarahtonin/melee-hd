@@ -7,6 +7,8 @@
 // NaN takes the original's branches, which the negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -50,9 +52,6 @@ const ELEMENT_DARK: u32 = 13;
 const ELEMENT_SCBALL: u32 = 14;
 const ELEMENT_LEADEAD: u32 = 16;
 
-/// `SmashState_Charging`.
-const SMASH_CHARGING: i32 = 2;
-
 /// `ftCo_Damage_OnEveryHitlag` and `ftCo_Damage_OnExitHitlag`.
 const ON_EVERY_HITLAG: CodeRef = CodeRef(0x8008_E4F0);
 const ON_EXIT_HITLAG: CodeRef = CodeRef(0x8008_E714);
@@ -95,7 +94,7 @@ impl Running<'_> {
         if fp.motion_id == ms::DAMAGE_ICE {
             fp.dmg.kb_applied = mem(fp::fmuls(reg(fp.dmg.kb_applied), reg(ice)));
         }
-        if fp.smash_attrs.state == SMASH_CHARGING {
+        if fp.smash_attrs.state == SmashState::Charging {
             fp.dmg.kb_applied = mem(fp::fmuls(reg(fp.dmg.kb_applied), reg(charge)));
         }
         if reg(fp.scale.y) != 1.0 {
@@ -873,7 +872,7 @@ impl Running<'_> {
         let desc = self.common().at(0x380);
         let d = |o: u32| self.data.u32(desc.at(o));
         let hit = super::super::super::structs::HitCapsule {
-            state: d(0) as i32,
+            state: HitCapsuleState::from_raw(d(0) as i32),
             damage: mem(fp::frsp(f64::from(d(4)))),
             kb_angle: d(8) as i32,
             kb_growth: d(0xC),

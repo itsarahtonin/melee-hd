@@ -1,6 +1,7 @@
 //! Creating fighters (`fighter.c`): the fighters' first setup for a match, a fighter's
 //! creation from its character's data, and its spawn, which a rebirth repeats.
 
+use crate::game::camera::CmSubjectState;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -256,7 +257,7 @@ impl Running<'_> {
             }
         }
         self.init_hurt_capsules(f);
-        let cam_box = self.game.camera.alloc_box(0);
+        let cam_box = self.game.camera.alloc_box(CmSubjectState::Active);
         self.game.fighters[f.0].camera_box = Some(cam_box);
         let root = self.root_jobj(gobj);
         self.create_shadow(f, root);
@@ -609,6 +610,6 @@ impl Running<'_> {
         let b = fp.camera_box.expect("a fighter without a camera box");
         fp.is_sleeping = true;
         fp.dead = true;
-        self.game.camera.subject_mut(b).state = super::super::camera::INACTIVE;
+        self.game.camera.subject_mut(b).state = CmSubjectState::Inactive;
     }
 }

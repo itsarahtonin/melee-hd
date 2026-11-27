@@ -965,7 +965,11 @@ fn refresh_hurtboxes() {
 fn set_hurtbox_state() {
     leaf_check::shard_test!();
     check("it_80271508", &|r, a| {
-        coll::set_hurtbox_state(r.game, a.gobj(0), a.int(1) as i32);
+        coll::set_hurtbox_state(
+            r.game,
+            a.gobj(0),
+            melee_sim::lb::hitcapsule::HurtCapsuleState::from_raw(a.int(1) as i32),
+        );
         Ret::None
     });
 }

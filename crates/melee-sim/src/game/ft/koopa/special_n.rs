@@ -9,6 +9,7 @@
 //! Kirby's (`ft::kirby::special_koopa::KIRBY`), and each function here carries both
 //! originals' names.
 
+use crate::lb::hitcapsule::HurtCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -492,13 +493,13 @@ impl Running<'_> {
         if var & 1 != 0 {
             self.set_model_variant(f, 0, 1);
             for b in SHELL_BONES {
-                self.set_bone_hurtbox_state(f, b, 2);
+                self.set_bone_hurtbox_state(f, b, HurtCapsuleState::Intangible);
             }
             self.set_item_visible(gobj, false);
             self.game.fighters[f.0].articles_visible = false;
         } else {
             self.set_model_variant(f, 0, 0);
-            self.set_hurtbox_state(f, 0);
+            self.set_hurtbox_state(f, HurtCapsuleState::Enabled);
             self.set_item_visible(gobj, true);
             self.game.fighters[f.0].articles_visible = true;
         }

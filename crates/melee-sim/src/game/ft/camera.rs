@@ -2,6 +2,7 @@
 //! grab mashing and a charging smash), then the action state's camera callback, which brings
 //! the fighter's camera box up to date.
 
+use crate::game::ft::types::SmashState;
 use gekko_fp as fp;
 
 use super::super::camera::BoxFit;
@@ -12,10 +13,6 @@ use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
-
-/// `SmashState_Charging` and the state after it that still shakes.
-const SMASH_CHARGING: i32 = 2;
-const SMASH_HELD: i32 = 4;
 
 /// `Fighter_procCamera`: unless the fighter sleeps, its shake and its state's camera
 /// callback.
@@ -53,7 +50,7 @@ impl Running<'_> {
             shakes[1] = Some(self.vec2(row, u32::from(fp.mash_shake_row)));
         }
         let s = &fp.smash_attrs;
-        if s.state == SMASH_CHARGING || s.state == SMASH_HELD {
+        if s.state == SmashState::Charging || s.state == SmashState::Held {
             let table = self.load_common(0x2C);
             let row = self.data.ptr(table).expect("the smash charge shake table");
             shakes[2] = Some(self.vec2(row, u32::from(s.shake_row)));

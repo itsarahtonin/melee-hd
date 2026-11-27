@@ -7,6 +7,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -174,7 +175,7 @@ pub fn release(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80295F38")]
 pub fn fire(r: &mut Running, gobj: GObjId) {
     let mut hit = HitCapsule {
-        state: crate::lb::hitcapsule::ENABLED,
+        state: HitCapsuleState::Enabled,
         damage: mem(fp::frsp(f64::from(attr_u(r, gobj, 0x30)))),
         ..HitCapsule::default()
     };

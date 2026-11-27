@@ -8,6 +8,7 @@
 //! Kirby's copy (`It_Kind_Kirby_MewtwoShadowBall`) runs the same code with his own checks
 //! (`ft::kirby::special_mewtwo`).
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::item::{change, change_state, play_sfx, play_sfx1};
@@ -22,7 +23,6 @@ use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::hitcapsule;
 use crate::math;
 use crate::vec::Vec3;
 
@@ -411,7 +411,7 @@ pub fn animate_burst(r: &mut Running, gobj: GObjId) -> bool {
     let s = ip.vars.mewtwo_shadowball().size.get();
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
     let ip = item_mut(r.game, gobj);
-    if ip.hitboxes[0].hit.state != hitcapsule::DISABLED {
+    if ip.hitboxes[0].hit.state != HitCapsuleState::Disabled {
         let s = ip.vars.mewtwo_shadowball().burst_scale.get();
         ip.hitboxes[0].hit.scale = s;
     }

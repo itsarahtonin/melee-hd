@@ -3,6 +3,7 @@
 //! Oil Panic throws the oil (`it::kinds::gamewatchpanic`), its damage from what it caught.
 //! The bucket's fill shows on his model variants.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -417,7 +418,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         for i in 0..4 {
             let fp = &self.game.fighters[f.0];
-            if fp.hitboxes[i].state == crate::lb::hitcapsule::ENABLED {
+            if fp.hitboxes[i].state == HitCapsuleState::Enabled {
                 let damage = fp.cmd_vars[1];
                 self.hitbox_damage(f, i, false, damage);
             }

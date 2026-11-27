@@ -3,6 +3,9 @@
 //! state's animation is loaded from ARAM and started, its command script begins, and its
 //! callbacks take over.
 
+use crate::game::ft::types::HurtHeight;
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
@@ -311,14 +314,14 @@ impl Running<'_> {
 
     /// Sets every hurtbox's state, `ftColl_8007B0C0`.
     #[doc(alias = "ftColl_8007B0C0")]
-    pub(super) fn set_hurtbox_state(&mut self, f: FighterId, state: i32) {
+    pub(super) fn set_hurtbox_state(&mut self, f: FighterId, state: HurtCapsuleState) {
         let fp = &mut self.game.fighters[f.0];
         for i in 0..fp.hurt_capsules_len as usize {
             let h = &mut fp.hurt_capsules[i].capsule;
             h.state = state;
             h.skip_update_pos = false;
         }
-        fp.hurtboxes_set = state != 0;
+        fp.hurtboxes_set = state != HurtCapsuleState::Enabled;
     }
 
     /// Puts the hurtboxes back as the character's data describes them, `ftColl_8007B4E0`.
@@ -353,9 +356,9 @@ impl Running<'_> {
             );
             let h = &mut self.game.fighters[f.0].hurt_capsules[i as usize];
             h.capsule.bone_idx = bone_idx;
-            h.height = height;
+            h.height = HurtHeight::from_raw(height);
             h.is_grabbable = grabbable;
-            h.capsule.state = 0;
+            h.capsule.state = HurtCapsuleState::Enabled;
             h.capsule.bone = joint;
             h.capsule.a_offset = a;
             h.capsule.b_offset = b;
@@ -633,7 +636,7 @@ impl Running<'_> {
                 self.set_hit_status(gobj, 0);
             }
             if self.game.fighters[f.0].hurtboxes_set {
-                self.set_hurtbox_state(f, 0);
+                self.set_hurtbox_state(f, HurtCapsuleState::Enabled);
             }
         }
         if self.game.fighters[f.0].hurtboxes_custom {
@@ -739,7 +742,7 @@ impl Running<'_> {
             // `mpClearFloorSkip`.
             fp.coll_data.floor_skip = -1;
             // `ftCo_800DEEA8`.
-            fp.smash_attrs.state = 0;
+            fp.smash_attrs.state = SmashState::None;
             fp.smash_attrs.smash_since_hitbox = -1.0;
             fp.wind_immune = false;
         }

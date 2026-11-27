@@ -5,6 +5,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -17,7 +18,6 @@ use super::{PART_R_SHOULDER_N, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 use crate::vec::Vec3;
 
 /// What the stance keeps between the ground and the air (`ftMs_MF_SpecialLw_Coll`).
@@ -181,7 +181,7 @@ impl Running<'_> {
         let n = self.game.fighters[f.0].mv_i32(mv::LW_X0);
         if n > 0 && self.game.ft_kind(gobj) == FighterKind::Emblem {
             for i in 0..4 {
-                if self.game.fighters[f.0].hitboxes[i].state == hitcapsule::ENABLED {
+                if self.game.fighters[f.0].hitboxes[i].state == HitCapsuleState::Enabled {
                     let n = self.game.fighters[f.0].mv_i32(mv::LW_X0);
                     self.hitbox_damage(f, i, false, n as u32);
                 }

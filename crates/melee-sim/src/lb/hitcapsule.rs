@@ -268,29 +268,40 @@ impl Mirror for HitJObj {
     }
 }
 
-/// `HitCapsuleState`.
-pub const DISABLED: i32 = 0;
-pub const ENABLED: i32 = 1;
-/// On, its place taken from its joint once (`HitCapsule_Unk2`): the next update starts sweeping.
-#[doc(alias("UNK2"))]
-pub const PLACED: i32 = 2;
-/// On, sweeping from its last place to where its joint is now (`HitCapsule_Unk3`).
-#[doc(alias("UNK3"))]
-pub const MOVING: i32 = 3;
-/// On, its place no longer brought up to date (`HitCapsule_Unk4`: an item's `it_80275788`).
-#[doc(alias("UNK4"))]
-pub const STOPPED: i32 = 4;
+crate::c_enum! {
+    /// `HitCapsuleState`: whether a hitbox is on, and how its place follows its joint
+    /// (`HitCapsule::state`).
+    pub enum HitCapsuleState: i32 {
+        /// `HitCapsule_Disabled`: off.
+        #[doc(alias("HitCapsule_Disabled", "DISABLED"))]
+        Disabled = 0,
+        /// `HitCapsule_Enabled`: on, its place not yet taken from its joint.
+        #[doc(alias("HitCapsule_Enabled", "ENABLED"))]
+        Enabled = 1,
+        /// On, its place taken from its joint once (`HitCapsule_Unk2`): the next update starts
+        /// sweeping.
+        #[doc(alias("HitCapsule_Unk2", "UNK2", "PLACED"))]
+        Placed = 2,
+        /// On, sweeping from its last place to where its joint is now (`HitCapsule_Unk3`).
+        #[doc(alias("HitCapsule_Unk3", "UNK3", "MOVING"))]
+        Moving = 3,
+        /// On, its place no longer brought up to date (`HitCapsule_Unk4`: an item's
+        /// `it_80275788`).
+        #[doc(alias("HitCapsule_Unk4", "UNK4", "STOPPED"))]
+        Stopped = 4,
+    }
+}
 
 /// Turns a hitbox off, `lbColl_80008428`.
 #[doc(alias = "lbColl_80008428")]
 pub fn disable(hit: &mut HitCapsule) {
-    hit.state = DISABLED;
+    hit.state = HitCapsuleState::Disabled;
 }
 
 /// Turns a hitbox on, `lbColl_80008434`.
 #[doc(alias = "lbColl_80008434")]
 pub fn enable(hit: &mut HitCapsule) {
-    hit.state = ENABLED;
+    hit.state = HitCapsuleState::Enabled;
 }
 
 /// Forgets every victim, `lbColl_80008440`.
@@ -319,7 +330,7 @@ pub fn copy_victims(src: &HitCapsule, dst: &mut HitCapsule) {
 /// `lbColl_80008A5C`.
 #[doc(alias = "lbColl_80008A5C")]
 pub fn age_victims(hit: &mut HitCapsule) {
-    if hit.state == DISABLED {
+    if hit.state == HitCapsuleState::Disabled {
         return;
     }
     for v in hit.victims_1.iter_mut().chain(hit.victims_2.iter_mut()) {
@@ -404,10 +415,20 @@ pub fn remove_victim(hit: &mut HitCapsule, victim: Victim) {
     }
 }
 
-/// `HurtCapsuleState`: an intangible hurtbox can't be hit.
-pub const HURT_INTANGIBLE: i32 = 2;
-/// `HurtCapsule_Enabled`.
-pub const HURT_ENABLED: i32 = 0;
+crate::c_enum! {
+    /// `HurtCapsuleState`: whether a hurtbox can be hit (`HurtCapsule::state`).
+    pub enum HurtCapsuleState: i32 {
+        /// `HurtCapsule_Enabled`: it takes hits.
+        #[doc(alias("HurtCapsule_Enabled", "HURT_ENABLED"))]
+        Enabled = 0,
+        /// `HurtCapsule_Disabled`: off.
+        #[doc(alias("HurtCapsule_Disabled", "HURT_DISABLED"))]
+        Disabled = 1,
+        /// `HurtCapsule_Intangible`: hits pass through it.
+        #[doc(alias("HurtCapsule_Intangible", "HURT_INTANGIBLE"))]
+        Intangible = 2,
+    }
+}
 
 /// The radius a hitbox tests with: its own, or scaled by its owner's size unless fixed.
 fn hit_radius(hit: &HitCapsule, owner_scale: f32) -> f32 {
@@ -453,7 +474,7 @@ pub fn hits_hurtbox(
     hurt_owner_scale: f32,
     z: f32,
 ) -> bool {
-    if hurt.state == HURT_INTANGIBLE {
+    if hurt.state == HurtCapsuleState::Intangible {
         return false;
     }
     if phantom {
@@ -548,7 +569,7 @@ pub fn grabs_hurtbox(
     hurt_owner_scale: f32,
     z: f32,
 ) -> bool {
-    if hurt.state != HURT_ENABLED {
+    if hurt.state != HurtCapsuleState::Enabled {
         return false;
     }
     hits_hurtbox(

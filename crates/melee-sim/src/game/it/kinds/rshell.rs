@@ -2,6 +2,7 @@
 //! the ground, turning at ledges and walls, until it has hit `x54` times or its time runs out.
 //! The green shell's code ([`super::shell`]) with its own chase, bounces and hits.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -15,7 +16,6 @@ use crate::game::handles::CodeRef;
 use crate::game::state::{Game, Running};
 use crate::game::structs::itRShell_ItemVars;
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 use crate::vec::Vec3;
 
 pub const TRAIL: u32 = 0x8028_CFE0;
@@ -427,7 +427,7 @@ pub fn phys5(r: &mut Running, gobj: GObjId) {
             accelerate(r, gobj);
             let chase_speed = attr(r, gobj, 0x10);
             let ip = item(r.game, gobj);
-            if ip.hitboxes[0].hit.state == hitcapsule::DISABLED
+            if ip.hitboxes[0].hit.state == HitCapsuleState::Disabled
                 && reg(ip.vel.x).abs() <= reg(chase_speed)
             {
                 lib2725::start_hitbox(r.game, r.data, gobj, 0);

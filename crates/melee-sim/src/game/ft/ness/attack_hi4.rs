@@ -5,6 +5,8 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -50,7 +52,7 @@ impl Running<'_> {
     #[doc(alias = "ftNs_AttackHi4_YoyoUpdateHitPos")]
     pub fn ness_yoyo_update_hit_pos(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.hitboxes[0].state != hitcapsule::DISABLED {
+        if fp.hitboxes[0].state != HitCapsuleState::Disabled {
             let p = u_vec(fp, u::YOYO_HITBOX_POS);
             if p.x != 0.0 || p.y != 0.0 {
                 super::super::seak::special_s::hit_at(&mut fp.hitboxes[0], p);
@@ -82,7 +84,7 @@ impl Running<'_> {
             return;
         }
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].hitboxes[0].state != hitcapsule::ENABLED {
+        if self.game.fighters[f.0].hitboxes[0].state != HitCapsuleState::Enabled {
             return;
         }
         let duration = reg(self.ness_attr_f32(f, attr::YOYO_CHARGE_DURATION));
@@ -241,7 +243,7 @@ impl Running<'_> {
         let rows = self.data.u32(self.load_common(0x2C).at(4)) as u8;
         let fp = &mut self.game.fighters[f.0];
         let s = &mut fp.smash_attrs;
-        s.state = 4;
+        s.state = SmashState::from_raw(4);
         s.frame_speed_mul = fp.frame_speed_mul;
         let s = &mut fp.smash_attrs;
         s.frames = 0.0;

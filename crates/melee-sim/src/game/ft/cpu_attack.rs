@@ -3,6 +3,7 @@
 //! entries say where an attack reaches and how often to pick it, weighed against where the
 //! target will be.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
@@ -1527,7 +1528,7 @@ impl Running<'_> {
                 .hitboxes
                 .iter()
                 .take(4)
-                .any(|h| h.hit.state != hitcapsule::DISABLED);
+                .any(|h| h.hit.state != HitCapsuleState::Disabled);
             if !live {
                 continue;
             }
@@ -1547,8 +1548,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800BB104")]
     fn cpu_hitbox_coming(&self, f: FighterId, o: FighterId, middle: Vec3, radius: f32) -> bool {
         self.game.fighters[o.0].hitboxes.iter().any(|h| {
-            if h.state == hitcapsule::DISABLED
-                || h.state == hitcapsule::ENABLED
+            if h.state == HitCapsuleState::Disabled
+                || h.state == HitCapsuleState::Enabled
                 || h.phantom
                 || h.element == ELEMENT_CATCH
                 || hitcapsule::has_victim(h, hitcapsule::Victim::Fighter(f))
@@ -1670,8 +1671,8 @@ impl Running<'_> {
         );
         let hit = self.game.items[it.0].hitboxes.iter().take(4).any(|b| {
             let h = &b.hit;
-            if h.state == hitcapsule::DISABLED
-                || h.state == hitcapsule::ENABLED
+            if h.state == HitCapsuleState::Disabled
+                || h.state == HitCapsuleState::Enabled
                 || h.phantom
                 || h.element == ELEMENT_INERT
                 || hitcapsule::has_victim(h, hitcapsule::Victim::Fighter(f))

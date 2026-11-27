@@ -2,6 +2,7 @@
 //! sped by the fuel left, flying at a random angle within its attributes' range and turning
 //! along the surfaces it meets, its hitbox gone after `x4` frames and itself after `x0`.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
@@ -15,7 +16,6 @@ use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::hitcapsule;
 use crate::mp::coll::EcbShape;
 use crate::vec::Vec3;
 
@@ -249,7 +249,7 @@ fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     let hitbox_life = attr_f32(r, gobj, attr::HITBOX_LIFETIME);
     let j = jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    if ip.hitboxes[0].hit.state != hitcapsule::DISABLED {
+    if ip.hitboxes[0].hit.state != HitCapsuleState::Disabled {
         let first = ip.hitboxes[0].hit.scale;
         let v = ip.vars.koopa_flame();
         if v.base_scale.get() == 0.0 {

@@ -21,6 +21,7 @@
 //! states (`check_calls`).
 
 use melee_local_data::ssbm_rs_local;
+use melee_sim::game::camera::CmSubjectState;
 use std::collections::HashSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
@@ -1393,7 +1394,10 @@ fn camera_boxes() {
         6,
         |f| f.regs.gpr[3] = f.rand.below(3) as u32,
         |r, a| {
-            let b = r.game.camera.alloc_box(a.r(3) as i32);
+            let b = r
+                .game
+                .camera
+                .alloc_box(CmSubjectState::from_raw(a.r(3) as i32));
             vec![Out::Box(Some(b))]
         },
         |ctx, call| {
@@ -1406,7 +1410,7 @@ fn camera_boxes() {
         0,
         |_| {},
         |r, _| {
-            let b = r.game.camera.alloc_box(camera::ACTIVE);
+            let b = r.game.camera.alloc_box(CmSubjectState::Active);
             vec![Out::Box(Some(b))]
         },
         |ctx, _| (fns::Camera_80029020(ctx).addr(), 0.0),
@@ -1430,7 +1434,10 @@ fn camera_boxes() {
         |r, a| {
             let boxes = &mut r.game.camera;
             boxes.free_box(a.camera_box(a.r(3)));
-            boxes.reset_box(Some(a.camera_box(a.r(4))), a.r(5) as i32);
+            boxes.reset_box(
+                Some(a.camera_box(a.r(4))),
+                CmSubjectState::from_raw(a.r(5) as i32),
+            );
             vec![]
         },
         |ctx, call| {
@@ -1888,16 +1895,21 @@ fn scene_setup() {
         vec![]
     });
     check("Camera_80029044", |r, a| {
-        let b = r.game.camera.alloc_box(a.r(3) as i32);
+        let b = r
+            .game
+            .camera
+            .alloc_box(CmSubjectState::from_raw(a.r(3) as i32));
         vec![Out::Box(Some(b))]
     });
     check("Camera_80029020", |r, _| {
-        let b = r.game.camera.alloc_box(camera::ACTIVE);
+        let b = r.game.camera.alloc_box(CmSubjectState::Active);
         vec![Out::Box(Some(b))]
     });
     check("Camera_80028F5C", |r, a| {
         let b = (a.r(3) != 0).then(|| a.camera_box(a.r(3)));
-        r.game.camera.reset_box(b, a.r(4) as i32);
+        r.game
+            .camera
+            .reset_box(b, CmSubjectState::from_raw(a.r(4) as i32));
         vec![]
     });
     check("Camera_SetModeToStandard", |r, _| {

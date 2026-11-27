@@ -212,7 +212,11 @@ FIELD_POINTERS = {
 # the enum's C name: every bit pattern still round-trips (`Other`), and the field reads,
 # compares, lays out and hashes as its integer, the comparer showing the variant's name.
 ENUM_TYPES = {
+    "CameraType": "CameraMode",
+    "CmSubjectState": "CmSubjectState",
     "GroundOrAir": "GroundOrAir",
+    "HitCapsuleState": "HitCapsuleState",
+    "HurtCapsuleState": "HurtCapsuleState",
 }
 
 # Integer fields that hold a decomp enum the C types as `int`, by `Struct.field`: the field
@@ -369,7 +373,8 @@ EXTRA_USES = [
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
     "use crate::hsd::sis::TextId;",
-    "use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};",
+    "use crate::lb::hitcapsule::{HitCapsuleState, HitJObj, HitOwner, HurtCapsuleState, Victim};",
+    "use crate::game::camera::{CameraMode, CmSubjectState};",
     "use crate::game::hud::magnify::{MagnifyImage, TexBuffer};",
     "use crate::game::hud::stock::StockJObj;",
 ]
@@ -578,6 +583,7 @@ use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::{GroundUnion, GroundVars};
 use crate::game::gr::setup::{GroundX11Flags, StageCameras};
+use crate::game::camera::{CameraMode, CmSubjectState};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::handles::*;
@@ -592,7 +598,7 @@ use crate::hsd::lobj::LObjId;
 use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
+use crate::lb::hitcapsule::{HitCapsuleState, HitJObj, HitOwner, HurtCapsuleState, Victim};
 use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;"""

@@ -5,6 +5,7 @@
 //! (`ft_0BEC.c`, `ft_0BEF.c`: the winners' three poses, with Fox's blaster, Dr. Mario's pills
 //! and Ness's yo-yo in hand, and the losers' clapping).
 
+use crate::game::camera::CmSubjectState;
 use melee_data::archive::ArchiveId;
 
 use super::super::handles::{CodeRef, FighterId};
@@ -389,7 +390,7 @@ impl Running<'_> {
         self.create_own_light(f);
         self.on_load(gobj, super::create_model::Creator::Demo);
         self.init_hurt_capsules(f);
-        let cam_box = self.game.camera.alloc_box(0);
+        let cam_box = self.game.camera.alloc_box(CmSubjectState::Active);
         self.game.fighters[f.0].camera_box = Some(cam_box);
         let root = self.root_jobj(gobj);
         self.create_shadow(f, root);

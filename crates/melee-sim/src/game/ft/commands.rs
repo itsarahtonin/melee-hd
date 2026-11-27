@@ -3,6 +3,9 @@
 //! effect commands are `effect.rs`'s. Commands that reach items, and a few others, aren't
 //! ported.
 
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -96,9 +99,6 @@ fn sfloat(v: i32) -> f64 {
 
 /// `0.003906f`, the scale fixed-point command fields take.
 const FIXED: f32 = 0.003906;
-
-/// `SmashState_Release`.
-const SMASH_RELEASE: i32 = 3;
 
 impl Running<'_> {
     /// The script a command runs in: the action's (`x3E4_fighterCmdScript`) or a color
@@ -253,14 +253,14 @@ impl Running<'_> {
         let group = bits(w[0], 9, 3);
         let fp = &mut self.game.fighters[f.0];
         let h = &fp.hitboxes[id];
-        if h.state == hitcapsule::DISABLED || h.group != group {
+        if h.state == HitCapsuleState::Disabled || h.group != group {
             fp.hitboxes[id].group = group;
-            fp.hitboxes[id].state = hitcapsule::ENABLED;
+            fp.hitboxes[id].state = HitCapsuleState::Enabled;
             fp.hitboxes_set = true;
             // `ftColl_800768A0`: a box of a group already out shares its victims.
             let src = (0..4).find(|&i| {
                 i != id
-                    && fp.hitboxes[i].state != hitcapsule::DISABLED
+                    && fp.hitboxes[i].state != HitCapsuleState::Disabled
                     && fp.hitboxes[i].group == group
             });
             match src {
@@ -380,7 +380,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DEEB8")]
     pub fn smash_damage(fp: &super::super::structs::Fighter, damage: f64) -> f64 {
         let a = &fp.smash_attrs;
-        if a.state != SMASH_RELEASE {
+        if a.state != SmashState::Release {
             return damage;
         }
         fp::fmuls(
@@ -458,7 +458,7 @@ impl Running<'_> {
     #[doc(alias = "ftAction_80071784")]
     #[doc(alias = "ftColl_8007AFC8")]
     fn cmd_clear_hitbox(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
-        self.cmd_hitbox(f, bits(w, 6, 26)).state = 0;
+        self.cmd_hitbox(f, bits(w, 6, 26)).state = HitCapsuleState::Disabled;
     }
 
     /// Clears every hitbox.
@@ -547,13 +547,17 @@ impl Running<'_> {
     /// Every hurtbox's state.
     #[doc(alias = "ftAction_80071A58")]
     fn cmd_hurtbox_state(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
-        self.set_hurtbox_state(f, bits(w, 6, 26) as i32);
+        self.set_hurtbox_state(f, HurtCapsuleState::from_raw(bits(w, 6, 26) as i32));
     }
 
     /// One bone's hurtbox state.
     #[doc(alias = "ftAction_80071A9C")]
     fn cmd_bone_hurtbox_state(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
-        self.set_bone_hurtbox_state(f, bits(w, 6, 8) as i32, bits(w, 14, 18) as i32);
+        self.set_bone_hurtbox_state(
+            f,
+            bits(w, 6, 8) as i32,
+            HurtCapsuleState::from_raw(bits(w, 14, 18) as i32),
+        );
     }
 
     /// The jab may continue into the next.
@@ -833,7 +837,7 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
         let color = mem(ufloat(bits(self.cmd_word(f, 0), 0, 8)));
         let a = &mut self.game.fighters[f.0].smash_attrs;
-        a.state = 1;
+        a.state = SmashState::PreCharge;
         a.frames = 0.0;
         a.hold_frame = frames;
         a.damage_mul = mul;
@@ -1285,12 +1289,17 @@ impl Running<'_> {
 
     /// Sets the state of the hurtbox on bone `bone`, `ftColl_8007B128`.
     #[doc(alias = "ftColl_8007B128")]
-    pub(crate) fn set_bone_hurtbox_state(&mut self, f: FighterId, bone: i32, state: i32) {
+    pub(crate) fn set_bone_hurtbox_state(
+        &mut self,
+        f: FighterId,
+        bone: i32,
+        state: HurtCapsuleState,
+    ) {
         let fp = &mut self.game.fighters[f.0];
         for i in 0..fp.hurt_capsules_len as usize {
             if fp.hurt_capsules[i].capsule.bone_idx == bone {
                 fp.hurt_capsules[i].capsule.state = state;
-                if state != 0 {
+                if state != HurtCapsuleState::Enabled {
                     fp.hurtboxes_set = true;
                 }
                 return;

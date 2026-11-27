@@ -3,6 +3,7 @@
 //! (`ftCo_800ADE48`) from what it and its target are doing, kept in `CpuFighter::x18`, which
 //! [`super::cpu_ai`]'s script writer acts on.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -914,7 +915,11 @@ impl Running<'_> {
             let it = super::super::it::item_of(self.game, g);
             let ip = &self.game.items[it.0];
             // `it_8026C1B4`: a hitbox on.
-            let live = ip.hitboxes.iter().take(4).any(|h| h.hit.state != 0);
+            let live = ip
+                .hitboxes
+                .iter()
+                .take(4)
+                .any(|h| h.hit.state != HitCapsuleState::Disabled);
             // `ftCo_800A5944`: `It_Kind_BombHei`, `_G_Shell`, `_R_Shell`.
             if !live
                 || !matches!(

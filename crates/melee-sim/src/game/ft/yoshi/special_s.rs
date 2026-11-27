@@ -2,6 +2,7 @@
 //! along the ground, turning with the stick, bounces off walls and the stage in the air, and
 //! breaks open at its end or when hit.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -516,11 +517,11 @@ impl Running<'_> {
         let since_renew = self.ys_mvi(gobj, mv::XC).wrapping_add(1);
         self.ys_set_mvi(gobj, mv::XC, since_renew);
         let fp = &mut self.game.fighters[f.0];
-        if since_renew >= renew_every && fp.hitboxes[0].state != 0 {
+        if since_renew >= renew_every && fp.hitboxes[0].state != HitCapsuleState::Disabled {
             fp.hitboxes[0].group = fp.hitboxes[0].group.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::XC, 0);
         }
-        if self.game.fighters[f.0].hitboxes[0].state == 0 {
+        if self.game.fighters[f.0].hitboxes[0].state == HitCapsuleState::Disabled {
             return;
         }
         let (damage_base, damage_scale) = (

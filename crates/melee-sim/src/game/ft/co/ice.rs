@@ -3,6 +3,8 @@
 //! ceiling, and shatters against them when fast; the player mashes out, and the fighter jumps
 //! out of the broken block (`DamageIceJump`).
 
+use crate::game::ft::types::HurtHeight;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -17,7 +19,6 @@ use super::ids::ms;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId, MTX_INDEP_SRT, USE_QUATERNION};
-use crate::lb::hitcapsule::HURT_INTANGIBLE;
 use crate::math::{self, sqrt_reg};
 use crate::mp::coll::{CEILING_HUG, LEFT_WALL_HUG, RIGHT_WALL_HUG};
 use crate::mtx::Mtx34;
@@ -37,8 +38,6 @@ pub const ON_HIT: u32 = 0x8009_0B48;
 
 /// `HitElement_Fire`.
 const ELEMENT_FIRE: u32 = 1;
-/// `HurtHeight_Mid`.
-const HURT_HEIGHT_MID: i32 = 1;
 /// `QuakeKind_Small`.
 const QUAKE_SMALL: i32 = 2;
 /// The block's sounds: freezing, and hitting a surface or breaking.
@@ -220,7 +219,7 @@ impl Running<'_> {
         let args = [ef::Arg::Float(size)];
         self.fighter_effect(gobj, ef::SpawnKind::AttachParam, GFX_ICE, joint, &args);
         self.game.fighters[f.0].effect_once = true;
-        self.set_hurtbox_state(f, HURT_INTANGIBLE);
+        self.set_hurtbox_state(f, HurtCapsuleState::Intangible);
         let fp = &self.game.fighters[f.0];
         let bone_idx = self.bone_index(fp, XROT_N);
         let bone = self.bone(f, bone_idx).joint;
@@ -229,9 +228,9 @@ impl Running<'_> {
         // `ftColl_HurtboxInit` with `ftCo_DamageIce_HurtboxOffset` (zero) at both ends.
         let h = &mut fp.hurt_capsules[0];
         h.capsule.bone_idx = bone_idx;
-        h.height = HURT_HEIGHT_MID;
+        h.height = HurtHeight::Mid;
         h.is_grabbable = 0;
-        h.capsule.state = crate::lb::hitcapsule::HURT_ENABLED;
+        h.capsule.state = HurtCapsuleState::Enabled;
         h.capsule.bone = bone;
         h.capsule.a_offset = Vec3::default();
         h.capsule.b_offset = Vec3::default();

@@ -13,6 +13,7 @@
 
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -25,7 +26,6 @@ use super::{PART_TOP_N, PART_Y_ROT_N, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::hitcapsule;
 use crate::math;
 use crate::vec::Vec3;
 
@@ -279,7 +279,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::N_HIT_TOGGLE).wrapping_add(1);
         fp.set_mv_i32(mv::N_HIT_TOGGLE, n);
-        if n >= every && fp.hitboxes[0].state != hitcapsule::DISABLED {
+        if n >= every && fp.hitboxes[0].state != HitCapsuleState::Disabled {
             fp.hitboxes[0].group = fp.hitboxes[0].group.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::N_HIT_TOGGLE, 0);
         }
@@ -376,13 +376,13 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let state = fp.hitboxes[0].state;
         if speed(fp) < min {
-            fp.hitboxes[0].state = hitcapsule::DISABLED;
+            fp.hitboxes[0].state = HitCapsuleState::Disabled;
             crate::lb::colanim::clear(&mut fp.secondary_overlay);
-        } else if state == hitcapsule::DISABLED {
-            fp.hitboxes[0].state = hitcapsule::ENABLED;
+        } else if state == HitCapsuleState::Disabled {
+            fp.hitboxes[0].state = HitCapsuleState::Enabled;
         }
         let fp = &self.game.fighters[f.0];
-        if fp.hitboxes[0].state != hitcapsule::DISABLED {
+        if fp.hitboxes[0].state != HitCapsuleState::Disabled {
             let damage = fp::fctiwz(fp::fmuls(mul, fp::fadds(base, speed(fp)))).max(1);
             self.hitbox_damage(f, 0, false, damage as u32);
         }

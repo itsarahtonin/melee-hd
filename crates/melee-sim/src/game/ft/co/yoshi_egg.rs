@@ -5,6 +5,8 @@
 //! `ftkirbyyoshiegg.c`), the same but for his attributes, his copy's egg model and their
 //! callbacks, and a breakout that leaves the model's scale as it is.
 
+use crate::game::ft::types::HurtHeight;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -18,7 +20,6 @@ use super::ids::{ms, sm};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::hitcapsule::{HURT_ENABLED, HURT_INTANGIBLE};
 use crate::vec::Vec3;
 
 /// `ftCommon_MotionVars_yoshiegg`'s offsets in `mv`: Yoshi (`x0`), the last frame's mash
@@ -88,8 +89,6 @@ pub enum Layer {
 
 /// The egg's breaking effect.
 const GFX_EGG_BREAK: i32 = 1231;
-/// `HurtHeight_Mid`.
-const HURT_HEIGHT_MID: i32 = 1;
 
 /// Whether a burial kind holds the fighter (`ftCo_800C0C88`): kinds 1 and 3.
 #[doc(alias = "ftCo_800C0C88")]
@@ -322,7 +321,7 @@ impl Running<'_> {
     /// the body, from the common attributes' egg box (`xBC`).
     fn yoshi_egg_hurtbox(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.set_hurtbox_state(f, HURT_INTANGIBLE);
+        self.set_hurtbox_state(f, HurtCapsuleState::Intangible);
         let fp = &self.game.fighters[f.0];
         let bone_idx = self.bone_index(fp, TRANS_N);
         let bone = self.bone(f, bone_idx).joint;
@@ -334,9 +333,9 @@ impl Running<'_> {
         );
         let h = &mut fp.hurt_capsules[0];
         h.capsule.bone_idx = bone_idx;
-        h.height = HURT_HEIGHT_MID;
+        h.height = HurtHeight::Mid;
         h.is_grabbable = 0;
-        h.capsule.state = HURT_ENABLED;
+        h.capsule.state = HurtCapsuleState::Enabled;
         h.capsule.bone = bone;
         h.capsule.a_offset = a;
         h.capsule.b_offset = b;

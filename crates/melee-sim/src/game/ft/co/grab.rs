@@ -5,6 +5,8 @@
 //! breaks out on the ground or jumps away. Link's and Samus's tethers, Yoshi's egg and
 //! Kirby's swallow stop at their seams, as do the throws.
 
+use crate::game::ft::types::HurtHeight;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -984,7 +986,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.invisible = true;
         fp.accessory1_cb = Some(CodeRef(HELD_FOLLOW));
-        self.set_hurtbox_state(f, crate::lb::hitcapsule::HURT_INTANGIBLE);
+        self.set_hurtbox_state(f, HurtCapsuleState::Intangible);
         let fp = &self.game.fighters[f.0];
         let bone_idx = self.bone_index(fp, X_ROT_N);
         let bone = self.bone(f, bone_idx).joint;
@@ -994,9 +996,9 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.hurt_capsules[0];
         h.capsule.bone_idx = bone_idx;
-        h.height = 1;
+        h.height = HurtHeight::Mid;
         h.is_grabbable = 0;
-        h.capsule.state = crate::lb::hitcapsule::HURT_ENABLED;
+        h.capsule.state = HurtCapsuleState::Enabled;
         h.capsule.bone = bone;
         h.capsule.a_offset = crate::vec::Vec3::default();
         h.capsule.b_offset = crate::vec::Vec3::default();

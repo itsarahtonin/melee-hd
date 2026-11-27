@@ -7,9 +7,9 @@
 //! skyscraper's roof) it comes down over one of three buildings, to be stood on, and flies off
 //! again. The helicopter crosses behind when the UFO isn't out.
 
+use crate::game::camera::CmSubjectState;
 use gekko_fp as fp;
 
-use super::super::camera;
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
 use super::data::FOURSIDE_CALLBACKS;
@@ -404,7 +404,7 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
                         r.game.geometry_mut().settle_vertices(UFO_JOINT);
                         jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
                         r.game.geometry_mut().enable_joint(UFO_JOINT);
-                        let b = r.game.camera.alloc_box(camera::ACTIVE);
+                        let b = r.game.camera.alloc_box(CmSubjectState::Active);
                         let v = r.game.grounds[g.0].u.fourside_ufo();
                         v.subject = Some(b);
                         v.sound_state = 0;

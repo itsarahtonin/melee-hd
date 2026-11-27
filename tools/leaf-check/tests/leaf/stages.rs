@@ -4470,7 +4470,7 @@ fn klap() {
         );
         let w = |o: u32| peek_u32(call, g[5] + o);
         let hit = melee_sim::game::structs::HitCapsule {
-            state: w(0) as i32,
+            state: melee_sim::lb::hitcapsule::HitCapsuleState::from_raw(w(0) as i32),
             damage: w(4) as f32,
             kb_angle: w(8) as i32,
             kb_growth: w(0xC),
@@ -4599,7 +4599,7 @@ fn barrel_hold(c: &mut Call, keep_at: u32, state: u16, keep: u32) {
 fn hit_desc(c: &Call, addr: u32) -> HitCapsule {
     let w = |i: u32| peek_u32(c, addr + 4 * i);
     HitCapsule {
-        state: w(0) as i32,
+        state: melee_sim::lb::hitcapsule::HitCapsuleState::from_raw(w(0) as i32),
         damage: w(1) as f32,
         kb_angle: w(2) as i32,
         kb_growth: w(3),

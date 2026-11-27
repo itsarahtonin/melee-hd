@@ -5,6 +5,7 @@
 
 use melee_data::archive::DataRef;
 
+use crate::game::camera::{CameraMode, CmSubjectState};
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
@@ -26,7 +27,7 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
+use crate::lb::hitcapsule::{HitCapsuleState, HitJObj, HitOwner, HurtCapsuleState, Victim};
 use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -234,7 +235,7 @@ impl Default for HitVictim {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct HitCapsule {
     /// +0x0
-    pub state: i32,
+    pub state: HitCapsuleState,
     /// +0x4
     #[doc(alias("x4"))]
     pub group: u32,
@@ -375,7 +376,7 @@ pub struct HitCapsule {
 impl Default for HitCapsule {
     fn default() -> Self {
         HitCapsule {
-            state: 0,
+            state: Default::default(),
             group: 0,
             whole_damage: 0,
             damage: 0.0,
@@ -433,7 +434,7 @@ impl Default for HitCapsule {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct HurtCapsule {
     /// +0x0
-    pub state: i32,
+    pub state: HurtCapsuleState,
     /// +0x4
     pub a_offset: Vec3,
     /// +0x10
@@ -476,7 +477,7 @@ pub struct HurtCapsule {
 impl Default for HurtCapsule {
     fn default() -> Self {
         HurtCapsule {
-            state: 0,
+            state: Default::default(),
             a_offset: Default::default(),
             b_offset: Default::default(),
             scale: 0.0,
@@ -671,7 +672,7 @@ pub struct CmSubject {
     /// +0x4
     pub prev: Option<CameraBoxId>,
     /// +0x8
-    pub state: i32,
+    pub state: CmSubjectState,
     /// +0xc (bits 0..+1)
     pub on_ledge: bool,
     /// +0xc (bits 1..+1)
@@ -703,7 +704,7 @@ impl Default for CmSubject {
         CmSubject {
             next: None,
             prev: None,
-            state: 0,
+            state: Default::default(),
             on_ledge: false,
             force_inactive: false,
             was_framed: false,
@@ -723,7 +724,7 @@ impl Default for CmSubject {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct CameraDebugMode {
     /// +0x0
-    pub last_mode: i32,
+    pub last_mode: CameraMode,
     /// +0x4
     pub ply_slot: i32,
     /// +0x8
@@ -750,7 +751,7 @@ pub struct CameraDebugMode {
 impl Default for CameraDebugMode {
     fn default() -> Self {
         CameraDebugMode {
-            last_mode: 0,
+            last_mode: Default::default(),
             ply_slot: 0,
             follow_int_offset: Default::default(),
             follow_eye_offset: Default::default(),

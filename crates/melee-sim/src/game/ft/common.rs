@@ -1,6 +1,8 @@
 //! Helpers the processes share, from the common fighter units (`ftcommon.c`, `ft_*.c`,
 //! `ftCo_*.c`).
 
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HitCapsuleState;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -337,8 +339,8 @@ impl Running<'_> {
     pub fn smash_charge_tick(&mut self, gobj: GObjId) {
         let sfx_frame = self.common().f32(0x7C8);
         let attr = &mut self.game.fighter_mut(gobj).smash_attrs;
-        let charging = attr.state == 2;
-        if !charging && attr.state != 4 {
+        let charging = attr.state == SmashState::Charging;
+        if !charging && attr.state != SmashState::Held {
             return;
         }
         attr.frames = mem(fp::fadds(reg(attr.frames), 1.0));
@@ -350,7 +352,7 @@ impl Running<'_> {
             if attr.frames > attr.hold_frame {
                 attr.frames = attr.hold_frame;
             }
-            attr.state = 3;
+            attr.state = SmashState::Release;
             let (rate, color) = (attr.frame_speed_mul, attr.color_anim);
             self.set_anim_rate(gobj, rate);
             self.end_color_anim(gobj, color);
@@ -771,7 +773,10 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let h = &fp.hitboxes[i];
         let state = h.state;
-        if !(1..=3).contains(&state) {
+        if !matches!(
+            state,
+            HitCapsuleState::Enabled | HitCapsuleState::Placed | HitCapsuleState::Moving
+        ) {
             return;
         }
         let offset = if h.unscaled_offset {
@@ -786,17 +791,17 @@ impl Running<'_> {
             h.b_offset
         };
         let j = h.jobj.get("ftColl_8007AD18");
-        if state == 1 {
+        if state == HitCapsuleState::Enabled {
             let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
             let h = &mut self.game.fighter_mut(gobj).hitboxes[i];
             h.pos = p;
             h.prev_pos = p;
-            h.state = 2;
+            h.state = HitCapsuleState::Placed;
             return;
         }
         let h = &mut self.game.fighter_mut(gobj).hitboxes[i];
-        if state == 2 {
-            h.state = 3;
+        if state == HitCapsuleState::Placed {
+            h.state = HitCapsuleState::Moving;
         }
         h.prev_pos = h.pos;
         let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
@@ -810,17 +815,17 @@ impl Running<'_> {
         let h = &self.game.fighter(gobj).thrown_hitbox;
         let (state, j, offset) = (h.state, h.jobj.get("ft_8007C224"), h.b_offset);
         match state {
-            1 => {
+            HitCapsuleState::Enabled => {
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
                 let h = &mut self.game.fighter_mut(gobj).thrown_hitbox;
                 h.pos = p;
                 h.prev_pos = p;
-                h.state = 2;
+                h.state = HitCapsuleState::Placed;
             }
-            2 | 3 => {
+            HitCapsuleState::Placed | HitCapsuleState::Moving => {
                 let h = &mut self.game.fighter_mut(gobj).thrown_hitbox;
-                if state == 2 {
-                    h.state = 3;
+                if state == HitCapsuleState::Placed {
+                    h.state = HitCapsuleState::Moving;
                 }
                 h.prev_pos = h.pos;
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));

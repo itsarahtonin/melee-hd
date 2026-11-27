@@ -39,6 +39,22 @@ c_enum! {
 }
 
 c_enum! {
+    /// `CmSubjectState`: whether the camera frames a subject (`CmSubject::state`): always,
+    /// never, or only inside the stage's camera bounds.
+    pub enum CmSubjectState: i32 {
+        /// `CmSubjectState_Active`: always framed.
+        #[doc(alias("CmSubjectState_Active", "ACTIVE"))]
+        Active = 0,
+        /// `CmSubjectState_Inactive`: never framed.
+        #[doc(alias("CmSubjectState_Inactive", "INACTIVE"))]
+        Inactive = 1,
+        /// `CmSubjectState_Auto`: framed inside the stage's camera bounds.
+        #[doc(alias("CmSubjectState_Auto", "AUTO"))]
+        Auto = 2,
+    }
+}
+
+c_enum! {
     /// `CmQuakeKind`: a quake's kind.
     #[doc(alias("CmQuakeKind"))]
     pub enum QuakeKind: i32 {

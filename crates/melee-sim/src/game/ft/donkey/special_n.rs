@@ -7,6 +7,7 @@
 //! Donkey Kong's [`DONKEY`] or Kirby's (`ft::kirby::special_donkey::KIRBY`), and each function
 //! here carries both originals' names.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg, spawn};
@@ -16,7 +17,6 @@ use super::super::co::{PAD_B, PAD_LR};
 use super::{U_SWINGS, addr, attr, ms, mv, part};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 
 /// What tells one Giant Punch from the other: the user's states, where its attributes and
 /// stored swings are, its effects and glow, and its hooks.
@@ -328,7 +328,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_DkSpecialN_Anim")]
     pub fn dk_special_n_anim(&mut self, gobj: GObjId, p: &GiantPunch) {
         self.dk_special_n_effect(gobj, p);
-        if self.game.fighter(gobj).hitboxes[0].state != hitcapsule::DISABLED {
+        if self.game.fighter(gobj).hitboxes[0].state != HitCapsuleState::Disabled {
             let fp = self.game.fighter_mut(gobj);
             if fp.mv_i32(mv::N_LUNGE) == 0 {
                 fp.set_mv_i32(mv::N_LUNGE, 1);
@@ -346,7 +346,7 @@ impl Running<'_> {
     pub fn dk_special_n_full_anim(&mut self, gobj: GObjId, p: &GiantPunch) {
         self.dk_special_n_effect(gobj, p);
         let fp = self.game.fighter_mut(gobj);
-        if fp.hitboxes[0].state != hitcapsule::DISABLED && fp.mv_i32(mv::N_LUNGE) == 0 {
+        if fp.hitboxes[0].state != HitCapsuleState::Disabled && fp.mv_i32(mv::N_LUNGE) == 0 {
             fp.set_mv_i32(mv::N_LUNGE, 1);
         }
         self.dk_special_n_lunge(gobj, p);
@@ -359,7 +359,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_DkSpecialAirN_Anim")]
     pub fn dk_special_air_n_anim(&mut self, gobj: GObjId, p: &GiantPunch) {
         self.dk_special_n_effect(gobj, p);
-        if self.game.fighter(gobj).hitboxes[0].state != hitcapsule::DISABLED {
+        if self.game.fighter(gobj).hitboxes[0].state != HitCapsuleState::Disabled {
             self.dk_special_n_damage(gobj, p);
         }
         self.dk_special_n_end(gobj, p, true);
