@@ -28,6 +28,14 @@ pub struct Row {
     pub gpu: Option<FrameGpu>,
     /// What the renderer made over the frame ([`melee_gpu::made`]).
     pub made: Made,
+    /// The fast renderer's game thread building the frame until its last piece is handed on
+    /// (`Frames::handed_in`), and its stream thread running the pieces (`Gpu::fed`).
+    pub build: Duration,
+    pub stream: Duration,
+    /// On a tick's first frame (`k` 0): the tick before it (the simulation and its display
+    /// pass), and keeping its transforms or predicting the next.
+    pub tick_sim: Duration,
+    pub tick_keep: Duration,
 }
 
 impl Row {
@@ -183,7 +191,9 @@ impl Frames {
 
     /// Every frame as a CSV row, times in microseconds.
     pub fn csv(&self) -> String {
-        let mut out = String::from("tick,k,draw,submit,wait,gpu_busy,gpu_span");
+        let mut out = String::from(
+            "tick,k,draw,submit,wait,build,stream,tick_sim,tick_keep,gpu_busy,gpu_span",
+        );
         for s in Stage::ALL {
             let _ = write!(out, ",{0},{0}_passes", s.name().replace(' ', "_"));
         }
@@ -195,12 +205,16 @@ impl Frames {
         for r in &self.rows {
             let _ = write!(
                 out,
-                "{},{},{},{},{}",
+                "{},{},{},{},{},{},{},{},{}",
                 r.tick,
                 r.k,
                 us(r.draw),
                 us(r.submit),
-                us(r.wait)
+                us(r.wait),
+                us(r.build),
+                us(r.stream),
+                us(r.tick_sim),
+                us(r.tick_keep)
             );
             match &r.gpu {
                 Some(g) => {
@@ -285,6 +299,7 @@ mod tests {
                     wait,
                     gpu: Some(gpu(1000)),
                     made: Made::default(),
+                    ..Row::default()
                 });
             }
         }

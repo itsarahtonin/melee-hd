@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The idea and the neighbour test follow melee-unlocked's --flicker-scan
-// (port/runtime/gx/flicker_scan.cpp, GPL-2.0-or-later); the flatness test is this player's own.
 
 //! `--flicker-scan`: catches a frame that drops out for a single presented frame, which F12 is
 //! too slow for. Each presented image is copied into a small ring on the GPU and reduced there

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Shaders specialized by a uid of the TEV's configuration, made on threads of their own while
 // the uber shader draws, after Dolphin's shader uids and its asynchronous shader compilation
-// (PixelShaderGen, ShaderCache; GPL-2.0-or-later) as melee-unlocked uses them (gx_shader.cpp,
-// gx_d3d12.cpp's pipeline library).
+// (PixelShaderGen, ShaderCache; GPL-2.0-or-later).
 
 //! Specialized TEV shaders. gx.wgsl's fragment shader reads every register it needs from the
 //! uniforms per pixel, and loops over the TEV's stages, switching on their inputs and indexing

@@ -55,6 +55,9 @@ pub struct Frames {
     /// nothing shares its offset with the next). The fast renderer's comparison harness
     /// (`melee-render-check fast`) keys each GX draw by the display draw it came from.
     pub marks: Vec<(u32, u32)>,
+    /// The last piped frame's time on the game thread, from its build's start until its last
+    /// piece was handed on ([`Frames::frame_piped`]; the paced bench's measurement only).
+    pub handed_in: std::time::Duration,
 }
 
 impl Default for Frames {
@@ -92,6 +95,7 @@ impl Frames {
             patched: usize::MAX,
             built: 0,
             marks: Vec::new(),
+            handed_in: std::time::Duration::ZERO,
         }
     }
 
@@ -156,6 +160,7 @@ impl Frames {
         to: Option<&mut dyn Stream>,
         piped: Option<&mut (dyn Stream + Send)>,
     ) -> Vec<u8> {
+        let start = std::time::Instant::now();
         let patches = &game.objs.pobjs.refract_patches;
         if self.patched != patches.len() {
             self.patched = patches.len();
@@ -192,6 +197,7 @@ impl Frames {
             hsd,
             space,
             marks,
+            handed_in,
             ..
         } = self;
         let space: &Space = space;
@@ -233,6 +239,7 @@ impl Frames {
             );
             pipe.piece(space, &last, marks);
             drop(pipe);
+            *handed_in = start.elapsed();
             runner.join().expect("the stream's thread");
         });
         Vec::new()

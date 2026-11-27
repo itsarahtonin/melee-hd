@@ -3480,6 +3480,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
             let t2 = Instant::now();
             kept += t2 - t1;
             rendered += 1;
+            let tick_parts = (t1 - t0, t2 - t1);
             for k in 0..per_tick {
                 let t = k as f32 / per_tick as f32;
                 let blend = if extrapolate {
@@ -3531,6 +3532,18 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     wait: td - submitted,
                     gpu: None,
                     made: made.since(),
+                    build: if renderer.is_fast() {
+                        frames.handed_in
+                    } else {
+                        tb - ta
+                    },
+                    stream: if renderer.is_fast() {
+                        renderer.fed()
+                    } else {
+                        Duration::ZERO
+                    },
+                    tick_sim: if k == 0 { tick_parts.0 } else { Duration::ZERO },
+                    tick_keep: if k == 0 { tick_parts.1 } else { Duration::ZERO },
                 });
                 rows.gpu(&gpu.gpu_times(), usize::from(in_flight));
             }
