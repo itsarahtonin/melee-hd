@@ -6,6 +6,8 @@
 //! [`code::call`](super::code::call) and the scheduler's process table; until those ports fill
 //! their arms in, a match stops at the first unported function it reaches, saying which.
 
+use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
 use melee_data::archive::{Archive, ArchiveId, Archives};
 
 use super::gm::{scene, vs, vs_mode};
@@ -23,7 +25,6 @@ use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
 use crate::game::it::ItKind;
-use crate::game::pl::player::PlayerKind;
 use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
 
@@ -212,7 +213,7 @@ impl Settings {
         for p in players {
             let d = &mut vs.players[usize::from(p.port)];
             d.ckind = p.character as i8;
-            d.slot_type = p.kind;
+            d.slot_type = Narrow::from_raw(p.kind);
             d.color = p.costume;
             d.team = p.team;
             d.cpu_level = p.cpu_level.max(1);
@@ -1451,7 +1452,7 @@ pub fn load_results_files(
 
 #[cfg(test)]
 mod tests {
-    use super::{CharacterKind, CodeError, Player, Settings};
+    use super::{CharacterKind, CodeError, Player, PlayerKind, Settings};
 
     fn player(character: u8, port: u8) -> Player {
         Player {
@@ -1517,7 +1518,7 @@ mod tests {
             let want = on.then(crate::hsd::heap::Layout::slippi_playback);
             assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, want);
             // A computer Samus too.
-            start.players[1].slot_type = 1;
+            start.players[1].slot_type = PlayerKind::Cpu.into();
             let (r, _) = crate::game::record::live_start(&g, &start);
             assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, want);
         }

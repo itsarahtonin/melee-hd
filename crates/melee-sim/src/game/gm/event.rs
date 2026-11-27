@@ -332,7 +332,7 @@ impl Running<'_> {
         let flags = u8_(8);
         let mut p = super::vs_mode::player_defaults();
         p.ckind = u8_(0) as i8;
-        p.slot_type = u8_(1);
+        p.slot_type = Narrow::from_raw(u8_(1));
         p.stocks = u8_(2) as i8;
         p.color = u8_(3);
         p.slot = 0;
@@ -732,7 +732,7 @@ impl Running<'_> {
             self.game.left_list_start(&mut start.rules);
         }
         for p in &mut start.players {
-            p.slot_type = 3;
+            p.slot_type = PlayerKind::None.into();
         }
         let count = usize::from(e.players(self));
         let mut i = 0;

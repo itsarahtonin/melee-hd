@@ -14,6 +14,7 @@ use melee_capture::{Capture, DataMap, MEM1, disc_index, find_archives_in};
 use melee_data::archive::{Archives, DataRef};
 use melee_data::disc::Disc;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
+use melee_sim::game::pl::player::PlayerKind;
 use melee_sim::game::state::{Game, Running};
 use melee_sim::game::structs::StaticPlayer;
 use melee_sim::hsd::gobj::GObjId;
@@ -132,13 +133,13 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             i(fns::Player_GetPlayerCharacter(ctx, slot)),
         ),
         2 => (
-            i(game.player_pkind(slot)),
+            i(game.player_pkind(slot).id()),
             i(fns::Player_GetPlayerSlotType(ctx, slot)),
         ),
         3 => {
             let s = small(rand);
             (
-                i(game.player_kind(slot, s)),
+                i(game.player_kind(slot, s).id()),
                 i(fns::Player_8003248C(ctx, slot, s)),
             )
         }
@@ -410,7 +411,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
         }
         65 => {
             let v = rand.below(4) as i32;
-            game.set_player_pkind(slot, v);
+            game.set_player_pkind(slot, PlayerKind::from_raw(v));
             fns::Player_SetSlottype(ctx, slot, v);
             (Got::None, Got::None)
         }

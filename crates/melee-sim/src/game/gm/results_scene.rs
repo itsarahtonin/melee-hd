@@ -537,7 +537,7 @@ impl Running<'_> {
             team_best,
             g.player_team(i32::from(team_best)) as u8,
             u8::from(me.is_teams == 1),
-            me.player_standings[winner].pkind,
+            me.player_standings[winner].pkind.raw(),
         );
         let frame = mem(fp::fadds(1.0, fp::frsp(f64::from(color as u8))));
         crate::hsd::aobj::set_current_frame(&mut g.objs.aobjs, &mut g.objs.fobjs, aobj, frame);

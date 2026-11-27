@@ -5,6 +5,7 @@
 use crate::game::ft::CpuKind;
 use crate::game::handles::{CodeRef, RawPtr};
 use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
 
 /// The decomp's `StartMeleeRules`.
 #[derive(
@@ -243,7 +244,7 @@ pub struct PlayerInitData {
     #[at(0x0)]
     pub ckind: i8,
     #[at(0x1)]
-    pub slot_type: u8,
+    pub slot_type: Narrow<PlayerKind, u8>,
     #[at(0x2)]
     pub stocks: i8,
     #[at(0x3)]

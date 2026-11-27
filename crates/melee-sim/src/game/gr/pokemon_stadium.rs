@@ -1657,7 +1657,7 @@ pub fn text_results(r: &mut Running, _gobj: GObjId) {
         }
         let team = r.game.player_team(slot) as u8;
         let teams = u8::from(r.game.vs_is_teams());
-        let pkind = r.game.player_pkind(slot) as u8;
+        let pkind = r.game.player_pkind(slot).raw() as u8;
         let c = super::super::gm::vs::hud_color(super::super::gm::vs::player_color(
             slot as u8, team, teams, pkind,
         ));

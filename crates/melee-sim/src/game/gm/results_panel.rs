@@ -276,7 +276,7 @@ impl Running<'_> {
             let icon = fp::fctiwz(super::vs::stock_icon_frame(ckind, cid, 0));
             self.results_icon_frame(js[5], icon);
             let rank =
-                super::vs::player_color(i as u8, p.team, u8::from(me.is_teams == 1), p.pkind);
+                super::vs::player_color(i as u8, p.team, u8::from(me.is_teams == 1), p.pkind.raw());
             let j2 = js[2].expect("a column's rank joint");
             let o = &mut self.game.objs;
             let m = o.jobjs[j2].dobj().and_then(|d| o.dobjs[d].mobj);
@@ -1237,10 +1237,10 @@ impl Running<'_> {
         if phase == 1 {
             self.game.results.data.phase = 2;
             for k in 0..4 {
-                match PlayerKind::from_id(i32::from(me.player_standings[k].pkind)) {
-                    Some(PlayerKind::None) => self.game.results.data.players[k].done = true,
-                    Some(PlayerKind::Human) => self.stats_page(k),
-                    Some(PlayerKind::Cpu) => {
+                match me.player_standings[k].pkind.get() {
+                    PlayerKind::None => self.game.results.data.players[k].done = true,
+                    PlayerKind::Human => self.stats_page(k),
+                    PlayerKind::Cpu => {
                         self.stats_page(k);
                         self.game.results.data.players[k].done = true;
                     }

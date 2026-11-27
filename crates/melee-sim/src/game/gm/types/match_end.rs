@@ -2,6 +2,9 @@
 //! team's and player's standing and statistics, and the decisions (the results' bonuses) each
 //! player earned.
 
+use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
+
 /// The decomp's `MatchTeamData`.
 #[derive(
     melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq, melee_derive::Mirror,
@@ -27,7 +30,7 @@ pub struct MatchTeamData {
 #[mirror(c = "MatchPlayerData", size = 0xA8, pad(0x1A, 2))]
 pub struct MatchPlayerData {
     #[at(0x0)]
-    pub pkind: u8,
+    pub pkind: Narrow<PlayerKind, u8>,
     #[at(0x1)]
     pub ckind: i8,
     #[at(0x2)]

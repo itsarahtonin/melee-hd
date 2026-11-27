@@ -6,6 +6,7 @@
 
 use crate::game::ft::CpuKind;
 use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
 use gekko_fp as fp;
 
 use super::super::handles::CodeRef;
@@ -79,7 +80,7 @@ impl super::super::state::Game {
             st[o..o + 6].copy_from_slice(&[
                 f.ckind,
                 f.entry_timer,
-                f.slot_type,
+                f.slot_type.raw(),
                 f.spawn_point as u8,
                 f.flags[0],
                 f.unused_5,
@@ -330,7 +331,7 @@ impl Running<'_> {
             let p = &mut start.players[idx];
             *p = player_defaults();
             p.ckind = a.ckind;
-            p.slot_type = 1;
+            p.slot_type = PlayerKind::Cpu.into();
             p.stocks = 1;
             p.team = team;
             p.color = a.color;
@@ -436,7 +437,7 @@ impl Running<'_> {
                 let teams = start.rules.is_teams == 1;
                 let p = &mut start.players[player_idx];
                 *p = player_defaults();
-                p.slot_type = 1;
+                p.slot_type = PlayerKind::Cpu.into();
                 p.ckind = kind;
                 p.stocks = 1;
                 p.cpu_level = enemy_level;
@@ -465,7 +466,7 @@ impl Running<'_> {
                     p.hp_explodes = true;
                     p.spawn_dir = -1;
                     if p.ckind == CharacterKind::CrazyHand {
-                        p.slot_type = 3;
+                        p.slot_type = PlayerKind::None.into();
                     }
                     boss_count += 1;
                 }
@@ -477,12 +478,12 @@ impl Running<'_> {
                     break;
                 }
             } else if i == 0 && chars[1] == CharacterKind::MasterHand {
-                start.players[player_idx].slot_type = 3;
+                start.players[player_idx].slot_type = PlayerKind::None.into();
                 player_idx += 1;
             }
         }
         for p in start.players.iter_mut().skip(player_idx) {
-            p.slot_type = 3;
+            p.slot_type = PlayerKind::None.into();
         }
         if run_flags & 0x40 != 0 {
             run.counters[0] = 7;

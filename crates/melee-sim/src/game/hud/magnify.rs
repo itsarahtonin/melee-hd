@@ -218,7 +218,7 @@ impl Running<'_> {
             slot,
             g.player_team(i32::from(slot)) as u8,
             u8::from(g.vs_is_teams()),
-            g.player_pkind(i32::from(slot)) as u8,
+            g.player_pkind(i32::from(slot)).raw() as u8,
         ));
         for jj in [arrow, child] {
             let d = g.objs.jobjs[jj].dobj().expect("u.dobj");
@@ -407,7 +407,7 @@ impl Running<'_> {
                     slot,
                     g.player_team(i32::from(slot)) as u8,
                     u8::from(g.vs_is_teams()),
-                    g.player_pkind(i32::from(slot)) as u8,
+                    g.player_pkind(i32::from(slot)).raw() as u8,
                 ));
                 let kind = if edge == 2 { 1 } else { 2 };
                 self.game.show_arrow(slot, kind, color);

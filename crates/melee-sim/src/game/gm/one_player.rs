@@ -20,6 +20,7 @@ use crate::game::ft::CharacterKind;
 use crate::game::ft::CpuKind;
 use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
+use crate::game::pl::player::PlayerKind;
 use gekko_fp as fp;
 
 /// The select's match types (`CSSMatchType`) the modes enter it with.
@@ -1347,7 +1348,7 @@ impl Running<'_> {
         s.ckind = CharacterKind::Sandbag.raw() as i8;
         s.cpu_kind = CpuKind::NoAct.into();
         s.defense_ratio = 1.0;
-        s.slot_type = 1;
+        s.slot_type = PlayerKind::Cpu.into();
         s.stocks = 1;
         s.team = 1;
     }
@@ -1430,7 +1431,7 @@ impl Running<'_> {
             if ps[i].color == ps[0].color {
                 ps[i].color = (ps[i].color + 1) % n;
             }
-            ps[i].slot_type = 3;
+            ps[i].slot_type = PlayerKind::None.into();
         }
         if slot == 0 {
             for p in &mut ps[1..4] {

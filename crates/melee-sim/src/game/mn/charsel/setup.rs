@@ -223,7 +223,7 @@ impl Running<'_> {
             let p = &self.css().vs.start.players[i];
             let (kind, color) = (p.slot_type, p.color);
             let d = &mut self.game.charsel.doors[i];
-            d.p_kind = kind;
+            d.p_kind = kind.raw();
             d.costume = color;
             d.p_kind_prev = PlayerKind::None.into();
             d.slider_timer = 0;

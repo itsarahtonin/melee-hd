@@ -986,7 +986,7 @@ impl Running<'_> {
             g.player_port(slot) as u8,
             g.player_team(slot) as u8,
             teams,
-            g.player_pkind(slot) as u8,
+            g.player_pkind(slot).raw() as u8,
         );
         g.set_player_effect_color(slot, i32::from(super::vs::cap_color(color as u8)));
         self.player_create_fighters(slot);

@@ -1632,7 +1632,7 @@ fn player_awake() {
 #[test]
 fn player_kind() {
     check("Player_8003248C", |r, a| {
-        vec![Out::R3(r.game.player_kind(a.i(3), a.i(4)) as u32)]
+        vec![Out::R3(r.game.player_kind(a.i(3), a.i(4)).raw() as u32)]
     });
 }
 

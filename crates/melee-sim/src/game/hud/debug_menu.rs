@@ -208,7 +208,7 @@ impl DebugVars {
         for (i, p) in d.players[..4].iter_mut().enumerate() {
             let i = 4 * i as u32;
             p.ckind = w(0x10 + i) as i8;
-            p.slot_type = w(0x24 + i) as u8;
+            p.slot_type = Narrow::from_raw(w(0x24 + i) as u8);
             p.color = w(0x38 + i) as u8;
             p.sub_color = w(0x48 + i) as u8;
             p.team = w(0x58 + i) as u8;
@@ -1498,19 +1498,19 @@ impl Running<'_> {
             let p = &mut me.player_standings[i];
             p.sub_rank = p.sub_rank.wrapping_add(6 - i as u32);
             p.pkind = if p.ckind == CharacterKind::NONE as i8 {
-                3
+                PlayerKind::None.into()
             } else if err == 0 {
-                0
+                PlayerKind::Human.into()
             } else {
-                1
+                PlayerKind::Cpu.into()
             };
             if p.ckind == CharacterKind::Seak {
                 p.ckind = 0x12;
                 p.ftkind = 7;
             }
         }
-        me.player_standings[4].pkind = 3;
-        me.player_standings[5].pkind = 3;
+        me.player_standings[4].pkind = PlayerKind::None.into();
+        me.player_standings[5].pkind = PlayerKind::None.into();
         self.game.rank_results_standalone(me);
         let mut sfx = 0u64;
         for p in &me.player_standings[..4] {
@@ -1568,8 +1568,13 @@ impl Running<'_> {
         for (p, ckind) in start.players.iter_mut().zip([6, 8, 6, 6]) {
             p.ckind = ckind;
         }
-        for (p, kind) in start.players.iter_mut().zip([0, 0, 3, 3]) {
-            p.slot_type = kind;
+        for (p, kind) in start.players.iter_mut().zip([
+            PlayerKind::Human,
+            PlayerKind::Human,
+            PlayerKind::None,
+            PlayerKind::None,
+        ]) {
+            p.slot_type = kind.into();
         }
         for p in &mut start.players[..4] {
             p.rumble_enabled = false;

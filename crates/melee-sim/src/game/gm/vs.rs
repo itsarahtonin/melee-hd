@@ -8,6 +8,7 @@
 // NaN takes the original's branches, which the negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -650,7 +651,7 @@ impl Game {
         }
         let mut result = 0;
         for p in 0..6 {
-            result = self.player_pkind(p);
+            result = self.player_pkind(p).id();
             if result == PlayerKind::None {
                 continue;
             }
@@ -677,7 +678,7 @@ impl Game {
     pub fn update_ranks(&mut self) {
         let res = &self.vs.state.match_end;
         let (is_teams, penalty) = (res.is_teams, res.sd_penalty);
-        let pkinds: [u8; 6] = core::array::from_fn(|i| res.player_standings[i].pkind);
+        let pkinds: [u8; 6] = core::array::from_fn(|i| res.player_standings[i].pkind.raw());
         self.rank_players(is_teams, penalty);
         let r = &mut self.gm.ranks;
         if r.taken == 0 && 0 < r.lowest {
@@ -735,7 +736,7 @@ impl Running<'_> {
     pub fn vs_announce_entry(&mut self, slot: i32, pkind: u8) {
         let f = &mut self.game.vs.state.fighters[slot as usize];
         f.entry_timer = 0x82;
-        f.slot_type = pkind;
+        f.slot_type = Narrow::from_raw(pkind);
         self.stadium_entrance(slot, pkind.into());
     }
 
@@ -1629,7 +1630,7 @@ impl Running<'_> {
             g.player_port(0) as u8,
             g.player_team(0) as u8,
             teams,
-            g.player_pkind(0) as u8,
+            g.player_pkind(0).raw() as u8,
         );
         g.set_player_effect_color(0, i32::from(cap_color(color as u8)));
         self.player_create_fighters(0);
@@ -1786,7 +1787,7 @@ impl Running<'_> {
                 g.player_port(i) as u8,
                 g.player_team(i) as u8,
                 teams,
-                g.player_pkind(i) as u8,
+                g.player_pkind(i).raw() as u8,
             );
             g.set_player_effect_color(i, i32::from(cap_color(color as u8)));
             self.player_create_fighters(i);
@@ -1803,7 +1804,7 @@ impl Game {
     /// Zelda and Sheik.
     #[doc(alias = "fn_8016D8AC")]
     pub fn init_vs_player(&mut self, slot: i32, d: &PlayerInitData) {
-        self.set_player_pkind(slot, i32::from(d.slot_type));
+        self.set_player_pkind(slot, d.slot_type.get());
         self.set_player_ckind(slot, i32::from(d.ckind));
         let f = &mut self.vs.state.fighters[slot as usize];
         f.ckind = d.ckind as u8;

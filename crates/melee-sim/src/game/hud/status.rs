@@ -559,7 +559,7 @@ impl Running<'_> {
             g.player_port(s) as u8,
             g.player_team(s) as u8,
             u8::from(g.vs_is_teams()),
-            g.player_pkind(s) as u8,
+            g.player_pkind(s).raw() as u8,
         ));
         set_diffuse(&mut g.objs, child, [c[0], c[1], c[2]]);
         g.hud.status.players[i].next
@@ -680,7 +680,7 @@ impl Running<'_> {
             && (k == PlayerKind::Human || k == PlayerKind::Cpu)
             && self.game.player_stocks(slot) == 0
         {
-            self.vs_announce_entry(slot, k as u8);
+            self.vs_announce_entry(slot, k.raw() as u8);
         }
         let s = &self.game.vs.start;
         if s.match_kind != 1 && s.damage_display_kos {

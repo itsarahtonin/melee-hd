@@ -194,24 +194,24 @@ impl Game {
 
     /// Who plays the slot (`Gm_PKind`), `Player_GetPlayerSlotType`.
     #[doc(alias = "Player_GetPlayerSlotType")]
-    pub fn player_pkind(&self, slot: i32) -> i32 {
+    pub fn player_pkind(&self, slot: i32) -> PlayerKind {
         self.player(slot).pkind
     }
 
     /// Who plays a slot's entity, `Player_8003248C`: a human's or computer's partner (Nana)
     /// plays as a computer; a transformation as its player.
     #[doc(alias = "Player_8003248C")]
-    pub fn player_kind(&self, slot: i32, sub: i32) -> i32 {
+    pub fn player_kind(&self, slot: i32, sub: i32) -> PlayerKind {
         let p = self.player(slot);
         if sub == 1 && mapping(p.ckind).has_transformation == 0 && p.is_playing() {
-            return PlayerKind::Cpu.into();
+            return PlayerKind::Cpu;
         }
         p.pkind
     }
 
     #[doc(alias = "Player_SetSlottype")]
-    pub fn set_player_pkind(&mut self, slot: i32, pkind: impl Into<i32>) {
-        self.player_mut(slot).pkind = pkind.into();
+    pub fn set_player_pkind(&mut self, slot: i32, pkind: PlayerKind) {
+        self.player_mut(slot).pkind = pkind;
     }
 
     /// The slot's entity's fighter kind (0: its fighter, 1: its second), `Player_80032610`.

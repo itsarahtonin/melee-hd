@@ -1078,7 +1078,7 @@ fn export_rules(o: &mut Bits<0x138>, r: &StartMeleeRules) {
 
 fn export_player(o: &mut Bits<0x138>, at: usize, p: &PlayerInitData) {
     o.u8(at, p.ckind as u8);
-    o.u8(at + 0x1, p.slot_type);
+    o.u8(at + 0x1, p.slot_type.raw());
     o.u8(at + 0x2, p.stocks as u8);
     o.u8(at + 0x3, p.color);
     o.u8(at + 0x4, p.slot);

@@ -8,6 +8,7 @@
 
 use super::*;
 use crate::game::ft::CharacterKind;
+use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
 
 /// `mnCharSel_CursorThink`.
@@ -518,7 +519,7 @@ impl Running<'_> {
                             _ => {}
                         }
                         let kind = self.game.charsel.doors[door].p_kind;
-                        self.css_start().players[door].slot_type = kind;
+                        self.css_start().players[door].slot_type = Narrow::from_raw(kind);
                         if kind == PlayerKind::Cpu {
                             self.css_start().players[door].nametag = NO_TAG;
                             self.game.charsel.tags[door]

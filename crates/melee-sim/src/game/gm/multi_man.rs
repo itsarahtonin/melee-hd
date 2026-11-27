@@ -775,7 +775,7 @@ impl Running<'_> {
         mm.start_frames = 0;
         let mut p = super::vs_mode::player_defaults();
         p.ckind = CharacterKind::Boy.raw() as i8;
-        p.slot_type = 1;
+        p.slot_type = PlayerKind::Cpu.into();
         p.stocks = 1;
         p.dies_up = true;
         mm.joiner = p;

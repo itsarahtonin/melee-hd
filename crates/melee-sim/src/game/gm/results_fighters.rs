@@ -356,7 +356,7 @@ impl Running<'_> {
             slot as u8,
             p.team,
             u8::from(me.is_teams == 1),
-            p.pkind,
+            p.pkind.raw(),
         ));
         self.game
             .objs

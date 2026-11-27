@@ -586,7 +586,7 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
             character: p.ckind as u8,
             costume: p.color,
             port: i as u8,
-            kind: p.slot_type,
+            kind: p.slot_type.raw(),
             cpu_level: p.cpu_level,
             team: p.team,
         })

@@ -965,7 +965,7 @@ impl Session {
             for p in joining.players.iter_mut().take(4).skip(1) {
                 // The 33 character kinds; past them a slot names no one.
                 if (0..0x21).contains(&p.ckind) {
-                    p.slot_type = 1;
+                    p.slot_type = PlayerKind::Cpu.into();
                 }
             }
             super::vs_match::load_fighter_files(
@@ -1071,7 +1071,7 @@ impl Session {
                 let p = &mut joining.players[i];
                 p.ckind = ck;
                 p.color = 0;
-                p.slot_type = 1;
+                p.slot_type = PlayerKind::Cpu.into();
             }
             super::vs_match::load_fighter_files(
                 &mut self.game,
@@ -1119,7 +1119,7 @@ impl Session {
 
                         p.ckind = ck;
                         p.color = if c < t.costume_count { c } else { 0 };
-                        p.slot_type = 1;
+                        p.slot_type = PlayerKind::Cpu.into();
                     }
                     super::vs_match::load_fighter_files(
                         &mut self.game,

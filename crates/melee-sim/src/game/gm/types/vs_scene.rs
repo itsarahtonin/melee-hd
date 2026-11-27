@@ -4,6 +4,8 @@
 
 use super::{MatchEnd, StartMeleeRules};
 use crate::game::handles::RawPtr;
+use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
 
 /// The decomp's `VsSceneFighter`.
 #[derive(
@@ -19,7 +21,7 @@ pub struct VsSceneFighter {
     #[doc(alias("x1"))]
     pub entry_timer: u8,
     #[at(0x2)]
-    pub slot_type: u8,
+    pub slot_type: Narrow<PlayerKind, u8>,
     #[at(0x3)]
     pub spawn_point: i8,
     /// `b0` metal, `b1` (`PlayerInitData`'s `unread_c_b3`), `b2` invisible, `b3` shows the

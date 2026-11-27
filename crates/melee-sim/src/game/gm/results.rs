@@ -3,6 +3,7 @@
 //! the VS controller's `x24C`, which `gm_8016C5C0` brings up to date once a tick for the
 //! rank a grab's escape counts.
 
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
@@ -158,8 +159,8 @@ impl Game {
         // `kills` holds four; the fifth and sixth land in `x18` and the padding after it.
         let mut kills = [[0u16; 6]; 6];
         for (i, row) in kills.iter_mut().enumerate() {
-            let pkind = self.player_pkind(i as i32) as u8;
-            r.player_standings[i].pkind = pkind;
+            let pkind = self.player_pkind(i as i32).raw() as u8;
+            r.player_standings[i].pkind = Narrow::from_raw(pkind);
             if pkind == PlayerKind::None {
                 continue;
             }

@@ -12,6 +12,7 @@
 use crate::game::ft::CpuKind;
 use crate::game::handles::CodeRef;
 use crate::game::mirror::{Export, MemMut, Narrow};
+use crate::game::pl::player::PlayerKind;
 use crate::game::structs::HitRecord;
 use crate::hsd::gobj::GObjId;
 use crate::state_eq::{Diff, StateEq, StateHasher};
@@ -631,7 +632,7 @@ pub struct StaticPlayer {
     #[at(0x4)]
     pub ckind: i32,
     #[at(0x8)]
-    pub pkind: i32,
+    pub pkind: PlayerKind,
     #[at(0xC)]
     pub transformed: [u8; 2],
     #[at(0xE)]
@@ -736,7 +737,7 @@ impl Default for StaticPlayer {
         StaticPlayer {
             player_state: 0,
             ckind: 0,
-            pkind: 0,
+            pkind: PlayerKind::Human,
             transformed: [0; 2],
             unused_0e: 0,
             player_poses: [0; 48],

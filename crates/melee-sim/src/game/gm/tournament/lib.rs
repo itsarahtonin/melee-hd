@@ -4,6 +4,7 @@
 //! texts and models, and the match's start data.
 
 use crate::game::ft::CpuKind;
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -1204,7 +1205,8 @@ impl Running<'_> {
             m.color = color;
             m.level = s.level;
             self.game.set_player_ckind(p as i32, ckind);
-            self.game.set_player_pkind(p as i32, i32::from(slot_type));
+            self.game
+                .set_player_pkind(p as i32, PlayerKind::from_raw(i32::from(slot_type)));
             self.game.set_player_costume(p as i32, i32::from(color));
         }
         self.game.tou.tm.players_per_match = count;
@@ -1500,7 +1502,7 @@ impl Running<'_> {
                 let tag = d.players[i].nametag;
                 let rumble = self.rumble_enabled_for(i, tag);
                 let p = &mut d.players[i];
-                p.slot_type = m.slot_type;
+                p.slot_type = Narrow::from_raw(m.slot_type);
                 p.stocks = rules.stock_count as i8;
                 p.sub_color = 0;
                 p.team = 0xFF;
@@ -1527,7 +1529,7 @@ impl Running<'_> {
         let players: Vec<(u8, i32, u8)> = (0..4)
             .map(|i| {
                 let p = &d.players[i];
-                (p.slot_type, i32::from(p.ckind), p.color)
+                (p.slot_type.raw(), i32::from(p.ckind), p.color)
             })
             .collect();
         *self.game.tou.start = d;
