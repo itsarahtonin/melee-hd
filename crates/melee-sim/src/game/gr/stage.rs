@@ -433,7 +433,7 @@ impl super::super::state::Running<'_> {
     /// selected stage's.
     #[doc(alias = "Stage_802252E4")]
     pub fn start_stage(&mut self, _stkind: i32) {
-        let grkind = crate::lb::audio::ground_kind(self.game.gr.stkind) as i32;
+        let grkind = GrKind::from_raw(crate::lb::audio::ground_kind(self.game.gr.stkind) as i32);
         super::setup::start(self, grkind);
     }
 }

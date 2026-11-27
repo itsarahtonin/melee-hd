@@ -10,6 +10,7 @@ use crate::game::ef::QueuedId;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets};
 use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
+use crate::game::gr::GrKind;
 use crate::game::handles::*;
 use crate::game::structs::*;
 use crate::hsd::gobj::GObjId;
@@ -1208,7 +1209,7 @@ pub struct Fighter {
     #[at(0x222C)]
     pub u: FighterVars,
     #[at(0x2324)]
-    pub bury_grkind: i32,
+    pub bury_grkind: GrKind,
     #[at(0x2328)]
     pub bury_timer_1: u32,
     #[at(0x232C)]
@@ -1645,7 +1646,7 @@ impl Default for Fighter {
             unused_222a_b6: false,
             unused_222a_b7: false,
             u: Default::default(),
-            bury_grkind: 0,
+            bury_grkind: GrKind::Dummy,
             bury_timer_1: 0,
             bury_timer_2: 0,
             hammer_frames: Default::default(),

@@ -4,7 +4,7 @@
 
 use melee_data::archive::DataRef;
 use melee_sim::game::gr::{
-    self, CollUser, DynamicAttr, GroundVars, StageArchive, StartHook, vars_kind,
+    self, CollUser, DynamicAttr, GrKind, GroundVars, StageArchive, StartHook, vars_kind,
 };
 use melee_sim::game::handles::{CodeRef, GroundId, StartHookId};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
@@ -188,7 +188,7 @@ impl Importer<'_> {
         let cap = self.cap;
         let m = mem(&cap.call.mem1);
         let mut g = Ground::import(&m, a, self);
-        let grkind = self.cap.u32(sym("stage_info") + 0x88) as i32;
+        let grkind = GrKind::from_raw(self.cap.u32(sym("stage_info") + 0x88) as i32);
         g.u.vars = GroundVars::import_as(vars_kind(grkind, g.map_id), &m, a + 0xC4, self);
         self.game.grounds[id.0] = g;
         id
@@ -2119,11 +2119,11 @@ fn vec3_at(mem: &dyn Fn(u32) -> u32, a: u32) -> Vec3 {
 
 /// The spawn configurations' addresses the stage objects' variables hold: Brinstar's stage's
 /// (map 6, `xFC`) and island's (map 7, `xEC`).
-fn config_addrs(grkind: i32, u32_at: &dyn Fn(u32) -> u32) -> Vec<u32> {
-    let maps: &[(u32, u32)] = match melee_sim::game::gr::GrKind::from_id(grkind) {
-        Some(melee_sim::game::gr::GrKind::Zebes) => &[(6, 0x38), (7, 0x28)],
+fn config_addrs(grkind: GrKind, u32_at: &dyn Fn(u32) -> u32) -> Vec<u32> {
+    let maps: &[(u32, u32)] = match grkind {
+        GrKind::Zebes => &[(6, 0x38), (7, 0x28)],
         // The Great Fox's two (`grCorneria_GroundVars::xC8`, `xCC`).
-        Some(melee_sim::game::gr::GrKind::Corneria) => &[(3, 4), (3, 8)],
+        GrKind::Corneria => &[(3, 4), (3, 8)],
         _ => return Vec::new(),
     };
     let mut out = Vec::new();
@@ -2233,7 +2233,7 @@ impl Importer<'_> {
             self.game.gr.raw_parts_mut().zebes.bubbles[i as usize].gobj =
                 self.import_handle_gobj(g);
         }
-        let grkind = self.cap.u32(sym("stage_info") + 0x88) as i32;
+        let grkind = GrKind::from_raw(self.cap.u32(sym("stage_info") + 0x88) as i32);
         let addrs = config_addrs(grkind, &|a| self.cap.u32(a));
         self.game.gr.raw_parts_mut().spawn_configs.clear();
         for a in addrs {

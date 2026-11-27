@@ -173,7 +173,7 @@ impl Game {
 
     #[doc(alias = "gm_GetStKind")]
     pub fn vs_stkind(&self) -> u16 {
-        self.vs.start.stkind
+        self.vs.start.stkind.raw()
     }
 
     /// Whether this is a stock match, `gm_8016B094`.
@@ -761,7 +761,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8016B7F8")]
     pub fn vs_go(&mut self, _kind: i32) {
         self.game.ft_enable_all_input();
-        let stkind = i32::from(self.game.vs.start.stkind);
+        let stkind = i32::from(self.game.vs.start.stkind.raw());
         self.start_stage(stkind);
         self.stadium_go();
         let kind = if self.game.vs.start.alt_go { 8 } else { 4 };
@@ -979,7 +979,7 @@ impl Running<'_> {
         if mode == GameMode::TargetTest {
             let ckind = self.game.game_data.vs.event.target_test.ckind as u8;
             self.target_test_score(ckind);
-        } else if mode == GameMode::Classic && (0x21..=0x3A).contains(&stkind) {
+        } else if mode == GameMode::Classic && (0x21..=0x3A).contains(&stkind.raw()) {
             let ckind = self.game.one_player.classic.base.player.ckind as u8;
             self.target_test_score(ckind);
         }
@@ -1614,14 +1614,15 @@ impl Running<'_> {
         let pos = self.slot_spawn_point(0);
         let g = &mut *self.game;
         if g.player_facing(0) == 0.0 {
-            let dir =
-                if super::super::gr::stage::is_special_target_stage(i32::from(g.vs.start.stkind)) {
-                    1.0
-                } else if pos.x >= 0.0 {
-                    -1.0
-                } else {
-                    1.0
-                };
+            let dir = if super::super::gr::stage::is_special_target_stage(i32::from(
+                g.vs.start.stkind.raw(),
+            )) {
+                1.0
+            } else if pos.x >= 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
             g.set_player_facing(0, dir);
         }
         g.set_player_pos(0, pos);
@@ -1767,7 +1768,7 @@ impl Running<'_> {
             let g = &mut *self.game;
             if g.player_facing(i) == 0.0 {
                 let dir = if super::super::gr::stage::is_special_target_stage(i32::from(
-                    g.vs.start.stkind,
+                    g.vs.start.stkind.raw(),
                 )) {
                     1.0
                 } else if pos.x >= 0.0 {
@@ -2049,7 +2050,7 @@ impl Running<'_> {
         super::super::gr::setup::reset_devices(self.game);
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
-        super::super::gr::setup::select(self, i32::from(d.rules.stkind), files.stage);
+        super::super::gr::setup::select(self, i32::from(d.rules.stkind.raw()), files.stage);
         self.game.vs.state.item_weight = item_weight(self.game);
         // `Item_80266F70`'s `lbArchive_80017040`: the common items from the preload cache.
         let kept = self.take_cached_named("ItCo.usd");
@@ -2064,7 +2065,7 @@ impl Running<'_> {
             self.game.audio(0x8002_785C, [0; 4]);
         }
         // `Stage_8022524C` and `Stage_80225298` hand the stage's ground kind on.
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::gr::setup::setup(self, grkind);
         let tilt = self.game.stage_info.camera_settings().cam_vertical_tilt;
         self.game.camera.set_default_fov(tilt);

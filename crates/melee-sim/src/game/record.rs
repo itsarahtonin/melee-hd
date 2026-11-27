@@ -1053,7 +1053,7 @@ fn export_rules(o: &mut Bits<0x138>, r: &StartMeleeRules) {
     o.u8(0xB, r.item_freq as u8);
     o.u8(0xC, r.sd_penalty as u8);
     o.u8(0xD, r.end_wait);
-    o.be(0xE, &r.stkind.to_be_bytes());
+    o.be(0xE, &r.stkind.raw().to_be_bytes());
     o.be(0x10, &r.time_limit.to_be_bytes());
     o.u8(0x14, r.start_frame);
     o.be(0x18, &r.score.to_be_bytes());

@@ -56,7 +56,7 @@ fn run(args: Vec<String>) -> ExitCode {
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     println!(
         "replay: stage {}, {} frames, seed {:#010x}",
-        settings.start.rules.stkind,
+        settings.start.rules.stkind.raw(),
         replay.frames.len(),
         settings.seed
     );

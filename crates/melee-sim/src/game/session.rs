@@ -10,6 +10,7 @@
 //! the modes' loops to the next scene (`gm::machine`). A session taken up from a state (an
 //! imported trace tick, [`Session::resume`]) plays on with [`Session::step_tick`].
 
+use crate::game::gr::GrKind;
 use melee_data::archive::{Archive, Archives};
 
 use super::gm::scene;
@@ -920,10 +921,10 @@ impl Session {
         super::vs_match::load_results_files(&mut self.game, &mut self.data, start, &mut |n| {
             console.file(n)
         });
-        let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
+        let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind.raw())) as i32;
         let mut names: Vec<&str> = Vec::new();
         let us = self.game.game_data.saved_language() == super::gm::main_lib::LANG_US;
-        if let Some(name) = super::gr::registry::stage(grkind).file(us) {
+        if let Some(name) = super::gr::registry::stage(GrKind::from_raw(grkind)).file(us) {
             names.push(name.trim_start_matches('/'));
         }
         if grkind == super::gr::GrKind::PStadium {
@@ -1021,7 +1022,7 @@ impl Session {
             ))
         {
             let kinds: Vec<i32> =
-                super::gm::adventure::match_start_kinds(&self.game, start.rules.stkind)
+                super::gm::adventure::match_start_kinds(&self.game, start.rules.stkind.raw())
                     .iter()
                     .filter(|&&k| k != CharacterKind::NONE as i8)
                     .map(|&k| i32::from(k))
@@ -1130,14 +1131,16 @@ impl Session {
                 }
             }
         }
-        if training && let Some(name) = super::gr::registry::stage(grkind).file(us) {
+        if training
+            && let Some(name) = super::gr::registry::stage(GrKind::from_raw(grkind)).file(us)
+        {
             let archive = self
                 .game
                 .ft
                 .data
                 .files
                 .archive(name.trim_start_matches('/'));
-            let stkind = i32::from(start.rules.stkind);
+            let stkind = i32::from(start.rules.stkind.raw());
             for bgm in super::gr::setup::stage_songs(&self.data, archive, stkind) {
                 let path = format!("audio/{}", crate::lb::audio::HPS_NAMES[bgm as usize]);
                 let file = console.file(&path);

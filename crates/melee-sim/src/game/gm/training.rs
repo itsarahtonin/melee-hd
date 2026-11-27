@@ -969,7 +969,7 @@ impl Running<'_> {
         let pos = self.slot_spawn_point(slot);
         let g = &mut *self.game;
         if g.player_facing(slot) == 0.0 {
-            let stage = i32::from(g.vs.start.stkind);
+            let stage = i32::from(g.vs.start.stkind.raw());
             let dir = if super::super::gr::stage::is_special_target_stage(stage) {
                 1.0
             } else if pos.x >= 0.0 {

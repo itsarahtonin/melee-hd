@@ -10,6 +10,7 @@
 //! ([`DebugVars`]), the debug level, and the words the tables name.
 
 use crate::game::ft::CpuKind;
+use crate::game::gr::StKind;
 use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 
@@ -199,7 +200,7 @@ impl DebugVars {
                 r.timer_enabled = false;
             }
         }
-        r.stkind = w(0x8) as u16;
+        r.stkind = Narrow::from_raw(w(0x8) as u16);
         r.item_switch = u64::MAX;
         r.item_freq = w(0xD8).wrapping_sub(1) as i8;
         r.sd_penalty = -1;
@@ -1556,7 +1557,7 @@ impl Running<'_> {
         );
         let start = &mut self.game.vs_melee.start;
         start.rules = rules_defaults();
-        start.rules.stkind = 0x20;
+        start.rules.stkind = StKind::Last.into();
         start.rules.item_freq = -1;
         start.rules.sd_penalty = -1;
         start.rules.match_kind = 0;

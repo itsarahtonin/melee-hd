@@ -1437,7 +1437,7 @@ impl Running<'_> {
         };
         let r = &mut d.rules;
         r.is_teams = 0;
-        r.stkind = self.game.tou.tm.stage as u16;
+        r.stkind = Narrow::from_raw(self.game.tou.tm.stage as u16);
         for (i, &kind) in super::super::vs_mode::ITEM_SWITCH_KINDS.iter().enumerate() {
             if kind != super::super::vs_mode::NO_ITEM_KIND {
                 if prefs_mask & (1 << i) != 0 {
@@ -1525,7 +1525,7 @@ impl Running<'_> {
                 d.players[i].slot_type = PlayerKind::None.into();
             }
         }
-        let stkind = i32::from(d.rules.stkind);
+        let stkind = i32::from(d.rules.stkind.raw());
         let players: Vec<(u8, i32, u8)> = (0..4)
             .map(|i| {
                 let p = &d.players[i];

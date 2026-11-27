@@ -447,19 +447,13 @@ impl Running<'_> {
     /// The fighter's burial timers for the stage, `ftCo_800C09B4`.
     #[doc(alias = "ftCo_800C09B4")]
     fn init_bury(&mut self, f: FighterId) {
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         let fp = &mut self.game.fighters[f.0];
         fp.bury_grkind = grkind;
         fp.bury_timer_1 = 0;
         if matches!(
-            GrKind::from_id(grkind),
-            Some(
-                GrKind::OldKongo
-                    | GrKind::Kongo
-                    | GrKind::ShrineRoute
-                    | GrKind::Pushon
-                    | GrKind::Zebes
-            )
+            grkind,
+            GrKind::OldKongo | GrKind::Kongo | GrKind::ShrineRoute | GrKind::Pushon | GrKind::Zebes
         ) {
             fp.bury_timer_2 = 0;
         }

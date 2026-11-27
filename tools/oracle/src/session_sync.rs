@@ -619,7 +619,7 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         return true;
     }
     let (rules, prefs) = melee_sim::game::gm::attract::saved_rules(&s.game.game_data);
-    let mut settings = Settings::vs_with(start.rules.stkind, &players, &rules, &prefs);
+    let mut settings = Settings::vs_with(start.rules.stkind.raw(), &players, &rules, &prefs);
     // The match's own: the save's unlocks, the session's console, the allocator model on
     // whatever the players (the menus' match always runs it).
     settings.unlocks = s.game.gm.unlocks;
@@ -653,7 +653,7 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         None => println!(
             "the shortcut at tick {t}: the menus' start data ({} players, stage {}){}",
             players.len(),
-            start.rules.stkind,
+            start.rules.stkind.raw(),
             if taken.is_empty() {
                 String::new()
             } else {
@@ -771,7 +771,7 @@ fn probe_line(tick: u64, next: usize, game: &Game) {
         line += &format!(
             " | teams{} stage{} | rules mode{} time{} hcap{} ff{} sd{}",
             start.rules.is_teams,
-            start.rules.stkind,
+            start.rules.stkind.raw(),
             r.mode,
             r.time_limit,
             r.handicap,

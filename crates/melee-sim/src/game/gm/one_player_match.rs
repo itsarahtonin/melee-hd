@@ -256,7 +256,7 @@ impl Running<'_> {
             r.timer_enabled = false;
         }
         r.score = run.score as u32;
-        r.stkind = stkind as u16;
+        r.stkind = Narrow::from_raw(stkind as u16);
         r.item_freq = Self::one_player_getter(run.getters[0], count, level, 0) as i8;
         r.item_switch = u64::MAX;
         let enemies = chars.iter().filter(|&&c| c != NONE).count();

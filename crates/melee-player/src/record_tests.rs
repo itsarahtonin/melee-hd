@@ -315,7 +315,7 @@ fn a_recording_carries_the_item_settings() {
                 seed: base.seed,
                 rules: Rules::slippi_online(),
                 record: Some(Setup::slippi()),
-                ..Settings::vs_items(stage, &players, 0, 1, &prefs)
+                ..Settings::vs_items(stage.raw(), &players, 0, 1, &prefs)
             };
             let mut session = start(&disc, &s, None);
             for tick in 0..30 {
@@ -536,7 +536,7 @@ fn a_slow_mo_live_match_equals_its_playback() {
             })
             .collect();
         let mut slowed = Settings::vs_special(
-            base.start.rules.stkind,
+            base.start.rules.stkind.raw(),
             &players,
             &GameRules::vs(0, 1),
             &GamePrefs::items_off(),

@@ -539,14 +539,8 @@ impl Running<'_> {
             fp.bury_timer_1 -= 1;
         }
         if matches!(
-            GrKind::from_id(fp.bury_grkind),
-            Some(
-                GrKind::OldKongo
-                    | GrKind::Kongo
-                    | GrKind::ShrineRoute
-                    | GrKind::Pushon
-                    | GrKind::Zebes
-            )
+            fp.bury_grkind,
+            GrKind::OldKongo | GrKind::Kongo | GrKind::ShrineRoute | GrKind::Pushon | GrKind::Zebes
         ) && fp.bury_timer_2 != 0
         {
             fp.bury_timer_2 -= 1;

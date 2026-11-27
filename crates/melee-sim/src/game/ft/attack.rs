@@ -2189,13 +2189,12 @@ impl Running<'_> {
     /// The hit the stage gives a line ([`Self::line_hazard`]'s `DynamicsDesc`).
     pub(crate) fn line_hazard_desc(&mut self, line: i32) -> Option<melee_data::archive::DataRef> {
         let f = self.game.stage_info.touch_line_callback()?;
-        let touch = super::super::gr::registry::by_address(
-            self.game.stage_info.ground_kind_id(),
-            f.0,
-            |d| d.on_touch_line,
-        )
-        .and_then(|s| s.touch_line)
-        .unwrap_or_else(|| unported_call(&format!("a stage's on_touch_line {:#x}", f.0)));
+        let touch =
+            super::super::gr::registry::by_address(self.game.stage_info.ground_kind(), f.0, |d| {
+                d.on_touch_line
+            })
+            .and_then(|s| s.touch_line)
+            .unwrap_or_else(|| unported_call(&format!("a stage's on_touch_line {:#x}", f.0)));
         touch(self, line)
     }
 

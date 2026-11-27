@@ -652,7 +652,7 @@ impl Running<'_> {
         if s.start_game != 0 {
             let stage = s.vs.start.rules.stkind;
             self.set_next_game_mode_state_id(STATE_VS);
-            self.game.tou.tm.stage = u32::from(stage);
+            self.game.tou.tm.stage = u32::from(stage.raw());
             return;
         }
         if self.game.tou.tm.match_type() == 0 {

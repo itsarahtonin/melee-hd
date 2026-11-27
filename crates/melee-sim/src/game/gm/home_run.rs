@@ -27,7 +27,7 @@ pub const PROC_COUNTER: u32 = 0x8018_0C60;
 pub const PROC_END: u32 = 0x8018_1598;
 
 /// `gm_801734D0`'s none (`St_Kind_Unk328`).
-const NO_STAGE: u16 = StKind::Unk328.id();
+const NO_STAGE: u16 = StKind::Unk328.id() as u16;
 
 /// The contest's statics (`gm_180A.c`): `lbl_80472E48` (its flags, the player, the end's
 /// wait, the port and every character's record in tenths), `lbl_80472EC8` (the distance now,
@@ -109,7 +109,7 @@ impl Running<'_> {
         };
         start.rules.clone_from(&vs.rules);
         let r = &mut start.rules;
-        r.stkind = crate::game::gr::StKind::HomeRun.id();
+        r.stkind = crate::game::gr::StKind::HomeRun.into();
         r.match_kind = 1;
         r.timer_enabled = true;
         r.exact_start_frame = true;
@@ -171,8 +171,8 @@ impl Running<'_> {
         }
         let sel = selkind(me.player_standings[0].ckind as u8);
         let dist = self.game.home_run.dist[0].wrapping_mul(10) as u32;
-        let stage = if dist >= 0x9C40 && !self.stage_unlocked(StKind::OldYoshi.id()) {
-            StKind::OldYoshi.id()
+        let stage = if dist >= 0x9C40 && !self.stage_unlocked(StKind::OldYoshi.id() as u16) {
+            StKind::OldYoshi.id() as u16
         } else {
             NO_STAGE
         };

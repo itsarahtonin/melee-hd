@@ -7,6 +7,7 @@ mod types;
 pub use types::{EventData, TargetTestChoice};
 
 use crate::game::ft::CpuKind;
+use crate::game::gr::StKind;
 use crate::game::mirror::Narrow;
 use melee_data::archive::DataRef;
 
@@ -269,7 +270,7 @@ impl Running<'_> {
             }
         }
         if stage {
-            gc.stkind = ev.stage;
+            gc.stkind = ev.stage.id();
         }
         self.preload_refresh();
         let mut mask = 0;
@@ -278,7 +279,7 @@ impl Running<'_> {
                 mask |= crate::lb::audio::character_banks(i32::from(ev.chars[i]));
             }
         }
-        mask |= crate::lb::audio::stage_banks(ev.stage);
+        mask |= crate::lb::audio::stage_banks(ev.stage.id());
         let lb = &mut self.game.audio.lb;
         lb.unwant_banks(0x1C);
         lb.want_banks(0xC, mask);
@@ -464,7 +465,7 @@ impl Running<'_> {
         }
         let ev = &mut self.game.game_data.vs.event;
         ev.load_kind = load_kind;
-        ev.stage = stkind;
+        ev.stage = StKind::from_raw(stkind);
         ev.chars = chars;
         ev.colors = colors;
         ev.crowd_kirby_copies = crowd_copies;
@@ -696,7 +697,7 @@ impl Running<'_> {
         r.item_freq = d.u8(ei.at(3)) as i8;
         r.sd_penalty = d.u8(ei.at(4)) as i8;
         r.end_wait = 0x6E;
-        r.stkind = d.u16(ei.at(6));
+        r.stkind = Narrow::from_raw(d.u16(ei.at(6)));
         r.time_limit = d.u32(ei.at(8));
         r.start_frame = 0;
         r.score = 0;
@@ -722,8 +723,8 @@ impl Running<'_> {
             ev.series = true;
             let round = ev.round;
             let stage = self.event_round_stage(e, round as usize);
-            start.rules.stkind = stage;
-            self.game.game_data.vs.event.stage = i32::from(stage);
+            start.rules.stkind = Narrow::from_raw(stage);
+            self.game.game_data.vs.event.stage = StKind::from_raw(i32::from(stage));
             if round > 0 {
                 start.rules.long_countdown = true;
                 start.rules.alt_go = true;

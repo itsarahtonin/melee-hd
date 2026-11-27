@@ -274,8 +274,8 @@ impl Running<'_> {
             self.toy_mark_class(7, false, false);
         }
         self.trophy_class_notices();
-        if idx == STAGE_TROPHY && !self.stage_unlocked(STAGE_TROPHY_STKIND.id()) {
-            self.unlock_stage(STAGE_TROPHY_STKIND.id());
+        if idx == STAGE_TROPHY && !self.stage_unlocked(STAGE_TROPHY_STKIND.id() as u16) {
+            self.unlock_stage(STAGE_TROPHY_STKIND.id() as u16);
         }
         let t = self.trophy_tables();
         if self.trophy_class(&t, idx) == 1 {

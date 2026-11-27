@@ -199,7 +199,7 @@ impl Running<'_> {
     pub fn vs_melee_exit_sss(&mut self, table: usize, cancel: u8) {
         if self.game.vs_melee.sss.start_game != 0 {
             let vs = self.game.vs_melee.sss.vs.clone();
-            let stkind = i32::from(vs.start.rules.stkind);
+            let stkind = i32::from(vs.start.rules.stkind.raw());
             self.vs_table(table).clone_from(&vs);
             self.game.audio.lb.unwant_banks(24);
             self.game

@@ -227,7 +227,7 @@ pub fn game_cache_files() -> Vec<String> {
         let st = crate::game::gm::opening::stage_select_kind(i);
         let gr = crate::lb::audio::ground_kind(i32::from(st)) as i32;
         for us in [true, false] {
-            if let Some(n) = crate::game::gr::registry::stage(gr).file(us) {
+            if let Some(n) = crate::game::gr::registry::stage(GrKind::from_raw(gr)).file(us) {
                 add(n);
             }
         }
@@ -236,7 +236,7 @@ pub fn game_cache_files() -> Vec<String> {
     for st in 0xCA..=0x111 {
         let gr = crate::lb::audio::ground_kind(st) as i32;
         for us in [true, false] {
-            if let Some(n) = crate::game::gr::registry::stage(gr).file(us) {
+            if let Some(n) = crate::game::gr::registry::stage(GrKind::from_raw(gr)).file(us) {
                 add(n);
             }
         }
@@ -447,7 +447,7 @@ impl Dvd {
         }
         if gc.stkind != StKind::Unk328 {
             let gr = crate::lb::audio::ground_kind(gc.stkind) as i32;
-            if let Some(n) = crate::game::gr::registry::stage(gr).file(saved_us) {
+            if let Some(n) = crate::game::gr::registry::stage(GrKind::from_raw(gr)).file(saved_us) {
                 self.want_named(4, n, 4, 4, 1, 7, 16, 0);
             }
             let tex = |w, h, f| crate::hsd::heap::tex_buffer_size(w, h, f).next_multiple_of(32);

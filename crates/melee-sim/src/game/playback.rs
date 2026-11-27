@@ -753,7 +753,7 @@ impl Running<'_> {
         }
         want(
             audio,
-            ground_slot(ground_kind(i32::from(start.rules.stkind))),
+            ground_slot(ground_kind(i32::from(start.rules.stkind.raw()))),
         );
         audio.lb_start_bank_loads(data);
         self.lb_audio_call(1);

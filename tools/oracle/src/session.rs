@@ -1934,7 +1934,7 @@ impl Run<'_> {
                     )
                 })
                 .collect();
-            format!("stage {:#x}, {}", d.stkind, players.join(", "))
+            format!("stage {:#x}, {}", d.stkind.raw(), players.join(", "))
         };
         if in_live {
             println!("live match 1: {}", describe(s));

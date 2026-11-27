@@ -18,6 +18,7 @@ pub mod v1201v1;
 pub mod v1201v2;
 pub mod v1202;
 
+use crate::game::gr::GrKind;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::gr::StKind;
@@ -486,20 +487,22 @@ impl Running<'_> {
         super::gr::setup::prepare(self.game);
         let grkind = crate::lb::audio::ground_kind(stkind) as i32;
         let us = self.files_us();
-        let archive = super::gr::registry::stage(grkind).file(us).map(|name| {
-            self.game
-                .ft
-                .data
-                .files
-                .archive(name.trim_start_matches('/'))
-        });
+        let archive = super::gr::registry::stage(GrKind::from_raw(grkind))
+            .file(us)
+            .map(|name| {
+                self.game
+                    .ft
+                    .data
+                    .files
+                    .archive(name.trim_start_matches('/'))
+            });
         super::gr::setup::select(self, stkind, archive);
         let kept = self.take_cached_named("ItCo.usd");
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
         super::it::item::load_common_data(self.game, self.data, it_co, kept);
         super::it::item::init_globals(self.game, self.data);
         before_setup(self);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::gr::setup::setup_at(self, grkind, stage_frames(frames));
         super::gr::stage::demo_init(self, stkind, demo);
     }
@@ -861,7 +864,7 @@ impl Running<'_> {
         let us = self.files_us();
         let stage = |f: &mut SceneFiles, stkind: i32| {
             let grkind = crate::lb::audio::ground_kind(stkind) as i32;
-            if let Some(name) = super::gr::registry::stage(grkind).file(us) {
+            if let Some(name) = super::gr::registry::stage(GrKind::from_raw(grkind)).file(us) {
                 f.names.push(name.trim_start_matches('/').to_owned());
             }
         };

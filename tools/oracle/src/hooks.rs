@@ -343,7 +343,7 @@ fn hands_lineup(rng: &Rng, fighters: &[i32], ports: usize) -> Vec<usize> {
 fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
     let rules = &mut data.rules;
     let stage = chosen.stages[rng.below(chosen.stages.len() as u64) as usize];
-    rules.stkind = stage as u16;
+    rules.stkind = Narrow::from_raw(stage as u16);
     rules.match_kind = TIME;
     rules.timer_enabled = true;
     rules.time_limit = chosen.time;

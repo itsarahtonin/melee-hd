@@ -46,7 +46,7 @@ fn vs_start_data_matches_the_recorded() {
                 }
             })
             .collect();
-        let ours = Settings::vs_with(rec.rules.stkind, &players, &rules, &prefs).start;
+        let ours = Settings::vs_with(rec.rules.stkind.raw(), &players, &rules, &prefs).start;
         assert_eq!(ours.rules, rec.rules, "{name}: rules");
         for (i, (o, r)) in ours.players.iter().zip(&rec.players).enumerate() {
             if r.slot_type == PlayerKind::None {

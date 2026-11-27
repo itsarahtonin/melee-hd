@@ -5,6 +5,7 @@
 //! bonus stage's intro shows its title instead. Adventure's (`gm_1879.c`, `GS_INTRO_NORMAL`)
 //! flies a camera over the stage's map until Start.
 
+use crate::game::gr::GrKind;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -409,7 +410,7 @@ impl Running<'_> {
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
         super::super::it::item::load_common_data(self.game, self.data, it_co, kept);
         super::super::it::item::init_globals(self.game, self.data);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::gr::setup::setup_at(self, grkind, 0x28);
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);
@@ -1095,7 +1096,7 @@ impl Running<'_> {
         let stkind = i32::from(e.stkind);
         let grkind = crate::lb::audio::ground_kind(stkind) as i32;
         let us = self.files_us();
-        let archive = super::super::gr::registry::stage(grkind)
+        let archive = super::super::gr::registry::stage(GrKind::from_raw(grkind))
             .file(us)
             .map(|name| {
                 self.game
@@ -1112,7 +1113,7 @@ impl Running<'_> {
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);
         super::super::ef::load_sync(self, 0x1F);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::gr::setup::setup_at(self, grkind, 0x10);
         self.game.init_all_players();
         self.bg_flash_create(10);
@@ -1489,7 +1490,9 @@ impl Running<'_> {
             f.names.push(self.intro_file_name(NORMAL_ARCHIVE));
             let stkind = i32::from(self.game.one_player.adventure_intro.stkind);
             let grkind = crate::lb::audio::ground_kind(stkind) as i32;
-            if let Some(name) = super::super::gr::registry::stage(grkind).file(self.files_us()) {
+            if let Some(name) =
+                super::super::gr::registry::stage(GrKind::from_raw(grkind)).file(self.files_us())
+            {
                 f.names.push(name.trim_start_matches('/').to_owned());
             }
             f.songs.push(0x2E);

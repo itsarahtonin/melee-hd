@@ -3,6 +3,7 @@
 //! match reads as it sets up.
 
 use crate::game::ft::CpuKind;
+use crate::game::gr::StKind;
 use crate::game::handles::{CodeRef, RawPtr};
 use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
@@ -181,7 +182,7 @@ pub struct StartMeleeRules {
     #[doc(alias("xD"))]
     pub end_wait: u8,
     #[at(0xE)]
-    pub stkind: u16,
+    pub stkind: Narrow<StKind, u16>,
     #[at(0x10)]
     pub time_limit: u32,
     #[at(0x14)]

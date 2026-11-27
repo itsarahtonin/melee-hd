@@ -1468,7 +1468,7 @@ impl Running<'_> {
             let costume = u8::from(p.ckind as u8 == CharacterKind::Kirby && p.color == 0);
             self.load_kirby_hats(costume);
         }
-        for k in match_start_kinds(self.game, stkind) {
+        for k in match_start_kinds(self.game, stkind.raw()) {
             if k != FT_NONE {
                 self.load_fighter_all_costumes(i32::from(k));
             }

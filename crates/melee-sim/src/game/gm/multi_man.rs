@@ -357,7 +357,7 @@ impl Running<'_> {
         r.game_over_scene = true;
         r.goes_on = true;
         r.is_teams = 1;
-        r.stkind = STKIND.id();
+        r.stkind = STKIND.into();
         r.score = 0;
         r.item_freq = 2;
         r.quake_scale = 0.5;
@@ -628,10 +628,10 @@ impl Running<'_> {
     /// none (0x148).
     #[doc(alias = "gm_80173498")]
     fn multi_man_15min_stage(&self) -> u16 {
-        if !self.stage_unlocked(StKind::OldKongo.id()) {
-            StKind::OldKongo.id()
+        if !self.stage_unlocked(StKind::OldKongo.id() as u16) {
+            StKind::OldKongo.id() as u16
         } else {
-            StKind::Unk328.id()
+            StKind::Unk328.id() as u16
         }
     }
 

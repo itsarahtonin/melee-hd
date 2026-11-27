@@ -323,7 +323,7 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
         }
         Change::ShrineAbove => {
             let stage = leaf_check::sym("stage_info");
-            if peek_u32(call, stage + GRKIND) != GrKind::Shrine as u32
+            if peek_u32(call, stage + GRKIND) != GrKind::Shrine.raw() as u32
                 || peek_u32(call, nana + GROUND_OR_AIR) != 0
             {
                 return false;
@@ -354,7 +354,7 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
         }
         Change::WindDrift => {
             let stage = leaf_check::sym("stage_info");
-            if peek_u32(call, stage + GRKIND) != GrKind::RCruise as u32
+            if peek_u32(call, stage + GRKIND) != GrKind::RCruise.raw() as u32
                 || peek_u32(call, nana + GROUND_OR_AIR) != 0
             {
                 return false;

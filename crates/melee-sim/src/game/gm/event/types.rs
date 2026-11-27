@@ -2,6 +2,8 @@
 //! hand-written as [`super::super::types`] are): the event, its fighter and color, the round's
 //! score and counters, and the target test's choice beside it (`TargetTestChoice`).
 
+use crate::game::gr::StKind;
+
 /// The decomp's `gmm_x0_584_t`.
 #[doc(alias("gmm_x0_584_t"))]
 #[derive(
@@ -145,7 +147,7 @@ pub struct EventData {
     pub crowd_kirby_copies: u8,
     #[at(0x48)]
     #[doc(alias("x48"))]
-    pub stage: i32,
+    pub stage: StKind,
     #[at(0x4C)]
     #[doc(alias("x4C"))]
     pub chars: [i8; 4],

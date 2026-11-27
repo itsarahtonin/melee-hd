@@ -6,6 +6,7 @@ use super::super::state::Running;
 use super::super::structs::{PlayerInitData, VsModeData};
 use super::vs_mode::{player_defaults, start_defaults};
 use crate::game::ft::CpuKind;
+use crate::game::gr::StKind;
 
 /// The modes' settings outside the game's data that their `on_init`s set.
 #[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
@@ -164,7 +165,7 @@ impl Running<'_> {
         e.play_frames = 0;
         e.load_kind = -1;
         e.crowd_kirby_copies = 0;
-        e.stage = 0;
+        e.stage = StKind::Dummy;
         e.chars = [0x21; 4];
         e.colors = [0; 4];
         init_vs_mode(&mut d.modes.table[VS_SINGLE_BUTTON]);

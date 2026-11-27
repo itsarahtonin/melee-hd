@@ -1,6 +1,7 @@
 //! The stage's core, `melee/gr/ground.c`: `stage_info`'s upkeep, the stage objects and their
 //! processes, map collision, points of interest, camera limits and blast zones, fog and lights.
 
+use crate::game::gr::GrKind;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -638,7 +639,7 @@ pub fn param_color(game: &Game, which: ParamColor) -> _GXColor {
 /// Runs the stage's demo setup, `Ground_DemoInit`.
 #[doc(alias = "Ground_DemoInit")]
 pub fn demo_init(r: &mut Running, grkind: i32, arg: i32) {
-    let f = registry::stage(grkind).data.on_demo_init;
+    let f = registry::stage(GrKind::from_raw(grkind)).data.on_demo_init;
     super::super::code::run_demo_init(r, f, arg);
 }
 
@@ -1213,7 +1214,7 @@ pub fn b1(game: &Game) -> bool {
 /// A stage kind's `flags2`, `Ground_801C5AD0`.
 #[doc(alias = "Ground_801C5AD0")]
 pub fn flags2(grkind: i32) -> u32 {
-    registry::stage(grkind).data.flags2
+    registry::stage(GrKind::from_raw(grkind)).data.flags2
 }
 
 /// Euler angles from three axes, any not under 30000 in size (NaN too) zeroed,

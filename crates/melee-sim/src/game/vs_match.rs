@@ -6,6 +6,7 @@
 //! [`code::call`](super::code::call) and the scheduler's process table; until those ports fill
 //! their arms in, a match stops at the first unported function it reaches, saying which.
 
+use crate::game::gr::GrKind;
 use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
 use melee_data::archive::{Archive, ArchiveId, Archives};
@@ -201,7 +202,7 @@ impl Settings {
     ) -> Settings {
         assert!(players.len() <= 4, "a VS match has up to four players");
         let mut vs = vs_mode::start_defaults();
-        vs.rules.stkind = stage;
+        vs.rules.stkind = Narrow::from_raw(stage);
         // What the character select leaves in the four ports' blocks as it sets up its coins
         // and doors on its first entry: a port with no character on the screen takes `0x1A`
         // (`CharacterKind::PLAYABLE`), and every port's computer level is at least 1 (docs/oracle.md,
@@ -413,8 +414,10 @@ pub fn retail_kinds(start: &StartMeleeData) -> Result<(), CodeError> {
         }
     }
     let stage = start.rules.stkind;
-    if usize::from(stage) >= crate::lb::audio::STAGE_KINDS {
-        return Err(CodeError::ModdedStage { kind: stage });
+    if usize::from(stage.raw()) >= crate::lb::audio::STAGE_KINDS {
+        return Err(CodeError::ModdedStage {
+            kind: (stage).raw(),
+        });
     }
     Ok(())
 }
@@ -586,8 +589,9 @@ impl Match {
             it_co: data.add(archive("ItCo.usd")),
             // `Stage_802251E8`'s stage archive.
             stage: {
-                let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind));
-                super::gr::registry::stage(grkind as i32)
+                let grkind =
+                    crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind.raw()));
+                super::gr::registry::stage(GrKind::from_raw(grkind as i32))
                     .data
                     .file
                     .map(|name| data.add(archive(name)))
@@ -595,9 +599,9 @@ impl Match {
         };
         // Pokémon Stadium's transformation files, which it loads during the match: disc data
         // the frontend loads with the match's archives, as the fighters' files are.
-        let stadium_files: Vec<(&str, ArchiveId)> = if super::gr::registry::stage(
-            crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind)) as i32,
-        )
+        let stadium_files: Vec<(&str, ArchiveId)> = if super::gr::registry::stage(GrKind::from_raw(
+            crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind.raw())) as i32,
+        ))
         .kind
             == super::gr::GrKind::PStadium
         {
@@ -655,9 +659,11 @@ impl Match {
         .into_iter()
         .map(|(n, id)| (n.to_owned(), id))
         .collect();
-        let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind));
+        let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind.raw()));
         if let (Some(name), Some(id)) = (
-            super::gr::registry::stage(grkind as i32).data.file,
+            super::gr::registry::stage(GrKind::from_raw(grkind as i32))
+                .data
+                .file,
             files.stage,
         ) {
             // The stage table's paths start at the disc's root.
@@ -963,8 +969,8 @@ pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, 
             out.push(name.to_owned());
         }
     };
-    let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
-    if let Some(name) = super::gr::registry::stage(grkind).file(saved_us) {
+    let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind.raw())) as i32;
+    if let Some(name) = super::gr::registry::stage(GrKind::from_raw(grkind)).file(saved_us) {
         add(name);
     }
     // `grIzumi_801CD2D4` and `grStadium_801D511C`.

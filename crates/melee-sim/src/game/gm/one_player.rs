@@ -20,6 +20,7 @@ use crate::game::ft::CharacterKind;
 use crate::game::ft::CpuKind;
 use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
+use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
 use gekko_fp as fp;
 
@@ -434,7 +435,7 @@ pub const CLASSIC_STAGES: [ClassicStage; 12] = [
 pub type Matchup = (u16, [i8; 3]);
 
 /// A matchup table's end (`St_Kind_Unk328`).
-const END: u16 = StKind::Unk328.id();
+const END: u16 = StKind::Unk328.id() as u16;
 
 /// `gmClassic_803DDEC8Data.x0C0`: the last stage's (Master Hand's) matchup.
 pub const CLASSIC_FINAL: [Matchup; 2] = [(176, [30, 26, 33]), (END, [0, 0, 0])];
@@ -1136,7 +1137,7 @@ impl Running<'_> {
         s.players[0].nametag = t.nametag;
         s.players[0].enters = false;
         let stkind = target_stage(s.players[0].ckind as u8);
-        s.rules.stkind = stkind;
+        s.rules.stkind = Narrow::from_raw(stkind);
         self.dvd_mut().cache.scene.game_cache.stkind = i32::from(stkind);
         self.preload_refresh();
         let s = &mut self.game.one_player.target_start;
@@ -1480,13 +1481,13 @@ impl Running<'_> {
             return;
         }
         let stkind = sss.vs.start.rules.stkind;
-        self.game.modes.training_stage = stkind as i16;
+        self.game.modes.training_stage = stkind.raw() as i16;
         self.training_table().start.rules.stkind = stkind;
         self.game.audio.lb.unwant_banks(0x18);
         self.game
             .audio
             .lb
-            .want_banks(8, crate::lb::audio::stage_banks(i32::from(stkind)));
+            .want_banks(8, crate::lb::audio::stage_banks(i32::from(stkind.raw())));
         self.game.audio.lb_start_bank_loads(self.data);
     }
 }

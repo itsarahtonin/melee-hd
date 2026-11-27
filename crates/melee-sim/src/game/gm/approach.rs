@@ -7,6 +7,7 @@
 
 use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
+use crate::game::mirror::Narrow;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
@@ -61,7 +62,7 @@ const CHALLENGER_STAGES: [u16; 11] = [
 ];
 
 /// `St_Kind_Unk328`, no stage.
-const NO_STAGE: u16 = StKind::Unk328.id();
+const NO_STAGE: u16 = StKind::Unk328.id() as u16;
 
 /// `gm_80480D98`, the screen's statics, and `gmVsMelee_ApproachData`, its enter and exit
 /// data.
@@ -138,7 +139,7 @@ impl Running<'_> {
         start.rules.timer_enabled = false;
         start.rules.match_kind = MATCH_STOCK;
         start.rules.damage_display = 2;
-        start.rules.stkind = challenger_stage(c.cpu_ckind);
+        start.rules.stkind = Narrow::from_raw(challenger_stage(c.cpu_ckind));
         setup_human(
             &mut start.players[0],
             c.human_ckind,
