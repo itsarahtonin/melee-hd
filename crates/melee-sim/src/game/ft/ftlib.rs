@@ -4,6 +4,7 @@ use super::super::state::{Game, Running};
 use crate::game::ft::CpuKind;
 use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
+use crate::mp::coll::GroundOrAir;
 
 impl Running<'_> {
     /// The kinds of the items a container the fighter opened gave, for its player's records,
@@ -87,7 +88,7 @@ impl Game {
     pub fn ft_ground_slope_angle(&self, gobj: GObjId) -> f32 {
         let fp = self.fighter(gobj);
         assert!(
-            fp.ground_or_air == super::common::GA_GROUND,
+            fp.ground_or_air == GroundOrAir::Ground,
             "the original's assertion failed: ftlib.c:1517"
         );
         let n = &fp.coll_data.floor.normal;
@@ -292,7 +293,7 @@ impl Game {
 
     /// Whether the fighter is on the ground or in the air, `ftLib_GetGroundAir`.
     #[doc(alias = "ftLib_GetGroundAir")]
-    pub fn ft_ground_air(&self, gobj: GObjId) -> i32 {
+    pub fn ft_ground_air(&self, gobj: GObjId) -> GroundOrAir {
         self.fighter(gobj).ground_or_air
     }
 

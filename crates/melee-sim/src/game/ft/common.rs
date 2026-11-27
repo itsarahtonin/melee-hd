@@ -1,6 +1,7 @@
 //! Helpers the processes share, from the common fighter units (`ftcommon.c`, `ft_*.c`,
 //! `ftCo_*.c`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::{run_fighter_cb, unported_call};
@@ -15,12 +16,6 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
-
-/// `GA_Ground`.
-pub const GA_GROUND: i32 = 0;
-
-/// `GA_Air`.
-pub const GA_AIR: i32 = 1;
 
 /// The process link fighters' GObjs are on.
 pub const FIGHTER_P_LINK: u8 = 8;
@@ -244,7 +239,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_800804FC")]
     pub fn forget_attacker_grounded(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             fp.dmg.source_player = 6;
             fp.dmg.source_attack = -1;
         }
@@ -386,7 +381,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.nudge_vel.y = 0.0;
         fp.nudge_vel.x = 0.0;
-        if fp.out_of_play || fp.in_hitlag || fp.ground_or_air != GA_GROUND {
+        if fp.out_of_play || fp.in_hitlag || fp.ground_or_air != GroundOrAir::Ground {
             return;
         }
         let c = self.common();
@@ -462,7 +457,7 @@ impl Running<'_> {
             }
             let other = self.game.fighter(o);
             if other.is_sleeping
-                || other.ground_or_air != GA_GROUND
+                || other.ground_or_air != GroundOrAir::Ground
                 || other.victim_gobj.is_some()
                 || other.is_sub_fighter
             {
@@ -514,7 +509,7 @@ impl Running<'_> {
             .player_entity(slot)
             .expect("a second fighter without its player's fighter");
         let other = self.game.fighter(leader);
-        if !other.is_sleeping && other.ground_or_air == GA_GROUND {
+        if !other.is_sleeping && other.ground_or_air == GroundOrAir::Ground {
             let me = self.game.fighter(gobj);
             if self.floors_meet(me.coll_data.floor.index, other.coll_data.floor.index) {
                 let p = Self::pending_pos(other);
@@ -645,7 +640,7 @@ impl Running<'_> {
             return;
         }
         fp.combo_push_frames -= 1;
-        if fp.victim_gobj.is_none() && fp.ground_or_air == GA_GROUND {
+        if fp.victim_gobj.is_none() && fp.ground_or_air == GroundOrAir::Ground {
             let n = fp.coll_data.floor.normal;
             let push = if i32::from(fp.combo_count) < limit {
                 near
@@ -692,7 +687,9 @@ impl Running<'_> {
             return true;
         }
         if y > top
-            && (fp.ground_or_air == GA_GROUND || fp.no_blast_rise || reg(fp.kb_vel.y) > kb_limit)
+            && (fp.ground_or_air == GroundOrAir::Ground
+                || fp.no_blast_rise
+                || reg(fp.kb_vel.y) > kb_limit)
         {
             let (slot, ice) = (
                 i32::from(fp.player_idx),

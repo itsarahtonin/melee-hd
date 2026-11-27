@@ -13,6 +13,7 @@
 //! arena's opponents (`gm_801674C4`). A Polar Bear landing from its jump speeds the climb up
 //! for a while (`grIceMt_801FA6D8`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::Archives;
 
@@ -991,7 +992,7 @@ pub fn make_blocks(r: &mut Running, gobj: GObjId, parts: &[i32]) {
                 6.0,
             );
             material::item_hurtbox_on(r.game, item);
-            material::item_ground_or_air(r.game, item, 0);
+            material::item_ground_or_air(r.game, item, GroundOrAir::Ground);
         }
         field_vars(r.game, g).items[i] = item;
     }

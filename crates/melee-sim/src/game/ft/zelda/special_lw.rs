@@ -5,12 +5,13 @@
 //! and Sheik's (`ft::seak::special_lw::SHEIK`), and each function here carries both originals'
 //! names.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::{GA_GROUND, addr, ms};
+use super::{addr, ms};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 
@@ -268,7 +269,7 @@ impl Running<'_> {
     #[doc(alias = "ftZd_SpecialLw_8013B4D8")]
     #[doc(alias = "ftSk_SpecialLw_80114758")]
     pub fn transform_finish(&mut self, gobj: GObjId, t: &Transform) {
-        let msid = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        let msid = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             t.states + SECOND
         } else {
             t.states + AIR + SECOND

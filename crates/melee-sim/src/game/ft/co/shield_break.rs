@@ -4,11 +4,11 @@
 //! (`ShieldBreakDownU`/`D`), gets up (`ShieldBreakStandU`/`D`), and stands dizzy (`Furafura`)
 //! until the player mashes out or its timer runs out.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, SpawnKind};
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::super::sound::Track;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
@@ -97,7 +97,7 @@ impl Running<'_> {
     /// (`ftCo_80097570`), raising the knockdown's dust.
     #[doc(alias = "ftCo_80098E3C")]
     pub fn enter_shield_break_down(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.land(gobj);
         }
         let msid = if self.hips_up(gobj) {

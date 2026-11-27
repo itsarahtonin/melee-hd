@@ -3,6 +3,7 @@
 //! state's animation is loaded from ARAM and started, its command script begins, and its
 //! callbacks take over.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -11,7 +12,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::super::structs::Fighter;
 use super::anim::anim_bit;
-use super::common::GA_GROUND;
 use super::{MotionState, motion_table};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
@@ -772,7 +772,7 @@ impl Running<'_> {
             jobj::remove_all(&mut self.game.objs, Some(acc));
             self.game.fighters[f.0].accessory = None;
         }
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             let fp = &mut self.game.fighters[f.0];
             if fp.kind == FighterKind::Peach {
                 fp.u[..4].copy_from_slice(&1u32.to_be_bytes());
@@ -833,7 +833,7 @@ impl Running<'_> {
         self.game.part_set_rot_y(f, 0, y);
         self.game.part_set_rot_z(f, 0, 0.0);
         let ms = Self::motion_state(&self.game.fighters[f.0], msid);
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground
             && flags & SKIP_HIT_STUN_START == 0
             && ms.move_bits & 0x0040_0000 != 0
             && self.game.fighters[f.0].dmg.source_attack == -1
@@ -957,7 +957,7 @@ impl Running<'_> {
                     jobj::clear_flags(jobjs, Some(j), USE_QUATERNION);
                 }
                 let fp = &mut self.game.fighters[f.0];
-                let grounded = fp.ground_or_air == GA_GROUND;
+                let grounded = fp.ground_or_air == GroundOrAir::Ground;
                 if anim_bit(fp, 0) {
                     if start == 0.0 {
                         fp.prev_trans_n_offset = Default::default();

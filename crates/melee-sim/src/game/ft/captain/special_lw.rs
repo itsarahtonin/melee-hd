@@ -2,12 +2,12 @@
 //! or down through the air, slowing with each hit, its landing, and the rebound off a wall
 //! (`ftCa_MS_SpecialHiThrow1`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg, SpawnKind};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::{addr, attr, ms, mv, part};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -111,7 +111,7 @@ impl Running<'_> {
             return;
         }
         let f = self.game.fighter_id(gobj);
-        let grounded = self.game.fighters[f.0].ground_or_air == GA_GROUND;
+        let grounded = self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground;
         self.ca_reset_cmd_and_throw(gobj);
         if grounded {
             let speed = self.ca_attr_f32(f, attr::SPECIALLW_GROUND_LAG_MUL);
@@ -171,7 +171,7 @@ impl Running<'_> {
         let n = fp.coll_data.floor.normal;
         let tilt = mem(fp::fneg(reg(crate::math::atan2(n.x, n.y))));
         assert!(
-            fp.ground_or_air == GA_GROUND,
+            fp.ground_or_air == GroundOrAir::Ground,
             "the original's assertion failed: fp->ground_or_air == GA_Ground"
         );
         self.game.part_set_rot_z(f, 0, tilt);
@@ -195,7 +195,7 @@ impl Running<'_> {
     /// its hits, and the flame.
     #[doc(alias = "ftCa_SpecialLw_Phys")]
     pub fn ca_special_lw_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.tilt_to_floor(gobj);
             self.ground_anim_speed_facing(gobj);
         } else {
@@ -225,7 +225,7 @@ impl Running<'_> {
     /// upright without drift; then slowed by the kick's hits.
     #[doc(alias = "ftCa_SpecialLwEnd_Phys")]
     pub fn ca_special_lw_end_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.tilt_to_floor(gobj);
             self.ca_special_lw_traction(gobj, attr::SPECIALLW_GROUND_TRACTION);
         } else {
@@ -239,7 +239,7 @@ impl Running<'_> {
     /// upright, without drift once the script says (`cmd_vars[0]`), else by the animation.
     #[doc(alias = "ftCa_SpecialLwEndAir_Phys")]
     pub fn ca_special_lw_end_air_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.tilt_to_floor(gobj);
             self.ground_anim_speed_facing(gobj);
             return;
@@ -282,7 +282,7 @@ impl Running<'_> {
     #[doc(alias = "ftCa_SpecialLw_Coll")]
     pub fn ca_special_lw_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             if !self.ground_coll_off_ledges(gobj) {
                 self.go_airborne(f);
             }
@@ -308,7 +308,7 @@ impl Running<'_> {
     #[doc(alias = "ftCa_SpecialLwEndAir_Coll")]
     pub fn ca_special_lw_end_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             let on = if self.game.fighters[f.0].cmd_vars[1] != 0 {
                 self.ground_coll_slide(gobj)
             } else {

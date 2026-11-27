@@ -7,6 +7,7 @@
 // NaN takes the original's branches, which the negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -15,7 +16,6 @@ use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{Game, Running};
 use super::super::structs::DynamicsDesc;
 use super::anim::{anim_bit, bone_flag};
-use super::common::GA_AIR;
 use crate::fpu::{copy, mem, reg};
 use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
@@ -337,7 +337,7 @@ impl Running<'_> {
             if fp.kind == FighterKind::Mewtwo && (0xDF..=0xE8).contains(&fp.motion_id) {
                 true
             } else {
-                !(fp.ground_or_air == GA_AIR
+                !(fp.ground_or_air == GroundOrAir::Air
                     || fp.kind == FighterKind::Koopa
                     || fp.kind == FighterKind::GKoopa)
             }

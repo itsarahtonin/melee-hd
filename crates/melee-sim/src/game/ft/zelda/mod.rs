@@ -102,8 +102,6 @@ pub(crate) mod attr {
     pub const X34: usize = 0x34;
 }
 
-pub(crate) use super::common::GA_GROUND;
-
 impl Running<'_> {
     /// A float of the fighter's `ftZelda_DatAttrs`, `off` bytes in.
     pub(crate) fn zelda_attr_f32(&self, f: FighterId, off: usize) -> f32 {

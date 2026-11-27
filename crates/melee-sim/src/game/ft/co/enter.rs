@@ -1,10 +1,10 @@
 //! Entering the common action states the others end in: waiting, falling, lying down.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::FighterId;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use crate::fpu::reg;
 use crate::game::ft::FighterKind;
 use crate::game::it::ItKind;
@@ -83,7 +83,7 @@ impl Running<'_> {
             return;
         }
         let fp = &self.game.fighters[f.0];
-        if fp.ground_or_air != GA_GROUND {
+        if fp.ground_or_air != GroundOrAir::Ground {
             self.land(gobj);
         }
         let fp = &self.game.fighters[f.0];
@@ -139,7 +139,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_i32(0, SM_FALL);
         fp.set_mv_f32(4, 0.0);
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             self.go_airborne(f);
         }
     }

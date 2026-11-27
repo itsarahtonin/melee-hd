@@ -13,13 +13,13 @@
 
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::state::Running;
 use super::super::super::structs::{Vec2, ftCollisionBox};
-use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::sound::Track;
 use super::{PART_TOP_N, PART_Y_ROT_N, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
@@ -246,7 +246,7 @@ impl Running<'_> {
 
     /// The roll's sound at each turn of the roll (`playRollSFX`).
     fn ro_roll_sfx(&mut self, f: FighterId) {
-        let id = if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        let id = if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             250_067
         } else {
             250_064
@@ -329,7 +329,7 @@ impl Running<'_> {
         fp.death2_cb = Some(CodeRef(r.on_death));
         fp.take_dmg_cb = Some(CodeRef(r.on_damage));
         fp.deal_dmg_cb = None;
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             fp.self_vel.x = mem(fp::fmuls(reg(fp.gr_vel), vx));
             self.go_airborne(f);
         } else {
@@ -366,7 +366,7 @@ impl Running<'_> {
             self.ro_f(f, r, attr::N_DAMAGE_MUL),
         );
         let speed = |fp: &super::super::super::structs::Fighter| {
-            let v = if fp.ground_or_air == GA_AIR {
+            let v = if fp.ground_or_air == GroundOrAir::Air {
                 reg(fp.self_vel.x)
             } else {
                 reg(fp.gr_vel)

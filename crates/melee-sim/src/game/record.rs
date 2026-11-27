@@ -572,7 +572,7 @@ impl Recorder {
             w.u8(b);
         }
         w.bytes(&misc_as(g, fp));
-        w.u8(fp.ground_or_air as u8);
+        w.u8(fp.ground_or_air.raw() as u8);
         w.u16(fp.coll_data.floor.index as u16);
         w.u8((fp.co_attrs.max_jumps as u8).wrapping_sub(fp.jumps_used));
         w.u8(self.lcancel.get(f.0 as usize).copied().unwrap_or(0));

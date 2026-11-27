@@ -12,7 +12,7 @@ use crate::game::it::{IgnoreId, ItemVars};
 use crate::game::structs::*;
 use crate::hsd::gobj::GObjId;
 use crate::lb::colanim::ColorOverlay;
-use crate::mp::coll::CollData;
+use crate::mp::coll::{CollData, GroundOrAir};
 use crate::vec::Vec3;
 
 /// The decomp's `Item`.
@@ -120,7 +120,7 @@ pub struct Item {
     #[doc(alias("xBC_itemStateContainer"))]
     pub state_table: Option<ItemStatesRef>,
     #[at(0xC0)]
-    pub ground_or_air: i32,
+    pub ground_or_air: GroundOrAir,
     #[at(0xC4)]
     #[doc(alias("xC4_article_data"))]
     pub article: Option<DataRef>,

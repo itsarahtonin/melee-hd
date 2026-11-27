@@ -2,6 +2,7 @@
 //! lands, it travels along the floor at its angle, slowing, until its life runs out or it meets
 //! a wall ahead of it.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, spawn_air};
@@ -156,7 +157,7 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
     ip.vars.kirby_cutter_beam().init_pos.set(pos);
     velocity_from_angle(r, gobj);
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air == 0 && reg(ip.vel.y) < 0.0 {
+    if ip.ground_or_air == GroundOrAir::Ground && reg(ip.vel.y) < 0.0 {
         let vy = reg(ip.vel.y);
         ip.vel.y = mem(fp::fmadds(f64::from(0.05_f32), vy, vy));
     }
@@ -187,7 +188,7 @@ fn floor_angle(r: &mut Running, gobj: GObjId) -> f32 {
 /// when still).
 #[doc(alias = "itKirbycutterbeam_UnkMotion0_Coll")]
 pub fn collide(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == 0 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
         if ground::ground(r, gobj) {
             let a = floor_angle(r, gobj);
             item_mut(r.game, gobj).vars.kirby_cutter_beam().angle.set(a);
@@ -236,7 +237,7 @@ pub fn ends(_r: &mut Running, _gobj: GObjId) -> bool {
 /// Its angle after a turn: the floor's on the ground, else its flight's, and its model turned
 /// to it and its facing.
 fn reangle(r: &mut Running, gobj: GObjId) {
-    let a = if item(r.game, gobj).ground_or_air == 0 {
+    let a = if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
         floor_angle(r, gobj)
     } else {
         let ip = item(r.game, gobj);

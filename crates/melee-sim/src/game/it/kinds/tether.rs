@@ -24,6 +24,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{change, change_state, pick_up, spawn_air};
@@ -32,7 +33,6 @@ use super::super::vars::{ItemVars, Var};
 use super::super::{item, item_mut, jobj_of};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
-use crate::game::ft::common::{GA_AIR, GA_GROUND};
 use crate::game::handles::{CodeRef, ItemLinkId};
 use crate::game::state::{Obj, Running};
 use crate::game::structs::SpawnItem;
@@ -567,7 +567,7 @@ pub fn retract(r: &mut Running, gobj: GObjId, t: &Tether) {
     let h = hand(r, gobj, t);
     let mut pos = point(r, t, h);
     let speed = reg((t.attr)(r, gobj, t.retract));
-    let speed = if t.air_retract_doubles && r.game.fighter(f).ground_or_air != GA_GROUND {
+    let speed = if t.air_retract_doubles && r.game.fighter(f).ground_or_air != GroundOrAir::Ground {
         fp::frsp(fp::fmul(2.0, speed))
     } else {
         speed
@@ -642,7 +642,7 @@ pub fn latched(r: &mut Running, gobj: GObjId, t: &Tether) {
     }
     let scale = r.game.fighter(f).scale.y;
     line_up_held(r, gobj, t, pos, scale);
-    if r.game.fighter(f).ground_or_air != GA_AIR {
+    if r.game.fighter(f).ground_or_air != GroundOrAir::Air {
         to_retract(r, gobj);
         return;
     }
@@ -688,7 +688,7 @@ pub fn pull(r: &mut Running, gobj: GObjId, t: &Tether) {
     }
     let scale = r.game.fighter(f).scale.y;
     line_up_held(r, gobj, t, pos, scale);
-    if r.game.fighter(f).ground_or_air != GA_AIR {
+    if r.game.fighter(f).ground_or_air != GroundOrAir::Air {
         to_retract(r, gobj);
     }
 }
@@ -738,7 +738,7 @@ pub fn hang(r: &mut Running, gobj: GObjId, t: &Tether) {
         on_hang(r, gobj, f);
     }
     let fp_ = r.game.fighter_mut(f);
-    if fp_.ground_or_air != GA_AIR {
+    if fp_.ground_or_air != GroundOrAir::Air {
         to_retract(r, gobj);
         return;
     }

@@ -8,6 +8,7 @@ use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
+use crate::mp::coll::GroundOrAir;
 use crate::vec::Vec3;
 
 pub const MOTION0_ANIM: u32 = 0x8029_D094;
@@ -119,7 +120,7 @@ fn setup(r: &mut Running, gobj: GObjId) {
         .owner
         .expect("an afterimage without an owner");
     // `ftLib_GetGroundAir`.
-    let air = super::super::owner::fighter(r.game, owner).ground_or_air == 1;
+    let air = super::super::owner::fighter(r.game, owner).ground_or_air == GroundOrAir::Air;
     let flags = super::super::item::change::ANIM_UPDATE;
     change_state(r, gobj, if air { 1 } else { 0 }, flags);
     lib2725::scale_by_owner(r, gobj);

@@ -5,6 +5,7 @@
 //! star. The victims' states are in `ft::co::capture_kirby`; the copies' specials are in their
 //! own units, reached through the entries here by his copy's kind.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, SpawnKind};
@@ -131,7 +132,7 @@ impl Running<'_> {
     pub fn kb_victim_hop(&mut self, gobj: GObjId, dir: i32) {
         let f = self.game.fighter_id(gobj);
         let stop = reg(self.kb_attr_f32(f, attr::N_STOP_MOMENTUM));
-        if self.game.fighters[f.0].ground_or_air == 0 {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             let d = fp::frsp(f64::from(dir));
             self.kb_n_eat_wait_to_air(gobj);
             self.game.fighters[f.0].self_vel.y = mem(fp::fmuls(stop, d));
@@ -145,7 +146,7 @@ impl Running<'_> {
         let stop = reg(self.kb_attr_f32(f, attr::N_STOP_MOMENTUM));
         let fp = &mut self.game.fighters[f.0];
         let v = mem(fp::fmuls(reg(dir), stop));
-        if fp.ground_or_air == 0 {
+        if fp.ground_or_air == GroundOrAir::Ground {
             fp.gr_vel = v;
         } else {
             fp.self_vel.x = v;
@@ -277,7 +278,7 @@ impl Running<'_> {
             .expect("pulling no item");
         if kirbyinhale::distance2(self, it, mouth) < fp::fmuls(v, v) {
             kirbyinhale::hold(self, it);
-            if self.game.fighters[f.0].ground_or_air == 1 {
+            if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
                 self.kb_n_eat_air(gobj);
             } else {
                 self.kb_n_eat(gobj);
@@ -298,7 +299,7 @@ impl Running<'_> {
         let d2 = self.capture_kirby_dist2(victim, mouth);
         if d2 < fp::fmuls(v, v) {
             self.enter_capture_wait_kirby(victim);
-            if self.game.fighters[f.0].ground_or_air == 1 {
+            if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
                 self.kb_n_eat_air(gobj);
             } else {
                 self.kb_n_eat(gobj);

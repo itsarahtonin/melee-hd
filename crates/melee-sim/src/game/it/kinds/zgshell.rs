@@ -12,6 +12,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{
@@ -136,9 +137,6 @@ pub mod off {
 const B0: u8 = 0x80;
 const B1: u8 = 0x40;
 
-/// `GA_Ground`, `GA_Air`.
-const GA_GROUND: i32 = 0;
-const GA_AIR: i32 = 1;
 /// `QuakeKind_Small`.
 const QUAKE_SMALL: i32 = 2;
 /// `ITEM_UNK_0x1`.
@@ -343,7 +341,7 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
     }
     coll::take_attacker(r.game, gobj);
     hitbox::start_blink(r.game, gobj);
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         slide_air(r, gobj);
     } else {
         slide(r, gobj);
@@ -386,7 +384,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
             ip.vel.x = mem(fp::fmuls(reg(kick_speed), fp::fneg(reg(ip.stomp_dir))));
             coll::take_stomper(r.game, gobj);
             set_bit(r, gobj, off::FLAGS, B1, true);
-            if item(r.game, gobj).ground_or_air == GA_AIR {
+            if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
                 slide_air(r, gobj);
             } else {
                 slide(r, gobj);
@@ -477,7 +475,7 @@ pub fn count_still(r: &mut Running, gobj: GObjId) {
 /// Rolls the model with the speed on the ground (the inline `Item_UpdateRollingShellRotation`,
 /// or its spelled-out copy in state 9's collision).
 fn roll(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air != GA_GROUND {
+    if item(r.game, gobj).ground_or_air != GroundOrAir::Ground {
         return;
     }
     let rate = attr(r, gobj, 0x20);
@@ -844,7 +842,7 @@ pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
         let w = get(r, gobj, off::WAKE);
         if w != 0 {
             set(r, gobj, off::WAKE, w.wrapping_sub(1));
-        } else if item(r.game, gobj).ground_or_air == GA_AIR {
+        } else if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
             let a = attr_of(item(r.game, gobj));
             let accel = reg(a.f32(r.data, data::attr::FALL_SPEED));
             let max = a.f32(r.data, data::attr::FALL_SPEED_MAX);
@@ -861,7 +859,7 @@ pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
             stop(r, gobj);
             maplib::tilt_on_floor(r.game, r.data, gobj);
         }
-    } else if item(r.game, gobj).ground_or_air == GA_GROUND {
+    } else if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
         let j = jobj_of(r.game, gobj);
         let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, j, None);
         set_hurt(r, gobj, false);
@@ -894,7 +892,7 @@ pub fn phys11(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itZrshell_UnkMotion11_Coll")]
 #[doc(alias = "itZrshell_UnkMotion10_Coll")]
 pub fn coll_waking(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         if air_touches_walls(r, gobj) & 1 != 0 {
             maplib::enter_ground(item_mut(r.game, gobj));
             stop(r, gobj);
@@ -921,7 +919,9 @@ pub fn bounced(r: &mut Running, gobj: GObjId) {
 /// to rest (or slides off a slope).
 #[doc(alias = "itZrshell_UnkMotion10_Anim")]
 pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) && item(r.game, gobj).ground_or_air == GA_GROUND {
+    if !lib2725::is_animating(r.game, gobj)
+        && item(r.game, gobj).ground_or_air == GroundOrAir::Ground
+    {
         if !maplib::slides(r.game, r.data, gobj) {
             rest(r, gobj, change::ANIM_UPDATE, true);
         } else {

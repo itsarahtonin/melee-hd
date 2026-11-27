@@ -32,6 +32,7 @@ use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::game::structs::{Vec2, ftCollisionBox};
 use melee_sim::hsd::gobj::GObjId;
+use melee_sim::mp::coll::GroundOrAir;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
 
@@ -186,7 +187,7 @@ fn gobj(maps: &Maps, call: &Call) -> GObjId {
 const MOTION: u32 = 0x10;
 const GROUND_OR_AIR: u32 = 0xE0;
 /// `GA_Air`.
-const GA_AIR: u32 = 1;
+const AIR: u32 = GroundOrAir::Air.raw() as u32;
 const SELF_VEL: u32 = 0x80;
 const CUR_POS: u32 = 0xB0;
 const COLL_POS: u32 = 0x6F0 + 0x4;
@@ -265,7 +266,7 @@ fn vary(call: &mut Call, i: usize) {
     // Destination's, Dream Land's or Yoshi's Story's edges), or up toward its underside, so
     // the pass meets a wall or the ceiling, or down onto its floor: the collision data's
     // position is where it moves from.
-    if i % 4 == 3 && peek_u32(call, fp + GROUND_OR_AIR) == GA_AIR {
+    if i % 4 == 3 && peek_u32(call, fp + GROUND_OR_AIR) == AIR {
         let sweeps = [
             ((-80.0f32, -6.0f32), (-71.0f32, -6.0f32)),
             ((80.0, -6.0), (71.0, -6.0)),
@@ -401,7 +402,7 @@ const GROUND_TARGETS: [&str; 5] = [
 /// Whether a call's fighter is frozen on the ground.
 fn grounded(call: &Call) -> bool {
     let fp = user_data_arg(call);
-    peek_u32(call, fp + MOTION) == DAMAGE_ICE && peek_u32(call, fp + GROUND_OR_AIR) != GA_AIR
+    peek_u32(call, fp + MOTION) == DAMAGE_ICE && peek_u32(call, fp + GROUND_OR_AIR) != AIR
 }
 
 /// Each function run from the captures of its state's callbacks, with the controls and timer

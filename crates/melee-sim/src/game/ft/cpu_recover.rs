@@ -1,12 +1,12 @@
 //! Computer players getting back to the stage (`ftCo_0A01.c`, behavior 4): the ledge they aim
 //! for, a jump off stage pieces that don't count as ground, and the recovery in the air.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::gr::stage;
 use super::super::handles::FighterId;
 use super::super::state::Running;
-use super::common::GA_GROUND;
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CpuKind;
@@ -39,7 +39,7 @@ impl Running<'_> {
     pub(super) fn cpu_recover_behavior(&mut self, f: FighterId) {
         self.cpu_pick_ledge(f);
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_GROUND {
+        if fpp.ground_or_air == GroundOrAir::Ground {
             if self.excluded_floor(fpp.coll_data.floor.index) {
                 self.cpu_jump_off_piece(f);
                 return;
@@ -350,7 +350,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A3498")]
     fn cpu_should_recover(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.drifting_back || fpp.ground_or_air != super::common::GA_AIR {
+        if fpp.cpu.drifting_back || fpp.ground_or_air != GroundOrAir::Air {
             return false;
         }
         if fpp.pos_delta.y > 0.0 {

@@ -4,6 +4,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
@@ -173,7 +174,7 @@ impl Running<'_> {
     #[doc(alias = "ftCa_SpecialHi_Coll")]
     #[doc(alias = "ftCa_SpecialAirHi_Coll")]
     pub fn ca_special_hi_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == super::super::common::GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.ca_special_hi_air_coll(gobj);
         } else if !self.ground_coll_off_ledges(gobj) {
             let f = self.game.fighter_id(gobj);
@@ -196,7 +197,7 @@ impl Running<'_> {
         fp.no_turn = true;
         fp.grab_immune = 0x1FF;
         self.stop_dead(gobj);
-        if self.game.fighter(victim).ground_or_air == super::super::common::GA_AIR {
+        if self.game.fighter(victim).ground_or_air == GroundOrAir::Air {
             self.game.fighter_mut(gobj).state_flags.grounded_catch = false;
         } else {
             // The catcher holds on to the grounded victim's throw bone.
@@ -322,7 +323,7 @@ impl Running<'_> {
         fp.victim_gobj = Some(catcher);
         fp.state_flags.holds_grab = false;
         fp.facing_dir = -cfacing;
-        if fp.ground_or_air == super::super::common::GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             self.attach_to_thrower(catcher, gobj);
             self.game.fighter_mut(gobj).state_flags.grounded_catch = false;
         } else {

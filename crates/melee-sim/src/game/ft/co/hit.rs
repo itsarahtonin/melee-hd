@@ -7,6 +7,7 @@
 // NaN takes the original's branches, which the negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::camera;
@@ -15,7 +16,6 @@ use super::super::super::ef;
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
-use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::parts::TOP_N;
 use super::super::sound::Track;
 use super::PAD_LR;
@@ -209,7 +209,7 @@ impl Running<'_> {
             return deg_to_rad(fp::frsp(f64::from(angle)));
         }
         let (air, max, lo, hi) = (c.f32(0x144), c.f32(0x148), c.f32(0x14C), c.f32(0x150));
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             return reg(air);
         }
         if kb < reg(lo) {
@@ -325,7 +325,7 @@ impl Running<'_> {
         let hurtbox = fp.dmg.damaged_hurtbox as usize;
         let mut sounds = true;
         let mut msid;
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             msid = DAMAGE_STATES[1][level as usize][hurtbox];
             if self.damage_air_motion(f) {
                 scaled = fp::fmuls(scaled, reg(c.f32(0x190)));
@@ -378,7 +378,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel = Vec3::default();
         fp.gr_vel = 0.0;
-        if level == 3 && fp.ground_or_air == GA_AIR {
+        if level == 3 && fp.ground_or_air == GroundOrAir::Air {
             if angle > reg(c.f32(0x234)) && angle < reg(c.f32(0x238)) {
                 msid = ms::DAMAGE_FLY_TOP;
             } else if reg(fp.dmg.percent) >= fp::frsp(f64::from(c.i32(0x23C)))
@@ -454,7 +454,7 @@ impl Running<'_> {
                 fp.dmg.queued_sfx_table = v;
             }
         }
-        if level == 3 && self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if level == 3 && self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             let kind = if scaled154 >= reg(c.f32(0x174)) {
                 4
             } else if scaled154 >= reg(c.f32(0x170)) {
@@ -568,7 +568,7 @@ impl Running<'_> {
         if p.dead || p.in_hitlag || p.attack_flags[1] >> 4 == 13 {
             return true;
         }
-        if p.ground_or_air == GA_GROUND {
+        if p.ground_or_air == GroundOrAir::Ground {
             self.enter_catch_cut(partner, false);
         } else {
             let pf = self.game.fighter_id(partner);
@@ -741,7 +741,7 @@ impl Running<'_> {
         let (air_mag, ground_mag) = (c.f32(0x64C), c.f32(0x650));
         self.turn_spin_start(gobj);
         let fp = &self.game.fighters[f.0];
-        let air = fp.ground_or_air == GA_AIR;
+        let air = fp.ground_or_air == GroundOrAir::Air;
         let mag = reg(if air { air_mag } else { ground_mag });
         let kb = reg(fp.dmg.kb_applied);
         let angle = self.damage_angle(f, kb);
@@ -1111,7 +1111,7 @@ impl Running<'_> {
         self.release_victim(gobj);
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].cmd_vars[0] = 0;
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             self.go_airborne(f);
             self.change_motion_state(gobj, ms::DAMAGE_SCREW, 0, 0.0, 1.0, 0.0, None);
         } else {
@@ -1156,7 +1156,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C0CB8")]
     fn bury_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.dmg.element == ELEMENT_GROUND && fp.ground_or_air == GA_GROUND && !fp.held_in_ice {
+        if fp.dmg.element == ELEMENT_GROUND
+            && fp.ground_or_air == GroundOrAir::Ground
+            && !fp.held_in_ice
+        {
             self.enter_bury(gobj);
             return true;
         }
@@ -1190,7 +1193,7 @@ impl Running<'_> {
         element: u32,
         dmg: i32,
         msid: i32,
-        ga: i32,
+        ga: GroundOrAir,
         mul: f32,
     ) {
         if matches!(
@@ -1210,7 +1213,7 @@ impl Running<'_> {
         fp.dmg.shake_step = 0;
         if element == ELEMENT_ELECTRIC {
             fp.dmg.shake_kind = 2;
-        } else if ga == GA_AIR {
+        } else if ga == GroundOrAir::Air {
             fp.dmg.shake_kind = 0;
         } else {
             fp.dmg.shake_kind = 1;

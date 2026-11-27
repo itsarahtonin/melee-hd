@@ -3,13 +3,13 @@
 //! entries say where an attack reaches and how often to pick it, weighed against where the
 //! target will be.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
 use super::super::code::unported_call;
 use super::super::handles::{FighterId, ItemId};
 use super::super::state::Running;
-use super::common::GA_AIR;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
@@ -261,7 +261,7 @@ impl Running<'_> {
             FighterKind::Ness => self.cpu_ness_ranged(f, angle, dist),
             FighterKind::Yoshi => self.cpu_yoshi_ranged(f, angle, dist),
             FighterKind::Samus => {
-                if fpp.ground_or_air == super::common::GA_GROUND {
+                if fpp.ground_or_air == GroundOrAir::Ground {
                     false
                 } else if angle < -0.785_398_157_313_466_1 {
                     self.game.fighters[f.0].cpu.command = 0x26;
@@ -311,7 +311,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A2170")]
     pub(super) fn cpu_same_island(&self, a: FighterId, b: FighterId) -> bool {
         let (fa, fb) = (&self.game.fighters[a.0], &self.game.fighters[b.0]);
-        if fa.ground_or_air == GA_AIR || fb.ground_or_air == GA_AIR {
+        if fa.ground_or_air == GroundOrAir::Air || fb.ground_or_air == GroundOrAir::Air {
             return false;
         }
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -325,7 +325,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B9790")]
     fn cpu_ness_ranged(&mut self, f: FighterId, angle: f64, dist: f64) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             if angle < -0.698_131_695_389_747_6
                 && angle > -0.872_664_619_237_184_5
                 && dist < 53.0
@@ -362,7 +362,7 @@ impl Running<'_> {
     /// 51).
     #[doc(alias = "ftCo_800B98C8")]
     fn cpu_yoshi_ranged(&mut self, f: FighterId, angle: f64, dist: f64) -> bool {
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             return false;
         }
         if !self.cpu_target_ahead(f) {
@@ -376,7 +376,9 @@ impl Running<'_> {
             .target
             .expect("ftCo_800B98C8 without a target");
         let a = if angle < 0.087_266_461_923_718_45 && angle > -0.087_266_461_923_718_45 {
-            if self.game.fighters[t.0].ground_or_air == GA_AIR || !self.cpu_same_island(f, t) {
+            if self.game.fighters[t.0].ground_or_air == GroundOrAir::Air
+                || !self.cpu_same_island(f, t)
+            {
                 return false;
             }
             0x1B
@@ -458,7 +460,7 @@ impl Running<'_> {
             self.cpu_rule_out(f, cmd::ANY_ATTACK);
         }
         let fpp = &self.game.fighters[f.0];
-        let ground = fpp.ground_or_air == super::common::GA_GROUND;
+        let ground = fpp.ground_or_air == GroundOrAir::Ground;
         let off_stage = !fpp.cpu.drifting_back;
         // Each rule: the command it rules out and the reach it tests.
         match fpp.fighter_kind() {
@@ -632,7 +634,7 @@ impl Running<'_> {
         self.cpu_character_rules(f);
         let kind = self.game.fighters[f.0].kind;
         let result = 'done: {
-            if self.game.fighters[f.0].ground_or_air == GA_AIR {
+            if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
                 if self.cpu_air_attack_ok(f) {
                     let r = self.cpu_pick_attack(f, target, self.cpu_table(table::AIR, kind));
                     if r != 0 {
@@ -773,7 +775,7 @@ impl Running<'_> {
             (reg(tg.cpu.hurt_ahead), reg(tg.cpu.hurt_behind))
         };
         let hurt_top = reg(tg.cpu.hurt_top);
-        let target_air = tg.ground_or_air == GA_AIR;
+        let target_air = tg.ground_or_air == GroundOrAir::Air;
         let scale = reg(me.scale.y);
         let facing_right = f64::from(me.facing_dir) > 0.0;
         let tiny = reg(1e-5);
@@ -964,7 +966,7 @@ impl Running<'_> {
         let (it_x, it_y) = (reg(ip.pos.x), reg(ip.pos.y));
         let it_vx = reg(ip.vel.x);
         let it_grav = reg(attr.f32(self.data, a::FALL_SPEED));
-        let item_air = ip.ground_or_air == GA_AIR;
+        let item_air = ip.ground_or_air == GroundOrAir::Air;
         let tiny = reg(1e-5);
         let mut picks: [Option<DataRef>; 32] = [None; 32];
         let mut count = 0usize;
@@ -1167,7 +1169,7 @@ impl Running<'_> {
             return;
         };
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.near_target && fpp.ground_or_air == super::common::GA_GROUND {
+        if fpp.cpu.near_target && fpp.ground_or_air == GroundOrAir::Ground {
             let r = reg(self.game.objs.rng.draw_f32());
             let level = fp::frsp(f64::from(self.game.fighters[f.0].cpu.level));
             if r < fp::fmuls(0.050_000_000_745_058_06, level) {
@@ -1186,7 +1188,7 @@ impl Running<'_> {
             return;
         }
         if self.game.fighters[f.0].cpu.command == 0 {
-            if self.game.fighters[f.0].ground_or_air == super::common::GA_GROUND
+            if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground
                 && !self.cpu_target_ahead(f)
             {
                 self.cpu_turn_around(f);
@@ -1727,7 +1729,7 @@ impl Running<'_> {
         // A threat of 3 (an absorbable hitbox to Ness) would run `ftCo_800BA080`, but
         // [`Running::cpu_item_coming`] never finds one.
         let blaster = matches!(fpp.fighter_kind(), FighterKind::Fox | FighterKind::Falco);
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             if blaster && threat == 2 {
                 self.cpu_fire_blaster(f);
             } else {
@@ -1792,7 +1794,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A2998")]
     fn cpu_near_island_end(&self, f: FighterId, margin: f32) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return false;
         }
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -1927,7 +1929,7 @@ impl Running<'_> {
     pub(super) fn cpu_jump_attack(&mut self, f: FighterId) -> i32 {
         let fpp = &self.game.fighters[f.0];
         let Some(t) = fpp.cpu.target else { return 0 };
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return 0;
         }
         if self.cpu_on_ledge(t) != 0 {
@@ -1969,7 +1971,7 @@ impl Running<'_> {
             let dx = abs(fp::fsubs(reg(tp.x), reg(me.x)));
             super::co::guard::stick_angle(dy, dx)
         };
-        if self.game.fighters[t.0].ground_or_air == GA_AIR {
+        if self.game.fighters[t.0].ground_or_air == GroundOrAir::Air {
             if tp.y < me.y {
                 return 0;
             }
@@ -2003,7 +2005,7 @@ impl Running<'_> {
     fn cpu_jump_attack_16(&mut self, f: FighterId) -> i32 {
         let fpp = &self.game.fighters[f.0];
         let Some(t) = fpp.cpu.target else { return 0 };
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             if fpp.co_attrs.max_jumps <= i32::from(fpp.jumps_used) {
                 return 0;
             }
@@ -2020,7 +2022,7 @@ impl Running<'_> {
             let dx = abs(fp::fsubs(reg(tp.x), reg(me.x)));
             super::co::guard::stick_angle(dy, dx)
         };
-        if self.game.fighters[t.0].ground_or_air == GA_AIR {
+        if self.game.fighters[t.0].ground_or_air == GroundOrAir::Air {
             let geo = self.game.geometry.as_mut().expect("no collision geometry");
             if geo.check_ceiling(me.x, me.y, tp.x, tp.y, -1, -1).is_some() {
                 return 0;

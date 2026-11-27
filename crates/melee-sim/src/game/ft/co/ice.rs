@@ -3,6 +3,7 @@
 //! ceiling, and shatters against them when fast; the player mashes out, and the fighter jumps
 //! out of the broken block (`DamageIceJump`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::camera;
@@ -10,7 +11,6 @@ use super::super::super::ef;
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::state::Running;
 use super::super::super::structs::{Vec2, ftCollisionBox};
-use super::super::common::GA_AIR;
 use super::super::parts::{TOP_N, XROT_N, YROT_N};
 use super::super::sound::Track;
 use super::ids::ms;
@@ -100,7 +100,7 @@ impl Running<'_> {
         fp.set_mv_f32(ICE_COLL + 0xC, 0.0);
         super::super::fighter::unlock_ecb(fp);
         let b = self.ice_coll(f);
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             let _ = self.air_coll_box_floor(gobj, &b);
         } else {
             let _ = self.ground_coll_box(gobj, &b);
@@ -197,7 +197,7 @@ impl Running<'_> {
         self.knockback_enter(gobj);
         let fp = &mut self.game.fighters[f.0];
         fp.no_blast_rise = true;
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             fp.self_vel = fp.kb_vel;
             fp.kb_vel.z = 0.0;
             fp.kb_vel.y = 0.0;
@@ -265,7 +265,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DamageIce_Anim")]
     pub fn co_damage_ice_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             let by = reg(self.game.fighters[f.0].mv_f32(ICE_ROT_SPEED));
             let j = self.x_rot_joint(f).expect("jobj");
             // `HSD_JObjAddRotationX`.
@@ -296,7 +296,7 @@ impl Running<'_> {
     pub fn co_damage_ice_phys(&mut self, gobj: GObjId) {
         let mult = reg(self.common().f32(0x77C));
         let fp = self.game.fighter_mut(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             Self::self_accel_deaccel_air(fp);
             let (g, t) = (reg(fp.co_attrs.gravity), reg(fp.co_attrs.terminal_velocity));
             Self::fall(fp, fp::fmuls(g, mult), t);
@@ -310,7 +310,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DamageIce_Coll")]
     pub fn co_damage_ice_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             self.damage_ice_air_coll(gobj);
             return;
         }

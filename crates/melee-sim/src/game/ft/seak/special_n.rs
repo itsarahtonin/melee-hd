@@ -7,13 +7,14 @@
 //! [`Needles`] says which, Sheik's [`SEAK`] or Kirby's (`ft::kirby::special_seak::KIRBY`), and
 //! each function here carries both originals' names.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{seakneedleheld, seakneedlethrown};
 use super::super::super::state::Running;
-use super::{GA_GROUND, PAD_B, PAD_LR, addr, attr, ms, mv, u};
+use super::{PAD_B, PAD_LR, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
@@ -137,7 +138,7 @@ impl Running<'_> {
             while self.seak_n_count(gobj, p) != 0 {
                 let fp = &self.game.fighters[f.0];
                 let mut pos = fp.cur_pos;
-                let y = if fp.ground_or_air == GA_GROUND {
+                let y = if fp.ground_or_air == GroundOrAir::Ground {
                     self.seak_n_attr_f32(gobj, p, attr::X4)
                 } else {
                     self.seak_n_attr_f32(gobj, p, attr::XC)
@@ -494,7 +495,7 @@ impl Running<'_> {
         if self.seak_n_count(gobj, p) <= 0 {
             return;
         }
-        let grounded = self.game.fighters[f.0].ground_or_air == GA_GROUND;
+        let grounded = self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground;
         let (ax, ay) = if grounded {
             (attr::X0, attr::X4)
         } else {

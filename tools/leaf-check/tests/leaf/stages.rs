@@ -3511,7 +3511,11 @@ fn yaku_glue_and_hits() {
     check_calls_with(&d, "grMaterial_801C8E28", 1, &as_saved, &off);
     let air = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = gobj_arg(maps, call);
-        melee_sim::game::gr::material::item_ground_or_air(r.game, g, call.regs.gpr[4] as i32);
+        melee_sim::game::gr::material::item_ground_or_air(
+            r.game,
+            g,
+            melee_sim::mp::coll::GroundOrAir::from_raw(call.regs.gpr[4] as i32),
+        );
         Ret::Nothing
     };
     let either = |c: &mut Call, k: usize| c.regs.gpr[4] = (k % 2) as u32;

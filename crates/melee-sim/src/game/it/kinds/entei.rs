@@ -14,6 +14,7 @@ use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
+use crate::mp::coll::GroundOrAir;
 
 pub const SPAWNED: u32 = 0x802C_F3E0;
 pub const LANDED_NOTHING: u32 = 0x802C_F44C;
@@ -210,7 +211,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
 
 /// A beast's first state's physics: gravity in the air.
 pub fn phys0_of(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         super::gravity(r, gobj);
     }
 }
@@ -224,7 +225,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 /// A beast's first state's collision: lands in the air (its hits kept) or walks off the floor,
 /// doing nothing either way.
 pub fn coll0_of(b: &Beast, r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         fall_keep_hits(r, gobj, b.on_landed);
     } else {
         ground_or_fall(r, gobj, b.on_landed);

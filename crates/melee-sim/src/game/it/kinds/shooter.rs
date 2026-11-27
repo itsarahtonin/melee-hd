@@ -10,6 +10,7 @@
 //! Chikorita's fall, Cyndaquil's flames, Staryu's chase, Blastoise's push back and Charizard's
 //! breath.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{Event, air_touched_any, fall, ground_or_fall};
@@ -198,7 +199,7 @@ pub fn gone(_: &mut Running, _: GObjId) -> bool {
 #[doc(alias = "itLizardon_UnkMotion2_Coll")]
 #[doc(alias = "itLizardon_UnkMotion3_Coll")]
 pub fn stays(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         fall(r, gobj, nothing);
     } else {
         ground_or_fall(r, gobj, nothing);
@@ -214,7 +215,7 @@ pub fn stays(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itLizardon_UnkMotion2_Phys")]
 #[doc(alias = "itLizardon_UnkMotion3_Phys")]
 pub fn gravity_in_air(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         super::gravity(r, gobj);
     }
 }

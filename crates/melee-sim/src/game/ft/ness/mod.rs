@@ -24,8 +24,6 @@ use super::super::state::Running;
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
-pub(crate) use super::common::GA_AIR;
-
 /// The items Ness registers at his creation, by their slot in his data's item list.
 pub(crate) const ITEMS: [(u32, i32); 11] = [
     (0, ItKind::NessPKFire.id()),

@@ -5,12 +5,12 @@
 //! `ftkirbyyoshiegg.c`), the same but for his attributes, his copy's egg model and their
 //! callbacks, and a breakout that leaves the model's scale as it is.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::motion::flags::SKIP_HIT_STUN_START;
 use super::super::parts::{TOP_N, TRANS_N};
 use super::super::yoshi::attr;
@@ -266,7 +266,7 @@ impl Running<'_> {
         };
         let f = self.game.fighter_id(gobj);
         let root = self.root_jobj(gobj);
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             self.go_airborne(f);
         }
         let flags = SKIP_HIT_STUN_START;
@@ -441,7 +441,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_YoshiEgg_Phys")]
     #[doc(alias = "ftCo_KirbyYoshiEgg_Phys")]
     pub fn co_yoshi_egg_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.ground_friction(gobj);
         } else {
             self.air_physics(gobj);
@@ -453,7 +453,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_YoshiEgg_Coll")]
     #[doc(alias = "ftCo_KirbyYoshiEgg_Coll")]
     pub fn co_yoshi_egg_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.ground_coll_fall_off_then(gobj, |r, g| r.yoshi_egg_off_ground(g));
         } else {
             self.air_coll_then(gobj, |r, g| r.yoshi_egg_landed(g));

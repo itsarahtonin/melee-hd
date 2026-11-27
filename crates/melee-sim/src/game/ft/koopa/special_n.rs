@@ -9,13 +9,13 @@
 //! Kirby's (`ft::kirby::special_koopa::KIRBY`), and each function here carries both
 //! originals' names.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::camera;
 use super::super::super::code::Val;
 use super::super::super::it::kinds::koopaflame;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::kirby::copy::KindFrom;
 use super::super::motion::flags::SKIP_RUMBLE;
 use super::{addr, attr, ms, mv, u};
@@ -484,7 +484,7 @@ impl Running<'_> {
     pub fn kp_hi_shell(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let var = if fp.ground_or_air == GA_GROUND {
+        let var = if fp.ground_or_air == GroundOrAir::Ground {
             fp.cmd_vars[2]
         } else {
             fp.cmd_vars[1]

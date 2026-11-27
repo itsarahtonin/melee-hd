@@ -1,12 +1,12 @@
 //! Shielding (`ftCo_Guard.c`): raising the shield, holding it (tilted by the stick, shrinking
 //! as it weakens), dropping it, the stun of a hit on it, and powershields.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::motion::flags::{KEEP_GFX, SKIP_ANIM};
 use super::super::parts::TRANS_N;
 use super::checks::abs;
@@ -641,7 +641,7 @@ impl Running<'_> {
             reg(c.f32(0x4C0)),
         );
         let fp = self.game.fighter(gobj);
-        if !fp.allow_sdi || fp.ground_or_air != GA_GROUND {
+        if !fp.allow_sdi || fp.ground_or_air != GroundOrAir::Ground {
             return;
         }
         let x = reg(fp.input.lstick[0].x);
@@ -668,7 +668,7 @@ impl Running<'_> {
         let (min, nudge_scale, sdi_unit) =
             (reg(c.f32(0x4B0)), reg(c.f32(0x4BC)), reg(c.f32(0x4C0)));
         let fp = self.game.fighter_mut(gobj);
-        if fp.ground_or_air != GA_GROUND {
+        if fp.ground_or_air != GroundOrAir::Ground {
             return;
         }
         let x = reg(fp.input.lstick[0].x);

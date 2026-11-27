@@ -6,6 +6,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::code::Val;
@@ -14,7 +15,7 @@ use super::super::super::it::item::article;
 use super::super::super::it::kinds::seakchain;
 use super::super::super::state::Running;
 use super::super::parts::TRANS_N;
-use super::{GA_AIR, PAD_B, addr, attr, ms, mv, u};
+use super::{PAD_B, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::structs::{Fighter, HitCapsule};
 use crate::hsd::gobj::GObjId;
@@ -534,7 +535,7 @@ impl Running<'_> {
             let frames = fp::fctiwz(reg(self.seak_attr_f32(f, attr::X18)));
             self.game.fighters[f.0].set_mv_i32(mv::S_X1C, frames);
             if self.seak_chain(gobj).is_none() {
-                if self.game.fighters[f.0].ground_or_air == GA_AIR {
+                if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
                     self.enter_fall(gobj);
                 } else {
                     self.enter_wait(gobj);

@@ -2,13 +2,13 @@
 //! fighter is created, that runs one stage of the fighter's frame and calls the current action
 //! state's callback for it.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::{run_fighter_cb, unported_call};
 use super::super::gm::DB_DEBUG_ROM;
 use super::super::state::Running;
 use super::anim::anim_bit;
-use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::game::it::ItKind;
@@ -400,7 +400,7 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
             reg(c.f32(0x3EC)),
         );
         let fp = &g.game.fighters[f.0];
-        let grounded_push = fp.ground_or_air != GA_AIR
+        let grounded_push = fp.ground_or_air != GroundOrAir::Air
             && (fp.kb_vel.x != 0.0
                 || fp.kb_vel.y != 0.0
                 || fp.atk_shield_kb_vel.x != 0.0
@@ -416,7 +416,7 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         let fp = &mut g.game.fighters[f.0];
         let kb_x = fp.kb_vel.x;
         if kb_x != 0.0 || fp.kb_vel.y != 0.0 {
-            if fp.ground_or_air == GA_AIR {
+            if fp.ground_or_air == GroundOrAir::Air {
                 let (x, y) = (fp.kb_vel.x, fp.kb_vel.y);
                 if let Some((dx, dy)) = sandbag {
                     fp.kb_vel.x = super::sandbag::kb_deaccel(x, dx);
@@ -447,7 +447,7 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         }
         let shield_x = fp.atk_shield_kb_vel.x;
         if shield_x != 0.0 || fp.atk_shield_kb_vel.y != 0.0 {
-            if fp.ground_or_air == GA_AIR {
+            if fp.ground_or_air == GroundOrAir::Air {
                 let (x, y) = (fp.atk_shield_kb_vel.x, fp.atk_shield_kb_vel.y);
                 let angle = math::atan2(y, x);
                 if sqrt_reg(fp::fmadds(reg(x), reg(x), fp::fmuls(reg(y), reg(y)))) < shield_decay {
@@ -529,7 +529,7 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
     if let Some(cb) = g.game.fighters[f.0].hitlag_cb {
         run_fighter_cb(g, gobj, cb);
     }
-    if g.game.fighters[f.0].ground_or_air == GA_GROUND {
+    if g.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
         let fp = &g.game.fighters[f.0];
         let geometry = g.game.geometry.as_ref().expect("no collision geometry");
         if let Some(d) = geometry.line_speed(fp.coll_data.floor.index, fp.cur_pos) {
@@ -623,7 +623,7 @@ pub fn proc_map(g: &mut Running, gobj: GObjId) {
         g.kb_bump_timer(gobj);
     }
     let fp = &g.game.fighters[f.0];
-    if fp.ground_or_air == GA_GROUND {
+    if fp.ground_or_air == GroundOrAir::Ground {
         let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
         g.clear_air_counters(slot, sub);
     }
@@ -837,7 +837,7 @@ pub fn proc_coll_pos(g: &mut Running, gobj: GObjId) {
     // `Stage_GetCamBoundsBottomOffset`, inline.
     let bottom = fp::fadds(reg(ci.cam_bounds.bottom), reg(y_off));
     let fp = &g.game.fighters[f.0];
-    if fp.ground_or_air == GA_AIR && reg(fp.cur_pos.y) < bottom {
+    if fp.ground_or_air == GroundOrAir::Air && reg(fp.cur_pos.y) < bottom {
         let slot = i32::from(fp.player_idx);
         if g.magnify_edge(slot) == 3 {
             // `Stage_UnkSetVec3TCam_Offset`, inline: the offset's y.

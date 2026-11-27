@@ -1,6 +1,7 @@
 //! The item core, `melee/it/item.c`: making items and their GObjs, the per-frame processes,
 //! state changes, and destroying items.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -832,7 +833,7 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     }
     lib26b1::enable_pickup(r.game, gobj);
     item_mut(r.game, gobj).flags.flags.held = false;
-    if spawn.ground_or_air == 1 {
+    if spawn.ground_or_air == GroundOrAir::Air {
         super::maplib::enter_air(item_mut(r.game, gobj));
     } else {
         super::maplib::enter_ground(item_mut(r.game, gobj));
@@ -923,7 +924,7 @@ pub fn logic(game: &Game, gobj: GObjId) -> &'static tables::ItemLogic {
 /// Makes an item in the air, `Item_80268B18`.
 #[doc(alias = "Item_80268B18")]
 pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
-    spawn.ground_or_air = 1;
+    spawn.ground_or_air = GroundOrAir::Air;
     spawn.origin = 0;
     spawn.hold_kind = hold_kind_of(spawn.kind).id();
     create(r, spawn)
@@ -932,7 +933,7 @@ pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
 /// Makes an item on the ground, `Item_80268B5C`.
 #[doc(alias = "Item_80268B5C")]
 pub fn spawn_ground(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
-    spawn.ground_or_air = 0;
+    spawn.ground_or_air = GroundOrAir::Ground;
     spawn.origin = 0;
     spawn.hold_kind = hold_kind_of(spawn.kind).id();
     create(r, spawn)
@@ -964,7 +965,7 @@ pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
 /// Makes an item on the ground with `x18` set, `Item_80268B9C`.
 #[doc(alias = "Item_80268B9C")]
 pub fn spawn_ground_marked(r: &mut Running, spawn: &mut SpawnItem) {
-    spawn.ground_or_air = 0;
+    spawn.ground_or_air = GroundOrAir::Ground;
     spawn.origin = 1;
     spawn.hold_kind = hold_kind_of(spawn.kind).id();
     create(r, spawn);
@@ -1313,7 +1314,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     if !ip.flags.flags.held {
         if !ip.flags.flags.in_hitlag {
             let mut v = vec_add(ip.vel, ip.nudge);
-            if ip.ground_or_air == 0 && !ip.hit_flags.bits.no_slide {
+            if ip.ground_or_air == GroundOrAir::Ground && !ip.hit_flags.bits.no_slide {
                 super::maplib::slide(r.game, r.data, gobj, &mut v);
             }
             let ip = item_mut(r.game, gobj);
@@ -1327,12 +1328,12 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
             return;
         }
         let ip = super::item(r.game, gobj);
-        if reg(ip.spin_speed) != 0.0 && ip.ground_or_air == 1 {
+        if reg(ip.spin_speed) != 0.0 && ip.ground_or_air == GroundOrAir::Air {
             lib2725::spin(r.game, r.data, gobj);
         }
     }
     let ip = super::item(r.game, gobj);
-    if flag(ip.phys_flags, 1) && ip.ground_or_air == 1 {
+    if flag(ip.phys_flags, 1) && ip.ground_or_air == GroundOrAir::Air {
         let mut v = super::item(r.game, gobj).wind_push;
         crate::game::gr::grlib::item_wind(r.game, &mut v);
         item_mut(r.game, gobj).wind_push = v;
@@ -1341,7 +1342,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     ip.pos = vec_add(ip.pos, ip.wind_push);
     lib2725::clear_displacement(r.game, gobj);
     let ip = super::item(r.game, gobj);
-    if ip.ground_or_air == 0 {
+    if ip.ground_or_air == GroundOrAir::Ground {
         let line = if flag(ip.hurt_flags, 3) && super::ground::on_line(r.game, gobj) {
             ip.touched_line
         } else {
@@ -1529,7 +1530,7 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
         fp::fadds(90.0, reg(degrees)),
     );
     let bounce = flag(ip.hurt_flags, 5)
-        && ip.ground_or_air == 1
+        && ip.ground_or_air == GroundOrAir::Air
         && (flag(ip.hurt_flags, 4) || reg(ip.shield_angle) < limit);
     if bounce {
         let ip = item_mut(r.game, gobj);

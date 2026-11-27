@@ -8,12 +8,12 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::state::Running;
 use super::super::coll::{Cb, PLATFORM_FILTER};
-use super::super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
 use crate::game::handles::FighterId;
 use crate::game::structs::{Vec2, ftCollisionBox};
@@ -183,7 +183,7 @@ impl Running<'_> {
     /// `*_SpecialHi_Phys`: in the air the animation's motion turned by the stick's angle, on
     /// the ground friction or the animation's motion.
     pub(crate) fn plumber_hi_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.air_anim_motion_angled(gobj);
         } else {
             self.ground_friction_or_anim(gobj);
@@ -221,7 +221,7 @@ impl Running<'_> {
     /// says, then landing helpless through platforms; on the ground, the ground's.
     pub(crate) fn plumber_hi_coll(&mut self, gobj: GObjId, p: &SuperJump) {
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             if fp.cmd_vars[0] == 0 || reg(fp.self_vel.y) >= 0.0 {
                 self.air_coll_stay(gobj);
             } else {
@@ -403,7 +403,7 @@ impl Running<'_> {
     /// isn't), off a ledge into the air.
     pub(crate) fn plumber_lw_coll(&mut self, gobj: GObjId, p: &Tornado) {
         let b = spin_box();
-        let on = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        let on = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.ground_coll_box(gobj, &b)
         } else {
             self.air_coll_box(gobj, &b)

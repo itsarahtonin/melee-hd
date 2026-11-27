@@ -3,12 +3,12 @@
 //! (`ftCo_800ADE48`) from what it and its target are doing, kept in `CpuFighter::x18`, which
 //! [`super::cpu_ai`]'s script writer acts on.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::gr::{GrKind, ground, stage};
 use super::super::handles::{FighterId, ItemId};
 use super::super::state::Running;
-use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
@@ -577,7 +577,7 @@ impl Running<'_> {
             let fpp = &mut self.game.fighters[f.0];
             fpp.cpu.ledge_picked = false;
             let pos = fpp.cur_pos;
-            let at = if fpp.ground_or_air == GA_AIR {
+            let at = if fpp.ground_or_air == GroundOrAir::Air {
                 let to = mem(fp::fsubs(reg(pos.y), 1000.0));
                 let (floor, left) = self.cpu_floor_r5(pos.x, pos.y, pos.x, to, sp);
                 r5 = left;
@@ -826,7 +826,7 @@ impl Running<'_> {
         let c = &fpp.cpu;
         if c.destination_timer != 0
             || c.kind == CpuKind::Stay
-            || fpp.ground_or_air == GA_AIR
+            || fpp.ground_or_air == GroundOrAir::Air
             || self.cpu_destination_here(f)
         {
             return;
@@ -882,7 +882,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A21FC")]
     fn cpu_destination_here(&mut self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return false;
         }
         let line = fpp.coll_data.floor.index;
@@ -972,7 +972,7 @@ impl Running<'_> {
             reg(self.game.fighters[f.0].cpu.reach),
             reg(p.cpu.hurt_middle),
         ));
-        if p.ground_or_air == GA_AIR {
+        if p.ground_or_air == GroundOrAir::Air {
             let below = mem(fp::fsubs(reg(ppos.y), 1000.0));
             let above = mem(fp::fadds(10.0, reg(ppos.y)));
             let hit = self
@@ -1030,8 +1030,8 @@ impl Running<'_> {
         let me = &self.game.fighters[f.0];
         let p = &self.game.fighters[partner.0];
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
-        let same_island = me.ground_or_air != GA_AIR
-            && p.ground_or_air != GA_AIR
+        let same_island = me.ground_or_air != GroundOrAir::Air
+            && p.ground_or_air != GroundOrAir::Air
             && geo
                 .island_of_line(me.coll_data.floor.index)
                 .is_some_and(|i| geo.island_of_line(p.coll_data.floor.index) == Some(i));
@@ -1163,7 +1163,7 @@ impl Running<'_> {
         if fpp.cpu.off_stage {
             return false;
         }
-        if fpp.ground_or_air == GA_GROUND {
+        if fpp.ground_or_air == GroundOrAir::Ground {
             return self.excluded_floor(fpp.coll_data.floor.index);
         }
         // `ftCo_MS_Pass`.
@@ -1265,11 +1265,11 @@ impl Running<'_> {
             return false;
         }
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR || fpp.item_gobj.is_some() {
+        if fpp.ground_or_air == GroundOrAir::Air || fpp.item_gobj.is_some() {
             return false;
         }
         // `ftCo_800A2170_it`: both on the same island.
-        if self.game.items[item.0].ground_or_air == GA_AIR {
+        if self.game.items[item.0].ground_or_air == GroundOrAir::Air {
             return false;
         }
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -1289,7 +1289,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A3554")]
     pub(super) fn cpu_at_destination(&mut self, f: FighterId, margin: f32) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return false;
         }
         // `ftCo_800A21FC`: the destination's island is the fighter's.

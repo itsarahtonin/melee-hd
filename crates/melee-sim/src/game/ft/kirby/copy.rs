@@ -2,6 +2,7 @@
 //! special's variables set anew, a copy's items registered, his copy's own cleanups when he's
 //! hit or KO'd, and losing a copy (a hit can knock it out of him, with its star).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::code::unported_call;
@@ -304,7 +305,7 @@ impl Running<'_> {
         if (0x18F..0x220).contains(&msid) {
             self.damage_pick_reaction(gobj);
             self.kb_lose_copy(gobj, true);
-            if self.game.fighters[f.0].ground_or_air == 0 {
+            if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
                 self.enter_wait(gobj);
             } else {
                 self.enter_fall(gobj);

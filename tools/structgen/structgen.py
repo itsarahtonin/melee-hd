@@ -95,6 +95,20 @@ def check_names(g):
         assert not dups, f"{struct}: names used twice: {sorted(dups)}"
 
 
+def typed_enum(t):
+    """The Rust type `config.ENUM_TYPES` (or a field's `config.FIELD_ENUMS` entry, kept on the
+    type as `rust`) gives a C enum, or None for an integer."""
+    if t.get("rust"):
+        return t["rust"]
+    if t["k"] == "enum":
+        m = re.match(r"c:@E@(.+)$", t["id"])
+        r = config.ENUM_TYPES.get(m.group(1)) if m else None
+        if r:
+            assert t["size"] == 4, f"{t['id']} isn't an int"
+        return r
+    return None
+
+
 def bit_type(bits):
     return "bool" if bits == 1 else "u32" if bits > 16 else "u16" if bits > 8 else "u8"
 
@@ -142,6 +156,8 @@ class Gen:
 
     def ty(self, t):
         k = t["k"]
+        if typed_enum(t):
+            return typed_enum(t)
         if k == "int":
             return INT[(t["size"], t["signed"])]
         if k == "float":
@@ -202,6 +218,10 @@ class Gen:
             if f["name"] in kept:
                 assert "bits" in f or f["type"]["k"] == "int", f"kept {f['name']} isn't an integer"
                 f = dict(f, kept=True)
+            over = config.FIELD_ENUMS.get(f"{rec_name(rid)}.{f['name']}")
+            if over:
+                assert "bits" not in f and f["type"]["k"] in ("int", "enum") and f["type"]["size"] == 4, f"{rec_name(rid)}.{f['name']} isn't an int"
+                f = dict(f, type=dict(f["type"], rust=over))
             off = f["offset_bits"] // 8
             splice = next((sp for sp in splices if sp[1] <= off < sp[2]), None)
             if splice:
@@ -360,6 +380,8 @@ class Gen:
 
     def default_of(self, t):
         k = t["k"]
+        if typed_enum(t):
+            return "Default::default()"
         if k in ("int", "enum"):
             return "0"
         if k == "float":
@@ -381,6 +403,8 @@ class Gen:
     def import_expr(self, t, at, depth=0):
         """An expression reading a value of type `t` at address expression `at`."""
         k = t["k"]
+        if typed_enum(t):
+            return f"{typed_enum(t)}::import(m, {at}, cx)"
         if k in ("int", "enum"):
             size = t["size"]
             signed = t.get("signed", True) if k == "int" else True
@@ -413,6 +437,8 @@ class Gen:
     def compare_stmts(self, t, ours, at, path, depth=0):
         """Statements comparing `ours` (an expression) with memory at `at`."""
         k = t["k"]
+        if typed_enum(t):
+            return [f"{ours}.compare(m, {at}, &{path}, cx);"]
         if k in ("int", "enum"):
             theirs = self.import_expr(t, at)
             return [f"if {ours} != {theirs} {{ cx.mismatch(&{path}, format!(\"{{:?}}\", {ours}), format!(\"{{:?}}\", {theirs})); }}"]
@@ -539,6 +565,8 @@ class Gen:
     def export_stmts(self, t, ours, at, depth=0):
         """Statements writing `ours` of type `t` at address expression `at`."""
         k = t["k"]
+        if typed_enum(t):
+            return [f"{ours}.export(m, {at});"]
         if k in ("int", "enum"):
             size = t["size"]
             ty = {1: "u8", 2: "u16", 4: "u32", 8: "u64"}[size]
@@ -598,6 +626,8 @@ class Gen:
     def lay_stmts(self, t, ours, at, depth=0):
         """Statements laying `ours` of type `t` out at address expression `at`."""
         k = t["k"]
+        if typed_enum(t):
+            return [f"{ours}.lay(l, {at}, cx);"]
         if k in ("int", "enum"):
             ty = {1: "u8", 2: "u16", 4: "u32", 8: "u64"}[t["size"]]
             return [f"l.put_{ty}({at}, {ours} as {ty});"]
@@ -770,7 +800,7 @@ def main():
         "use crate::hsd::gobj::GObjId;",
         "use crate::hsd::jobj::JObjId;",
         "use crate::hsd::tobj::TObjId;",
-        "use crate::mp::coll::{EcbSource, X34Flags, X35Flags};",
+        "use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};",
         *config.EXTRA_USES,
         "use crate::quat::Quat;",
         "use crate::vec::Vec3;",

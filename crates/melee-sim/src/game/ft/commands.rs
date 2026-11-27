@@ -3,6 +3,7 @@
 //! effect commands are `effect.rs`'s. Commands that reach items, and a few others, aren't
 //! ported.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
@@ -10,7 +11,7 @@ use super::super::handles::FighterId;
 use super::super::leftovers::{RenderOf, carry_victims};
 use super::super::state::Running;
 use super::colanim::Overlay;
-use super::common::{FIGHTER_P_LINK, GA_AIR};
+use super::common::FIGHTER_P_LINK;
 use super::sound::Track;
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
@@ -1255,7 +1256,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007D5D4")]
     pub(crate) fn go_airborne(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
-        fp.ground_or_air = GA_AIR;
+        fp.ground_or_air = GroundOrAir::Air;
         fp.gr_vel = 0.0;
         fp.atk_shield_kb_vel.z = 0.0;
         fp.cur_pos.z = 0.0;
@@ -1274,7 +1275,7 @@ impl Running<'_> {
             self.game.record_jump_left(slot, sub);
         }
         let fp = &mut self.game.fighters[f.0];
-        fp.ground_or_air = GA_AIR;
+        fp.ground_or_air = GroundOrAir::Air;
         fp.gr_vel = 0.0;
         fp.anim_vel.y = 0.0;
         fp.jumps_used = fp.co_attrs.max_jumps as u8;

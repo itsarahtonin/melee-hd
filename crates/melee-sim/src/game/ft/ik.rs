@@ -3,11 +3,11 @@
 //! tilts to the floor, for the matrices the frame draws with (the joints' rotations go back
 //! afterwards), and the root leans with the slope.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::handles::FighterId;
 use super::super::state::Running;
-use super::common::GA_GROUND;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId, USE_QUATERNION};
@@ -51,7 +51,7 @@ impl Running<'_> {
     pub fn plant_legs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.in_hitlag || fp.ground_or_air != GA_GROUND {
+        if fp.in_hitlag || fp.ground_or_air != GroundOrAir::Ground {
             return;
         }
         let flags = fp.leg_reach;

@@ -3,6 +3,7 @@
 //! fighters' hitboxes, the damage log they leave, and items keeping clear of fighters and of
 //! each other on the ground.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::Archives;
 
@@ -11,7 +12,6 @@ use super::item::{HoldKind, article, common_data, is_fighter};
 use super::{flag, item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::code;
-use crate::game::ft::common::{GA_AIR, GA_GROUND};
 use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::_itECB;
@@ -64,8 +64,8 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
             let h = &ip.hitboxes[hi].hit;
             let can = h.state != hitcapsule::DISABLED
                 && h.element == ELEMENT_CATCH
-                && ((h.hits_air && fp.ground_or_air == GA_AIR)
-                    || (h.hits_ground && fp.ground_or_air == GA_GROUND))
+                && ((h.hits_air && fp.ground_or_air == GroundOrAir::Air)
+                    || (h.hits_ground && fp.ground_or_air == GroundOrAir::Ground))
                 && !hitcapsule::has_victim(h, Victim::Fighter(f));
             if !can {
                 continue;
@@ -300,8 +300,8 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
             if h.state == hitcapsule::DISABLED
                 || h.element == ELEMENT_CATCH
                 || !h.hits_items
-                || ((!h.hits_air || me.ground_or_air != GA_AIR)
-                    && (!h.hits_ground || me.ground_or_air != GA_GROUND))
+                || ((!h.hits_air || me.ground_or_air != GroundOrAir::Air)
+                    && (!h.hits_ground || me.ground_or_air != GroundOrAir::Ground))
                 || hitcapsule::has_victim(h, Victim::Item(me_id))
                 || me.invincibility == 2
             {
@@ -504,8 +504,8 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                 let h = &me.hitboxes[k].hit;
                 let can = h.state != hitcapsule::DISABLED
                     && h.element != ELEMENT_CATCH
-                    && ((h.hits_air && other.ground_or_air == GA_AIR)
-                        || (h.hits_ground && other.ground_or_air == GA_GROUND))
+                    && ((h.hits_air && other.ground_or_air == GroundOrAir::Air)
+                        || (h.hits_ground && other.ground_or_air == GroundOrAir::Ground))
                     && !hitcapsule::has_victim(h, Victim::Item(other_id));
                 r.game.it.clank_boxes[k] = u8::from(can);
                 if can {
@@ -518,8 +518,8 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
             let h = &other.hitboxes[hi].hit;
             if h.state == hitcapsule::DISABLED
                 || !h.hits_items
-                || (!(h.hits_air && me.ground_or_air == GA_AIR)
-                    && !(h.hits_ground && me.ground_or_air == GA_GROUND))
+                || (!(h.hits_air && me.ground_or_air == GroundOrAir::Air)
+                    && !(h.hits_ground && me.ground_or_air == GroundOrAir::Ground))
                 || hitcapsule::has_victim(h, Victim::Item(me_id))
             {
                 continue;
@@ -1131,7 +1131,7 @@ pub fn push_from_items(game: &mut Game, data: &Archives, gobj: GObjId, heavy_onl
         let me = item(game, gobj);
         let candidate = g != gobj
             && !other.flags.flags.held
-            && other.ground_or_air == 0
+            && other.ground_or_air == GroundOrAir::Ground
             && !flag(other.phys_flags, 0)
             && if heavy_only {
                 super::lib26b1::is_heavy(game, data, g)
@@ -1168,7 +1168,7 @@ pub fn keep_clear(game: &mut Game, data: &Archives, gobj: GObjId) {
     ip.nudge = Vec3::new(0.0, 0.0, 0.0);
     ip.push_flags = 0;
     let f = &ip.flags.flags;
-    if !f.held && f.keeps_clear && ip.ground_or_air == 0 {
+    if !f.held && f.keeps_clear && ip.ground_or_air == GroundOrAir::Ground {
         if f.clear_of_fighters {
             push_from_fighters(game, data, gobj);
         }
@@ -1177,7 +1177,10 @@ pub fn keep_clear(game: &mut Game, data: &Archives, gobj: GObjId) {
         }
     }
     let ip = item(game, gobj);
-    if !ip.flags.flags.held && ip.ground_or_air == 0 && super::lib26b1::is_heavy(game, data, gobj) {
+    if !ip.flags.flags.held
+        && ip.ground_or_air == GroundOrAir::Ground
+        && super::lib26b1::is_heavy(game, data, gobj)
+    {
         push_from_items(game, data, gobj, true);
     }
 }

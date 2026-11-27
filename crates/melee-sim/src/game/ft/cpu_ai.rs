@@ -4,13 +4,13 @@
 //! Nana, the Ice Climbers' partner, is the computer player ported first: she follows Popo,
 //! replaying his recorded inputs, and acts on her own when apart from him.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
 use super::super::gr::stage;
 use super::super::handles::FighterId;
 use super::super::state::Running;
-use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
@@ -399,7 +399,7 @@ impl Running<'_> {
             if ceiling.is_none() {
                 self.game.fighters[f.0].cpu.off_stage = false;
             }
-        } else if fpp.ground_or_air == GA_GROUND
+        } else if fpp.ground_or_air == GroundOrAir::Ground
             && self.corneria_ceiling_floor(fpp.coll_data.floor.index)
         {
             self.game.fighters[f.0].cpu.off_stage = true;
@@ -691,7 +691,7 @@ impl Running<'_> {
         self.cpu_healing_item_targets(f);
         if self.cpu_should_act(f)
             && let Some(t) = self.game.fighters[f.0].cpu.target
-            && self.game.fighters[f.0].ground_or_air != GA_AIR
+            && self.game.fighters[f.0].ground_or_air != GroundOrAir::Air
         {
             let (me, them) = (
                 self.game.fighters[f.0].cur_pos,
@@ -762,7 +762,7 @@ impl Running<'_> {
             }
         }
         let fpp = &mut self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_GROUND {
+        if fpp.ground_or_air == GroundOrAir::Ground {
             fpp.cpu.nana_recovering = false;
         }
         r5
@@ -806,7 +806,7 @@ impl Running<'_> {
             return false;
         }
         let (me, other) = (&self.game.fighters[f.0], &self.game.fighters[popo.0]);
-        if other.ground_or_air != GA_GROUND || me.ground_or_air != GA_GROUND {
+        if other.ground_or_air != GroundOrAir::Ground || me.ground_or_air != GroundOrAir::Ground {
             return false;
         }
         if me.cpu.nana_recovering
@@ -896,8 +896,8 @@ impl Running<'_> {
                 return (false, r5);
             }
         }
-        if other.ground_or_air == GA_GROUND
-            && me.ground_or_air == GA_AIR
+        if other.ground_or_air == GroundOrAir::Ground
+            && me.ground_or_air == GroundOrAir::Air
             && other.cur_pos.y > me.cur_pos.y
             && me.pos_delta.y < 0.0
         {

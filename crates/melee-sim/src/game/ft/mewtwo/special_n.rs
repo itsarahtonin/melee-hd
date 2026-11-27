@@ -8,12 +8,12 @@
 //! own; a [`ShadowBall`] says which, Mewtwo's [`MEWTWO`] or Kirby's
 //! (`ft::kirby::special_mewtwo::KIRBY`), and each function here carries both originals' names.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef;
 use super::super::super::it::kinds::mewtwoshadowball as ball;
 use super::super::super::state::Running;
-use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::*;
 use super::super::sound::Track;
 use super::init::COLANIM_CHARGED;
@@ -305,11 +305,12 @@ impl Running<'_> {
         let ground = reg(self.mt_n_attr_f32(gobj, p, attr::N_GROUND_RECOIL));
         let fp = &mut self.game.fighters[f.0];
         let charge = p.u + u::CHARGE;
-        if fp.motion_id == p.states + ms::SPECIAL_AIR_N_END || fp.ground_or_air == GA_AIR {
+        if fp.motion_id == p.states + ms::SPECIAL_AIR_N_END || fp.ground_or_air == GroundOrAir::Air
+        {
             let c = fp::frsp(f64::from(fp.u_i32(charge)));
             fp.self_vel.x = mem(fp::fmuls(reg(fp.facing_dir), fp::fmuls(air, c)));
         }
-        if fp.motion_id == p.states + ms::SPECIAL_N_END || fp.ground_or_air == GA_GROUND {
+        if fp.motion_id == p.states + ms::SPECIAL_N_END || fp.ground_or_air == GroundOrAir::Ground {
             let c = fp::frsp(f64::from(fp.u_i32(charge)));
             fp.gr_vel = mem(fp::fmuls(reg(fp.facing_dir), fp::fmuls(ground, c)));
         }

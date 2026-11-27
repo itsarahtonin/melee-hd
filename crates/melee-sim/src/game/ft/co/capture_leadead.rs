@@ -3,12 +3,12 @@
 //! handicap and standing, then is thrown back from it (`CaptureCut`). A hit on the fighter makes
 //! the ReDead let go (`ftCo_800C7434.c`'s damage callbacks).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::camera;
 use super::super::super::it::kinds::redead;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -137,7 +137,7 @@ impl Running<'_> {
         let push = reg(self.common().f32(0x370));
         let fp = &mut self.game.fighters[f.0];
         let v = mem(fp::fmuls(fp::fneg(reg(fp.facing_dir)), push));
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             fp.gr_vel = v;
         } else {
             fp.self_vel.x = v;

@@ -253,7 +253,7 @@ fn run_gw(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     }
     match name.as_str() {
         "ftLib_GetFacingDir" => return Ret::Float(f64::from(g.game.ft_facing_dir(gobj))),
-        "ftLib_GetGroundAir" => return Ret::Int(g.game.ft_ground_air(gobj) as u32),
+        "ftLib_GetGroundAir" => return Ret::Int(g.game.ft_ground_air(gobj).raw() as u32),
         "ftLib_IsChargingSmash" => return b(g.game.ft_is_charging_smash(gobj)),
         "ftCo_800D6B00" => g.attack100_start(gobj, r4 as i32),
         "ftCo_800D6C60" => {

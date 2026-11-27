@@ -3,11 +3,11 @@
 //! throw's hit, and the victim's mash out of a slow throw. Kirby's, Samus's, Yoshi's and
 //! Bowser's own parts, and an airborne throw's collision, stop at their seams.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::super::parts::{HIP_N, TRANS_N2};
 
 use super::ids::ms;
@@ -191,7 +191,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800DD684")]
     pub fn co_throw_coll(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             if fp.mv_i32(THROW_FROZEN) != 0 {
                 if self.air_coll_touch(gobj) {
                     self.throw_land_frozen(gobj);

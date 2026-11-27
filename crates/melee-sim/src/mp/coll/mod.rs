@@ -38,6 +38,19 @@ use crate::hsd::jobj::JObjId;
 use crate::math;
 use crate::vec::Vec3;
 
+crate::c_enum! {
+    /// `GroundOrAir`: whether a fighter or an item stands on the ground or is in the air
+    /// (`Fighter::ground_or_air`, `Item::ground_or_air`, a spawn's), which picks its physics
+    /// and collision pass.
+    #[doc(alias("GA_Ground", "GA_Air"))]
+    pub enum GroundOrAir: i32 {
+        /// `GA_Ground`.
+        Ground = 0,
+        /// `GA_Air`.
+        Air = 1,
+    }
+}
+
 /// `x130_flags`: keep the desired ECB's bottom when loading (`CollData_X130_Locked`).
 #[doc(alias("X130_LOCKED"))]
 pub const KEEP_ECB_BOTTOM: u32 = 1 << 4;

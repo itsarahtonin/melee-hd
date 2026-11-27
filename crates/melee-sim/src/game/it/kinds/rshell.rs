@@ -2,6 +2,7 @@
 //! the ground, turning at ledges and walls, until it has hit `x54` times or its time runs out.
 //! The green shell's code ([`super::shell`]) with its own chase, bounces and hits.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::ground_to_ledge;
@@ -180,7 +181,7 @@ fn after_push(r: &mut Running, gobj: GObjId, did_hit: bool, take: fn(&mut Game, 
         if did_hit {
             hitbox::start_blink(r.game, gobj);
         }
-        if item(r.game, gobj).ground_or_air == 1 {
+        if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
             chase_air(r, gobj);
         } else {
             chase(r, gobj);
@@ -269,7 +270,7 @@ pub fn bounced(r: &mut Running, gobj: GObjId) {
     shell::draw_landings(r, gobj, &RED);
     let ip = item(r.game, gobj);
     if ip.msid != 6 && ip.msid != 5 {
-        if ip.ground_or_air == 1 {
+        if ip.ground_or_air == GroundOrAir::Air {
             chase_air(r, gobj);
             return;
         }

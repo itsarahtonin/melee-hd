@@ -2,6 +2,7 @@
 //! where it lands, and a hit swings it like a punching bag: the swing's speed from the hit's
 //! damage and side, its counter's hitbox as strong as the hit and fading, until its life is up.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{fall, ground_or_fall};
@@ -38,9 +39,6 @@ pub const COLL2: u32 = 0x802C_DBB8;
 const SWING_SPEED: usize = 0x60;
 const SWING_ANGLE: usize = 0x64;
 const DAMAGE: usize = 0x68;
-
-/// `GA_Air`.
-const GA_AIR: i32 = 1;
 
 /// Runs one of Wobbuffet's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -108,7 +106,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 /// and fading.
 #[doc(alias = "it_802CD4FC")]
 pub fn swing(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         super::gravity(r, gobj);
     }
     if item(r.game, gobj).cmd_var0 != 0 {
@@ -244,7 +242,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itSonans_UnkMotion0_Coll")]
 #[doc(alias = "itSonans_UnkMotion1_Coll")]
 pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         fall(r, gobj, landed);
     } else {
         ground_or_fall(r, gobj, landed);

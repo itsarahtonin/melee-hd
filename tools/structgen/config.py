@@ -208,6 +208,18 @@ FIELD_POINTERS = {
     "Fighter.x1A64": "Option<GObjId>",
 }
 
+# The decomp's enums a generated field holds as its `c_enum!` type rather than an integer, by
+# the enum's C name: every bit pattern still round-trips (`Other`), and the field reads,
+# compares, lays out and hashes as its integer, the comparer showing the variant's name.
+ENUM_TYPES = {
+    "GroundOrAir": "GroundOrAir",
+}
+
+# Integer fields that hold a decomp enum the C types as `int`, by `Struct.field`: the field
+# becomes that `c_enum!` type, as `ENUM_TYPES` makes an enum's.
+FIELD_ENUMS = {
+}
+
 # Arrays of words that hold pointers the C types as integers, by `Struct.field`: each word
 # becomes the handle given.
 FIELD_HANDLE_ARRAYS = {
@@ -581,6 +593,6 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
-use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
+use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;"""

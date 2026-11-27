@@ -2,6 +2,7 @@
 //! the shake offset's view matrix, and the joint trees drawn, all from the fighters' render
 //! callbacks in the display pass.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::camera;
@@ -365,7 +366,7 @@ impl Running<'_> {
         if flags & 0x20 != 0 {
             let p = &fp.item_pickup;
             let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-            if fp.ground_or_air == 0 {
+            if fp.ground_or_air == GroundOrAir::Ground {
                 drew |= coll_draw::range(objs, p.gr_light_offset, pos, LIGHT_RANGE, pass, facing);
                 drew |= coll_draw::range(objs, p.gr_heavy_offset, pos, HEAVY_RANGE, pass, facing);
             } else {

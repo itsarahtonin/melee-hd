@@ -159,7 +159,7 @@ fn main() {
                                                     "k{} ms{} ga{} ({:.1},{:.1}) x18={}",
                                                     f.kind,
                                                     f.motion_id,
-                                                    f.ground_or_air,
+                                                    f.ground_or_air.raw(),
                                                     f.cur_pos.x,
                                                     f.cur_pos.y,
                                                     f.cpu.behavior

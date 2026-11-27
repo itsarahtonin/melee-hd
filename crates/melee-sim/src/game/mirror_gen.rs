@@ -36,7 +36,7 @@ use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
-use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
+use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
@@ -1788,7 +1788,7 @@ impl Mirror for SpawnItem {
             unread_45: m.bytes(at + 0x45),
             unused_46: m.bytes(at + 0x46),
             unused_47: m.bytes(at + 0x47),
-            ground_or_air: m.u32(at + 0x48) as i32,
+            ground_or_air: GroundOrAir::import(m, at + 0x48, cx),
         }
     }
 
@@ -1887,13 +1887,12 @@ impl Mirror for SpawnItem {
                 format!("{:02x?}", m.bytes::<1>(at + 0x47)),
             );
         }
-        if self.ground_or_air != m.u32(at + 0x48) as i32 {
-            cx.mismatch(
-                &format!("{path}.ground_or_air (x48_ground_or_air)"),
-                format!("{:?}", self.ground_or_air),
-                format!("{:?}", m.u32(at + 0x48) as i32),
-            );
-        }
+        self.ground_or_air.compare(
+            m,
+            at + 0x48,
+            &format!("{path}.ground_or_air (x48_ground_or_air)"),
+            cx,
+        );
     }
 }
 

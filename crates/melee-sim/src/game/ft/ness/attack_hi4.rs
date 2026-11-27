@@ -5,12 +5,12 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::nessyoyo;
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::super::motion::flags::SKIP_ITEM_VIS;
 use super::super::sound::Track;
 use super::{PART_R2ND_NA, addr, attr, ms, mv, u};
@@ -511,7 +511,7 @@ impl Running<'_> {
     /// air the yo-yo goes.
     fn ness_attack_hi4_coll(&mut self, gobj: GObjId) {
         self.ground_coll(gobj);
-        if self.game.fighter(gobj).ground_or_air == GA_AIR
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air
             && let Some(yoyo) = self.game.fighter(gobj).u.gobj_at(u::YOYO)
         {
             nessyoyo::remove(self, yoyo);

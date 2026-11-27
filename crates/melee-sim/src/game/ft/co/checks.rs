@@ -2,6 +2,7 @@
 //! specials, grabs, attacks, shields, rolls, taunts, jumps, dashes and the rest. Each check
 //! enters the state its input asks for and says whether it did.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::code::{self, Val};
@@ -421,7 +422,7 @@ impl Running<'_> {
         use crate::game::it::{self, lib26b1};
         let fp = self.game.fighter(gobj);
         let p = &fp.item_pickup.clone();
-        let light = if fp.ground_or_air == super::super::common::GA_GROUND {
+        let light = if fp.ground_or_air == GroundOrAir::Ground {
             &p.gr_light_offset
         } else {
             &p.air_light_offset
@@ -523,7 +524,7 @@ impl Running<'_> {
         }
         let fp = self.game.fighter(gobj);
         let p = &fp.item_pickup;
-        let light = if fp.ground_or_air == super::super::common::GA_GROUND {
+        let light = if fp.ground_or_air == GroundOrAir::Ground {
             &p.gr_light_offset
         } else {
             &p.air_light_offset

@@ -2,10 +2,10 @@
 //! for a time that grows with its percent and its player's handicap and standing, which it
 //! mashes down; in the air it only tumbles.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -28,7 +28,7 @@ impl Running<'_> {
         self.drop_heavy_item(gobj);
         self.release_victim(gobj);
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             self.enter_damage_fall(gobj);
             return;
         }

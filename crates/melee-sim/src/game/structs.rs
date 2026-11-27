@@ -27,7 +27,7 @@ use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
-use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
+use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
@@ -1169,7 +1169,7 @@ pub struct SpawnItem {
     pub unused_47: [u8; 1],
     /// +0x48
     #[doc(alias("x48_ground_or_air"))]
-    pub ground_or_air: i32,
+    pub ground_or_air: GroundOrAir,
 }
 
 impl Default for SpawnItem {
@@ -1191,7 +1191,7 @@ impl Default for SpawnItem {
             unread_45: [0; 1],
             unused_46: [0; 1],
             unused_47: [0; 1],
-            ground_or_air: 0,
+            ground_or_air: Default::default(),
         }
     }
 }

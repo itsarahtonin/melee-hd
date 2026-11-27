@@ -2,6 +2,7 @@
 //! shrinking as its life runs down, falling to the floor, and burning out faster for the damage
 //! it takes.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
@@ -127,7 +128,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
 /// meant to test it.)
 #[doc(alias = "itNesspkfirepillar_UnkMotion0_Phys")]
 pub fn physics(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).ground_or_air = 1;
+    item_mut(r.game, gobj).ground_or_air = GroundOrAir::Air;
     let (speed, max) = (
         item_attr_f32(r, gobj, ITEM_FALL_SPEED),
         item_attr_f32(r, gobj, ITEM_FALL_SPEED_MAX),
@@ -139,7 +140,7 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
 /// sets it airborne where it meant to test it.)
 #[doc(alias = "itNesspkfirepillar_UnkMotion0_Coll")]
 pub fn collide(r: &mut Running, gobj: GObjId) -> bool {
-    item_mut(r.game, gobj).ground_or_air = 1;
+    item_mut(r.game, gobj).ground_or_air = GroundOrAir::Air;
     ground::fall_to_floor(r, gobj, |r, g| lib2725::clear_velocity(r.game, g));
     false
 }

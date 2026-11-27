@@ -3,13 +3,13 @@
 //! (`ftsamusspeciallw0.c`): her own bomb's blast throws her up and away from it in the jump
 //! state (`ms::SPECIAL_LW` and its aerial twin).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::samusbomb;
 use super::super::super::state::Running;
 use super::super::super::structs::{Vec2, ftCollisionBox};
-use super::super::common::GA_GROUND;
 use super::super::motion::flags;
 use super::{PART_TOP_N, PART_X_ROT_N, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
@@ -128,7 +128,7 @@ impl Running<'_> {
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
         fp.set_mv_i32(mv::INTANGIBLE, 0);
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             self.go_airborne(f);
         }
         self.change_motion_state(gobj, ms::SPECIAL_AIR_LW, 0, start, rate, 0.0, None);

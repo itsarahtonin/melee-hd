@@ -11,12 +11,12 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::kirby::copy::KindFrom;
 use super::super::motion::flags::*;
 use super::{PAD_B, addr, attr, ms, mv};
@@ -153,7 +153,7 @@ impl Running<'_> {
                 _ => None,
             };
             let air = if p.one_flash {
-                self.game.fighter(gobj).ground_or_air != GA_GROUND
+                self.game.fighter(gobj).ground_or_air != GroundOrAir::Ground
             } else {
                 air
             };

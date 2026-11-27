@@ -17,7 +17,7 @@ use crate::hsd::jobj::JObjId;
 use crate::hsd::lobj::LObjId;
 use crate::lb::colanim::ColorOverlay;
 use crate::lb::shadow::LbShadow;
-use crate::mp::coll::CollData;
+use crate::mp::coll::{CollData, GroundOrAir};
 use crate::vec::Vec3;
 
 /// The decomp's `Fighter`.
@@ -104,7 +104,7 @@ pub struct Fighter {
     #[doc(alias("xD4_unk_vel"))]
     pub frame_vel: Vec3,
     #[at(0xE0)]
-    pub ground_or_air: i32,
+    pub ground_or_air: GroundOrAir,
     #[at(0xE4)]
     #[doc(alias("xE4_ground_accel_1"))]
     pub ground_accel_1: f32,
@@ -1251,7 +1251,7 @@ impl Default for Fighter {
             prev_pos: Default::default(),
             pos_delta: Default::default(),
             frame_vel: Default::default(),
-            ground_or_air: 0,
+            ground_or_air: GroundOrAir::Ground,
             ground_accel_1: 0.0,
             ground_accel_2: 0.0,
             gr_vel: 0.0,

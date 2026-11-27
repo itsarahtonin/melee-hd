@@ -8,12 +8,12 @@
 //! of its own; a [`Toad`] says which, Peach's [`PEACH`] or Kirby's
 //! (`ft::kirby::special_peach::KIRBY`), and each function here carries both originals' names.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::it::kinds::{peachtoad, peachtoadspore};
 use super::super::super::state::Running;
 use super::super::co::guard::set_shield_hit;
-use super::super::common::GA_GROUND;
 use super::super::motion::flags::*;
 use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
@@ -578,7 +578,7 @@ impl Running<'_> {
         let facing = fp::fctiwz(reg(fp.specialn_facing_dir));
         fp.set_mv_i32(mv::N_FACING_DIR, facing);
         let msid = p.states
-            + if fp.ground_or_air == GA_GROUND {
+            + if fp.ground_or_air == GroundOrAir::Ground {
                 ms::SPECIAL_N_HIT
             } else {
                 ms::SPECIAL_AIR_N_HIT

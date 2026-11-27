@@ -2,12 +2,12 @@
 //! `ftCo_DownAttack.c`, `ftCo_DownDamage.c`, `ftCo_DownSpot.c`, `ftCo_Passive.c`,
 //! `ftCo_PassiveStand.c`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::camera;
 use super::super::super::ef;
 use super::super::super::state::Running;
-use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::parts::TOP_N;
 use super::checks::abs;
 use super::ids::ms;
@@ -50,7 +50,7 @@ impl Running<'_> {
     #[doc(alias = "ft_80084C74")]
     pub fn floor_sounds(&self, gobj: GObjId, set: usize) -> Option<([i32; 4], i32, i32)> {
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air != GA_GROUND || fp.coll_data.floor.index == -1 {
+        if fp.ground_or_air != GroundOrAir::Ground || fp.coll_data.floor.index == -1 {
             return None;
         }
         let g = self.game.geometry.as_ref().expect("no collision geometry");
@@ -254,7 +254,7 @@ impl Running<'_> {
     /// capped at `ftCommonData` x164, along the floor.
     #[doc(alias = "ftCommon_SetGroundedKnockbackIfLanded")]
     pub fn grounded_knockback_if_landed(fp: &mut crate::game::structs::Fighter, max: f64) {
-        if fp.ground_or_air != GA_GROUND || fp.ground_kb_vel != 0.0 {
+        if fp.ground_or_air != GroundOrAir::Ground || fp.ground_kb_vel != 0.0 {
             return;
         }
         let n = fp.coll_data.floor.normal;
@@ -620,7 +620,7 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             if fp.stamina_dead {
                 self.enter_damage_fall(gobj);
             } else {
@@ -642,7 +642,7 @@ impl Running<'_> {
     /// landing, or a wall tech or bounce.
     #[doc(alias = "ftCo_DownDamage_Coll")]
     pub fn co_down_damage_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             if !self.ground_coll_off_ledges(gobj) {
                 self.damage_go_airborne(gobj);
             } else {

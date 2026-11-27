@@ -10,10 +10,11 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{change, change_state, play_sfx};
-use super::super::zako::{self, GA_AIR, Knock, QUAKE_SMALL, attr};
+use super::super::zako::{self, Knock, QUAKE_SMALL, attr};
 use super::super::{ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
 use crate::game::camera;
@@ -402,7 +403,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) -> bool {
     zako::ko(r, gobj);
     let pos = item(r.game, gobj).pos;
     camera::request_quake(r, QUAKE_SMALL, Some(pos));
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         knock_down(r, gobj);
     } else {
         flatten(r, gobj);

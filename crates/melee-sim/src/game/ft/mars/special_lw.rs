@@ -5,6 +5,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
@@ -12,7 +13,7 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::co::guard::set_shield_hit;
 use super::super::motion::flags::*;
-use super::{GA_GROUND, PART_R_SHOULDER_N, addr, attr, ms, mv};
+use super::{PART_R_SHOULDER_N, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
@@ -251,7 +252,7 @@ impl Running<'_> {
         }
         let third = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0)));
         self.mars_hip_wind(gobj, 120, 0.9, 0.02, third);
-        let msid = if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        let msid = if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             ms::SPECIAL_LW_HIT
         } else {
             ms::SPECIAL_AIR_LW_HIT

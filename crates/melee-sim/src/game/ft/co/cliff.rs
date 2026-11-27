@@ -1,10 +1,10 @@
 //! The ledge's options (`ftCo_CliffClimb.c`, `ftCo_CliffAttack.c`, `ftCo_CliffEscape.c`,
 //! `ftCo_CliffJump.c`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::checks::abs;
 use super::ids::ms;
 use super::ledge::{CLIFF_LEDGE_ID, CLIFF_X8};
@@ -22,7 +22,7 @@ impl Running<'_> {
     pub fn co_cliff_cam(&mut self, gobj: GObjId) {
         self.update_camera_box(gobj);
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             let ledge = fp.mv_i32(CLIFF_LEDGE_ID);
             let mut cd = fp.coll_data.clone();
             let data = self.data;
@@ -200,7 +200,10 @@ impl Running<'_> {
             reg(v.x),
         ));
         fp.cur_pos.y = mem(fp::fadds(reg(v.y), reg(fp.trans_n_pos.y)));
-        if fp.ground_or_air == GA_AIR && fp.trans_n_pos.z >= 0.0 && fp.trans_n_pos.y >= 0.0 {
+        if fp.ground_or_air == GroundOrAir::Air
+            && fp.trans_n_pos.z >= 0.0
+            && fp.trans_n_pos.y >= 0.0
+        {
             fp.coll_data.floor.index = ledge;
             self.land(gobj);
         }
