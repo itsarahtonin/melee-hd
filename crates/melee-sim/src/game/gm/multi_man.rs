@@ -11,6 +11,7 @@ use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::match_exit::{MatchExitInfo, selkind};
 use super::vs_melee::CssData;
+use crate::game::mirror::Narrow;
 use crate::game::structs::{PlayerInitData, StartMeleeData};
 use crate::hsd::gobj::GObjId;
 use melee_data::archive::DataRef;
@@ -305,9 +306,9 @@ impl Running<'_> {
         );
         self.setup_vs_preload_cache();
         let gc = &mut self.dvd_mut().cache.scene.game_cache;
-        gc.entries[1].char_id = i32::from(CharacterKind::Boy as u8);
+        gc.entries[1].char_id = i32::from(CharacterKind::Boy.raw() as u8);
         gc.entries[1].color = 0;
-        gc.entries[2].char_id = i32::from(CharacterKind::Girl as u8);
+        gc.entries[2].char_id = i32::from(CharacterKind::Girl.raw() as u8);
         gc.entries[2].color = 0;
         gc.stkind = i32::from(STKIND.id());
         self.preload_refresh();
@@ -605,7 +606,7 @@ impl Running<'_> {
                 .game
                 .gm
                 .unlocks
-                .ckind_unlocked(CharacterKind::Falco as u8)
+                .ckind_unlocked(CharacterKind::Falco.raw() as u8)
         {
             let slot = self.game.multi_man.slot;
             self.init_challenger(
@@ -613,7 +614,7 @@ impl Running<'_> {
                 p.color,
                 slot,
                 p.nametag,
-                CharacterKind::Falco as u8,
+                CharacterKind::Falco.raw() as u8,
                 mode.id(),
             );
             self.change_game_mode_after_scene(GameMode::ChallengerApproach);
@@ -773,7 +774,7 @@ impl Running<'_> {
         mm.kos_early = 0;
         mm.start_frames = 0;
         let mut p = super::vs_mode::player_defaults();
-        p.ckind = CharacterKind::Boy as i8;
+        p.ckind = CharacterKind::Boy.raw() as i8;
         p.slot_type = 1;
         p.stocks = 1;
         p.dies_up = true;
@@ -852,7 +853,7 @@ impl Running<'_> {
         p.team = team;
         p.ckind = e.ckind as i8;
         p.cpu_level = e.level;
-        p.cpu_kind = e.cpu_kind;
+        p.cpu_kind = Narrow::from_raw(e.cpu_kind);
         p.attack_ratio = e.attack_ratio;
         p.defense_ratio = e.defense_ratio;
         self.vs_add_player(slot, &p);

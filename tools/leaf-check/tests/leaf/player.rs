@@ -204,7 +204,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             i(fns::Player_GetCpuLevel(ctx, slot)),
         ),
         16 => (
-            i(game.player_cpu_type(slot)),
+            i(game.player_cpu_type(slot).id()),
             i(fns::Player_GetCpuType(ctx, slot)),
         ),
         17 => (

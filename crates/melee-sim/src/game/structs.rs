@@ -17,6 +17,7 @@ use crate::game::handles::*;
 use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
+use crate::game::it::item::HoldKind;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
@@ -1135,7 +1136,7 @@ pub struct SpawnItem {
     /// +0x8
     pub kind: i32,
     /// +0xc
-    pub hold_kind: i32,
+    pub hold_kind: HoldKind,
     /// +0x10
     #[doc(alias("x10"))]
     pub origin: i32,
@@ -1179,7 +1180,7 @@ impl Default for SpawnItem {
             owner: None,
             maker: None,
             kind: 0,
-            hold_kind: 0,
+            hold_kind: Default::default(),
             origin: 0,
             pos: Default::default(),
             prev_pos: Default::default(),

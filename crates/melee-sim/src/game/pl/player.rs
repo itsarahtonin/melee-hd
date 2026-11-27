@@ -11,6 +11,7 @@ use super::super::ft::create::AllocInfo;
 use super::super::state::{Game, Running};
 use super::types::{ActionStats, ComboStats, StaleMoveTable, StaticPlayer};
 use crate::game::ft::CharacterKind;
+use crate::game::ft::CpuKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -46,7 +47,7 @@ impl From<PlayerKind> for i32 {
 
 impl From<PlayerKind> for u8 {
     fn from(k: PlayerKind) -> u8 {
-        k as u8
+        k.raw() as u8
     }
 }
 
@@ -347,8 +348,8 @@ impl Game {
     }
 
     #[doc(alias = "Player_GetCpuType")]
-    pub fn player_cpu_type(&self, slot: i32) -> i32 {
-        i32::from(self.player(slot).cpu_type)
+    pub fn player_cpu_type(&self, slot: i32) -> CpuKind {
+        self.player(slot).cpu_type.get()
     }
 
     #[doc(alias = "Player_GetHandicap")]
@@ -921,7 +922,7 @@ impl Game {
         p.team = 0;
         p.pad_port = 0;
         p.cpu_level = 0;
-        p.cpu_type = 4;
+        p.cpu_type = CpuKind::Normal.into();
         p.handicap = 0;
         p.entry_delay = 0;
         p.kirby_copy_kind = 4;
@@ -1166,8 +1167,8 @@ impl Running<'_> {
     }
 
     #[doc(alias = "Player_SetPlayerAndEntityCpuType")]
-    pub fn set_player_cpu_type(&mut self, slot: i32, kind: i32) {
-        self.game.player_mut(slot).cpu_type = kind as u8;
+    pub fn set_player_cpu_type(&mut self, slot: i32, kind: CpuKind) {
+        self.game.player_mut(slot).cpu_type = kind.into();
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
                 self.ft_set_cpu_type(g, kind);

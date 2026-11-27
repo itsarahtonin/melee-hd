@@ -201,20 +201,20 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800ABA34")]
     pub(super) fn cpu_walk(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        match CpuKind::from_id(fpp.cpu.kind) {
-            Some(CpuKind::SpLwLink) => {
+        match fpp.cpu.kind {
+            CpuKind::SpLwLink => {
                 if fpp.item_gobj.is_none() {
                     self.cpu_data_script(f, 38);
                     return;
                 }
             }
-            Some(CpuKind::SpLwSamus) => {
+            CpuKind::SpLwSamus => {
                 if fpp.cpu.frame_counter % 30 == 0 {
                     self.cpu_data_script(f, 38);
                     return;
                 }
             }
-            Some(CpuKind::Air)
+            CpuKind::Air
                 if fpp.ground_or_air == GroundOrAir::Ground
                     && fpp.cpu.frame_counter % 0x12C == 0 =>
             {

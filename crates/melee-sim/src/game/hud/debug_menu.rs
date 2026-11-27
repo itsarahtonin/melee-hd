@@ -9,6 +9,8 @@
 //! ([`Running::menu_call`]) and the variables are the debug menus' own statics
 //! ([`DebugVars`]), the debug level, and the words the tables name.
 
+use crate::game::ft::CpuKind;
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 
 use super::debug_tables::{SETTINGS_INIT, TABLES, WORDS};
@@ -214,7 +216,7 @@ impl DebugVars {
             p.damage1 = w(0x68 + i) as u16;
             p.attack_ratio = f(0x78 + i);
             p.defense_ratio = f(0x88 + i);
-            p.cpu_kind = w(0xA8 + i) as u8;
+            p.cpu_kind = Narrow::from_raw(w(0xA8 + i) as u8);
             p.cpu_level = w(0xB8 + i) as u8;
             p.stocks = w(0xD4) as i8;
             p.enters = false;
@@ -1561,7 +1563,7 @@ impl Running<'_> {
         for p in &mut start.players {
             *p = player_defaults();
             p.stocks = 0;
-            p.cpu_kind = 4;
+            p.cpu_kind = CpuKind::Normal.into();
         }
         for (p, ckind) in start.players.iter_mut().zip([6, 8, 6, 6]) {
             p.ckind = ckind;

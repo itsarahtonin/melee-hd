@@ -53,7 +53,7 @@ impl Running<'_> {
         self.game
             .gm
             .unlocks
-            .ckind_unlocked(CharacterKind::Luigi as u8)
+            .ckind_unlocked(CharacterKind::Luigi.raw() as u8)
     }
 
     /// The cutscene's stage and players, `un_8031F294`: Battlefield set up for a demo, the

@@ -1776,11 +1776,17 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
                 8 => Some(false),
                 2 => Some(roll(game, true)),
                 3 => {
-                    let unlocked = game.gm.unlocks.ckind_unlocked(CharacterKind::Mars as u8);
+                    let unlocked = game
+                        .gm
+                        .unlocks
+                        .ckind_unlocked(CharacterKind::Mars.raw() as u8);
                     Some(roll(game, unlocked))
                 }
                 4 => {
-                    let unlocked = game.gm.unlocks.ckind_unlocked(CharacterKind::Clink as u8);
+                    let unlocked = game
+                        .gm
+                        .unlocks
+                        .ckind_unlocked(CharacterKind::Clink.raw() as u8);
                     Some(roll(game, unlocked))
                 }
                 5 => {

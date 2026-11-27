@@ -222,6 +222,8 @@ ENUM_TYPES = {
 # Integer fields that hold a decomp enum the C types as `int`, by `Struct.field`: the field
 # becomes that `c_enum!` type, as `ENUM_TYPES` makes an enum's.
 FIELD_ENUMS = {
+    # `Item_HoldKinds`, which `Item::hold_kind` holds too.
+    "SpawnItem.hold_kind": "HoldKind",
 }
 
 # Arrays of words that hold pointers the C types as integers, by `Struct.field`: each word
@@ -367,6 +369,7 @@ EXTRA_USES = [
     "use crate::game::ft::second::{ActionTree, SecondTree};",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
     "use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
+    "use crate::game::it::item::HoldKind;",
     "use crate::game::it::link::LinkX20;",
     "use crate::game::held::Kept;",
     "use crate::hsd::lobj::LObjId;",
@@ -587,6 +590,7 @@ use crate::game::camera::{CameraMode, CmSubjectState};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::handles::*;
+use crate::game::it::item::HoldKind;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::game::it::link::LinkX20;
 use crate::game::held::Kept;

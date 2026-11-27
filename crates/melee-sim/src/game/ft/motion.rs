@@ -95,7 +95,7 @@ impl Running<'_> {
             && self.game.player_pkind(i32::from(fp.player_idx)) != PlayerKind::Demo
             && self.anim_aram(fp, own) == 0
         {
-            let popo = self.game.ft.data.data_list[FighterKind::Popo as usize]
+            let popo = self.game.ft.data.data_list[FighterKind::Popo.raw() as usize]
                 .expect("Popo's data isn't loaded");
             return self
                 .data
@@ -109,7 +109,7 @@ impl Running<'_> {
     /// The kind whose animation table `entry` is in: the fighter's, or Popo's for an entry
     /// Nana took from his ([`Running::anim_entry`]).
     pub(super) fn anim_entry_kind(&self, kind: i32, entry: DataRef) -> i32 {
-        let popo = self.game.ft.data.data_list[FighterKind::Popo as usize].map(|d| d.archive);
+        let popo = self.game.ft.data.data_list[FighterKind::Popo.raw() as usize].map(|d| d.archive);
         if kind == FighterKind::Nana && popo == Some(entry.archive) {
             FighterKind::Popo.id()
         } else {

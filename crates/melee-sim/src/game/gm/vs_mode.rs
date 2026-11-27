@@ -3,6 +3,7 @@
 //! match's entry (`gmVsMelee_EnterVs`), which [`Settings::vs`](super::super::vs_match::Settings::vs)
 //! runs on the choices the character and stage select screens would have left.
 
+use crate::game::ft::CpuKind;
 use gekko_fp as fp;
 
 use crate::fpu::{mem, reg};
@@ -187,7 +188,7 @@ pub fn player_defaults() -> PlayerInitData {
         handicap: 9,
         nametag: NO_NAMETAG,
         enters: true,
-        cpu_kind: 4,
+        cpu_kind: CpuKind::Normal.into(),
         attack_ratio: 1.0,
         defense_ratio: 1.0,
         model_scale: 1.0,

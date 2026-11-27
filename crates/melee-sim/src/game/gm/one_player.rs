@@ -17,6 +17,7 @@ use super::super::state::Running;
 use super::super::structs::{StartMeleeData, VsModeData};
 use super::vs_melee::{CssData, SssData};
 use crate::game::ft::CharacterKind;
+use crate::game::ft::CpuKind;
 use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
 use gekko_fp as fp;
@@ -1010,7 +1011,7 @@ impl Running<'_> {
         enemy_color_table(run.player.ckind, run.player.color, &chars, &mut colors);
         let last = round == 0xC;
         if last {
-            chars = [CharacterKind::GameWatch as i8; 3];
+            chars = [CharacterKind::GameWatch.raw() as i8; 3];
             colors = [0; 3];
         }
         self.dvd_mut().keep_class();
@@ -1222,10 +1223,10 @@ impl Running<'_> {
             .game
             .gm
             .unlocks
-            .ckind_unlocked(CharacterKind::GameWatch as u8)
+            .ckind_unlocked(CharacterKind::GameWatch.raw() as u8)
             && self.all_cleared_one_mode()
         {
-            return CharacterKind::GameWatch as u8;
+            return CharacterKind::GameWatch.raw() as u8;
         }
         CharacterKind::NONE
     }
@@ -1343,8 +1344,8 @@ impl Running<'_> {
         p.color = color;
         p.nametag = nametag;
         let s = &mut vs.start.players[1];
-        s.ckind = CharacterKind::Sandbag as i8;
-        s.cpu_kind = 0xF;
+        s.ckind = CharacterKind::Sandbag.raw() as i8;
+        s.cpu_kind = CpuKind::NoAct.into();
         s.defense_ratio = 1.0;
         s.slot_type = 1;
         s.stocks = 1;
@@ -1421,7 +1422,7 @@ impl Running<'_> {
         ps[1].ckind = pk;
         ps[1].color = pc as u8;
         ps[1].nametag = pn as u8;
-        ps[1].cpu_kind = 0;
+        ps[1].cpu_kind = CpuKind::Stay.into();
         for i in 2..4 {
             ps[i] = ps[1].clone();
             let n = crate::game::playback::costume_count(ps[i].ckind as u8);

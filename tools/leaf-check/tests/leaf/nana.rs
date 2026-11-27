@@ -191,7 +191,7 @@ fn enemies(call: &Call, nana: u32) -> Vec<u32> {
 /// Nana's `Fighter` in a saved frame, if it's hers and Popo is there.
 fn nana_and_popo(call: &Call) -> Option<(u32, u32)> {
     let nana = peek_u32(call, call.regs.gpr[3] + 0x2C);
-    if peek_u32(call, nana + KIND) != FighterKind::Nana as u32 {
+    if peek_u32(call, nana + KIND) != FighterKind::Nana.raw() as u32 {
         return None;
     }
     Some((nana, popo(call, nana)?))
@@ -482,7 +482,7 @@ fn nana_tumble_and_shields() {
 fn zero_knockback(call: &mut Call, hanging: bool) -> bool {
     let nana = peek_u32(call, call.regs.gpr[3] + 0x2C);
     let hitstun = peek_u32(call, nana + X221A) >> 24 & 0x10 != 0;
-    if peek_u32(call, nana + KIND) != FighterKind::Nana as u32
+    if peek_u32(call, nana + KIND) != FighterKind::Nana.raw() as u32
         || peek_u32(call, nana + BEHAVIOR) != DI
         || !hitstun
     {

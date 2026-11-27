@@ -426,7 +426,7 @@ impl Running<'_> {
         let table = self.load_common(0x14);
         let entry = self
             .data
-            .ptr(table.at(4 * FighterKind::Kirby as u32))
+            .ptr(table.at(4 * FighterKind::Kirby.raw() as u32))
             .expect("Fighter_804D6540[kind]");
         let count = self.data.u32(entry.at(4));
         let parts = self.data.ptr(entry).expect("Fighter_804D6540[kind]->x0");
@@ -698,7 +698,7 @@ impl Running<'_> {
         let table = self.load_common(0x14);
         let entry = self
             .data
-            .ptr(table.at(4 * FighterKind::Kirby as u32))
+            .ptr(table.at(4 * FighterKind::Kirby.raw() as u32))
             .expect("Fighter_804D6540[kind]");
         let count = self.data.u32(entry.at(4));
         let descs = self.data.ptr(entry).expect("Fighter_804D6540[kind]->x0");

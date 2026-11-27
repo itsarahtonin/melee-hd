@@ -5,6 +5,7 @@
 use super::super::state::Running;
 use super::super::structs::{PlayerInitData, VsModeData};
 use super::vs_mode::{player_defaults, start_defaults};
+use crate::game::ft::CpuKind;
 
 /// The modes' settings outside the game's data that their `on_init`s set.
 #[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
@@ -112,7 +113,7 @@ impl Running<'_> {
         let tr = &mut d.modes.table[VS_TRAINING].start.players;
         for i in 0..4 {
             tr[i].color = i as u8;
-            tr[i].cpu_kind = 0;
+            tr[i].cpu_kind = CpuKind::Stay.into();
             if i != 0 {
                 tr[1].ckind = 0x21;
             }

@@ -448,7 +448,7 @@ impl Running<'_> {
                 self.intro_easy_horde();
                 self.intro_easy_allies();
             }
-            None => {}
+            Some(IntroKind::Other(_)) | None => {}
         }
         self.lb_play_music(0x2D);
     }
@@ -674,7 +674,7 @@ impl Running<'_> {
         for i in 0..usize::from(d.enemies) {
             let s = &mut self.game.intros.easy.data;
             if s.enemy_kinds[i] == CharacterKind::GKoopa {
-                s.enemy_kinds[i] = CharacterKind::Koopa as u8;
+                s.enemy_kinds[i] = CharacterKind::Koopa.raw() as u8;
             }
             let c = s.enemy_kinds[i];
             if c != NONE {
@@ -1544,7 +1544,7 @@ impl Running<'_> {
         }
         for i in 0..usize::from(d.enemies) {
             let c = if d.enemy_kinds[i] == CharacterKind::GKoopa {
-                CharacterKind::Koopa as u8
+                CharacterKind::Koopa.raw() as u8
             } else {
                 d.enemy_kinds[i]
             };

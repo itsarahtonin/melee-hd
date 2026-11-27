@@ -643,7 +643,7 @@ impl Running<'_> {
         if switch {
             // `ftCo_800B4A78` leaves r5 alone.
             self.cpu_script_clear(f);
-            self.game.fighters[f.0].cpu.behavior = CpuBehavior::Di.id();
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::Di;
             return (true, r5);
         }
         let r5 = Leftover::Unknown("ftCo_800ADE48");
@@ -654,7 +654,7 @@ impl Running<'_> {
         macro_rules! switch_to {
             ($b:expr) => {{
                 self.cpu_script_clear(f);
-                self.game.fighters[f.0].cpu.behavior = CpuBehavior::id($b);
+                self.game.fighters[f.0].cpu.behavior = $b;
                 return (true, r5);
             }};
         }
@@ -743,21 +743,21 @@ impl Running<'_> {
         let c = &mut self.game.fighters[f.0].cpu;
         c.jump_kind = (jump & 3) as u8;
         if c.jump_kind != 0 {
-            c.behavior = CpuBehavior::JumpAtTarget.id();
+            c.behavior = CpuBehavior::JumpAtTarget;
             return (true, r5);
         }
         if self.game.fighters[f.0].cpu.behavior == CpuBehavior::PickUp {
             return (true, r5);
         }
         if self.cpu_item_pickup(f) {
-            self.game.fighters[f.0].cpu.behavior = CpuBehavior::PickUp.id();
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::PickUp;
             return (true, r5);
         }
         if self.game.fighters[f.0].cpu.behavior == CpuBehavior::ThrowItem {
             return (true, r5);
         }
         if self.cpu_throws_held_item(f) {
-            self.game.fighters[f.0].cpu.behavior = CpuBehavior::ThrowItem.id();
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::ThrowItem;
             return (true, r5);
         }
         let c = &self.game.fighters[f.0].cpu;

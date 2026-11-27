@@ -8,6 +8,7 @@ use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::vs_mode::{GamePrefs, GameRules};
 use crate::game::camera;
+use crate::game::ft::CpuKind;
 use crate::game::gm::GameMode;
 use crate::game::pl::player::PlayerKind;
 use crate::game::structs::StartMeleeData;
@@ -96,7 +97,7 @@ impl Running<'_> {
             p.color = d.colors[i];
             p.slot_type = PlayerKind::Cpu.into();
             p.cpu_level = 9;
-            p.cpu_kind = 4;
+            p.cpu_kind = CpuKind::Normal.into();
             p.enters = false;
             if start.rules.match_kind == 1 {
                 p.stocks = 99;

@@ -3,6 +3,7 @@
 //! match, the names' texts, the random characters and stages, the scenes' cameras, lights,
 //! texts and models, and the match's start data.
 
+use crate::game::ft::CpuKind;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -1504,7 +1505,7 @@ impl Running<'_> {
                 p.sub_color = 0;
                 p.team = 0xFF;
                 p.rumble_enabled = rumble && m.slot_type != PlayerKind::Cpu;
-                p.cpu_kind = 4;
+                p.cpu_kind = CpuKind::Normal.into();
                 p.cpu_level = m.level;
                 p.damage1 = 0;
                 if self.game.game_data.rules.handicap != 0 {

@@ -623,7 +623,7 @@ impl Running<'_> {
     /// common data's `x9C` and `xA0`).
     #[doc(alias = "ftKb_SpecialN_800F5874")]
     pub fn kb_thrown_vel(&self) -> Vec2 {
-        let d = self.game.ft.data.data_list[FighterKind::Kirby as usize]
+        let d = self.game.ft.data.data_list[FighterKind::Kirby.raw() as usize]
             .expect("Kirby's data without Kirby");
         let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
         Vec2 {

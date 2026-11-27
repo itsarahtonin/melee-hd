@@ -8,6 +8,7 @@ use super::*;
 use crate::game::ft::counted::{ItemDynamicBones, ItemHurtboxes};
 use crate::game::handles::*;
 use crate::game::held::Kept;
+use crate::game::it::item::HoldKind;
 use crate::game::it::{IgnoreId, ItemVars};
 use crate::game::structs::*;
 use crate::hsd::gobj::GObjId;
@@ -42,7 +43,7 @@ pub struct Item {
     #[at(0x10)]
     pub kind: i32,
     #[at(0x14)]
-    pub hold_kind: i32,
+    pub hold_kind: HoldKind,
     /// The spawn's `x10`; 1 counts the item among the training mode's (`Item_802676F4`).
     #[at(0x18)]
     #[doc(alias("x18"))]

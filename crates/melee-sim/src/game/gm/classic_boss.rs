@@ -5,6 +5,7 @@
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 use crate::game::ft::CharacterKind;
+use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
 use crate::game::pl::player::PlayerKind;
@@ -66,13 +67,13 @@ impl Running<'_> {
         let mut p = super::vs_mode::player_defaults();
         p.slot_type = PlayerKind::Cpu.into();
         p.stocks = 1;
-        p.cpu_kind = 4;
+        p.cpu_kind = CpuKind::Normal.into();
         p.cpu_level = self.game.player_cpu_level(SLOT_MASTER) as u8;
-        p.cpu_kind = self.game.player_cpu_type(SLOT_MASTER) as u8;
+        p.cpu_kind = self.game.player_cpu_type(SLOT_MASTER).into();
         p.attack_ratio = self.game.player_attack_ratio(SLOT_MASTER);
         p.defense_ratio = self.game.player_unset_ratio(SLOT_MASTER);
         p.color = 0;
-        p.ckind = CharacterKind::CrazyHand as i8;
+        p.ckind = CharacterKind::CrazyHand.raw() as i8;
         p.team = 4;
         p.stamina = true;
         p.hp = self.game.one_player.boss.hp as u16;

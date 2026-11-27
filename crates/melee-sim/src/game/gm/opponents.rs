@@ -8,6 +8,7 @@ use super::super::handles::CodeRef;
 use super::super::pl::player::PlayerKind;
 use super::super::state::{Game, Running};
 use crate::game::ft::CharacterKind;
+use crate::game::ft::CpuKind;
 
 /// The lists' length (`x20`, `xA2` and `x124`, 0x82 bytes each).
 pub const LIST_LEN: usize = 0x82;
@@ -703,14 +704,14 @@ impl Running<'_> {
         self.set_player_cpu_level(slot, i32::from(o.cpu_level));
         // The inline `roll_cpu_type`: with more than one left, a quarter of them kind 0x18.
         let cpu_type = if o.left != 1 && self.game.objs.rng.below(4) == 3 {
-            0x18
+            CpuKind::Wander
         } else {
-            0x17
+            CpuKind::Enemy
         };
         self.set_player_cpu_type(slot, cpu_type);
         if o.flags & METAL != 0 {
             self.game.set_player_is_metal(slot, 1);
-            self.set_player_cpu_type(slot, 0x1B);
+            self.set_player_cpu_type(slot, CpuKind::Unafraid);
         }
         self.game
             .set_player_flags_ae_bit0(slot, u8::from(o.flags & FLAG_AE0 != 0));

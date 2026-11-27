@@ -6,6 +6,8 @@ mod types;
 
 pub use types::{EventData, TargetTestChoice};
 
+use crate::game::ft::CpuKind;
+use crate::game::mirror::Narrow;
 use melee_data::archive::DataRef;
 
 use super::super::state::Running;
@@ -350,7 +352,7 @@ impl Running<'_> {
         p.shows_hearts = false;
         p.no_offscreen_damage = false;
         p.dies_up = false;
-        p.cpu_kind = u8_(9);
+        p.cpu_kind = Narrow::from_raw(u8_(9));
         p.cpu_level = u8_(0xA);
         p.damage = 0;
         p.damage1 = d.u16(src.at(0xC));
@@ -1990,7 +1992,7 @@ pub const JOIN_CALLBACK_ADDRS: [u32; JOIN_CALLBACKS.len()] = {
 pub fn run_join_callback(r: &mut Running, f: u32, slot: i32, left: i32) {
     let e = r.event_entry(r.event()).expect("the event's entry");
     let b = e.evbonus(r).expect("the event's crowd");
-    let kind = i32::from(r.data.u8(b.at(0x16)));
+    let kind = CpuKind::from_raw(i32::from(r.data.u8(b.at(0x16))));
     r.set_player_cpu_type(slot, kind);
     if f == 0x801B_EA88 && left == 0 {
         r.game.set_player_model_scale(slot, 2.0);

@@ -88,7 +88,7 @@ super::registry::kind_enum! {
 impl CpuKind {
     /// Its number as a byte, as the players and a match's start data hold it.
     pub const fn byte(self) -> u8 {
-        self as u8
+        self.raw() as u8
     }
 }
 
@@ -447,16 +447,13 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B2AFC")]
     fn cpu_decide(&mut self, f: FighterId) -> Leftover {
         use CpuKind as K;
-        let Some(kind) = CpuKind::from_id(self.game.fighters[f.0].cpu.kind) else {
-            // Every kind the switch doesn't list.
-            return self.cpu_decide_vs(f);
-        };
+        let kind = self.game.fighters[f.0].cpu.kind;
         match kind {
             K::Nana => self.nana_decide(f),
             // The VS kind, two others and the two the switch doesn't list.
             K::Normal | K::SpLwLink | K::SpLwSamus | K::Manual | K::Air => self.cpu_decide_vs(f),
             K::NoAct => {
-                self.game.fighters[f.0].cpu.behavior = CpuBehavior::Idle.id();
+                self.game.fighters[f.0].cpu.behavior = CpuBehavior::Idle;
                 Leftover::Unknown("ftCo_800B2AFC")
             }
             // Training's: stop where it stands, walk to its spot or jump, the jump and the
@@ -484,6 +481,8 @@ impl Running<'_> {
             // Kind 26 (kind 23's target, training's floor under it): no table, setter or
             // debug choice gives it (`cpu_audit`'s `KIND_26`).
             K::Unused26 => unported_call("ftCo_800B2AFC for computer kind 26"),
+            // Every kind the switch doesn't list.
+            K::Other(_) => self.cpu_decide_vs(f),
         }
     }
 
@@ -755,7 +754,7 @@ impl Running<'_> {
             r5 = left;
             if follow {
                 let c = &mut self.game.fighters[f.0].cpu;
-                c.behavior = CpuBehavior::Idle.id();
+                c.behavior = CpuBehavior::Idle;
                 c.follows_popo = true;
                 c.acts_alone = false;
                 c.may_air_attack = false;
@@ -1034,24 +1033,24 @@ impl Running<'_> {
         let r5 = self.cpu_charge_release(f).unwrap_or(r5);
         use super::cpu_script::cmd;
         use CpuBehavior as B;
-        match CpuBehavior::from_id(self.game.fighters[f.0].cpu.behavior) {
-            Some(B::Idle) => {
+        match self.game.fighters[f.0].cpu.behavior {
+            B::Idle => {
                 self.cpu_script_clear(f);
                 self.cpu_cmd(f, cmd::DONE);
             }
-            Some(B::Walk) => self.cpu_walk(f),
-            Some(B::Attack) => self.cpu_attack_behavior(f),
-            Some(B::Ranged) => self.cpu_ranged(f),
-            Some(B::Recover) => self.cpu_recover_behavior(f),
-            Some(B::GetUp) => self.cpu_get_up(f),
-            Some(B::Ledge) => self.cpu_ledge_behavior(f),
-            Some(B::Shield) => self.cpu_shield(f),
-            Some(B::JumpAtTarget) => self.cpu_jump_at_target(f),
-            Some(B::Hold) => self.cpu_hold(f),
-            Some(B::Stand) => self.cpu_stand(f),
-            Some(B::Hop) => self.cpu_hop(f),
-            Some(B::Pace) => self.cpu_pace(f),
-            Some(B::PickUp) => {
+            B::Walk => self.cpu_walk(f),
+            B::Attack => self.cpu_attack_behavior(f),
+            B::Ranged => self.cpu_ranged(f),
+            B::Recover => self.cpu_recover_behavior(f),
+            B::GetUp => self.cpu_get_up(f),
+            B::Ledge => self.cpu_ledge_behavior(f),
+            B::Shield => self.cpu_shield(f),
+            B::JumpAtTarget => self.cpu_jump_at_target(f),
+            B::Hold => self.cpu_hold(f),
+            B::Stand => self.cpu_stand(f),
+            B::Hop => self.cpu_hop(f),
+            B::Pace => self.cpu_pace(f),
+            B::PickUp => {
                 if self.game.fighters[f.0].item_gobj.is_some() {
                     let c = &mut self.game.fighters[f.0].cpu;
                     c.behavior = c.default_behavior;
@@ -1070,12 +1069,12 @@ impl Running<'_> {
                     c.behavior = c.default_behavior;
                 }
             }
-            Some(B::ThrowItem) => self.cpu_throw_item(f),
-            Some(B::Tumble) => self.cpu_tumble(f),
-            Some(B::Mash) => self.cpu_mash(f),
-            Some(B::Barrel) => self.cpu_barrel(f),
-            Some(B::Di) => self.cpu_di(f, r5),
-            Some(B::WarpStar) => {
+            B::ThrowItem => self.cpu_throw_item(f),
+            B::Tumble => self.cpu_tumble(f),
+            B::Mash => self.cpu_mash(f),
+            B::Barrel => self.cpu_barrel(f),
+            B::Di => self.cpu_di(f, r5),
+            B::WarpStar => {
                 let ms = self.game.fighters[f.0].motion_id;
                 if ms != 0x131 && ms != 0x132 {
                     let c = &mut self.game.fighters[f.0].cpu;
@@ -1089,7 +1088,7 @@ impl Running<'_> {
                 }
             }
             // Any other number a script's command left.
-            None => self.cpu_cmd(f, cmd::DONE),
+            B::Other(_) => self.cpu_cmd(f, cmd::DONE),
         }
         self.cpu_script_start(f);
     }

@@ -9,8 +9,9 @@
 //! structs' did. The stale-move table's last-KO hit (`ft_800898B4_t`), which a fighter's damage
 //! holds too, stays generated in `game::structs`.
 
+use crate::game::ft::CpuKind;
 use crate::game::handles::CodeRef;
-use crate::game::mirror::{Export, MemMut};
+use crate::game::mirror::{Export, MemMut, Narrow};
 use crate::game::structs::HitRecord;
 use crate::hsd::gobj::GObjId;
 use crate::state_eq::{Diff, StateEq, StateHasher};
@@ -654,7 +655,7 @@ pub struct StaticPlayer {
     #[at(0x49)]
     pub cpu_level: u8,
     #[at(0x4A)]
-    pub cpu_type: u8,
+    pub cpu_type: Narrow<CpuKind, u8>,
     #[at(0x4B)]
     pub handicap: u8,
     #[at(0x4C)]
@@ -746,7 +747,7 @@ impl Default for StaticPlayer {
             team: 0,
             pad_port: 0,
             cpu_level: 0,
-            cpu_type: 0,
+            cpu_type: CpuKind::Stay.into(),
             handicap: 0,
             entry_delay: 0,
             kirby_copy_kind: 0,

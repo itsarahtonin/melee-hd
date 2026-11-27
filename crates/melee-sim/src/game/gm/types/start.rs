@@ -2,7 +2,9 @@
 //! players' setup (`PlayerInitData`), which a mode fills before the match scene starts and the
 //! match reads as it sets up.
 
+use crate::game::ft::CpuKind;
 use crate::game::handles::{CodeRef, RawPtr};
+use crate::game::mirror::Narrow;
 
 /// The decomp's `StartMeleeRules`.
 #[derive(
@@ -316,7 +318,7 @@ pub struct PlayerInitData {
     #[doc(alias("xD_b7"))]
     pub unused_d_b7: bool,
     #[at(0xE)]
-    pub cpu_kind: u8,
+    pub cpu_kind: Narrow<CpuKind, u8>,
     #[at(0xF)]
     pub cpu_level: u8,
     #[at(0x10)]

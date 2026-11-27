@@ -25,6 +25,7 @@ use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::it::Var;
+use crate::game::it::item::HoldKind;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};
 use crate::hsd::dobj::DObjId;
@@ -1756,7 +1757,7 @@ impl Mirror for SpawnItem {
             owner: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
             maker: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
             kind: m.u32(at + 0x8) as i32,
-            hold_kind: m.u32(at + 0xc) as i32,
+            hold_kind: HoldKind::import(m, at + 0xc, cx),
             origin: m.u32(at + 0x10) as i32,
             pos: Vec3::import(m, at + 0x14, cx),
             prev_pos: Vec3::import(m, at + 0x20, cx),
@@ -1794,13 +1795,8 @@ impl Mirror for SpawnItem {
                 format!("{:?}", m.u32(at + 0x8) as i32),
             );
         }
-        if self.hold_kind != m.u32(at + 0xc) as i32 {
-            cx.mismatch(
-                &format!("{path}.hold_kind"),
-                format!("{:?}", self.hold_kind),
-                format!("{:?}", m.u32(at + 0xc) as i32),
-            );
-        }
+        self.hold_kind
+            .compare(m, at + 0xc, &format!("{path}.hold_kind"), cx);
         if self.origin != m.u32(at + 0x10) as i32 {
             cx.mismatch(
                 &format!("{path}.origin (x10)"),

@@ -7,6 +7,7 @@
 // The menu's arrays run by index, as the original's loops do.
 #![allow(clippy::needless_range_loop)]
 
+use crate::game::ft::CpuKind;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
@@ -675,7 +676,7 @@ impl Running<'_> {
         self.game.training.cpu_type = kind as u8;
         for i in 1..4 {
             if count != 0 {
-                self.set_player_cpu_type(i, kind);
+                self.set_player_cpu_type(i, CpuKind::from_raw(kind));
                 count -= 1;
                 if count == 0 {
                     break;

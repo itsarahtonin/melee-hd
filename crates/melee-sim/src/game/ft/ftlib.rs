@@ -328,7 +328,7 @@ impl Running<'_> {
 
     /// Sets the computer player's kind, its state started afresh, `ft_80087BC0`.
     #[doc(alias = "ft_80087BC0")]
-    pub fn ft_set_cpu_type(&mut self, gobj: GObjId, kind: i32) {
+    pub fn ft_set_cpu_type(&mut self, gobj: GObjId, kind: CpuKind) {
         let f = self.game.fighter_id(gobj);
         let c = &self.game.fighters[f.0].cpu;
         let (level, spawn_arg) = (c.level, c.spawn_arg);

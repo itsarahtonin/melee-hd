@@ -219,7 +219,7 @@ pub fn live_start(g: &Game, d: &StartMeleeData) -> (super::vs_match::ReplayStart
         // As the recording codes write it ([`Recorder::game_start`]): Zelda held A as the
         // match starts is Sheik, a costume past the character's count the first.
         if info[p] as i8 == CharacterKind::Zelda && g.pads.copy[port].button & PAD_A != 0 {
-            info[p] = CharacterKind::Seak as u8;
+            info[p] = CharacterKind::Seak.raw() as u8;
         }
         if info[p + 3] > super::playback::costume_count(info[p]) {
             info[p + 3] = 0;
@@ -419,7 +419,7 @@ impl Recorder {
             }
             // Zelda holding A as the match starts is Sheik.
             if info[p] as i8 == CharacterKind::Zelda && g.pads.copy[port].button & PAD_A != 0 {
-                info[p] = CharacterKind::Seak as u8;
+                info[p] = CharacterKind::Seak.raw() as u8;
             }
             // A costume past the character's count is the first (`ble`: the count itself
             // stays).
@@ -1110,7 +1110,7 @@ fn export_player(o: &mut Bits<0x138>, at: usize, p: &PlayerInitData) {
     for (i, &f) in flags.iter().enumerate() {
         o.bits(at, 96 + i as u32, 1, u32::from(f));
     }
-    o.u8(at + 0xE, p.cpu_kind);
+    o.u8(at + 0xE, p.cpu_kind.raw());
     o.u8(at + 0xF, p.cpu_level);
     o.be(at + 0x10, &p.damage.to_be_bytes());
     o.be(at + 0x12, &p.damage1.to_be_bytes());

@@ -25,6 +25,7 @@
 
 use std::cell::{Cell, RefCell};
 
+use melee_sim::game::mirror::Narrow;
 use melee_sim::game::oracle_hooks::{self, Entry};
 use melee_sim::game::state::Game;
 use melee_sim::game::structs::StartMeleeData;
@@ -291,7 +292,9 @@ fn hook(game: &mut Game, at: Entry) {
                             p.slot_type = CPU;
                             p.cpu_level = 9;
                             if let Some(kinds) = &s.hooks.rules.cpu_kinds {
-                                p.cpu_kind = kinds[s.kinds_rng.below(kinds.len() as u64) as usize];
+                                p.cpu_kind = Narrow::from_raw(
+                                    kinds[s.kinds_rng.below(kinds.len() as u64) as usize],
+                                );
                             }
                         }
                     }
@@ -439,7 +442,7 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
             p.enters = false;
         }
         if cpu && let Some(kinds) = &chosen.cpu_kinds {
-            p.cpu_kind = kinds[rng.below(kinds.len() as u64) as usize];
+            p.cpu_kind = Narrow::from_raw(kinds[rng.below(kinds.len() as u64) as usize]);
         }
         if let Some(hp) = chosen.stamina
             && lineup.is_none()

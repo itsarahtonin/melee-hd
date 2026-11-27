@@ -4,6 +4,8 @@
 // The opponents' loop runs by index, as the original's does, over tables indexed alongside.
 #![allow(clippy::needless_range_loop)]
 
+use crate::game::ft::CpuKind;
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 
 use super::super::handles::CodeRef;
@@ -297,10 +299,10 @@ impl Running<'_> {
         };
         let ckind = run.player.ckind;
         let player_ckind = if ckind == CharacterKind::Zelda && run.counters[6] != 0 {
-            CharacterKind::Seak as u8
+            CharacterKind::Seak.raw() as u8
         } else if run_flags & 0x80 != 0 && run.stage[1] == 1 && ckind == CharacterKind::IceClimbers
         {
-            CharacterKind::Popo as u8
+            CharacterKind::Popo.raw() as u8
         } else {
             ckind as u8
         };
@@ -332,7 +334,7 @@ impl Running<'_> {
             p.stocks = 1;
             p.team = team;
             p.color = a.color;
-            p.cpu_kind = a.cpu_kind;
+            p.cpu_kind = Narrow::from_raw(a.cpu_kind);
             p.cpu_level = a.cpu_level;
             p.attack_ratio = a.attack_ratio;
             p.defense_ratio = a.defense_ratio;
@@ -438,7 +440,7 @@ impl Running<'_> {
                 p.ckind = kind;
                 p.stocks = 1;
                 p.cpu_level = enemy_level;
-                p.cpu_kind = enemy_cpu_type;
+                p.cpu_kind = Narrow::from_raw(enemy_cpu_type);
                 p.attack_ratio = attack;
                 p.defense_ratio = defense;
                 p.color = colors[i];
@@ -451,7 +453,7 @@ impl Running<'_> {
                 }
                 if run_flags & 4 != 0 {
                     p.vs_metal = true;
-                    p.cpu_kind = 0x1B;
+                    p.cpu_kind = CpuKind::Unafraid.into();
                 }
                 if p.ckind == CharacterKind::GKoopa {
                     p.enters = false;
@@ -555,7 +557,7 @@ impl Running<'_> {
             let p0 = &start.players[0];
             let (p0_ckind, p0_color) = (p0.ckind, p0.color);
             self.setup_opponents(
-                &[CharacterKind::GameWatch as i8, NONE, NONE],
+                &[CharacterKind::GameWatch.raw() as i8, NONE, NONE],
                 [0; 3],
                 1,
                 0,

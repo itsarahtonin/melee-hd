@@ -680,7 +680,10 @@ fn count() {
 fn at_limit() {
     leaf_check::shard_test!();
     check("Item_8026784C", &|r, a| {
-        Ret::Bool(item::at_limit(r.game, a.int(0) as i32))
+        Ret::Bool(item::at_limit(
+            r.game,
+            item::HoldKind::from_raw(a.int(0) as i32),
+        ))
     });
 }
 

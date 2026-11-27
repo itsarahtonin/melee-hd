@@ -404,13 +404,13 @@ impl Running<'_> {
         }
         let cpu = &fp.cpu;
         use crate::game::ft::CpuBehavior as B;
-        let c = match B::from_id(cpu.behavior) {
-            Some(B::Attack | B::Ranged) => [0xFF, 0, 0, 0x60],
-            Some(B::Shield) => [0, 0, 0xFF, 0x60],
-            Some(B::Recover) => [0xFF, 0xFF, 0xFF, 0xFF],
-            Some(B::Stand) => [0xFF, 0, 0xFF, 0x60],
-            Some(B::Walk) => [0, 0xFF, 0, 0x60],
-            Some(B::Di) => [0, 0, 0, 0x60],
+        let c = match cpu.behavior {
+            B::Attack | B::Ranged => [0xFF, 0, 0, 0x60],
+            B::Shield => [0, 0, 0xFF, 0x60],
+            B::Recover => [0xFF, 0xFF, 0xFF, 0xFF],
+            B::Stand => [0xFF, 0, 0xFF, 0x60],
+            B::Walk => [0, 0xFF, 0, 0x60],
+            B::Di => [0, 0, 0, 0x60],
             _ => [0xFF, 0xFF, 0, 0x60],
         };
         let target = Vec3::new(cpu.destination.x, cpu.destination.y, 0.0);

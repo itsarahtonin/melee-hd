@@ -30,7 +30,7 @@ pub const SONG: i32 = 0x48;
 
 /// `MatchKind_Stock`, `CpuKind_4`.
 const MATCH_STOCK: u8 = 1;
-const CPU_KIND: u8 = crate::game::ft::CpuKind::Normal.byte();
+const CPU_KIND: crate::game::ft::CpuKind = crate::game::ft::CpuKind::Normal;
 
 /// `HSD_PAD_A | HSD_PAD_START`.
 const PAD_A_START: u32 = 0x1100;
@@ -149,7 +149,7 @@ impl Running<'_> {
         setup_cpu(&mut start.players[1], c.cpu_ckind, 0, 1, 1);
         start.players[0].nametag = c.human_nametag;
         start.players[1].nametag = NO_NAMETAG;
-        start.players[1].cpu_kind = CPU_KIND;
+        start.players[1].cpu_kind = CPU_KIND.into();
         start.players[1].cpu_level = level;
         load_rumble_enabled_with(start, &prefs, &tags);
     }

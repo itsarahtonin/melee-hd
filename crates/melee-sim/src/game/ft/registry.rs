@@ -37,41 +37,73 @@ use super::{
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
-/// Declares a kind enum with the game's numbers: `ALL`, `COUNT`, `from_id`, `id`, and
-/// comparisons with the numbers the state holds.
+/// Declares a kind enum with the game's numbers, a [`c_enum!`](crate::c_enum) over the C
+/// enum's `int` whose `Other(raw)` keeps any number the game's list lacks (an empty slot's
+/// kind, a leftover), so a field of it keeps every bit pattern the game stores; on top, `ALL`,
+/// `COUNT`, `from_id` (a kind the list names), `id`, `index`, the order by number, and
+/// comparisons with the numbers the game's tables hold and with the kind kept in a narrower
+/// field ([`Narrow`](crate::game::mirror::Narrow)).
 macro_rules! kind_enum {
-    ($(#[$m:meta])* $name:ident: $($(#[$vm:meta])* $v:ident = $n:expr,)*) => {
-        $(#[$m])*
-        #[repr(u8)]
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-        pub enum $name {
-            $($(#[$vm])* $v = $n,)*
+    ($(#[$m:meta])* $name:ident: $($(#[$vm:meta])* $v:ident = $n:literal,)*) => {
+        $crate::c_enum! {
+            $(#[$m])*
+            pub enum $name: i32 {
+                $($(#[$vm])* $v = $n,)*
+            }
         }
 
         impl $name {
-            /// Every kind, by number.
+            /// Every kind the game's list names, by number.
             pub const ALL: [$name; [$($name::$v),*].len()] = [$($name::$v),*];
 
-            /// How many there are.
+            /// How many the game's list names.
             pub const COUNT: usize = Self::ALL.len();
 
-            /// The kind numbered `id`, if the game has one.
+            /// The kind numbered `id`, if the game's list names one.
             pub const fn from_id(id: i32) -> Option<$name> {
-                if id >= 0 && (id as usize) < Self::COUNT {
-                    Some(Self::ALL[id as usize])
-                } else {
-                    None
+                match $name::from_raw(id) {
+                    $name::Other(_) => None,
+                    k => Some(k),
                 }
             }
 
             /// Its number, as the state and the game's tables hold it.
             pub const fn id(self) -> i32 {
-                self as i32
+                self.raw()
             }
 
             /// Its number as an index into the game's tables by kind.
             pub const fn index(self) -> usize {
-                self as usize
+                self.raw() as usize
+            }
+        }
+
+        impl PartialOrd for $name {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl Ord for $name {
+            /// By number.
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.id().cmp(&other.id())
+            }
+        }
+
+        impl<R: $crate::game::mirror::NarrowInt> PartialEq<$crate::game::mirror::Narrow<$name, R>>
+            for $name
+        {
+            fn eq(&self, k: &$crate::game::mirror::Narrow<$name, R>) -> bool {
+                *self == k.get()
+            }
+        }
+
+        impl<R: $crate::game::mirror::NarrowInt> PartialEq<$name>
+            for $crate::game::mirror::Narrow<$name, R>
+        {
+            fn eq(&self, k: &$name) -> bool {
+                self.get() == *k
             }
         }
 
@@ -265,7 +297,7 @@ impl CharacterKind {
 
     /// Its number as a byte, as the rules and the replays hold it.
     pub const fn byte(self) -> u8 {
-        self as u8
+        self.raw() as u8
     }
 }
 
