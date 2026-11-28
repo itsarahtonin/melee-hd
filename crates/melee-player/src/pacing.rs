@@ -19,6 +19,12 @@
 //! and makes successive frames' t follow their display times, so motion on screen is even at
 //! any refresh rate, 144 Hz's uneven frames a tick and variable refresh included.
 //!
+//! **Measured display times.** Where the system says when frames reached the screen
+//! ([`crate::feedback`]), those times are refreshes exactly, and the display's measured kind
+//! decides whether frames wait for one: a fixed-refresh display snaps D to the refreshes the
+//! frames showed at, presenting mailbox as well as FIFO (mailbox shows a frame at the next
+//! refresh too), and a variable-refresh one shows each frame when it's presented, FIFO or not.
+//!
 //! **Aligned frames.** Where the just-in-time tick knows the display's refresh times and aligns
 //! to them ([`crate::jit`]), [`Pacer::align`] starts each frame its measured lead before the
 //! refresh it's meant for, and that refresh is the frame's display time.
@@ -116,8 +122,12 @@ pub struct Pacer {
     tick: Duration,
     /// The display's refresh period: the frames' cadence.
     refresh: Duration,
-    /// Frames wait for a refresh to show (FIFO); else they show when presented.
+    /// Frames are presented FIFO, waiting for a refresh to show; else they show when presented,
+    /// unless `vrr` says otherwise.
     fifo: bool,
+    /// The display measured variable-refresh (`Some(true)`, frames show when presented) or
+    /// fixed (`Some(false)`, frames wait for a refresh, mailbox too).
+    vrr: Option<bool>,
     /// From a frame's start to its present call returning, in seconds.
     latency: Average,
     /// From a frame's start to its estimated display time, in seconds.
@@ -139,6 +149,7 @@ impl Pacer {
             tick,
             refresh,
             fifo,
+            vrr: None,
             latency: Average::default(),
             lead: Average::default(),
             refreshed: None,
@@ -159,6 +170,26 @@ impl Pacer {
 
     pub fn refresh(&self) -> Duration {
         self.refresh
+    }
+
+    /// The display measured variable-refresh (`Some(true)`), fixed (`Some(false)`), or not.
+    pub fn set_display(&mut self, vrr: Option<bool>) {
+        if vrr != self.vrr {
+            self.vrr = vrr;
+            self.refreshed = None;
+        }
+    }
+
+    /// Whether frames wait for a refresh to show.
+    fn waits(&self) -> bool {
+        self.vrr.map_or(self.fifo, |v| !v)
+    }
+
+    /// A frame reached the screen at `at`, a refresh read as it came ([`crate::feedback`]).
+    pub fn displayed(&mut self, at: Instant) {
+        if self.waits() {
+            self.refreshed = Some(at);
+        }
     }
 
     /// When the next frame is due.
@@ -211,7 +242,7 @@ impl Pacer {
     fn display_time(&self, now: Instant) -> Instant {
         let ready = now + Duration::from_secs_f64(self.latency.get());
         match self.refreshed {
-            Some(r) if self.fifo && !self.refresh.is_zero() => {
+            Some(r) if self.waits() && !self.refresh.is_zero() => {
                 // The first refresh of the grid the waits saw at or after `ready`.
                 let since = ready.saturating_duration_since(r).as_secs_f64();
                 let n = (since / self.refresh.as_secs_f64()).ceil();
@@ -441,6 +472,71 @@ mod tests {
         // Without a grid the cadence goes on.
         p.align(first, None, ms(3.0));
         assert_eq!(p.target(), None);
+    }
+
+    /// Mailbox on a fixed 144 Hz display, frames taking 9 ms to present (longer than a refresh,
+    /// so they show one or two refreshes apart): the swap chain's waits never block, so without
+    /// feedback the pacer takes each frame to show when it's presented, and the game time moves
+    /// on by 9 ms a frame where the screen moves on by 6.9 or 13.9. The measured display times
+    /// give it the refreshes, and motion follows the display time again.
+    #[test]
+    fn measured_refreshes_pace_mailbox_on_a_fixed_display() {
+        let hz = 144.0;
+        let refresh = Duration::from_secs_f64(1.0 / hz);
+        let worst = |feedback: bool| {
+            let t0 = Instant::now();
+            let mut p = Pacer::new(TICK, refresh, false, t0);
+            let mut frames = Vec::new();
+            let mut now = t0 + ms(0.4);
+            while now < t0 + Duration::from_secs(2) {
+                let n = (now - t0).as_nanos() / TICK.as_nanos();
+                let tick_due = t0 + TICK * n as u32;
+                let t = p.start(now, tick_due);
+                let presented = now + ms(9.0);
+                let k = ((presented - t0).as_secs_f64() / refresh.as_secs_f64()).ceil();
+                let shown = t0 + refresh.mul_f64(k);
+                p.presented(now, Duration::ZERO, now, presented);
+                if feedback {
+                    p.set_display(Some(false));
+                    p.displayed(shown);
+                }
+                frames.push(((shown - t0).as_secs_f64(), t, (tick_due - t0).as_secs_f64()));
+                now = p.due().max(presented);
+            }
+            // Frames whose t the clamp to 0 and 1 left alone (a frame showing up to a refresh
+            // after its estimate falls past the tick's end now and then).
+            let settled = &frames[frames.len() / 4..];
+            settled
+                .windows(2)
+                .filter(|w| w.iter().all(|f| f.1 > 0.001 && f.1 < 0.999))
+                .map(|w| ((game_time(&w[1]) - game_time(&w[0])) - (w[1].0 - w[0].0)).abs())
+                .fold(0.0, f64::max)
+        };
+        let (without, with) = (worst(false), worst(true));
+        assert!(without > 0.002, "estimated: worst {without} s off");
+        assert!(with < 0.0005, "measured: worst {with} s off");
+    }
+
+    /// A display measured variable-refresh shows each frame when it's presented, FIFO or not:
+    /// the swap chain's waits no longer set a grid; one measured fixed snaps mailbox's frames.
+    #[test]
+    fn the_measured_kind_decides_whether_frames_wait() {
+        let t0 = Instant::now();
+        let mut p = Pacer::new(TICK, ms(5.0), true, t0);
+        assert!(p.waits());
+        p.presented(t0, ms(2.0), t0 + ms(1.0), t0 + ms(2.0));
+        assert_eq!(p.display_time(t0), t0 + ms(6.0), "FIFO: the next refresh");
+        p.set_display(Some(true));
+        assert!(!p.waits());
+        p.displayed(t0 + ms(3.0));
+        assert_eq!(p.display_time(t0), t0 + ms(2.0), "variable: when presented");
+        let mut p = Pacer::new(TICK, ms(5.0), false, t0);
+        p.presented(t0, Duration::ZERO, t0, t0 + ms(2.0));
+        assert_eq!(p.display_time(t0), t0 + ms(2.0), "mailbox, unmeasured");
+        p.set_display(Some(false));
+        p.displayed(t0 + ms(4.0));
+        assert_eq!(p.display_time(t0), t0 + ms(4.0), "mailbox, measured fixed");
+        assert_eq!(p.display_time(t0 + ms(3.0)), t0 + ms(9.0));
     }
 
     #[test]

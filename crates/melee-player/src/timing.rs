@@ -12,9 +12,9 @@
 //! **Refresh times.** On Windows the desktop compositor's timing (`DwmGetCompositionTimingInfo`)
 //! gives the time of a recent refresh and the refresh period, from which every refresh follows.
 //! It describes the display the compositor runs on, so it's taken only when its period matches
-//! the window's monitor's refresh rate. Other systems have no source yet (Wayland's
-//! presentation-time protocol, macOS's `CAMetalDisplayLink`, `VK_GOOGLE_display_timing`), and
-//! the scheduler runs ticks at their own cadence there.
+//! the window's monitor's refresh rate. Elsewhere the window's presentation feedback gives them
+//! ([`crate::feedback`]: Wayland's presentation-time protocol, macOS's `CADisplayLink`); where
+//! nothing does (X11), the scheduler runs ticks at their own cadence.
 
 use std::time::{Duration, Instant};
 
@@ -76,10 +76,15 @@ impl Guard {
     }
 }
 
-/// The display's refreshes, where the system says when they come and the period matches
-/// `expected` (the window's monitor's refresh period) within 1%.
-pub fn refresh_grid(expected: Option<Duration>) -> Option<Grid> {
-    let g = os::refresh_grid()?;
+/// The display's refreshes, where the system says when they come (the compositor on Windows,
+/// else `window`, the window's presentation feedback's) and the period matches `expected` (the
+/// window's monitor's refresh period) within 1%.
+pub fn refresh_grid(expected: Option<Duration>, window: Option<Grid>) -> Option<Grid> {
+    of_monitor(os::refresh_grid().or(window)?, expected)
+}
+
+/// `g`, if its period matches `expected` within 1%.
+fn of_monitor(g: Grid, expected: Option<Duration>) -> Option<Grid> {
     let ok = expected.is_none_or(|e| {
         let r = g.period.as_secs_f64() / e.as_secs_f64();
         (0.99..=1.01).contains(&r)
@@ -240,13 +245,25 @@ mod tests {
     #[test]
     fn a_refresh_grid_matches_the_monitor_or_is_left_out() {
         // Whatever the system says, a grid whose period is far from the monitor's isn't used.
-        assert_eq!(refresh_grid(Some(Duration::from_secs(1))), None);
+        assert_eq!(refresh_grid(Some(Duration::from_secs(1)), None), None);
         let before = Instant::now();
-        if let Some(g) = refresh_grid(None) {
+        if let Some(g) = refresh_grid(None, None) {
             assert!(g.period > Duration::from_millis(2) && g.period < Duration::from_millis(50));
             // A recent refresh or the next one, within a second of the call.
             let second = Duration::from_secs(1);
             assert!(g.phase + second >= before && g.phase <= Instant::now() + second);
+        }
+        // Where the system has no grid of its own, the window's feedback gives it, checked
+        // against the monitor's rate like any other.
+        let window = Grid {
+            phase: before,
+            period: Duration::from_secs_f64(1.0 / 59.95),
+        };
+        let sixty = Some(Duration::from_secs_f64(1.0 / 60.0));
+        assert_eq!(of_monitor(window, sixty), Some(window));
+        assert_eq!(of_monitor(window, Some(Duration::from_millis(7))), None);
+        if os::refresh_grid().is_none() {
+            assert_eq!(refresh_grid(sixty, Some(window)), Some(window));
         }
     }
 }

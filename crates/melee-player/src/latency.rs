@@ -2,9 +2,10 @@
 //! when the tick read it, how long the tick took to simulate, render and hand its frame to the
 //! display, and how much sound was queued ahead of the tick's samples. It writes one CSV row a
 //! tick and prints a summary when the player quits; docs/player.md says what each column means.
-//! What happens after the present call (the GPU finishing, the compositor, scan-out) the player
-//! can't see portably: on Windows PresentMon measures it. F3 in a match shows the last second's
-//! means over the frame ([`Live`], [`overlay`]).
+//! When a frame reached the screen is measured where the system says ([`crate::feedback`]:
+//! DXGI's frame statistics on DX12, Wayland's presentation time) and estimated elsewhere, and the
+//! log and the overlay say which; PresentMon measures it on Windows either way. F3 in a match
+//! shows the last second's means over the frame ([`Live`], [`overlay`]).
 
 use std::collections::VecDeque;
 use std::fs::File;
@@ -31,9 +32,11 @@ pub struct FrameTimes {
     pub ready: Option<Duration>,
     /// The refresh the just-in-time tick meant the frame for.
     pub target: Option<Duration>,
-    /// When it reaches the screen, estimated: the first refresh after it's ready where the
-    /// refresh times are known and frames wait for them, else when it's ready.
+    /// When it reached the screen: measured where the system says (`measured`), else estimated,
+    /// the first refresh after it's ready where the refresh times are known and frames wait for
+    /// them, else when it's ready.
     pub shown: Option<Duration>,
+    pub measured: bool,
     /// Whether it came too late for the refresh it was meant for.
     pub missed: Option<bool>,
 }
@@ -80,9 +83,13 @@ pub struct Log {
     /// How ticks were timed, and the just-in-time tick's counts, for the summary.
     pub timing: String,
     pub counts: crate::jit::Counts,
+    /// The presentation feedback's source (None: shown times are estimated), and what it
+    /// measured of the display, for the summary.
+    pub feedback: Option<&'static str>,
+    pub display: String,
 }
 
-const HEADER: &str = "tick,time_ms,late_ms,adapter_age_ms,keyboard_age_ms,gamepad_age_ms,adapter_reports,sim_ms,frame,rendered_ms,acquire_ms,presented_ms,ready_ms,target_ms,shown_ms,missed,audio_ring_ms,audio_device_ms,audio_total_ms,audio_callback_frames,audio_underruns,audio_skips,emulated_ms,audio_samples,audio_dry_ms";
+const HEADER: &str = "tick,time_ms,late_ms,adapter_age_ms,keyboard_age_ms,gamepad_age_ms,adapter_reports,sim_ms,frame,rendered_ms,acquire_ms,presented_ms,ready_ms,target_ms,shown_ms,missed,audio_ring_ms,audio_device_ms,audio_total_ms,audio_callback_frames,audio_underruns,audio_skips,emulated_ms,audio_samples,audio_dry_ms,shown_measured";
 
 fn ms(d: Duration) -> f64 {
     d.as_secs_f64() * 1000.0
@@ -106,6 +113,8 @@ impl Log {
             added_delay: 0,
             timing: String::new(),
             counts: crate::jit::Counts::default(),
+            feedback: None,
+            display: String::new(),
         })
     }
 
@@ -116,7 +125,7 @@ impl Log {
         let f = t.frame;
         let a = t.audio;
         let row = format!(
-            "{},{:.3},{:.3},{},{},{},{},{:.3},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{:.3},{:.3},{},{},{},{},{:.3},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             self.rows.len(),
             ms(at.saturating_duration_since(start)),
             ms(t.late),
@@ -143,6 +152,8 @@ impl Log {
             opt_ms(t.length),
             t.samples.map_or(String::new(), |n| n.to_string()),
             opt_ms(a.map(|a| a.dry)),
+            f.filter(|f| f.shown.is_some())
+                .map_or(String::new(), |f| u8::from(f.measured).to_string()),
         );
         if let Err(e) = writeln!(self.out, "{row}") {
             eprintln!("{}: {e}", self.path);
@@ -218,16 +229,36 @@ impl Log {
             "tick start to GPU done",
             frames.iter().filter_map(|f| f.ready).collect(),
         );
-        line(
-            "tick start to shown (estimated)",
-            frames.iter().filter_map(|f| f.shown).collect(),
-        );
-        line(
-            "adapter report arrived to shown (estimated)",
-            rows.iter()
-                .filter_map(|t| Some(t.ages.adapter? + t.frame?.shown?))
-                .collect(),
-        );
+        for (measured, how) in [(true, "measured"), (false, "estimated")] {
+            line(
+                &format!("tick start to shown ({how})"),
+                frames
+                    .iter()
+                    .filter(|f| f.measured == measured)
+                    .filter_map(|f| f.shown)
+                    .collect(),
+            );
+            line(
+                &format!("adapter report arrived to shown ({how})"),
+                rows.iter()
+                    .filter_map(|t| t.frame.map(|f| (t, f)))
+                    .filter(|(_, f)| f.measured == measured)
+                    .filter_map(|(t, f)| Some(t.ages.adapter? + f.shown?))
+                    .collect(),
+            );
+        }
+        let shown = frames.iter().filter(|f| f.shown.is_some()).count();
+        let measured = frames.iter().filter(|f| f.measured).count();
+        let shown_line = match self.feedback {
+            Some(source) => format!(
+                "  shown times: measured by {source} for {measured} of {shown} frames, the rest estimated; display: {}\n",
+                self.display
+            ),
+            None => format!(
+                "  shown times: estimated (no presentation feedback here); display: {}\n",
+                self.display
+            ),
+        };
         let audio: Vec<OutputStats> = rows.iter().filter_map(|t| t.audio).collect();
         line(
             "audio queued in the ring at the tick's push",
@@ -247,6 +278,7 @@ impl Log {
                 a.callback_frames, a.underruns, a.skips
             );
         }
+        s += &shown_line;
         let c = self.counts;
         if c.long > 0 {
             s += &format!(
@@ -380,8 +412,8 @@ impl Live {
         self.recent.push_back(t);
     }
 
-    /// The overlay's lines: the last second's means.
-    pub fn text(&self, present_mode: &str, added_delay: u32) -> String {
+    /// The overlay's lines: the last second's means, and `display`, what's known of it.
+    pub fn text(&self, present_mode: &str, added_delay: u32, display: &str) -> String {
         let mean = |v: Vec<Duration>| -> Option<f64> {
             (!v.is_empty()).then(|| ms(v.iter().sum::<Duration>()) / v.len() as f64)
         };
@@ -396,6 +428,16 @@ impl Live {
         });
         let presented = mean(r.iter().filter_map(|t| Some(t.frame?.presented)).collect());
         let shown = mean(r.iter().filter_map(|t| t.frame?.shown).collect());
+        // Measured when most of the last second's frames were.
+        let (measured, all) = r
+            .iter()
+            .filter_map(|t| t.frame.filter(|f| f.shown.is_some()))
+            .fold((0, 0), |(m, n), f| (m + usize::from(f.measured), n + 1));
+        let how = if all > 0 && measured * 2 > all {
+            "measured"
+        } else {
+            "estimated"
+        };
         let audio = mean(r.iter().filter_map(|t| Some(t.audio?.total())).collect());
         let underruns = r.back().and_then(|t| t.audio).map_or(0, |a| a.underruns);
         let rate = match (r.front(), r.back()) {
@@ -424,7 +466,7 @@ impl Live {
         let f = &self.frames;
         let frame_rate = per_second(f.front().copied(), f.back().copied(), f.len());
         format!(
-            "{tick_rate} ticks/s, {frame_rate} frames/s\n{}\ninput age {}{rate}\ntick to present {}, to screen {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}",
+            "{tick_rate} ticks/s, {frame_rate} frames/s\n{}\ninput age {}{rate}\ntick to present {}, to screen ({how}) {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}\n{display}",
             self.frame_costs(),
             show(input),
             show(presented),
@@ -542,6 +584,7 @@ mod tests {
                     ready: Some(Duration::from_millis(6)),
                     target: Some(Duration::from_millis(7)),
                     shown: Some(Duration::from_millis(7)),
+                    measured: i % 4 == 0,
                     missed: Some(i == 10),
                 }),
                 audio: None,
@@ -556,7 +599,7 @@ mod tests {
         for i in 0..200u64 {
             live.frame(t0 + Duration::from_micros(11_111 * i));
         }
-        let text = live.text("Mailbox", 0);
+        let text = live.text("Mailbox", 0, "display 144 Hz, fixed refresh (measured)");
         assert!(
             text.starts_with("60 ticks/s, 90 frames/s\nGPU -\n"),
             "{text}"
@@ -575,13 +618,31 @@ mod tests {
             };
             live.cpu(t0 + us(10_000 * i), c);
         }
-        let text = live.text("Mailbox", 0);
+        let text = live.text("Mailbox", 0, "display 144 Hz, fixed refresh (measured)");
         assert!(
             text.contains("\nGPU 7.25 ms/frame: scene 6.50, XFB copy 0.50, present 0.25\nCPU ms/frame: build 2.00, swap chain 0.10, present 0.30\n"),
             "{text}"
         );
         assert!(text.contains("input age 0.9 ms, 1000 Hz"), "{text}");
         assert!(text.contains("tick to present 5.0 ms"), "{text}");
+        // Half the frames measured is not most.
+        assert!(text.contains("to screen (estimated) 7.0 ms"), "{text}");
+        assert!(
+            text.ends_with("\ndisplay 144 Hz, fixed refresh (measured)"),
+            "{text}"
+        );
+        let mut all = Live::default();
+        for t in &log.rows {
+            let mut t = *t;
+            if let Some(f) = &mut t.frame {
+                f.measured = true;
+            }
+            all.tick(t);
+        }
+        assert!(
+            all.text("Mailbox", 0, "")
+                .contains("to screen (measured) 7.0 ms")
+        );
         let summary = log.summary();
         assert!(summary.contains("120 ticks, 60 frames"), "{summary}");
         assert!(
@@ -589,11 +650,31 @@ mod tests {
             "{summary}"
         );
         assert!(summary.contains("tick start to presented"), "{summary}");
-        assert!(summary.contains("tick start to shown"), "{summary}");
+        assert!(
+            summary.contains("tick start to shown (measured)"),
+            "{summary}"
+        );
+        assert!(
+            summary.contains("tick start to shown (estimated)"),
+            "{summary}"
+        );
+        assert!(
+            summary.contains("shown times: estimated (no presentation feedback here)"),
+            "{summary}"
+        );
+        log.feedback = Some("DXGI frame statistics");
+        log.display = "variable refresh (measured)".into();
+        let summary = log.summary();
+        assert!(
+            summary.contains("shown times: measured by DXGI frame statistics for 30 of 60 frames, the rest estimated; display: variable refresh (measured)"),
+            "{summary}"
+        );
         log.finish();
         let csv = std::fs::read_to_string(&path).unwrap();
         let lines: Vec<&str> = csv.lines().collect();
         assert_eq!(lines.len(), 121);
+        assert!(lines[0].ends_with(",shown_measured"));
+        assert!(lines[1].ends_with(",1") && lines[3].ends_with(",0") && lines[2].ends_with(','));
         assert_eq!(
             lines[0].split(',').count(),
             lines[1].split(',').count(),

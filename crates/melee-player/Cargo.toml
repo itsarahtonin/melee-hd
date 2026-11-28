@@ -42,10 +42,24 @@ ureq = { version = "3.5.2", default-features = false, features = ["rustls"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Performance", "Win32_System_SystemInformation", "Win32_System_Threading"] }
+# The DX12 swap chain's frame statistics (feedback/dxgi.rs): wgpu-hal's own version, whose
+# swap chain type `Surface::as_hal` hands out.
+windows = { version = "0.62", features = ["Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common"] }
 
-# The first thread's stack (main.rs's `run_on_first_thread`) and the log's file (console.rs).
+# Wayland's presentation-time protocol (feedback/wayland.rs) on winit's connection, and the
+# compositor's clock.
+[target.'cfg(all(unix, not(any(target_os = "macos", target_os = "ios", target_os = "android"))))'.dependencies]
+libc = "0.2"
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client"] }
+
+# The first thread's stack (main.rs's `run_on_first_thread`) and the log's file (console.rs);
+# the refresh times' display link (feedback/apple.rs).
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSObjCRuntime", "NSRunLoop", "NSString"] }
+objc2-quartz-core = { version = "0.3", default-features = false, features = ["std", "CABase", "CADisplayLink", "objc2-core-foundation"] }
 
 [dev-dependencies]
 # A check that skips without its data fails under MELEE_CHECKS_REQUIRE_DATA (`melee_local_data::skip!`).
