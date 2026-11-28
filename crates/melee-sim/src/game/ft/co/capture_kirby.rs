@@ -339,13 +339,15 @@ impl Running<'_> {
             }
             return hat;
         }
-        if (kind.wrapping_sub(FighterKind::Boy.id()) as u32) <= 1 || kind == FighterKind::Sandbag {
+        if (kind.id().wrapping_sub(FighterKind::Boy.id()) as u32) <= 1
+            || kind == FighterKind::Sandbag
+        {
             return self.game.fighter(gobj).u_i32(0xC);
         }
         if kind == FighterKind::Nana {
             return FighterKind::Popo.id();
         }
-        kind
+        kind.id()
     }
 
     /// The normal of the surface the star meets, `ftCo_800BDA74`: the floor its box lands on,

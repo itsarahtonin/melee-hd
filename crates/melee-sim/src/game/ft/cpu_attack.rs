@@ -104,10 +104,10 @@ impl Running<'_> {
     }
 
     /// The character's table of a kind in the computer players' data.
-    fn cpu_table(&self, which: u32, kind: i32) -> Option<DataRef> {
+    fn cpu_table(&self, which: u32, kind: FighterKind) -> Option<DataRef> {
         let data = self.common_ptr(CPU_DATA);
         let tables = self.data.ptr(data.at(which))?;
-        self.data.ptr(tables.at(4 * kind as u32))
+        self.data.ptr(tables.at(4 * kind.raw() as u32))
     }
 
     /// What the fighter does from range with the item it holds, `ftCo_800B9A04`: nothing
@@ -399,7 +399,7 @@ impl Running<'_> {
     /// A random command from a character's table, weighed by each entry's weight,
     /// `ftCo_800B6208`; 0 for an empty table or weights summing to zero.
     #[doc(alias = "ftCo_800B6208")]
-    fn cpu_pick_entry(&mut self, which: u32, kind: i32) -> i32 {
+    fn cpu_pick_entry(&mut self, which: u32, kind: FighterKind) -> i32 {
         let r = reg(self.game.objs.rng.draw_f32());
         let arr = self
             .cpu_table(which, kind)

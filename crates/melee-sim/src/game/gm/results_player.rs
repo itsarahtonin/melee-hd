@@ -83,7 +83,7 @@ impl Running<'_> {
                     let (ck, fk, team) = (w.ckind, w.ftkind, w.team);
                     self.announce_winner(
                         i32::from(ck.raw()),
-                        i32::from(fk),
+                        i32::from(fk.raw()),
                         i32::from(team),
                         me.is_teams == 1,
                     );

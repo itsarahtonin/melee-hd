@@ -108,10 +108,10 @@ impl Running<'_> {
 
     /// The kind whose animation table `entry` is in: the fighter's, or Popo's for an entry
     /// Nana took from his ([`Running::anim_entry`]).
-    pub(super) fn anim_entry_kind(&self, kind: i32, entry: DataRef) -> i32 {
+    pub(super) fn anim_entry_kind(&self, kind: FighterKind, entry: DataRef) -> FighterKind {
         let popo = self.game.ft.data.data_list[FighterKind::Popo.raw() as usize].map(|d| d.archive);
         if kind == FighterKind::Nana && popo == Some(entry.archive) {
-            FighterKind::Popo.id()
+            FighterKind::Popo
         } else {
             kind
         }
@@ -126,10 +126,10 @@ impl Running<'_> {
         }
         // A demo's animation: where `ftData_80085B98` placed it in main memory.
         if let Some(i) = demo_index(fp, entry) {
-            return self.game.ft.data.demo_anim_addrs[fp.kind as usize][i];
+            return self.game.ft.data.demo_anim_addrs[fp.kind.raw() as usize][i];
         }
         let kind = self.anim_entry_kind(fp.kind, entry);
-        let file = self.game.ft.anim_files[kind as usize]
+        let file = self.game.ft.anim_files[kind.raw() as usize]
             .as_ref()
             .expect("the character's animation file isn't in ARAM");
         file.aram.wrapping_add(self.data.u32(entry.at(4)))
@@ -200,9 +200,9 @@ impl Running<'_> {
 
     /// The figatree of a kind's animation table entry, as copying its archive from ARAM
     /// (`lbArq_80014BD0`) and relocating it (`HSD_ArchiveParse`) finds it.
-    pub(super) fn anim_tree(&self, kind: i32, entry: DataRef) -> DataRef {
-        let demo = self.game.ft.data.demo_files[kind as usize].filter(|_| {
-            self.game.ft.data.data_list[kind as usize].is_some_and(|d| {
+    pub(super) fn anim_tree(&self, kind: FighterKind, entry: DataRef) -> DataRef {
+        let demo = self.game.ft.data.demo_files[kind.raw() as usize].filter(|_| {
+            self.game.ft.data.data_list[kind.raw() as usize].is_some_and(|d| {
                 self.data.ptr(d.at(0x14)).is_some_and(|l| {
                     l.archive == entry.archive
                         && entry.offset >= l.offset
@@ -219,7 +219,7 @@ impl Running<'_> {
                 .files
                 .demo_anim(archive, off)
                 .unwrap_or_else(|| {
-                    panic!("no demo animation at {off:#x} of character {kind}'s results file")
+                    panic!("no demo animation at {off:#x} of character {kind:?}'s results file")
                 });
             let mut buf = [0u8; 128];
             let name = self.c_string(
@@ -236,7 +236,7 @@ impl Running<'_> {
                 offset,
             };
         }
-        let file = self.game.ft.anim_files[kind as usize]
+        let file = self.game.ft.anim_files[kind.raw() as usize]
             .as_ref()
             .expect("the character's animation file isn't in ARAM");
         let off = self.data.u32(entry.at(4));
@@ -244,7 +244,7 @@ impl Running<'_> {
             .anims
             .iter()
             .find(|&&(o, _)| o == off)
-            .unwrap_or_else(|| panic!("no animation at {off:#x} of character {kind}'s file"));
+            .unwrap_or_else(|| panic!("no animation at {off:#x} of character {kind:?}'s file"));
         let mut buf = [0u8; 128];
         let name = self.c_string(
             self.data.ptr(entry).expect("an animation without a name"),

@@ -283,7 +283,7 @@ kind_enum! {
 impl FighterKind {
     /// Its registry entry.
     pub fn character(self) -> &'static Character {
-        character(self.id())
+        character(self)
     }
 }
 
@@ -302,10 +302,9 @@ impl CharacterKind {
 }
 
 impl super::super::structs::Fighter {
-    /// The fighter's kind (`kind`), which the game only ever sets to one of its own.
+    /// The fighter's kind (`kind`).
     pub fn fighter_kind(&self) -> FighterKind {
-        FighterKind::from_id(self.kind)
-            .unwrap_or_else(|| panic!("Fighter::kind {} is no fighter kind", self.kind))
+        self.kind
     }
 }
 
@@ -395,10 +394,10 @@ impl Character {
 }
 
 /// The character of fighter kind `kind`; stops if there's none.
-pub fn character(kind: i32) -> &'static Character {
-    match FighterKind::from_id(kind).and_then(|k| CHARACTERS[k.index()].as_ref()) {
+pub fn character(kind: FighterKind) -> &'static Character {
+    match CHARACTERS.get(kind.index()).and_then(Option::as_ref) {
         Some(c) => c,
-        None => unimplemented!("fighter kind {kind} isn't ported"),
+        None => unimplemented!("fighter kind {kind:?} isn't ported"),
     }
 }
 

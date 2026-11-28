@@ -10,6 +10,7 @@
 //! ([`DebugVars`]), the debug level, and the words the tables name.
 
 use crate::game::ft::CpuKind;
+use crate::game::ft::FighterKind;
 use crate::game::gr::StKind;
 use crate::game::mirror::Narrow;
 use gekko_fp as fp;
@@ -1507,7 +1508,7 @@ impl Running<'_> {
             };
             if p.ckind == CharacterKind::Seak {
                 p.ckind = CharacterKind::Zelda.into();
-                p.ftkind = 7;
+                p.ftkind = FighterKind::Seak.into();
             }
         }
         me.player_standings[4].pkind = PlayerKind::None.into();

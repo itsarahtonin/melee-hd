@@ -316,7 +316,7 @@ pub fn spawn(
     v.owner.set(Some(owner));
     v.sfx_timer.set(0.0);
     v.flight_left.set(flight_frames);
-    v.owner_kind.set(owner_kind);
+    v.owner_kind.set(owner_kind.id());
     for i in 0..16 {
         v.trail_pos[i].set(Vec3::new(0.0, 0.0, 0.0));
         v.trail_rot[i].set(Vec3::new(0.0, 0.0, 0.0));

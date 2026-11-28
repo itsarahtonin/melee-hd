@@ -354,7 +354,7 @@ impl Running<'_> {
             Some(gobj),
             victim,
             1,
-            kind,
+            kind.id(),
             attack_flags,
             crate::game::pl::trick::AttackRecord::Fighter(gobj),
             instance,

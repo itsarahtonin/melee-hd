@@ -20,6 +20,7 @@ use leaf_check::calls::{
 };
 use melee_local_data::ssbm_rs_local;
 use melee_sim::game::code::run_proc;
+use melee_sim::game::ft::FighterKind;
 use melee_sim::game::handles::{CodeRef, FighterId};
 
 const CALLS: &str = "calls/fighter-fd1";
@@ -677,8 +678,8 @@ fn figatree_binding() {
         &|g, maps, call| {
             if call.addr == leaf_check::sym("ftPartsRemap") {
                 let r = g.parts_remap(
-                    call.regs.gpr[3] as i32,
-                    call.regs.gpr[4] as i32,
+                    FighterKind::from_raw(call.regs.gpr[3] as i32),
+                    FighterKind::from_raw(call.regs.gpr[4] as i32),
                     call.regs.gpr[5],
                 );
                 return Ret::Int(u32::from(r));
@@ -726,8 +727,8 @@ fn parts_remap() {
         },
         &|g, _, call| {
             let r = g.parts_remap(
-                call.regs.gpr[3] as i32,
-                call.regs.gpr[4] as i32,
+                FighterKind::from_raw(call.regs.gpr[3] as i32),
+                FighterKind::from_raw(call.regs.gpr[4] as i32),
                 call.regs.gpr[5],
             );
             Ret::Int(u32::from(r))

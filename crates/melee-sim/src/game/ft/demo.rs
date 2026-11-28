@@ -41,22 +41,22 @@ const DEMO_STATES: i32 = 14;
 
 /// Each fighter kind's demo states of its own (`ftData_UnkMotionStates0`): Mario's,
 /// Kirby's, Luigi's and Giga Bowser's.
-fn demo_kind_states(kind: i32) -> u32 {
-    match FighterKind::from_id(kind) {
-        Some(FighterKind::Mario) => 0x803C_7260,
-        Some(FighterKind::Kirby) => 0x803C_A04C,
-        Some(FighterKind::Luigi) => 0x803D_0868,
-        Some(FighterKind::GKoopa) => 0x803D_38C8,
+fn demo_kind_states(kind: FighterKind) -> u32 {
+    match kind {
+        FighterKind::Mario => 0x803C_7260,
+        FighterKind::Kirby => 0x803C_A04C,
+        FighterKind::Luigi => 0x803D_0868,
+        FighterKind::GKoopa => 0x803D_38C8,
         _ => 0,
     }
 }
 
 /// `ftData_UnkIntPairs[kind].count`: each kind's demo animations.
-pub fn demo_anim_count(kind: i32) -> u32 {
-    match FighterKind::from_id(kind) {
-        Some(FighterKind::Mario | FighterKind::Luigi) => 16,
-        Some(FighterKind::Kirby) => 18,
-        Some(FighterKind::GKoopa) => 15,
+pub fn demo_anim_count(kind: FighterKind) -> u32 {
+    match kind {
+        FighterKind::Mario | FighterKind::Luigi => 16,
+        FighterKind::Kirby => 18,
+        FighterKind::GKoopa => 15,
         _ => 14,
     }
 }
@@ -371,7 +371,7 @@ impl Running<'_> {
         }
         self.load_costume_joint(gobj);
         let (lo, hi) = match a.pose {
-            p if p >= 9 => cutscene_anims(kind, p),
+            p if p >= 9 => cutscene_anims(kind.id(), p),
             8 => (13, 13),
             7 => (12, 12),
             5 | 6 => (10, 11),
@@ -411,7 +411,7 @@ impl Running<'_> {
     #[doc(alias = "ftData_80085B98")]
     fn demo_anim_buffers(&mut self, f: FighterId, lo: usize, hi: usize) {
         let kind = self.game.fighters[f.0].kind;
-        let base = self.game.ft.data.demo_anims[kind as usize];
+        let base = self.game.ft.data.demo_anims[kind.raw() as usize];
         self.alloc_anim_buffers(f);
         let count = demo_anim_count(kind);
         let fp = &mut self.game.fighters[f.0];
@@ -433,13 +433,13 @@ impl Running<'_> {
                         "the original's assertion failed: fighter figatree over! {size:#x}"
                     );
                     let at = base.wrapping_add(self.data.u32(e.at(4)));
-                    self.game.ft.data.demo_anim_addrs[kind as usize][i] = at;
+                    self.game.ft.data.demo_anim_addrs[kind.raw() as usize][i] = at;
                     // The original writes it into the character's data (the heap's image
                     // holds it where the scene loaded the data into its heap).
                     crate::hsd::heap::with(|h| h.image.file_word(e.at(0x14), at));
                 }
             }
-            self.game.ft.data.demo_anims[kind as usize] = 0;
+            self.game.ft.data.demo_anims[kind.raw() as usize] = 0;
         }
     }
 
@@ -607,7 +607,7 @@ impl Running<'_> {
         let kind = fp.kind;
         match (msid, kind) {
             // Fox's blaster (the first two poses), at his right thumb, his size.
-            (0 | 2, 1) => {
+            (0 | 2, FighterKind::Fox) => {
                 let f = self.game.fighter_id(gobj);
                 let fp = &self.game.fighters[f.0];
                 let part = self.bone_index(fp, PART_R_THUMB_NB);
@@ -622,7 +622,7 @@ impl Running<'_> {
             }
             // Dr. Mario's two pills (the second pose, `DocHelper`), each a random color
             // combination, in held states 5 and 4 at his place, 0.71428 his size.
-            (2, 0x15) => {
+            (2, FighterKind::DrMario) => {
                 let f = self.game.fighter_id(gobj);
                 for (msid, held) in [(1, false), (0, true)] {
                     let color =
@@ -653,7 +653,7 @@ impl Running<'_> {
                 }
             }
             // Ness's bat (the third pose), at his right thumb, 0.8 his size.
-            (5, 8) => {
+            (5, FighterKind::Ness) => {
                 let f = self.game.fighter_id(gobj);
                 let fp = &self.game.fighters[f.0];
                 let part = self.bone_index(fp, PART_R_THUMB_NB);

@@ -2,6 +2,7 @@
 //! the action's figatree is bound to them track by track, and the animations are requested
 //! from the starting frame at the action's rate.
 
+use crate::game::ft::FighterKind;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -99,9 +100,9 @@ impl Running<'_> {
     /// The bit of a part among the character's optional parts (`Fighter_804D6540`), or 0 for
     /// a part every animation moves, `ftParts_8007506C`.
     #[doc(alias = "ftParts_8007506C")]
-    pub fn part_mask(&self, kind: i32, part: i32) -> u32 {
+    pub fn part_mask(&self, kind: FighterKind, part: i32) -> u32 {
         let table = self.load_common(0x14);
-        let Some(entry) = self.data.ptr(table.at(4 * kind as u32)) else {
+        let Some(entry) = self.data.ptr(table.at(4 * kind.raw() as u32)) else {
             return 0;
         };
         let n = self.data.u32(entry.at(4)) as i32;
@@ -117,7 +118,7 @@ impl Running<'_> {
     /// The joint of character `to` matching joint `joint` of character `from`, through their
     /// common parts, or [`INVALID`], `ftPartsRemap`.
     #[doc(alias = "ftPartsRemap")]
-    pub fn parts_remap(&self, to: i32, from: i32, joint: u32) -> u8 {
+    pub fn parts_remap(&self, to: FighterKind, from: FighterKind, joint: u32) -> u8 {
         let from = self.parts_table(from);
         if joint >= from.len() {
             return INVALID;
@@ -203,7 +204,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006FE08")]
     fn bind_figatree(&mut self, f: FighterId, blend: bool) {
         let fp = &self.game.fighters[f.0];
-        if fp.kind as u32 != anim_bits_word(fp.anim_bits) & 0x3F {
+        if fp.kind.raw() as u32 != anim_bits_word(fp.anim_bits) & 0x3F {
             self.bind_figatree_remapped(f, blend);
         } else {
             let tree = fp.action_tree.expect("no figatree");
@@ -271,13 +272,13 @@ impl Running<'_> {
                 break;
             }
             loop {
-                let m = self.part_mask(from, i);
+                let m = self.part_mask(FighterKind::from_raw(from), i);
                 if m == 0 || m & bits != 0 {
                     break;
                 }
                 i += 1;
             }
-            let part = self.parts_remap(to, from, i as u32);
+            let part = self.parts_remap(to, FighterKind::from_raw(from), i as u32);
             if part != INVALID {
                 let part = i32::from(part);
                 let bone = self.bone(f, part);
@@ -336,7 +337,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006F954")]
     fn bind_part_figatree(&mut self, f: FighterId, part: i32, blend: bool) {
         let fp = &self.game.fighters[f.0];
-        if fp.kind as u32 != anim_bits_word(fp.anim_bits) & 0x3F {
+        if fp.kind.raw() as u32 != anim_bits_word(fp.anim_bits) & 0x3F {
             self.bind_part_figatree_remapped(f, part, blend);
         } else {
             let tree = fp.action_tree.expect("no figatree");
@@ -411,7 +412,7 @@ impl Running<'_> {
         let mut i = 0;
         // As in `ftAnim_8006F7C8`, past the node list's end the skip reads on in the buffer.
         while i < part {
-            let m = self.part_mask(from, i);
+            let m = self.part_mask(FighterKind::from_raw(from), i);
             if m == 0 || m & bits != 0 {
                 track = track.at(self.anim_buf_u8(buf, node) as i8 as u32 * TRACK_SIZE);
                 node = node.at(1);
@@ -424,7 +425,7 @@ impl Running<'_> {
                 break;
             }
             loop {
-                let m = self.part_mask(from, i);
+                let m = self.part_mask(FighterKind::from_raw(from), i);
                 if m == 0 || m & bits != 0 {
                     break;
                 }
@@ -433,7 +434,7 @@ impl Running<'_> {
             if self.bone(f, i).tree[0] <= depth && i != part {
                 break;
             }
-            let p = self.parts_remap(to, from, i as u32);
+            let p = self.parts_remap(to, FighterKind::from_raw(from), i as u32);
             if p != INVALID {
                 let p = i32::from(p);
                 let bone = self.bone(f, p);

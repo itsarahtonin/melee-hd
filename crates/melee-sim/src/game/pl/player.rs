@@ -832,7 +832,7 @@ impl Game {
     #[doc(alias = "Player_80036394")]
     pub fn player_fighter_kind(&self, slot: i32) -> i32 {
         match self.player_entity(slot) {
-            Some(g) => self.ft_kind(g),
+            Some(g) => self.ft_kind(g).id(),
             None => -1,
         }
     }

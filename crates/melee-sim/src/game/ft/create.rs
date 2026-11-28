@@ -265,10 +265,10 @@ impl Running<'_> {
             self.game.world.setup_proc(gobj, CodeRef(proc), priority);
         }
         self.fighter_spawn(gobj);
-        match FighterKind::from_id(kind) {
+        match kind {
             // ftMh_MS_341_8014FE10, ftCh_Init_80155FCC: the hands' entrances.
-            Some(FighterKind::MasterHand) => self.hand_start(gobj, &super::masterhand::HAND),
-            Some(FighterKind::CrazyHand) => self.hand_start(gobj, &super::crazyhand::HAND),
+            FighterKind::MasterHand => self.hand_start(gobj, &super::masterhand::HAND),
+            FighterKind::CrazyHand => self.hand_start(gobj, &super::crazyhand::HAND),
             _ if info.transformation => self.sleep(gobj),
             _ if self.game.player_flags_bit3(i32::from(info.slot)) => self.enter_entry(gobj),
             _ => {
@@ -299,7 +299,7 @@ impl Running<'_> {
         let more_bit6 = g.player_more_flags_bit6(slot);
         let ae_bit0 = g.player_flags_ae_bit0(slot);
         let fp = &mut self.game.fighters[f.0];
-        fp.kind = info.kind;
+        fp.kind = FighterKind::from_raw(info.kind);
         fp.player_idx = info.slot;
         fp.is_sub_fighter = info.sub;
         fp.scale.x = scale;
@@ -333,7 +333,7 @@ impl Running<'_> {
             rgba.a = c[3];
         }
         let mut costume = self.game.player_costume(slot) as i32;
-        if costume >= i32::from(kind_tables(info.kind).costume_count) {
+        if costume >= i32::from(kind_tables(FighterKind::from_raw(info.kind)).costume_count) {
             costume = 0;
         }
         let team = self.game.player_team(slot) as u8;
@@ -352,7 +352,9 @@ impl Running<'_> {
         fp.multi_jump_attrs = Default::default();
         fp.own_msid_start = 0x155;
         fp.common_motion_states = super::super::handles::RawPtr(MOTION_STATE_LIST);
-        fp.own_motion_states = super::super::handles::RawPtr(kind_tables(info.kind).state_table);
+        fp.own_motion_states = super::super::handles::RawPtr(
+            kind_tables(FighterKind::from_raw(info.kind)).state_table,
+        );
         fp.anim_table = anims;
         fp.anim_flags = anim_flags;
         fp.input.lstick[2].y = 0.0;
@@ -433,7 +435,8 @@ impl Running<'_> {
     pub(super) fn load_costume_joint(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let joint = self.game.ft.data.costumes[fp.kind as usize][usize::from(fp.costume_id)].joint;
+        let joint =
+            self.game.ft.data.costumes[fp.kind.raw() as usize][usize::from(fp.costume_id)].joint;
         self.game.fighters[f.0].costume_joint = joint;
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Fighter);
         let j = jobj::load_joint(&mut self.game.objs, self.data, joint);

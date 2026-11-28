@@ -86,7 +86,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D69C4")]
     pub fn special_hi_air_out_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        let kind = fp.kind as usize;
+        let kind = fp.kind.raw() as usize;
         if kinds::KINDS[kind].special_hi == 0 {
             return false;
         }

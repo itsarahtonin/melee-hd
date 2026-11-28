@@ -773,7 +773,7 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         let fkind = r.game.fighters[f.0].kind;
         let ip = item_mut(r.game, gobj);
         ip.flags.flags.holds_fighter_data = true;
-        ip.ecb_lock = fkind;
+        ip.ecb_lock = fkind.id();
         super::owner::inc_fighter_refs(r.game, fkind);
     }
     // `foobar3`: the camera follows some items.

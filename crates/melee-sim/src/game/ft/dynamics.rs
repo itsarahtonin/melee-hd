@@ -374,10 +374,10 @@ impl Running<'_> {
             n
         };
         for i in 0..sets.max(0) {
-            let first_wind = match FighterKind::from_id(kind) {
-                Some(FighterKind::Peach) if i < last => 3,
-                Some(FighterKind::Peach) => 0,
-                Some(FighterKind::Mewtwo) => 8,
+            let first_wind = match kind {
+                FighterKind::Peach if i < last => 3,
+                FighterKind::Peach => 0,
+                FighterKind::Mewtwo => 8,
                 _ => 0,
             };
             let set = &self.game.fighters[f.0].dynamic_bone_sets[i as usize];

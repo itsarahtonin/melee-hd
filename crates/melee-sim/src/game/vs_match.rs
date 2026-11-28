@@ -988,7 +988,7 @@ pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, 
             if kind < 0 {
                 continue;
             }
-            let t = kind_tables(i32::from(kind));
+            let t = kind_tables(FighterKind::from_raw(i32::from(kind)));
             if let Some(name) = t.dat_file {
                 add(name);
             }
@@ -1051,7 +1051,7 @@ pub fn load_fighter_files(
             if kind < 0 {
                 continue;
             }
-            let t = kind_tables(i32::from(kind));
+            let t = kind_tables(FighterKind::from_raw(i32::from(kind)));
             add(
                 files,
                 data,
@@ -1200,7 +1200,7 @@ pub fn load_joiner_files(
             if kind < 0 {
                 continue;
             }
-            let t = kind_tables(i32::from(kind));
+            let t = kind_tables(FighterKind::from_raw(i32::from(kind)));
             let c = usize::try_from(color).unwrap_or(0);
             let c = if c >= usize::from(t.costume_count) {
                 0
@@ -1248,7 +1248,7 @@ pub fn load_kind_files(
     use super::ft::data::kind_tables;
     let mut names: Vec<(std::borrow::Cow<'static, str>, bool)> = Vec::new();
     for &kind in kinds {
-        let t = kind_tables(kind);
+        let t = kind_tables(FighterKind::from_raw(kind));
         names.push((
             std::borrow::Cow::Borrowed(t.dat_file.expect("a fighter kind without a data file")),
             false,
@@ -1423,7 +1423,7 @@ pub fn load_results_files(
                 let Some(base) = data.get(results).public(&sym) else {
                     continue;
                 };
-                let t = kind_tables(kind);
+                let t = kind_tables(FighterKind::from_raw(kind));
                 let dat = files.archive(t.dat_file.expect("a fighter kind without a data file"));
                 let ft_data = super::ft::data::public(
                     data,

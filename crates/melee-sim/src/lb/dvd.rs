@@ -9,6 +9,7 @@
 //! callbacks run in the disc interrupt, so the cache lives with the audio library's state
 //! ([`crate::audio::Audio::dvd`]), the preload heaps and their blocks with it.
 
+use crate::game::ft::FighterKind;
 use melee_data::archive::Archives;
 
 use super::heap::{self, LbHeaps};
@@ -192,7 +193,7 @@ pub fn game_cache_files() -> Vec<String> {
         }
     };
     for kind in 0..0x21 {
-        let t = kind_tables(kind);
+        let t = kind_tables(FighterKind::from_raw(kind));
         if let Some(n) = t.dat_file {
             add(n);
         }
@@ -331,7 +332,7 @@ impl Dvd {
     /// 0xFF), its effect file and its animation file.
     #[doc(alias = "ftData_800855C8")]
     fn want_fighter(&mut self, kind: i32, color: u8) {
-        let t = crate::game::ft::data::kind_tables(kind);
+        let t = crate::game::ft::data::kind_tables(FighterKind::from_raw(kind));
         let mut color = color;
         if color != 0xFF && color >= t.costume_count {
             color = 0;
@@ -364,7 +365,7 @@ impl Dvd {
     #[doc(alias = "ftKb_SpecialN_800EEC34")]
     fn want_kirby_copy(&mut self, kind: i32, color: u8) {
         use crate::game::ft::kirby::init;
-        let count = crate::game::ft::data::kind_tables(4).costume_count;
+        let count = crate::game::ft::data::kind_tables(FighterKind::Kirby).costume_count;
         let mut color = color;
         if color != 0xFF && color >= count {
             color = 0;

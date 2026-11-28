@@ -19,6 +19,7 @@ pub mod v1201v2;
 pub mod v1202;
 
 use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
 use crate::game::mirror::Narrow;
 use melee_data::archive::{ArchiveId, DataRef};
@@ -1074,7 +1075,7 @@ pub fn load_scene_files(
             .get(archive)
             .public(&sym)
             .unwrap_or_else(|| panic!("{sym} isn't in {name}"));
-        let t = super::ft::data::kind_tables(*kind);
+        let t = super::ft::data::kind_tables(FighterKind::from_raw(*kind));
         let dat = loaded.archive(t.dat_file.expect("a fighter kind without a data file"));
         let ft_data = super::ft::data::public(
             data,

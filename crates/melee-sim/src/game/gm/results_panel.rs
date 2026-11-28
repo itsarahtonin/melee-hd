@@ -268,7 +268,7 @@ impl Running<'_> {
                 self.rp_hide(js[7]);
                 continue;
             }
-            let (ckind, cid) = (i32::from(p.ckind.raw()), i32::from(p.ftkind));
+            let (ckind, cid) = (i32::from(p.ckind.raw()), i32::from(p.ftkind.raw()));
             if !canceled(me.outcome) && me.is_teams == 0 && p.is_big_loser == 0 {
                 let t = fp::fctiwz(super::vs::stock_icon_frame(ckind, cid, 0));
                 self.rp_title_texture(t);

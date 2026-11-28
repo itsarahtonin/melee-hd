@@ -7,6 +7,7 @@ use melee_data::archive::DataRef;
 
 use super::*;
 use crate::game::ef::QueuedId;
+use crate::game::ft::FighterKind;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets};
 use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
@@ -40,7 +41,7 @@ pub struct Fighter {
     #[at(0x0)]
     pub gobj: Option<GObjId>,
     #[at(0x4)]
-    pub kind: i32,
+    pub kind: FighterKind,
     #[at(0x8)]
     #[doc(alias("x8_spawnNum"))]
     pub spawn_num: i32,
@@ -1228,7 +1229,7 @@ impl Default for Fighter {
     fn default() -> Self {
         Fighter {
             gobj: None,
-            kind: 0,
+            kind: FighterKind::Mario,
             spawn_num: 0,
             player_idx: 0,
             motion_id: 0,

@@ -259,9 +259,9 @@ impl Running<'_> {
         };
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         if !self.game.fighters[f.0].effect_once {
-            let id = match FighterKind::from_id(self.game.ft_kind(gobj)) {
-                Some(FighterKind::Mars) => Some(1265),
-                Some(FighterKind::Emblem) => Some(1296),
+            let id = match self.game.ft_kind(gobj) {
+                FighterKind::Mars => Some(1265),
+                FighterKind::Emblem => Some(1296),
                 _ => None,
             };
             if let Some(id) = id {

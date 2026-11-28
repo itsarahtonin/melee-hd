@@ -2,6 +2,7 @@
 
 use super::super::state::{Game, Running};
 use crate::game::ft::CpuKind;
+use crate::game::ft::FighterKind;
 use crate::game::ft::types::SmashState;
 use crate::game::pl::player::PlayerKind;
 use crate::hsd::gobj::GObjId;
@@ -174,7 +175,7 @@ impl Game {
     }
 
     #[doc(alias = "ftLib_GetKind")]
-    pub fn ft_kind(&self, gobj: GObjId) -> i32 {
+    pub fn ft_kind(&self, gobj: GObjId) -> FighterKind {
         self.fighter(gobj).kind
     }
 

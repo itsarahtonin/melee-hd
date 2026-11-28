@@ -82,12 +82,12 @@ impl Running<'_> {
         self.anim_update(gobj);
         self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.enter_thrown(victim, victim_msid, mem(speed));
-        match FighterKind::from_id(kind) {
-            Some(FighterKind::Kirby) if msid == ms::THROW_HI => {
+        match kind {
+            FighterKind::Kirby if msid == ms::THROW_HI => {
                 self.game.fighter_mut(gobj).blast_immune_state = true;
                 self.game.fighter_mut(victim).blast_immune_state = true;
             }
-            Some(FighterKind::Samus) => self.samus_throw_beam(gobj, msid, mem(speed)),
+            FighterKind::Samus => self.samus_throw_beam(gobj, msid, mem(speed)),
             _ => {}
         }
         let frames = self.common().i32(0x348);
@@ -309,7 +309,7 @@ impl Running<'_> {
             Some(gobj),
             victim,
             1,
-            akind,
+            akind.id(),
             attack_flags,
             super::super::super::pl::trick::AttackRecord::Fighter(gobj),
             instance,

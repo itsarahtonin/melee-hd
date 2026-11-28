@@ -157,7 +157,7 @@ fn main() {
                                             .map(|(_, f)| {
                                                 format!(
                                                     "k{} ms{} ga{} ({:.1},{:.1}) x18={}",
-                                                    f.kind,
+                                                    f.kind.id(),
                                                     f.motion_id,
                                                     f.ground_or_air.raw(),
                                                     f.cur_pos.x,

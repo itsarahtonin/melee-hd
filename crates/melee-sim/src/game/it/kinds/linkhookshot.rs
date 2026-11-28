@@ -483,7 +483,7 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
 /// kind `kind`). The floors and walls touched.
 #[doc(alias = "it_802A40D0")]
 #[doc(alias = "it_802A3E50")]
-fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> i32 {
+fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<FighterKind>) -> i32 {
     let next = lk(r.game, l).next.filter(|&n| lk(r.game, n).out);
     let was_on_floor = lk(r.game, l).touching;
     {

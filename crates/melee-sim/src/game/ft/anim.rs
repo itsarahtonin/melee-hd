@@ -70,7 +70,7 @@ impl Running<'_> {
             None if !anim_bit(fp, 5) => None,
             None => crate::game::code::unported_call(&format!(
                 "ftAnim_8006EBA4's part 0x35 past the parts of fighter kind {} (parts[{i}], compared with x594 bit 5)",
-                fp.kind
+                fp.kind.id()
             )),
         }
     }
@@ -702,7 +702,7 @@ impl Running<'_> {
         let root = self.root_jobj(gobj);
         let fp = &self.game.fighters[f.0];
         let matanim =
-            self.game.ft.data.costumes[fp.kind as usize][usize::from(fp.costume_id)].matanim;
+            self.game.ft.data.costumes[fp.kind.raw() as usize][usize::from(fp.costume_id)].matanim;
         jobj::add_anim_all(
             &mut self.game.objs,
             self.data,

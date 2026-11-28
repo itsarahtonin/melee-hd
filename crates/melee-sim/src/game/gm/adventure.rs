@@ -1486,15 +1486,18 @@ impl Running<'_> {
             self.check_preloaded(file);
             self.disc_load(file, MAIN_MEMORY);
         }
-        let t = kind_tables(kind);
+        let t = kind_tables(FighterKind::from_raw(kind));
         super::super::ef::load_sync(self, i32::from(t.effect_file));
         for c in 0..i32::from(t.costume_count) {
-            if let Some(file) = self.game.load_costume(self.data, kind, c) {
+            if let Some(file) = self
+                .game
+                .load_costume(self.data, FighterKind::from_raw(kind), c)
+            {
                 self.check_preloaded(&file);
                 self.disc_load(&file, MAIN_MEMORY);
             }
         }
-        self.put_anim_file(kind);
+        self.put_anim_file(FighterKind::from_raw(kind));
         if kind == FighterKind::Kirby {
             self.kirby_data_setup();
         }

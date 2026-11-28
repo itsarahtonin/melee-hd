@@ -855,7 +855,7 @@ impl Running<'_> {
                 let a = self.attacker(v);
                 let af = &self.game.fighters[a.0];
                 let entry = LogEntry {
-                    kind: af.kind,
+                    kind: af.kind.id(),
                     gobj: af.gobj,
                     hit: LoggedHit::Fighter {
                         fighter: v,
@@ -912,7 +912,7 @@ impl Running<'_> {
                 let af = &self.game.fighters[a.0];
                 let h0 = &self.game.fighters[v.0].hitboxes[j];
                 let entry = LogEntry {
-                    kind: af.kind,
+                    kind: af.kind.id(),
                     gobj: af.gobj,
                     hit: LoggedHit::Fighter {
                         fighter: v,
@@ -2588,7 +2588,7 @@ impl Running<'_> {
                     Some(a_gobj),
                     gobj,
                     1,
-                    kind,
+                    kind.id(),
                     attack_flags,
                     AttackRecord::Fighter(a_gobj),
                     instance,

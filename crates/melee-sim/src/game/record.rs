@@ -556,7 +556,7 @@ impl Recorder {
         w.i32(self.frame);
         w.u8(fp.player_idx);
         w.u8(u8::from(follower));
-        w.u8(fp.kind as u8);
+        w.u8(fp.kind.raw() as u8);
         w.u16(fp.motion_id as u16);
         w.f32(fp.cur_pos.x);
         w.f32(fp.cur_pos.y);
@@ -595,7 +595,7 @@ impl Recorder {
         self.last_frame = Some(self.frame);
         if !follower {
             let port = usize::from(fp.player_idx & 3);
-            let kind = fp.kind as u8;
+            let kind = fp.kind.raw() as u8;
             let c = &mut self.characters[port];
             match c.iter_mut().find(|e| e.0 == kind) {
                 Some(e) => e.1 += 1,

@@ -1114,9 +1114,8 @@ impl Session {
                         .filter(|&i| joining.players[i].slot_type == PlayerKind::None)
                         .collect();
                     for (&i, &(ck, c)) in free.iter().zip(&set) {
-                        let t = super::ft::data::kind_tables(super::pl::player::ckind_ftkind(
-                            i32::from(ck),
-                            0,
+                        let t = super::ft::data::kind_tables(FighterKind::from_raw(
+                            super::pl::player::ckind_ftkind(i32::from(ck), 0),
                         ));
                         let p = &mut joining.players[i];
 

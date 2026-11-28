@@ -78,7 +78,7 @@ impl Running<'_> {
     pub(crate) fn special_kind(&self, gobj: GObjId, from: KindFrom) -> i32 {
         let fp = self.game.fighter(gobj);
         match from {
-            KindFrom::Fighter => fp.kind,
+            KindFrom::Fighter => fp.kind.id(),
             KindFrom::Copy => fp.u_i32(u::HAT_KIND),
         }
     }

@@ -2,7 +2,7 @@
 //! team's and player's standing and statistics, and the decisions (the results' bonuses) each
 //! player earned.
 
-use crate::game::ft::CharacterKind;
+use crate::game::ft::{CharacterKind, FighterKind};
 use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
 
@@ -35,7 +35,7 @@ pub struct MatchPlayerData {
     #[at(0x1)]
     pub ckind: Narrow<CharacterKind, i8>,
     #[at(0x2)]
-    pub ftkind: i8,
+    pub ftkind: Narrow<FighterKind, i8>,
     /// The costume (the top six bits), the rumble and the stamina flags (bits 1 and 0).
     #[at(0x3, union)]
     #[doc(alias("x3_u"))]

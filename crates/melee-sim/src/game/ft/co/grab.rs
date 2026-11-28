@@ -81,9 +81,9 @@ impl Running<'_> {
             ms::CATCH_DASH_PULL
         };
         let kind = self.game.fighter(gobj).kind;
-        let j = match FighterKind::from_id(kind) {
+        let j = match kind {
             // The hookshot winds in, and he holds at its tip.
-            Some(FighterKind::Link | FighterKind::Clink) => {
+            FighterKind::Link | FighterKind::Clink => {
                 let hs = self
                     .game
                     .fighter(gobj)
@@ -98,7 +98,7 @@ impl Running<'_> {
                     .get()
             }
             // The beam winds in fast, and she holds at its tip.
-            Some(FighterKind::Samus) => {
+            FighterKind::Samus => {
                 let beam = self
                     .game
                     .fighter(gobj)
@@ -221,8 +221,8 @@ impl Running<'_> {
         let kind = self.game.fighter(gobj).kind;
         if self.game.fighter(gobj).accessory1_cb == Some(CodeRef(PULL_FOLLOW))
             && matches!(
-                FighterKind::from_id(kind),
-                Some(FighterKind::Link | FighterKind::Samus | FighterKind::Clink)
+                kind,
+                FighterKind::Link | FighterKind::Samus | FighterKind::Clink
             )
         {
             return;
@@ -302,12 +302,7 @@ impl Running<'_> {
         } else {
             self.throw_check(gobj)
         };
-        if acted
-            && matches!(
-                FighterKind::from_id(kind),
-                Some(FighterKind::Link | FighterKind::Clink)
-            )
-        {
+        if acted && matches!(kind, FighterKind::Link | FighterKind::Clink) {
             tether::ft_death(self, gobj, &linkhookshot::HOOKSHOT);
         }
         if acted && kind == FighterKind::Samus {

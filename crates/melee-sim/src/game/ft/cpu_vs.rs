@@ -4,6 +4,7 @@
 //! enemy, goes for an item in reach or heads for the human enemy standing best, and picks its
 //! behavior ([`Running::cpu_choose_behavior`]).
 
+use crate::game::ft::FighterKind;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -573,13 +574,13 @@ impl Running<'_> {
     }
 
     /// The character's distance threshold (`Fighter_804D64FC->x20[kind]`).
-    pub(super) fn cpu_distance_threshold(&self, kind: i32) -> f32 {
+    pub(super) fn cpu_distance_threshold(&self, kind: FighterKind) -> f32 {
         let data = self.common_ptr(CPU_DATA);
         let table = self
             .data
             .ptr(data.at(DISTANCES))
             .expect("the computer players' distance thresholds");
-        self.data.f32(table.at(4 * kind as u32))
+        self.data.f32(table.at(4 * kind.raw() as u32))
     }
 
     /// Whether the fighter stands near its target, `ftCo_800A20A0` (`xF8_b6`): on the ground
