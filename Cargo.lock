@@ -1628,7 +1628,9 @@ dependencies = [
 name = "melee-data"
 version = "0.1.1"
 dependencies = [
+ "crc32fast",
  "libc",
+ "melee-local-data",
  "nod",
  "num-traits",
  "thiserror 2.0.21",
