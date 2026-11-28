@@ -2219,9 +2219,8 @@ impl App {
         let options = note.is_none()
             && self.front.is_some()
             && self.replay.is_none()
-            && (self.session.as_ref()).is_some_and(|s| {
-                s.console.is_some() && hooks::place(s.game()) == hooks::Place::Options
-            });
+            && m.console.is_some()
+            && hooks::place(m.game()) == hooks::Place::Options;
         if (note.is_some() || options) && self.note_painter.is_none() {
             let mut p = ui::Painter::new(&self.gpu, shown.format());
             p.clear = false;
