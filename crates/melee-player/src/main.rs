@@ -1274,9 +1274,11 @@ struct Stats {
     frames: u64,
     work: Duration,
     worst: Duration,
-    /// Extrapolate's predictions and their time.
+    /// Extrapolate's predictions and their time, and how many were made beside a tick's first
+    /// frame (the rest before a frame past t = 0).
     predictions: u64,
     predicting: Duration,
+    beside: u64,
     since: Option<Instant>,
 }
 
@@ -1291,8 +1293,10 @@ impl Stats {
             let s = t.as_secs_f64();
             let predicting = if self.predictions > 0 {
                 format!(
-                    ", predicting a tick {:.2} ms average",
-                    self.predicting.as_secs_f64() * 1000.0 / self.predictions as f64
+                    ", predicting a tick {:.2} ms average ({} of {} beside a frame)",
+                    self.predicting.as_secs_f64() * 1000.0 / self.predictions as f64,
+                    self.beside,
+                    self.predictions
                 )
             } else {
                 String::new()
@@ -2069,6 +2073,7 @@ impl App {
             self.draw_frame_of(&session, draws, now, None)
         });
         self.session = Some(session);
+        self.stats.beside += u64::from(made.is_ok());
         self.predicted(paced, Some(made));
         Some(drawn)
     }
