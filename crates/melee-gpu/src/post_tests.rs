@@ -68,12 +68,18 @@ fn supersampling_averages_the_texels_under_each_pixel() {
         return;
     };
     let mut post = Post::new(&device, wgpu::TextureFormat::Rgba8Unorm);
-    let checkerboard = |x: u32, y: u32| (x + y) % 2 == 1;
-    let grid = |x: u32, y: u32| x % 4 == 0 && y % 4 == 0;
-    let cases: [(u32, &dyn Fn(u32, u32) -> bool, i32); 3] = [
-        (2, &checkerboard, 128),
-        (4, &checkerboard, 128),
-        (4, &grid, 16),
+    fn checkerboard(x: u32, y: u32) -> bool {
+        (x + y) % 2 == 1
+    }
+    fn grid(x: u32, y: u32) -> bool {
+        x.is_multiple_of(4) && y.is_multiple_of(4)
+    }
+    // Each case: the factor, which texels are white, and the gray every pixel comes out.
+    type Case = (u32, fn(u32, u32) -> bool, i32);
+    let cases: [Case; 3] = [
+        (2, checkerboard, 128),
+        (4, checkerboard, 128),
+        (4, grid, 16),
     ];
     for (factor, white, expected) in cases {
         let (w, h) = (64, 48);
