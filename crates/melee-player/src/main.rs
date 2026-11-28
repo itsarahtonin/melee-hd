@@ -3833,10 +3833,30 @@ fn run(args: Args) -> ExitCode {
         let mut panel = front::Panel::new(settings_of(&args), args.disc.clone());
         panel.open = true;
         panel.tab = args.settings_tab;
+        // Kept open while the panel is drawn: dropped, it closes the adapter.
+        let mut inputs = None;
         if panel.tab == front::Tab::Controllers {
-            panel.controllers.devices = Inputs::new(args.adapter).look(&panel.settings.controllers);
+            let inputs = inputs.insert(Inputs::new(args.adapter));
+            // The adapter's controllers and its polling rate, once it has reported for a
+            // second (three seconds at most, for one that doesn't open).
+            if let Some(a) = &inputs.adapter {
+                let until = Instant::now() + Duration::from_secs(3);
+                let mut since: Option<Instant> = None;
+                while Instant::now() < until
+                    && since.is_none_or(|t| t.elapsed() < Duration::from_millis(1100))
+                {
+                    if since.is_none() && a.report_time().is_some() {
+                        since = Some(Instant::now());
+                    }
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+            }
+            panel.controllers.devices = inputs.look(&panel.settings.controllers);
+            panel.controllers.adapter.clone_from(&inputs.adapter);
         }
-        return match ui::shot(&gpu, &mut panel, args.size, std::path::Path::new(path)) {
+        let shot = ui::shot(&gpu, &mut panel, args.size, std::path::Path::new(path));
+        drop(inputs);
+        return match shot {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 console::fatal(&format!("{path}: {e}"));
