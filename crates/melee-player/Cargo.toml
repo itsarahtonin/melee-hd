@@ -39,6 +39,10 @@ rfd = { version = "0.17", features = ["common-controls-v6"] }
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Performance", "Win32_System_SystemInformation", "Win32_System_Threading"] }
 
+# The first thread's stack (main.rs's `run_on_first_thread`) and the log's file (console.rs).
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 # A check that skips without its data fails under MELEE_CHECKS_REQUIRE_DATA (`melee_local_data::skip!`).
 melee-local-data = { path = "../../tools/local-data" }

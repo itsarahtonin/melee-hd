@@ -24,16 +24,23 @@ use crate::present::{Aspect, Gpu};
 pub const SAVED_LIST_WAIT: std::time::Duration = std::time::Duration::from_secs(3);
 
 /// Where the player keeps its caches: `%LOCALAPPDATA%\melee-hd` on Windows,
-/// `$XDG_CACHE_HOME/melee-hd` or `~/.cache/melee-hd` elsewhere (`melee-hd-dev` for a dev build,
-/// [`crate::channel`]), or the folder `MELEE_HD_CACHE` names (the shipped list's collection).
+/// `~/Library/Caches/melee-hd` on macOS, `$XDG_CACHE_HOME/melee-hd` or `~/.cache/melee-hd`
+/// elsewhere (`melee-hd-dev` for a dev build, [`crate::channel`]), or the folder
+/// `MELEE_HD_CACHE` names (the shipped list's collection).
 pub fn dir() -> Option<PathBuf> {
-    dir_of(crate::channel::channel(), |name| std::env::var_os(name))
+    dir_of(crate::channel::channel(), crate::settings::MAC, |name| {
+        std::env::var_os(name)
+    })
 }
 
-/// The cache folder of a build of `channel`, with `var` the environment.
-fn dir_of(channel: Channel, var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+/// The cache folder of a build of `channel`, on macOS if `mac`, with `var` the environment.
+fn dir_of(channel: Channel, mac: bool, var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
     if let Some(d) = var("MELEE_HD_CACHE") {
         return Some(PathBuf::from(d));
+    }
+    if mac {
+        let home = PathBuf::from(var("HOME")?);
+        return Some(home.join("Library").join("Caches").join(channel.folder()));
     }
     let base = var("LOCALAPPDATA")
         .or_else(|| var("XDG_CACHE_HOME"))
@@ -278,20 +285,49 @@ mod tests {
         let elsewhere = env(&[("HOME", "H")]);
         let xdg = env(&[("XDG_CACHE_HOME", "X")]);
         let cache = |b: &str, f: &str| Some(Path::new(b).join(f));
-        assert_eq!(dir_of(Channel::Stable, &windows), cache("LA", "melee-hd"));
-        assert_eq!(dir_of(Channel::Local, &windows), cache("LA", "melee-hd"));
-        assert_eq!(dir_of(Channel::Dev, &windows), cache("LA", "melee-hd-dev"));
-        assert_eq!(dir_of(Channel::Dev, &xdg), cache("X", "melee-hd-dev"));
         assert_eq!(
-            dir_of(Channel::Dev, &elsewhere),
+            dir_of(Channel::Stable, false, &windows),
+            cache("LA", "melee-hd")
+        );
+        assert_eq!(
+            dir_of(Channel::Local, false, &windows),
+            cache("LA", "melee-hd")
+        );
+        assert_eq!(
+            dir_of(Channel::Dev, false, &windows),
+            cache("LA", "melee-hd-dev")
+        );
+        assert_eq!(
+            dir_of(Channel::Dev, false, &xdg),
+            cache("X", "melee-hd-dev")
+        );
+        assert_eq!(
+            dir_of(Channel::Dev, false, &elsewhere),
             Some(Path::new("H").join(".cache").join("melee-hd-dev"))
         );
         // MELEE_HD_SETTINGS names the settings folder only.
         let named = env(&[("MELEE_HD_SETTINGS", "S"), ("LOCALAPPDATA", "LA")]);
-        assert_eq!(dir_of(Channel::Dev, &named), cache("LA", "melee-hd-dev"));
-        assert_eq!(dir_of(Channel::Dev, env(&[])), None);
+        assert_eq!(
+            dir_of(Channel::Dev, false, &named),
+            cache("LA", "melee-hd-dev")
+        );
+        assert_eq!(dir_of(Channel::Dev, false, env(&[])), None);
         // MELEE_HD_CACHE names the cache folder itself.
         let cache = env(&[("MELEE_HD_CACHE", "C"), ("LOCALAPPDATA", "LA")]);
-        assert_eq!(dir_of(Channel::Dev, &cache), Some(PathBuf::from("C")));
+        assert_eq!(
+            dir_of(Channel::Dev, false, &cache),
+            Some(PathBuf::from("C"))
+        );
+        assert_eq!(dir_of(Channel::Dev, true, &cache), Some(PathBuf::from("C")));
+    }
+
+    /// macOS keeps them in `~/Library/Caches`, whatever XDG's variables say.
+    #[test]
+    fn macos_keeps_caches_in_library_caches() {
+        let caches = |f: &str| Some(Path::new("H").join("Library").join("Caches").join(f));
+        let xdg = env(&[("HOME", "H"), ("XDG_CACHE_HOME", "X")]);
+        assert_eq!(dir_of(Channel::Stable, true, &xdg), caches("melee-hd"));
+        assert_eq!(dir_of(Channel::Dev, true, &xdg), caches("melee-hd-dev"));
+        assert_eq!(dir_of(Channel::Dev, true, env(&[])), None);
     }
 }
