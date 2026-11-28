@@ -11,6 +11,12 @@
 //! `COSMETIC_TEST_REPLAYS=A.slp;B.slp` (the platform's path list) plays those replays instead,
 //! with `COSMETIC_TEST_FP=slippi` for Slippi replays, and `COSMETIC_TEST_REPORT=1` lists every
 //! field that differs (indices left out), from which tick and on how many, without failing.
+//!
+//! Slippi's two other cosmetic codes, no screen shake and PAL stock icons, are done in the
+//! presentation (`melee_render::cosmetic`, milestone 7's design call 9), which reads the state
+//! and never writes it: [`presentation_toggles_change_no_gameplay`] plays a replay and a session
+//! twice, one drawn with both toggles on, and finds every tick the same, state included, while
+//! each toggle changes exactly the frames it should.
 
 use std::collections::{BTreeMap, HashSet};
 
@@ -288,5 +294,200 @@ fn drawing_offscreen_fighters_changes_no_gameplay() {
                 "{path}: the toggle drew no fighter the game left out"
             );
         }
+    });
+}
+
+/// What drawing a run with the presentation's toggles found.
+#[derive(Debug, Default)]
+struct Presented {
+    ticks: u32,
+    /// Ticks with a frame, those whose game camera shook, and those that drew a stock row.
+    frames: u32,
+    shaking: u32,
+    rows: u32,
+    /// The first runs of ticks the camera shook (first and last tick), for frames by eye.
+    quakes: Vec<(u32, u32)>,
+}
+
+/// Three frame builders over a run's draws: as the game is, without the screen shake, and with
+/// PAL stock icons. Made anew as a session's match takes over from the menus or hands back, as
+/// the player's are (`handoff`).
+struct Builders {
+    plain: melee_render::frame::Frames,
+    unshaken: melee_render::frame::Frames,
+    pal: melee_render::frame::Frames,
+    live: Option<bool>,
+}
+
+impl Builders {
+    fn new() -> Builders {
+        let made = |shake: bool, pal: bool| {
+            let mut f = melee_render::frame::Frames::new();
+            f.hsd.no_screen_shake = shake;
+            f.hsd.pal_stock_icons = pal;
+            f
+        };
+        Builders {
+            plain: made(false, false),
+            unshaken: made(true, false),
+            pal: made(false, true),
+            live: None,
+        }
+    }
+
+    /// Draws tick `tick`'s frame three ways; fails unless no screen shake changes exactly the
+    /// frames whose game camera shook and PAL stock icons exactly those that draw a stock row.
+    fn draw(&mut self, s: &Session, draws: &[Draw], tick: u32, seen: &mut Presented) {
+        use melee_render::cosmetic::{Unshake, pal_stock_row};
+        let live = s.in_live_match();
+        if self.live != Some(live) {
+            *self = Builders::new();
+            self.live = Some(live);
+            for f in [&mut self.plain, &mut self.unshaken, &mut self.pal] {
+                f.space.load_dol(&s.dol);
+            }
+        }
+        if draws.is_empty() {
+            return;
+        }
+        let (game, data) = (s.game(), s.data());
+        let plain = self.plain.frame(game, data, draws);
+        let unshaken = self.unshaken.frame(game, data, draws);
+        let pal = self.pal.frame(game, data, draws);
+        let cameras = &game.objs.display.cameras;
+        let shook = draws.iter().any(|d| {
+            matches!(d, Draw::Camera(c, i)
+                if Unshake::of(game, *c, &cameras[usize::from(*i)].view_mtx).is_some())
+        });
+        // A shape of a stock row drawn (a row whose icons are all hidden draws none).
+        let mut row = false;
+        let rows = draws.iter().any(|d| {
+            match d {
+                Draw::Rendering(g) => row = g.is_some_and(|g| pal_stock_row(game, g).is_some()),
+                Draw::Shape { .. } => return row,
+                _ => {}
+            }
+            false
+        });
+        assert_eq!(
+            unshaken != plain,
+            shook,
+            "tick {tick}: no screen shake changed the frame ({}), the camera shook ({shook})",
+            unshaken != plain
+        );
+        assert_eq!(
+            pal != plain,
+            rows,
+            "tick {tick}: PAL stock icons changed the frame ({}), a stock row drew ({rows})",
+            pal != plain
+        );
+        seen.frames += 1;
+        seen.shaking += u32::from(shook);
+        if shook {
+            let runs = seen.quakes.len();
+            match seen.quakes.last_mut() {
+                Some((_, last)) if *last + 1 == tick => *last = tick,
+                _ if runs < 12 => seen.quakes.push((tick, tick)),
+                _ => {}
+            }
+        }
+        seen.rows += u32::from(rows);
+    }
+}
+
+/// Plays `off` and `on` side by side for at most `ticks` ticks, `on` drawn with no screen shake
+/// and with PAL stock icons ([`Builders`]); fails on any difference between them: in a tick's
+/// output, its mixed sound or the state after it.
+fn presented(mut off: Session, mut on: Session, ticks: u32, what: &str) -> Presented {
+    let none = [PadStatus::default(); 4];
+    let mut builders = Builders::new();
+    let mut seen = Presented::default();
+    for tick in 0..ticks {
+        let want = off.tick(none);
+        let got = on.tick(none);
+        if let Some(d) = got.state_diff(&want) {
+            panic!("{what}: tick {tick}'s output differs with the toggles on at frame{d}");
+        }
+        let (a, b) = (
+            off.sound.as_ref().expect("sound"),
+            on.sound.as_ref().expect("sound"),
+        );
+        assert!(
+            a.samples() == b.samples(),
+            "{what}: tick {tick}'s mixed sound differs with the toggles on"
+        );
+        builders.draw(&on, &got.draws, tick, &mut seen);
+        if let Some(d) = on.game().state_diff(off.game()) {
+            panic!("{what}: the state after tick {tick} differs with the toggles on at game{d}");
+        }
+        seen.ticks = tick + 1;
+        let ended = on.ended;
+        off.recycle(want);
+        on.recycle(got);
+        if ended {
+            break;
+        }
+    }
+    eprintln!("{what}: {seen:?}");
+    seen
+}
+
+/// No screen shake and PAL stock icons change no gameplay: a replay and a session from power-on
+/// play the same drawn with both on, and each changes only the frames it should. The benchmark
+/// match's big hits shake the camera, and its HUD has two rows of stocks. Skips without
+/// `SSBM_DISC` (the session without `SSBM_RS_LOCAL`).
+#[test]
+fn presentation_toggles_change_no_gameplay() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        let bytes = std::fs::read(REPLAY).expect("the benchmark replay");
+        let start = || {
+            let replay = Replay::parse(&bytes).expect("a replay");
+            let settings =
+                melee_sim::game::vs_match::Settings::from_replay(&melee_slippi::start(&replay))
+                    .expect("its settings");
+            Session::begin(&disc, &settings, Some(replay), false).expect("the match")
+        };
+        // `COSMETIC_TEST_REPLAYS` plays those replays instead (and no session), as above.
+        if let Some(list) = std::env::var_os("COSMETIC_TEST_REPLAYS") {
+            if std::env::var("COSMETIC_TEST_FP").as_deref() == Ok("slippi") {
+                melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+            }
+            for path in std::env::split_paths(&list) {
+                let bytes = std::fs::read(&path).expect("the replay");
+                let start = || {
+                    let replay = Replay::parse(&bytes).expect("a replay");
+                    let settings = melee_sim::game::vs_match::Settings::from_replay(
+                        &melee_slippi::start(&replay),
+                    )
+                    .expect("its settings");
+                    Session::begin(&disc, &settings, Some(replay), false).expect("the match")
+                };
+                presented(start(), start(), u32::MAX, &path.to_string_lossy());
+            }
+            return;
+        }
+        let seen = presented(start(), start(), u32::MAX, REPLAY);
+        assert!(seen.shaking > 0, "{seen:?}: the camera never shook");
+        assert!(seen.rows > seen.frames / 2, "{seen:?}: few stock rows drew");
+        let Some((disc, path)) = crate::live_tests::pause_fd() else {
+            melee_local_data::skip!("the session skipped: no ruleset sessions");
+            return;
+        };
+        let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");
+        args.disc = disc;
+        args.mute = true;
+        args.bench = Some(0);
+        let seen = presented(
+            crate::live_tests::powered_on(&args, &path),
+            crate::live_tests::powered_on(&args, &path),
+            3100,
+            "pause-fd",
+        );
+        assert!(
+            seen.rows > 0,
+            "{seen:?}: the session's match drew no stock row"
+        );
     });
 }
