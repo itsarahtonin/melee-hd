@@ -12,6 +12,7 @@
 //! don't take the adapter's ports from it.
 
 use crate::bindings::Bindings;
+use crate::boxes::BoxKeys;
 
 /// A controller, as the player knows it from one session to the next.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -26,10 +27,18 @@ pub enum DeviceId {
         nth: u8,
     },
     Keyboard,
+    /// A box controller melee-hd recognizes ([`crate::boxes::MODELS`]) by its USB vendor and
+    /// product ids, and which of the boxes with those ids it is (0 for the first plugged in).
+    Box {
+        vendor: u16,
+        product: u16,
+        nth: u8,
+    },
 }
 
 impl DeviceId {
-    /// Its name in `settings.txt`: `adapter:1` to `adapter:4`, `gamepad:UUID:N`, `keyboard`.
+    /// Its name in `settings.txt`: `adapter:1` to `adapter:4`, `gamepad:UUID:N`, `keyboard`,
+    /// `box:VENDOR:PRODUCT:N` (the ids in hex).
     pub fn key(&self) -> String {
         match self {
             DeviceId::Adapter(n) => format!("adapter:{}", n + 1),
@@ -38,6 +47,11 @@ impl DeviceId {
                 format!("gamepad:{hex}:{nth}")
             }
             DeviceId::Keyboard => "keyboard".to_owned(),
+            DeviceId::Box {
+                vendor,
+                product,
+                nth,
+            } => format!("box:{vendor:04x}:{product:04x}:{nth}"),
         }
     }
 
@@ -64,18 +78,43 @@ impl DeviceId {
                 }
             }
             "keyboard" => DeviceId::Keyboard,
+            "box" => {
+                let mut id = || {
+                    let h = parts.next()?;
+                    (h.len() == 4).then_some(())?;
+                    u16::from_str_radix(h, 16).ok()
+                };
+                let (vendor, product) = (id()?, id()?);
+                DeviceId::Box {
+                    vendor,
+                    product,
+                    nth: parts.next()?.parse().ok()?,
+                }
+            }
             _ => return None,
         };
         parts.next().is_none().then_some(d)
     }
 
-    /// Its bindings when the player set none.
+    /// Its bindings when the player set none: a box's are a GameCube controller's, its report
+    /// being one.
     pub fn default_bindings(&self) -> Bindings {
         match self {
-            DeviceId::Adapter(_) => Bindings::gamecube(),
+            DeviceId::Adapter(_) | DeviceId::Box { .. } => Bindings::gamecube(),
             DeviceId::Gamepad { .. } => Bindings::gamepad(),
             DeviceId::Keyboard => Bindings::keyboard(),
         }
+    }
+
+    /// Whether the player can set "No deadzone, exact" for it: a gamepad (a box always reads
+    /// so, the adapter's controllers and the keyboard have nothing to set).
+    pub fn can_be_exact(&self) -> bool {
+        matches!(self, DeviceId::Gamepad { .. })
+    }
+
+    /// Whether the player can give it a box layout: the keyboard.
+    pub fn can_have_box_layout(&self) -> bool {
+        *self == DeviceId::Keyboard
     }
 }
 
@@ -104,6 +143,10 @@ pub struct Config {
     pub ports: Vec<Chosen>,
     /// The bindings that differ from their device's default.
     pub bindings: Vec<(DeviceId, Bindings)>,
+    /// The gamepads set to "No deadzone, exact".
+    pub exact: Vec<DeviceId>,
+    /// The devices (the keyboard) played through a box layout, with its keys.
+    pub box_layouts: Vec<(DeviceId, BoxKeys)>,
 }
 
 /// A device as the Controllers tab shows it.
@@ -138,6 +181,34 @@ impl Config {
         }
     }
 
+    /// Whether `d` reads "No deadzone, exact".
+    pub fn is_exact(&self, d: &DeviceId) -> bool {
+        self.exact.contains(d)
+    }
+
+    /// Sets "No deadzone, exact" for `d`, if it can take it.
+    pub fn set_exact(&mut self, d: &DeviceId, on: bool) {
+        self.exact.retain(|x| x != d);
+        if on && d.can_be_exact() {
+            self.exact.push(d.clone());
+        }
+    }
+
+    /// `d`'s box layout, if it plays through one.
+    pub fn box_layout(&self, d: &DeviceId) -> Option<&BoxKeys> {
+        self.box_layouts.iter().find(|b| b.0 == *d).map(|b| &b.1)
+    }
+
+    /// Plays `d` through the box layout `keys`, or through its bindings with none.
+    pub fn set_box_layout(&mut self, d: &DeviceId, keys: Option<BoxKeys>) {
+        self.box_layouts.retain(|b| b.0 != *d);
+        if let Some(k) = keys
+            && d.can_have_box_layout()
+        {
+            self.box_layouts.push((d.clone(), k));
+        }
+    }
+
     /// The player picks `pick` (or nothing) for `port`, with `devices` where every device is
     /// now: every device stays where it is (kept as the player's from now on, so nothing moves
     /// later either), `pick` moves to `port`, and what played `port` takes `pick`'s old port:
@@ -163,7 +234,9 @@ impl Config {
     }
 
     /// The `settings.txt` lines: `port = DEVICE PORT NAME` for each device placed (PORT 1 to 4
-    /// or `none`), `bindings = DEVICE TARGET=SOURCE…` for each device rebound.
+    /// or `none`), `bindings = DEVICE TARGET=SOURCE…` for each device rebound, `exact = DEVICE`
+    /// for each gamepad set to "No deadzone, exact", `box-layout = DEVICE BUTTON=SOURCE…` for a
+    /// device played through a box layout.
     pub fn save(&self) -> String {
         let mut out = String::new();
         for c in &self.ports {
@@ -174,6 +247,12 @@ impl Config {
         }
         for (d, b) in &self.bindings {
             out += &format!("bindings = {} {}\n", d.key(), b.save());
+        }
+        for d in &self.exact {
+            out += &format!("exact = {}\n", d.key());
+        }
+        for (d, k) in &self.box_layouts {
+            out += &format!("box-layout = {} {}\n", d.key(), k.save());
         }
         out
     }
@@ -207,6 +286,21 @@ impl Config {
                     && let Some(b) = d.default_bindings().restore(rest)
                 {
                     self.set_bindings(&d, b);
+                }
+                true
+            }
+            "exact" => {
+                if let Some(d) = DeviceId::parse(value) {
+                    self.set_exact(&d, true);
+                }
+                true
+            }
+            "box-layout" => {
+                let (d, rest) = value.split_once(' ').unwrap_or((value, ""));
+                if let Some(d) = DeviceId::parse(d)
+                    && let Some(k) = BoxKeys::restore(rest)
+                {
+                    self.set_box_layout(&d, Some(k));
                 }
                 true
             }
@@ -280,14 +374,14 @@ impl Ports {
                 out[i] = Some(p);
             }
         }
-        // The keyboard plays with the first gamepad, or alone in the first port free.
+        // The keyboard plays with the first gamepad (a box is one), or alone in the first port
+        // free.
         if let Some(k) = present.iter().position(|d| *d == DeviceId::Keyboard)
             && !decided[k]
         {
-            let pad = present
-                .iter()
-                .zip(&out)
-                .find(|(d, p)| matches!(d, DeviceId::Gamepad { .. }) && p.is_some());
+            let pad = present.iter().zip(&out).find(|(d, p)| {
+                matches!(d, DeviceId::Gamepad { .. } | DeviceId::Box { .. }) && p.is_some()
+            });
             out[k] = match pad {
                 Some((_, p)) => *p,
                 None => (0..4).find(|&p| !held[p as usize]),
@@ -509,26 +603,64 @@ mod tests {
         c.set_bindings(&DeviceId::Adapter(2), b);
         c.set_bindings(&g, Bindings::gamepad());
         assert_eq!(c.bindings.len(), 1, "a default isn't kept");
+        let haybox = DeviceId::Box {
+            vendor: 0x2e8a,
+            product: 0x000a,
+            nth: 1,
+        };
+        c.ports.push(Chosen {
+            device: haybox.clone(),
+            port: Some(1),
+            name: "Box controller (HayBox DInput) (2)".into(),
+        });
+        c.set_exact(&g, true);
+        // Only a gamepad takes "No deadzone, exact", only the keyboard a box layout.
+        c.set_exact(&haybox, true);
+        c.set_exact(&DeviceId::Keyboard, true);
+        assert_eq!(c.exact, std::slice::from_ref(&g));
+        let mut keys = crate::boxes::BoxKeys::default();
+        keys.set(melee_phob::haybox::Button::Rt1, Some("KeyX".into()));
+        c.set_box_layout(&DeviceId::Keyboard, Some(keys.clone()));
+        c.set_box_layout(&g, Some(keys.clone()));
+        assert_eq!(c.box_layouts, [(DeviceId::Keyboard, keys.clone())]);
         let mut back = Config::default();
         for line in c.save().lines() {
             let (key, v) = line.split_once('=').unwrap();
             assert!(back.restore_line(key.trim(), v.trim()));
         }
         assert_eq!(back, c);
+        assert!(back.is_exact(&g) && !back.is_exact(&haybox));
+        assert_eq!(back.box_layout(&DeviceId::Keyboard), Some(&keys));
+        back.set_box_layout(&DeviceId::Keyboard, None);
+        back.set_exact(&g, false);
+        assert!(back.box_layouts.is_empty() && back.exact.is_empty());
         for d in [
             g,
             DeviceId::Adapter(0),
             DeviceId::Adapter(3),
             DeviceId::Keyboard,
+            haybox,
         ] {
             assert_eq!(DeviceId::parse(&d.key()), Some(d));
         }
+        assert_eq!(
+            DeviceId::parse("box:0738:4726:0"),
+            Some(DeviceId::Box {
+                vendor: 0x0738,
+                product: 0x4726,
+                nth: 0
+            })
+        );
         for bad in [
             "adapter:0",
             "adapter:5",
             "gamepad:00:1",
             "mouse",
             "keyboard:1",
+            "box:2e8a:000a",
+            "box:2e8a:0a:0",
+            "box:2e8a:000a:0:1",
+            "box:zzzz:000a:0",
         ] {
             assert_eq!(DeviceId::parse(bad), None, "{bad}");
         }
