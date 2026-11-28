@@ -5,7 +5,7 @@
 //! waits that long before its next tick (`jit::Scheduler::took`).
 
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use melee_audio::{Mixer, Output, OutputOptions, OutputStats};
 use melee_data::archive::Archives;
@@ -19,6 +19,11 @@ static OPTIONS: Mutex<OutputOptions> = Mutex::new(OutputOptions {
 });
 /// The volume, in percent.
 static VOLUME: AtomicU32 = AtomicU32::new(100);
+/// The music's volume within it, in percent.
+static MUSIC: AtomicU32 = AtomicU32::new(100);
+/// Whether a sound effect starts a mix frame sooner where it can (the panel's Early sound
+/// effects, on by default: minimum latency is the default).
+static EARLY: AtomicBool = AtomicBool::new(true);
 
 /// Opens the matches' output devices this way from now on.
 pub fn set_output(options: OutputOptions) {
@@ -30,11 +35,28 @@ pub fn set_volume(percent: u32) {
     VOLUME.store(percent.min(100), Ordering::Relaxed);
 }
 
+/// Plays the music at `percent` of its volume within the volume from the next tick's mix: the
+/// stream's voices scaled in the mix (`Mixer::set_music`), on the same curve as the volume.
+pub fn set_music(percent: u32) {
+    MUSIC.store(percent.min(100), Ordering::Relaxed);
+}
+
+/// Starts each sound effect a mix frame (5 ms) sooner where it can, from the next tick's mix
+/// (`Mixer::set_early`); off, the mix is the console's.
+pub fn set_early(on: bool) {
+    EARLY.store(on, Ordering::Relaxed);
+}
+
 /// What the samples are multiplied by at `percent`: the square, which a listener hears as
 /// about even steps (50% is a quarter, 12 dB down); 100% plays the mix as it is.
 pub fn gain(percent: u32) -> f32 {
     let v = percent.min(100) as f32 / 100.0;
     v * v
+}
+
+/// What the music's voices are scaled by: the music's volume on the volume's curve.
+fn music_gain() -> f32 {
+    gain(MUSIC.load(Ordering::Relaxed))
 }
 
 fn options() -> OutputOptions {
@@ -53,6 +75,8 @@ impl Sound {
     /// never waits.
     pub fn mix(&mut self, audio: &mut melee_sim::audio::Audio, data: &Archives, long: bool) {
         self.samples.clear();
+        self.mixer.set_music(music_gain());
+        self.mixer.set_early(EARLY.load(Ordering::Relaxed));
         self.mixer.mix(audio, data, &mut self.samples);
         match &self.output {
             Some(out) if long => out.push_long(&self.samples),
@@ -147,4 +171,23 @@ pub fn start(
         samples: Vec::new(),
     };
     Ok((m, Some(sound)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The music's volume follows the volume's curve, and 100% leaves the mix alone.
+    #[test]
+    fn the_music_follows_the_volumes_curve() {
+        for percent in [0, 1, 50, 99, 100] {
+            set_music(percent);
+            assert_eq!(music_gain(), gain(percent));
+        }
+        assert_eq!(music_gain(), 1.0);
+        set_music(50);
+        assert_eq!(music_gain(), 0.25);
+        set_music(250);
+        assert_eq!(music_gain(), 1.0);
+    }
 }

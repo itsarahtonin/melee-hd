@@ -11,3 +11,10 @@ publish.workspace = true
 [dependencies]
 melee-sim.workspace = true
 thiserror = "2"
+# `.slpz` (src/slpz.rs, ported from the slpz crate): zstd as melee-data's zstd-sys is built,
+# no features of its own.
+zstd = { version = "0.13", default-features = false }
+
+[dev-dependencies]
+# A check that skips without its data fails under MELEE_CHECKS_REQUIRE_DATA (`melee_local_data::skip!`).
+melee-local-data = { path = "../../tools/local-data" }

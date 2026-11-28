@@ -126,3 +126,50 @@ fn fox_marth_fd_keeps_its_song_at_dolphins_speed() {
         assert!(last_box_move(&text) > 4000, "{text}");
     }
 }
+
+/// The early sound effects over the benchmark's Fox ditto from melee-sim's boot (`--early`; 697 of
+/// 706 starts moved on 2026-11-27):
+/// how many of the match's sound starts move a frame sooner, the voices the mixer checks
+/// against the simulation's blocks never drifting. The mix is then not the recording's, so
+/// only the counts are checked.
+#[test]
+#[ignore = "needs ssbm-rs's recording and the disc; run with --ignored"]
+fn early_starts_over_the_fox_ditto() {
+    std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
+    let refs = std::env::var_os("REFS")
+        .map_or_else(|| melee_local_data::ssbm_rs_local("").into(), PathBuf::from);
+    let wav = refs.join("player/audio-dolphin-fox-fox-fd.wav");
+    let replay = melee_local_data::bench_replay("fox-fox-fd");
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-audio-check"))
+        .arg("-")
+        .arg("--port")
+        .arg(&replay)
+        .arg(&wav)
+        .args([
+            "--fp",
+            "hardware",
+            "--disc-speed",
+            "fast",
+            "--ticks",
+            "4200",
+        ])
+        .arg("--early")
+        .output()
+        .expect("melee-audio-check runs");
+    let text = String::from_utf8_lossy(&out.stdout);
+    let line = text
+        .lines()
+        .find_map(|l| l.strip_prefix("early sound effects: "))
+        .unwrap_or_else(|| panic!("no early line\n{text}"));
+    // "N of M starts moved a frame sooner"
+    let numbers: Vec<u64> = line.split(' ').filter_map(|w| w.parse().ok()).collect();
+    let [moved, starts] = numbers[..] else {
+        panic!("unexpected early line: {line}");
+    };
+    println!("{moved} of {starts} starts moved");
+    assert!(moved > 0 && moved < starts, "{line}\n{text}");
+    assert!(
+        text.contains("drifted voice frames 0,"),
+        "voices drifted\n{text}"
+    );
+}

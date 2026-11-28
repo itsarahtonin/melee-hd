@@ -1,17 +1,16 @@
 """Draws the player's icon, a hexagonal ring in the style of the reflector move (original
 artwork, nothing taken from the game), and writes it as melee-hd.ico (16 to 256 pixels, for
-the Windows executable), melee-hd.png (256 pixels) and window.rgba (64 by 64 RGBA pixels, the
-window's icon). The band shades from a periwinkle edge to a pale center; small sizes get a
-wider band so the hole stays open. With --iconset DIR it writes the PNGs macOS's iconutil makes
-an .icns from instead (16 to 1024 pixels), for the release workflow's app bundle.
+the Windows executable), melee-hd.icns (16 to 1024 pixels, PNGs as iconutil writes them, for
+the macOS app bundle the dist tool makes), melee-hd.png (256 pixels) and window.rgba (64 by 64
+RGBA pixels, the window's icon). The band shades from a periwinkle edge to a pale center; small
+sizes get a wider band so the hole stays open.
 
-    python crates/melee-player/icon/make.py [--iconset DIR]
+    python crates/melee-player/icon/make.py
 """
 
 import math
 import os
 import struct
-import sys
 import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -80,19 +79,20 @@ def ico(images):
     return head + entries + data
 
 
-def iconset(folder):
-    os.makedirs(folder, exist_ok=True)
-    for size in [16, 32, 128, 256, 512]:
-        for scale, suffix in [(1, ""), (2, "@2x")]:
-            side = size * scale
-            with open(os.path.join(folder, f"icon_{size}x{size}{suffix}.png"), "wb") as f:
-                f.write(png(side, render(side)))
+# The icns element types iconutil writes, each a PNG of its side in pixels: the 1x and 2x
+# images of 16, 32, 128, 256 and 512 points.
+ICNS = [("icp4", 16), ("icp5", 32), ("ic11", 32), ("ic12", 64), ("ic07", 128), ("ic13", 256),
+        ("ic08", 256), ("ic14", 512), ("ic09", 512), ("ic10", 1024)]
+
+
+def icns(pngs):
+    """An icns file of ICNS's elements, with `pngs` the PNG of each side."""
+    body = b"".join(kind.encode() + struct.pack(">I", 8 + len(pngs[side])) + pngs[side]
+                    for kind, side in ICNS)
+    return b"icns" + struct.pack(">I", 8 + len(body)) + body
 
 
 def main():
-    if sys.argv[1:2] == ["--iconset"]:
-        iconset(sys.argv[2])
-        return
     images = []
     for size in SIZES:
         rows = render(size)
@@ -104,6 +104,11 @@ def main():
         f.write(ico(images))
     with open(os.path.join(HERE, "melee-hd.png"), "wb") as f:
         f.write(images[-1][1])
+    pngs = dict(images)
+    for side in {side for _, side in ICNS} - pngs.keys():
+        pngs[side] = png(side, render(side))
+    with open(os.path.join(HERE, "melee-hd.icns"), "wb") as f:
+        f.write(icns(pngs))
 
 
 if __name__ == "__main__":

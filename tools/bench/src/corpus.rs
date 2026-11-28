@@ -1,6 +1,6 @@
 //! `melee-bench corpus [--rules slippi|own] [--heap rules|off|on] [--fp slippi|hardware|own]
-//! [--jobs N] [--ticks N] [--list FILE]... [PATH...]`: plays every replay named (a `.slp` file, or every
-//! `.slp` under a directory; `--list` files name one path a line, `#` starting a comment) from
+//! [--jobs N] [--ticks N] [--list FILE]... [PATH...]`: plays every replay named (a `.slp` or
+//! `.slpz` file, or every one under a directory; `--list` files name one path a line, `#` starting a comment) from
 //! its start through `vs_match`'s replay path with the display pass, as `native` does, and
 //! reports how each run went: to the replay's end, the match's own end, or a stop (code no port
 //! covers, or a word melee-hd doesn't follow, by name), and the first frame whose fighters
@@ -118,7 +118,7 @@ fn parse(args: &[String]) -> Options {
     o
 }
 
-/// Every `.slp` file `path` names: itself, or those under it, in name order.
+/// Every `.slp` or `.slpz` file `path` names: itself, or those under it, in name order.
 fn replays_in(path: &Path, out: &mut Vec<PathBuf>) {
     if path.is_dir() {
         let mut entries: Vec<PathBuf> = std::fs::read_dir(path)
@@ -127,7 +127,7 @@ fn replays_in(path: &Path, out: &mut Vec<PathBuf>) {
             .collect();
         entries.sort();
         for e in entries {
-            if e.is_dir() || e.extension().is_some_and(|x| x == "slp") {
+            if e.is_dir() || e.extension().is_some_and(|x| x == "slp" || x == "slpz") {
                 replays_in(&e, out);
             }
         }
@@ -207,6 +207,11 @@ fn play(o: &Options, files: &mut Files, path: &Path) -> Outcome {
     let bytes = match std::fs::read(path) {
         Ok(b) => b,
         Err(e) => return fail("-".into(), format!("reading it: {e}")),
+    };
+    // A `.slpz` decompressed, for ssbm-rs's parser, which reads `.slp` only.
+    let bytes = match melee_slippi::slpz::slp(&bytes) {
+        Ok(b) => b.into_owned(),
+        Err(e) => return fail("-".into(), format!("decompressing it: {e}")),
     };
     let (original, replay) = match (
         ssbm_slippi::replay::Replay::parse(&bytes),

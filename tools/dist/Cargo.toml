@@ -1,6 +1,6 @@
 [package]
 name = "dist"
-description = "Builds the player to play (the dist profile) and copies it to dist/, with a desktop shortcut on Windows if asked"
+description = "Builds the player to play (the dist profile) and copies it to dist/, with a desktop shortcut on Windows or as melee-hd.app on macOS if asked"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

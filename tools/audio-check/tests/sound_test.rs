@@ -61,3 +61,40 @@ fn every_song_is_sample_exact() {
 fn every_category_is_sample_exact() {
     check("sounds", 173.0);
 }
+
+/// Music at 0% (`--music 0`): the songs session's stream voices are found (two a frame while a
+/// song plays) and the mix loses the music, keeping the menu's sounds: on 2026-11-27, 56940
+/// voice frames scaled and the level went from the recording's -20.9 dB to -41.6 dB, 139 of
+/// the 154 seconds exactly silent.
+#[test]
+#[ignore = "needs ssbm-rs's recording and the disc; run with --ignored"]
+fn no_music_leaves_the_songs_silent() {
+    std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
+    let refs = std::env::var_os("REFS")
+        .map_or_else(|| melee_local_data::ssbm_rs_local("").into(), PathBuf::from);
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-audio-check"))
+        .arg("--session")
+        .arg(refs.join("lockstep/sound-sessions/songs.inputs"))
+        .arg(refs.join("player/audio-sound-songs.wav"))
+        .args(["--music", "0"])
+        .output()
+        .expect("melee-audio-check runs");
+    let text = String::from_utf8_lossy(&out.stdout);
+    let line = text
+        .lines()
+        .find_map(|l| l.strip_prefix("music at 0%: "))
+        .unwrap_or_else(|| panic!("no music line\n{text}"));
+    // "N voice frames scaled; level A dB, the recording's B dB"
+    let numbers: Vec<f64> = line
+        .split([' ', ',', ';'])
+        .filter_map(|w| w.parse().ok())
+        .collect();
+    let [scaled, ours, theirs] = numbers[..] else {
+        panic!("unexpected music line: {line}");
+    };
+    assert!(scaled > 50_000.0, "{scaled} voice frames scaled\n{text}");
+    assert!(
+        ours < theirs - 18.0,
+        "{ours} dB against {theirs} dB\n{text}"
+    );
+}

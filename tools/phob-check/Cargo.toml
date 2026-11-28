@@ -1,0 +1,20 @@
+[package]
+name = "phob-check"
+description = "Checks melee-phob against PhobGCC-SW's own source, built from a pinned checkout as a test oracle"
+version.workspace = true
+edition.workspace = true
+# It links PhobGCC-SW's code (GPL version 3, no "or later") into its tests.
+license = "GPL-3.0-only"
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+melee-phob = { path = "../../crates/melee-phob" }
+# A check that skips without its data fails under MELEE_CHECKS_REQUIRE_DATA (`melee_local_data::skip!`).
+melee-local-data = { path = "../local-data" }
+
+[build-dependencies]
+cc = "1"

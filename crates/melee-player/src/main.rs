@@ -21,7 +21,9 @@
 //! `game::roster`, what it has ported (`--help` lists them); a match the command line names is a
 //! developer's. With no `--p1` to `--p4`, `--stage`, `--replay` or `--inputs`, Melee boots from
 //! power-on with the native save ([`saves`]), its menus gated where they lead into unported
-//! code ([`gates`]), each session recorded ([`session_rec`]); Esc opens the settings ([`front`]).
+//! code ([`gates`]), each session recorded ([`session_rec`]); Esc opens the settings ([`front`]),
+//! and so do Z on Melee's Options list and Z held in its main menu ([`hooks`]), the panel then
+//! worked from a controller too ([`pad_nav`]).
 //! Controllers: GameCube controllers on a Wii U adapter play their own ports;
 //! gamepads and the keyboard play the first ports left (arrows: stick, IJKL: C-stick, X/Z/C/S:
 //! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
@@ -67,6 +69,7 @@ mod bench_frames;
 mod capture;
 mod channel;
 mod console;
+mod controllers;
 #[cfg(test)]
 mod cosmetic_tests;
 mod dialogs;
@@ -75,6 +78,7 @@ mod front;
 mod gates;
 mod handoff;
 mod holds;
+mod hooks;
 mod jit;
 mod latency;
 #[cfg(test)]
@@ -86,7 +90,9 @@ mod paced;
 #[cfg(test)]
 mod paced_tests;
 mod pacing;
+mod pad_nav;
 mod perf;
+mod phob_ui;
 mod pipelines;
 mod power;
 #[cfg(test)]
@@ -97,6 +103,8 @@ mod predict_tests;
 mod prepare_tests;
 mod present;
 mod quick;
+#[cfg(test)]
+mod rebind_tests;
 #[cfg(test)]
 mod record_tests;
 mod recording;
@@ -112,13 +120,14 @@ mod sound;
 mod state_only_tests;
 mod timing;
 mod ui;
+mod update;
 
 use std::collections::VecDeque;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
 use melee_data::disc::Disc;
-use melee_input::{Inputs, Key};
+use melee_input::Inputs;
 use melee_render::blend::{Blend, Capture};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
@@ -143,6 +152,23 @@ const TICK_RATE: f64 = 60.0;
 
 /// The stack the game runs on: the simulation recurses as the original does (joint trees).
 const GAME_STACK: usize = 512 << 20;
+
+/// Read by NVIDIA's Optimus driver from the executable's exports: 1 puts the program on the
+/// discrete GPU of a laptop with two. A binary exports nothing by default, so build.rs has the
+/// linker export it (`/EXPORT:NvOptimusEnablement,DATA`).
+#[cfg(windows)]
+#[used]
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals)]
+pub static NvOptimusEnablement: u32 = 1;
+
+/// AMD's PowerXpress (switchable graphics) counterpart of [`NvOptimusEnablement`], exported
+/// the same way.
+#[cfg(windows)]
+#[used]
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals)]
+pub static AmdPowerXpressRequestHighPerformance: u32 = 1;
 
 /// Runs a test's body on the game's stack ([`GAME_STACK`]), as every test that starts a
 /// [`Session`] does: a test thread's is the standard library's 2 MiB.
@@ -245,6 +271,8 @@ struct Args {
     record: bool,
     /// Where the replays go: the settings folder's replays folder unless given.
     replays: Option<String>,
+    /// Saves the replays compressed, as `.slpz` (`--compress-replays`; off by default).
+    compress_replays: bool,
     /// The item frequency and switch a command line's match starts with: items off.
     items: GamePrefs,
     /// The Special Melee mode whose rules the match plays by, if any.
@@ -284,14 +312,14 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|controllers|quick-match|recordings]]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
          frames: [--high-refresh on|off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
-         replays: [--no-record] [--replays DIR] each match under the Slippi ruleset is saved to DIR, else to replays in the settings folder; Vanilla saves none\n\
+         replays: [--no-record] [--replays DIR] [--compress-replays] each match under the Slippi ruleset is saved to DIR, else to replays in the settings folder, as .slp or compressed as .slpz; Vanilla saves none; --replay plays a .slp or a .slpz\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match; [--debug-level off|debug-rom|develop] the developer setting's debug level from power-on\n\
          console: [--power-on] boots Melee from power-on into its menus; [--ruleset vanilla|slippi] the ruleset it runs (Slippi's: no memory card, no debug level); [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
@@ -358,6 +386,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         unfinished_stages: false,
         record: true,
         replays: None,
+        compress_replays: false,
         items: GamePrefs::items_off(),
         special: None,
         power_on: false,
@@ -522,6 +551,10 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.replays = Some(value()?);
                 a.given.replays = true;
             }
+            "--compress-replays" => {
+                a.compress_replays = true;
+                a.given.compress_replays = true;
+            }
             "--unfinished-stages" => a.unfinished_stages = true,
             "--power-on" => {
                 a.power_on = true;
@@ -683,7 +716,7 @@ impl Platform {
                         );
                     }
                     self.slp = Some((
-                        recording::Recording::new(dir.as_deref()),
+                        recording::Recording::new(dir.as_deref(), self.compress_replays),
                         !attract && !single_player && !unrebuilt,
                     ));
                 }
@@ -749,7 +782,10 @@ impl Platform {
         let feed = self.feed.take();
         let gated = match &feed {
             Some(_) => pads,
-            None => self.gates.apply(&s.game, pads),
+            None => {
+                let pads = self.gates.apply(&s.game, pads);
+                self.hooks.apply(&s.game, pads)
+            }
         };
         let (f, next) = {
             let source = match &feed {
@@ -800,10 +836,14 @@ struct Platform {
     /// Each VS match saved as a Slippi replay: to this folder (none: the settings folder's
     /// replays folder), when on.
     replays: Option<Option<String>>,
+    /// The replays saved compressed, as `.slpz`.
+    compress_replays: bool,
     /// The replay of the match playing, once it started, and whether it's kept (the title's
     /// attract match isn't).
     slp: Option<(recording::Recording, bool)>,
     gates: gates::Gates,
+    /// The controllers' routes into the settings.
+    hooks: hooks::Hooks,
 }
 
 impl Drop for Session {
@@ -938,8 +978,10 @@ impl Session {
             replays: (args.record
                 && (args.given.replays || (args.bench.is_none() && args.inputs.is_none())))
             .then(|| args.replays.clone()),
+            compress_replays: args.compress_replays,
             slp: None,
             gates: gates::Gates::default(),
+            hooks: hooks::Hooks::default(),
         });
         let mut s = s;
         let dol = platform.disc.dol().map_err(|e| format!("main.dol: {e}"))?;
@@ -1239,32 +1281,10 @@ fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
         .unwrap_or_else(|| "a panic".into())
 }
 
-/// The keyboard controller's keys.
-fn key(code: KeyCode) -> Option<Key> {
-    Some(match code {
-        KeyCode::ArrowLeft => Key::Left,
-        KeyCode::ArrowRight => Key::Right,
-        KeyCode::ArrowUp => Key::Up,
-        KeyCode::ArrowDown => Key::Down,
-        KeyCode::KeyJ => Key::CLeft,
-        KeyCode::KeyL => Key::CRight,
-        KeyCode::KeyI => Key::CUp,
-        KeyCode::KeyK => Key::CDown,
-        KeyCode::KeyX => Key::A,
-        KeyCode::KeyZ => Key::B,
-        KeyCode::KeyC => Key::X,
-        KeyCode::KeyS => Key::Y,
-        KeyCode::KeyD => Key::Z,
-        KeyCode::KeyQ => Key::L,
-        KeyCode::KeyW => Key::R,
-        KeyCode::Enter => Key::Start,
-        KeyCode::KeyT => Key::DUp,
-        KeyCode::KeyG => Key::DDown,
-        KeyCode::KeyF => Key::DLeft,
-        KeyCode::KeyH => Key::DRight,
-        KeyCode::ShiftLeft => Key::Modifier,
-        _ => return None,
-    })
+/// A key's name as the keyboard controller's bindings name it: winit's for its key code (`KeyX`,
+/// `ArrowLeft`), which the default bindings use (`melee_input::Bindings::keyboard`).
+fn key_name(code: KeyCode) -> String {
+    format!("{code:?}")
 }
 
 /// The frame time statistics the loop logs.
@@ -1395,6 +1415,8 @@ struct App {
     renderer: Option<Gpu>,
     shown: Option<present::Shown>,
     inputs: Inputs,
+    /// The controllers' moves in the settings panel while it shows.
+    pad_nav: pad_nav::PadNav,
     /// Each port's rumble motor as the match last set it (`PADControlMotor`'s commands):
     /// the controllers' rumble output, which the save's rumble options decide.
     motors: [bool; 4],
@@ -2193,12 +2215,20 @@ impl App {
             .and_then(|p| p.gates.refused)
             .filter(|(_, at)| at.elapsed() < gates::NOTE)
             .map(|(g, _)| gates::note_text(g));
-        if note.is_some() && self.note_painter.is_none() {
+        // The line under Melee's Options list: Z there opens the settings ([`hooks`]).
+        let options = note.is_none()
+            && self.front.is_some()
+            && self.replay.is_none()
+            && (self.session.as_ref()).is_some_and(|s| {
+                s.console.is_some() && hooks::place(s.game()) == hooks::Place::Options
+            });
+        if (note.is_some() || options) && self.note_painter.is_none() {
             let mut p = ui::Painter::new(&self.gpu, shown.format());
             p.clear = false;
             self.note_painter = Some(p);
         }
         let (gpu, overlay, note_painter) = (&self.gpu, &mut self.overlay, &mut self.note_painter);
+        let aspect = self.aspect;
         let meta = flicker::Meta {
             tick: self.ticks,
             t: blend.map(|b| b.t),
@@ -2209,8 +2239,10 @@ impl App {
             if let (Some(p), Some(text)) = (overlay, text) {
                 latency::overlay(p, gpu, &text, view, w, h);
             }
-            if let (Some(p), Some(text)) = (note_painter, note) {
-                front::note(p, gpu, &text, view, w, h);
+            match (note_painter, note) {
+                (Some(p), Some(text)) => front::note(p, gpu, &text, view, w, h),
+                (Some(p), None) if options => front::options_line(p, gpu, aspect, view, w, h),
+                _ => {}
             }
         });
         // Kept to draw the settings panel over.
@@ -2451,6 +2483,7 @@ impl App {
             args.debug_level = s.debug_level;
             args.record = s.record;
             args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+            args.compress_replays = s.compress_replays;
             args.ruleset = s.ruleset;
         }
         eprintln!("power on");
@@ -2528,6 +2561,8 @@ impl App {
         f.panel.recordings.refresh();
         // Every key goes up: none stays held into the game when it resumes.
         self.inputs.keyboard = Default::default();
+        // What the controllers hold as it opens (the Z that opened it) does nothing in it.
+        self.pad_nav.reset(&self.inputs.read());
         if let Some(s) = &self.shown {
             s.window.request_redraw();
         }
@@ -2539,9 +2574,16 @@ impl App {
         let Some(f) = &mut self.front else { return };
         f.panel.open = false;
         f.panel.message = None;
+        f.panel.controllers.stop();
         let s = f.panel.settings.clone();
         s.keep();
         self.apply(&s);
+        // A controller that worked the panel hands the game nothing it still holds (read on
+        // the ports the settings just applied give it).
+        let pads = self.inputs.read();
+        if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
+            p.hooks.after_panel(&pads, self.pad_nav.drove);
+        }
         self.start_clock();
         self.start_pacing(s.high_refresh);
         if self.hold.holds(Instant::now()) {
@@ -2550,8 +2592,37 @@ impl App {
         }
     }
 
+    /// A controller asked for the settings ([`hooks`]) in Melee from power-on.
+    fn panel_asked(&self) -> bool {
+        self.front.as_ref().is_some_and(|f| !f.panel.open)
+            && self.replay.is_none()
+            && (self.session.as_ref())
+                .and_then(|s| s.console.as_ref())
+                .is_some_and(|p| p.hooks.asked)
+    }
+
+    /// The controllers read while the panel shows: their moves to it, and what it then does.
+    fn poll_pads(&mut self, event_loop: &ActiveEventLoop) {
+        // While Rebind… waits for an input, a controller's press is its binding, not a move.
+        let capturing =
+            (self.front.as_ref()).is_some_and(|f| f.panel.controllers.capturing().is_some());
+        let inputs = &mut self.inputs;
+        let navs = self
+            .pad_nav
+            .poll(capturing, || inputs.read(), Instant::now());
+        let (Some(f), Some(shown)) = (&mut self.front, &self.shown) else {
+            return;
+        };
+        let halted = f.panel.halted;
+        let Some(w) = &mut f.window else { return };
+        if let Some(a) = w.pad(shown, &navs, halted) {
+            self.act(a, event_loop);
+        }
+    }
+
     /// The settings to the frames, the latency and the recordings.
     fn apply(&mut self, s: &front::Settings) {
+        self.inputs.set_config(s.controllers.clone());
         let msaa = if s.msaa { 4 } else { 1 };
         let fast = s.fast_renderer;
         self.args.scale = s.scale;
@@ -2586,13 +2657,17 @@ impl App {
         self.mode = s.high_refresh;
         self.args.record = s.record;
         self.args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+        self.args.compress_replays = s.compress_replays;
         let replays = s.record.then(|| self.args.replays.clone());
         if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
             p.replays = replays;
+            p.compress_replays = s.compress_replays;
         }
         // The sound's device and volume, taken at once (the device opened again if need be).
         sound::set_output(s.output());
         sound::set_volume(s.volume);
+        sound::set_music(s.music);
+        sound::set_early(s.early_sfx);
         if let Some(snd) = self.session.as_ref().and_then(|s| s.sound.as_ref()) {
             snd.configure();
         }
@@ -2669,6 +2744,19 @@ impl App {
         f.panel.running = melee
             .and_then(Session::ruleset)
             .unwrap_or(f.panel.settings.ruleset);
+        // The Controllers tab: the devices there are now, and what the one being rebound holds.
+        if f.panel.tab == front::Tab::Controllers {
+            let c = &mut f.panel.controllers;
+            c.devices = self.inputs.look(&f.panel.settings.controllers);
+            c.adapter.clone_from(&self.inputs.adapter);
+            if let Some(d) = c
+                .capturing()
+                .filter(|d| **d != melee_input::DeviceId::Keyboard)
+            {
+                let held = self.inputs.active(&d.clone());
+                c.offer(held);
+            }
+        }
         let action = w.redraw(&self.gpu, shown, &mut f.panel, self.last_image.as_ref());
         if f.panel.settings.fullscreen != shown.fullscreen() {
             shown.set_fullscreen(f.panel.settings.fullscreen);
@@ -3013,7 +3101,12 @@ impl ApplicationHandler for App {
             return;
         }
         let paneled = self.front.as_ref().is_some_and(|f| f.panel.open);
+        // While Rebind… runs, the keys are its, not the panel's (Enter doesn't press a button).
+        let rebinding = (self.front.as_ref())
+            .is_some_and(|f| f.panel.controllers.capturing().is_some())
+            && matches!(event, WindowEvent::KeyboardInput { .. });
         if paneled
+            && !rebinding
             && let (
                 Some(Front {
                     window: Some(w), ..
@@ -3065,7 +3158,11 @@ impl ApplicationHandler for App {
                 if code == KeyCode::Escape && state == ElementState::Pressed {
                     // Escape opens the settings panel over the console, and closes it again (a
                     // drop-down open in it closes first); without the panel, it quits.
-                    match &self.front {
+                    match &mut self.front {
+                        // While Rebind… runs, it skips the input asked for.
+                        Some(f) if f.panel.open && f.panel.controllers.capturing().is_some() => {
+                            f.panel.controllers.skip();
+                        }
                         Some(f) if f.panel.open => {
                             let popup = f.window.as_ref().is_some_and(ui::Window::popup_open);
                             if !popup && !f.panel.halted {
@@ -3080,13 +3177,16 @@ impl ApplicationHandler for App {
                     }
                     return;
                 }
-                // The panel's key presses aren't the keyboard controller's; releases always
-                // are, so no key stays held.
+                // The panel's key presses aren't the keyboard controller's (while Rebind… reads
+                // the keyboard, they're its); releases always are, so no key stays held.
                 let pressed = state == ElementState::Pressed;
-                if let Some(k) = key(code)
-                    && !(paneled && pressed)
-                {
-                    self.inputs.keyboard.set(k, pressed);
+                let name = key_name(code);
+                if paneled && pressed {
+                    if let Some(f) = &mut self.front {
+                        f.panel.controllers.key(&name);
+                    }
+                } else {
+                    self.inputs.key(&name, pressed);
                 }
             }
             _ => {}
@@ -3126,6 +3226,12 @@ impl ApplicationHandler for App {
                 }
             }
         }
+        if self.panel_asked() {
+            if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
+                p.hooks.asked = false;
+            }
+            self.open_panel();
+        }
         let paneled = self.front.as_ref().is_some_and(|f| f.panel.open);
         if self.session.is_some() && !paneled {
             // Ticks and frames that are due run; the event loop sleeps until shortly before the
@@ -3133,7 +3239,7 @@ impl ApplicationHandler for App {
             // way. The fixed timer only sleeps.
             for _ in 0..32 {
                 let next_tick = self.run_due();
-                if self.ended() {
+                if self.ended() || self.panel_asked() {
                     break;
                 }
                 let next = self.draw_due().map_or(next_tick, |f| f.min(next_tick));
@@ -3181,7 +3287,18 @@ impl ApplicationHandler for App {
             ));
             return;
         }
-        // The panel: woken by events, or when egui asked for its next frame.
+        // The panel: woken by events, when egui asked for its next frame, and to read the
+        // controllers.
+        let paneled = self.front.as_ref().is_some_and(|f| f.panel.open);
+        if paneled {
+            self.poll_pads(event_loop);
+            if !self.front.as_ref().is_some_and(|f| f.panel.open) {
+                // Closed from a controller: the ticks go on at once.
+                event_loop.set_control_flow(ControlFlow::Poll);
+                return;
+            }
+        }
+        let poll = Instant::now() + pad_nav::POLL;
         let flow = match self.front.as_mut().and_then(|f| f.window.as_mut()) {
             Some(w) if paneled => match w.repaint_at {
                 Some(t) if t <= Instant::now() => {
@@ -3189,10 +3306,10 @@ impl ApplicationHandler for App {
                     if let Some(s) = &self.shown {
                         s.window.request_redraw();
                     }
-                    ControlFlow::Wait
+                    ControlFlow::WaitUntil(poll)
                 }
-                Some(t) => ControlFlow::WaitUntil(t),
-                None => ControlFlow::Wait,
+                Some(t) => ControlFlow::WaitUntil(t.min(poll)),
+                None => ControlFlow::WaitUntil(poll),
             },
             _ => ControlFlow::Wait,
         };
@@ -3820,6 +3937,9 @@ fn settings_of(args: &Args) -> front::Settings {
     if g.replays {
         s.replays = args.replays.clone().unwrap_or_default();
     }
+    if g.compress_replays {
+        s.compress_replays = args.compress_replays;
+    }
     if g.record_sessions {
         s.record_sessions = args.session_record;
     }
@@ -3846,6 +3966,7 @@ fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.jit_margin = Duration::from_secs_f64(f64::from(s.jit_margin) / 1000.0);
     a.record = s.record;
     a.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+    a.compress_replays = s.compress_replays;
     a.session_record = s.record_sessions;
     a.debug_level = s.debug_level;
     a.audio_exclusive = s.audio_exclusive;
@@ -3859,6 +3980,9 @@ fn run(args: Args) -> ExitCode {
         let mut panel = front::Panel::new(settings_of(&args), args.disc.clone());
         panel.open = true;
         panel.tab = args.settings_tab;
+        if panel.tab == front::Tab::Controllers {
+            panel.controllers.devices = Inputs::new(args.adapter).look(&panel.settings.controllers);
+        }
         return match ui::shot(&gpu, &mut panel, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -3880,8 +4004,11 @@ fn run(args: Args) -> ExitCode {
     // and its power-on in the background once the window is up.
     let front = args.front.then(|| {
         let settings = settings_of(&args);
+        let mut panel = front::Panel::new(settings, args.disc.clone());
+        // Once a day, in release builds, on a thread of its own (`update`).
+        panel.update = update::start(panel.settings.update_check);
         Front {
-            panel: front::Panel::new(settings, args.disc.clone()),
+            panel,
             window: None,
         }
     });
@@ -3892,6 +4019,8 @@ fn run(args: Args) -> ExitCode {
     if let Some(f) = &front {
         sound::set_output(f.panel.settings.output());
         sound::set_volume(f.panel.settings.volume);
+        sound::set_music(f.panel.settings.music);
+        sound::set_early(f.panel.settings.early_sfx);
     }
     let session = if args.front {
         None
@@ -3942,6 +4071,7 @@ fn run(args: Args) -> ExitCode {
         renderer: None,
         shown: None,
         inputs: Inputs::new(args.adapter),
+        pad_nav: pad_nav::PadNav::default(),
         motors: [false; 4],
         jit: jit::Scheduler::new(
             Duration::from_secs_f64(1.0 / TICK_RATE),
@@ -3999,6 +4129,15 @@ fn run(args: Args) -> ExitCode {
         handoff: handoff::Handoff::default(),
         args,
     };
+    // The player's ports and bindings (the Controllers tab's).
+    if let Some(f) = &app.front {
+        app.inputs.set_config(f.panel.settings.controllers.clone());
+    }
+    // PhobGCC's processing on the adapter ports it's on for, whether or not the panel shows.
+    match &app.front {
+        Some(f) => f.panel.phob.apply(app.inputs.adapter.as_deref()),
+        None => phob_ui::PhobPanel::default().apply(app.inputs.adapter.as_deref()),
+    }
     if let Some(path) = &app.args.latency_log {
         match latency::Log::create(path) {
             Ok(log) => app.latency = Some(log),
@@ -4180,14 +4319,37 @@ fn main() -> ExitCode {
             None => return ExitCode::SUCCESS,
         }
     }
-    // The window must live on the main thread on some systems, so the game gets its stack by
-    // running everything on a thread that is itself the event loop's only user.
-    let child = std::thread::Builder::new()
+    // macOS runs winit's event loop on the process's first thread only, and its dialogs there.
+    #[cfg(target_os = "macos")]
+    let done = run_on_first_thread(args);
+    // Elsewhere the game gets its stack by running everything on a thread that is itself the
+    // event loop's only user.
+    #[cfg(not(target_os = "macos"))]
+    let done = std::thread::Builder::new()
         .stack_size(GAME_STACK)
         .spawn(move || run(args))
-        .expect("the player's thread");
-    child.join().unwrap_or_else(|p| {
+        .expect("the player's thread")
+        .join();
+    done.unwrap_or_else(|p| {
         console::fatal(&format!("melee-hd stopped: {}", panic_text(&p)));
         ExitCode::FAILURE
     })
+}
+
+/// The player on macOS's first thread, where winit's event loop must run (it refuses any other
+/// there, and has no switch for it as on Windows and Linux), on the stack the linker gives that
+/// thread: build.rs asks for [`GAME_STACK`] (`-stack_size`), and `tests/mac_stack.rs` reads it
+/// back from the executable. A panic is caught as the other systems' thread join catches it.
+#[cfg(target_os = "macos")]
+fn run_on_first_thread(args: Args) -> std::thread::Result<ExitCode> {
+    // SAFETY: both only read the calling thread's attributes.
+    let stack = unsafe { libc::pthread_get_stacksize_np(libc::pthread_self()) };
+    if stack < GAME_STACK {
+        eprintln!(
+            "the first thread's stack is {} MiB, less than the game's {} MiB: a deep recursion may overflow it",
+            stack >> 20,
+            GAME_STACK >> 20
+        );
+    }
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(args)))
 }
