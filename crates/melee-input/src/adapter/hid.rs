@@ -14,6 +14,7 @@
 use std::collections::VecDeque;
 use std::ffi::c_void;
 use std::ptr::NonNull;
+use std::time::Instant;
 
 use objc2_core_foundation::{
     CFDictionary, CFIndex, CFNumber, CFRetained, CFRunLoop, CFRunLoopMode, CFString,
@@ -33,7 +34,9 @@ const KEPT: usize = 32;
 struct State {
     /// IOKit copies each input report here before calling [`report`].
     buffer: [u8; MAX_REPORT],
-    reports: VecDeque<([u8; MAX_REPORT], usize)>,
+    /// Each report, its length and when IOKit handed it over: a run of the run loop can
+    /// bring several, and PhobGCC steps by their arrival, not by when they're read.
+    reports: VecDeque<([u8; MAX_REPORT], usize, Instant)>,
     removed: bool,
 }
 
@@ -134,7 +137,7 @@ impl Link for Hid {
         }
     }
 
-    fn next(&mut self, out: &mut [u8; MAX_REPORT]) -> Result<Option<usize>, String> {
+    fn next(&mut self, out: &mut [u8; MAX_REPORT]) -> Result<Option<(usize, Instant)>, String> {
         let state = self.state.as_ptr();
         // SAFETY: IOKit writes `state` only from inside the run loop's run, while no
         // reference to it is held here.
@@ -146,9 +149,9 @@ impl Link for Hid {
             if (*state).removed {
                 return Err("unplugged".into());
             }
-            Ok((*state).reports.pop_front().map(|(r, len)| {
+            Ok((*state).reports.pop_front().map(|(r, len, at)| {
                 out[..len].copy_from_slice(&r[..len]);
-                len
+                (len, at)
             }))
         }
     }
@@ -197,7 +200,7 @@ unsafe extern "C-unwind" fn report(
         if reports.len() == KEPT {
             reports.pop_front();
         }
-        reports.push_back((r, n));
+        reports.push_back((r, n, Instant::now()));
     }
 }
 
