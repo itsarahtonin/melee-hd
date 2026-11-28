@@ -4,6 +4,7 @@
 //! melee-hd [--saves DIR] [--no-session-record]     boots Melee from power-on with the native save
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread]
+//!          [--texture-filtering off|2|4|8|16] [--supersampling off|2|4] [--sharpening off|STRENGTH]
 //!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
@@ -235,6 +236,9 @@ struct Args {
     one_thread: bool,
     /// Samples a pixel: 4 for MSAA, 1 as the console draws.
     msaa: u32,
+    /// Texture filtering, Supersampling and Sharpening (all off as the console draws).
+    anisotropy: melee_gpu::Anisotropy,
+    filters: melee_gpu::post::Filters,
     /// Draws with the fast renderer (docs/fast-renderer.md) rather than the exact one.
     fast: bool,
     /// The console from power-on with the settings panel (no match on the command line).
@@ -310,6 +314,7 @@ fn usage() -> String {
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
          frames: [--high-refresh on|off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
+         filters: [--texture-filtering off|2|4|8|16] [--supersampling off|2|4] [--sharpening off|STRENGTH (0 to 100)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
          replays: [--no-record] [--replays DIR] each match under the Slippi ruleset is saved to DIR, else to replays in the settings folder; Vanilla saves none\n\
@@ -364,6 +369,8 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         aspect: present::Aspect::GAME,
         one_thread: false,
         msaa: 1,
+        anisotropy: melee_gpu::Anisotropy::OFF,
+        filters: melee_gpu::post::Filters::OFF,
         // The fast renderer by default (Sarah, 2026-11-20); `--renderer exact` for the other.
         fast: true,
         front: false,
@@ -482,6 +489,37 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                     _ => return Err("--msaa 4 (or 1, off)".into()),
                 };
                 a.given.msaa = true;
+            }
+            "--texture-filtering" => {
+                a.anisotropy = match value()?.as_str() {
+                    "off" | "1" => melee_gpu::Anisotropy::OFF,
+                    v @ ("2" | "4" | "8" | "16") => {
+                        melee_gpu::Anisotropy::new(v.parse().expect("a number"))
+                    }
+                    _ => return Err("--texture-filtering off|2|4|8|16".into()),
+                };
+                a.given.anisotropy = true;
+            }
+            "--supersampling" => {
+                a.filters.supersampling = match value()?.as_str() {
+                    "off" | "1" => 1,
+                    "2" => 2,
+                    "4" => 4,
+                    _ => return Err("--supersampling off|2|4".into()),
+                };
+                a.given.supersampling = true;
+            }
+            "--sharpening" => {
+                a.filters.sharpening = match value()?.as_str() {
+                    "off" => None,
+                    v => Some(
+                        v.parse()
+                            .ok()
+                            .filter(|n| *n <= 100)
+                            .ok_or("--sharpening off|STRENGTH (0 to 100)")?,
+                    ),
+                };
+                a.given.sharpening = true;
             }
             "--renderer" => {
                 a.fast = match value()?.as_str() {
@@ -2464,6 +2502,8 @@ impl App {
         let msaa = if s.msaa { 4 } else { 1 };
         let fast = s.fast_renderer;
         self.args.scale = s.scale;
+        // Before the scale, which Supersampling multiplies.
+        present::set_filters(s.anisotropy, s.filters());
         self.set_aspect(s.aspect);
         self.scale = scale_for(s.scale, self.window_size, s.aspect);
         let width = s.aspect.efb_width(self.scale);
@@ -3157,14 +3197,15 @@ fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool, fast: bool) -> Gpu {
 }
 
 /// The internal resolution's scale: as asked, or the smallest whose 480 lines cover the
-/// window's height, at most what the aspect's EFB width allows.
+/// window's height, times Supersampling's factor (the present filters it down), at most what
+/// the aspect's EFB width allows.
 fn scale_for(asked: u32, size: (u32, u32), aspect: present::Aspect) -> u32 {
     let scale = if asked != 0 {
         asked
     } else {
         size.1.div_ceil(480)
     };
-    scale.clamp(1, aspect.max_scale())
+    (scale * present::supersampling()).clamp(1, aspect.max_scale())
 }
 
 /// A match's renderer makes the textures and meshes of what the game holds before the match's
@@ -3677,6 +3718,16 @@ fn settings_of(args: &Args) -> front::Settings {
     if g.msaa {
         s.msaa = args.msaa == 4;
     }
+    if g.anisotropy {
+        s.anisotropy = args.anisotropy;
+    }
+    if g.supersampling {
+        s.supersampling = args.filters.supersampling;
+    }
+    if g.sharpening {
+        s.sharpening = args.filters.sharpening.is_some();
+        s.sharpness = args.filters.sharpening.unwrap_or(s.sharpness);
+    }
     if g.renderer {
         s.fast_renderer = args.fast;
     }
@@ -3719,6 +3770,8 @@ fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.fullscreen = s.fullscreen;
     a.scale = s.scale;
     a.msaa = if s.msaa { 4 } else { 1 };
+    a.anisotropy = s.anisotropy;
+    a.filters = s.filters();
     a.fast = s.fast_renderer;
     a.present = s.present;
     a.added_delay = s.added_delay;
@@ -3757,6 +3810,7 @@ fn run(args: Args) -> ExitCode {
     });
     present::set_present(args.present);
     present::set_scanned(args.flicker_scan);
+    present::set_filters(args.anisotropy, args.filters);
     if let Some(ticks) = args.bench {
         return bench(&args, ticks);
     }
@@ -3778,6 +3832,7 @@ fn run(args: Args) -> ExitCode {
         sound::set_volume(f.panel.settings.volume);
         sound::set_music(f.panel.settings.music);
         sound::set_early(f.panel.settings.early_sfx);
+        present::set_filters(f.panel.settings.anisotropy, f.panel.settings.filters());
     }
     let session = if args.front {
         None

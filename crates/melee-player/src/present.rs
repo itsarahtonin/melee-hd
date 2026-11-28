@@ -4,8 +4,8 @@
 //! deep, presenting each frame as soon as it's drawn, in the mode [`Present`] picks: mailbox
 //! by default, where the display has it, else FIFO.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::{Arc, LazyLock, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use melee_render::frame::GAME_ASPECT;
@@ -19,6 +19,11 @@ static PRESENT: Mutex<Present> = Mutex::new(Present::Mailbox);
 static ASPECT: Mutex<f32> = Mutex::new(GAME_ASPECT);
 /// Windows let the flicker scan copy their images (`--flicker-scan`).
 static SCANNED: AtomicBool = AtomicBool::new(false);
+/// The present's filters, Supersampling and Sharpening (off: the plain blit).
+static FILTERS: Mutex<melee_gpu::post::Filters> = Mutex::new(melee_gpu::post::Filters::OFF);
+/// Texture filtering's samples, which every renderer made here takes as it draws.
+static ANISOTROPY: LazyLock<Arc<AtomicU32>> =
+    LazyLock::new(|| Arc::new(AtomicU32::new(melee_gpu::Anisotropy::OFF.samples())));
 
 /// The largest EFB side the renderer makes (wgpu's default limit on a texture's side).
 const MAX_EFB_SIDE: u32 = 8192;
@@ -179,6 +184,19 @@ pub fn set_aspect(aspect: f32) {
     *ASPECT.lock().unwrap() = aspect;
 }
 
+/// Texture filtering for every renderer from their next draw, and the present's filters from
+/// the next frame. Supersampling's factor multiplies the internal scale ([`supersampling`]).
+pub fn set_filters(anisotropy: melee_gpu::Anisotropy, filters: melee_gpu::post::Filters) {
+    ANISOTROPY.store(anisotropy.samples(), Ordering::Relaxed);
+    *FILTERS.lock().unwrap() = filters;
+}
+
+/// Supersampling's factor per side (1 when off): the EFB is drawn this many times the internal
+/// scale (at most the largest scale), and filtered down at the present.
+pub fn supersampling() -> u32 {
+    FILTERS.lock().unwrap().supersampling.max(1)
+}
+
 /// Windows from now on let the flicker scan copy what they present ([`crate::flicker`]).
 pub fn set_scanned(on: bool) {
     SCANNED.store(on, Ordering::Relaxed);
@@ -271,6 +289,7 @@ impl Gpu {
         r.xfb_readback = false;
         r.set_timer(self.timer.clone());
         r.share_specialized(Some(self.specialized.clone()));
+        r.share_anisotropy(ANISOTROPY.clone());
         r
     }
 
@@ -319,6 +338,9 @@ pub struct Blit {
     pipeline: wgpu::RenderPipeline,
     layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
+    format: wgpu::TextureFormat,
+    /// The present's filters' passes, made the first time one is on ([`set_filters`]).
+    post: Mutex<Option<melee_gpu::post::Post>>,
 }
 
 impl Blit {
@@ -388,11 +410,14 @@ impl Blit {
             pipeline,
             layout,
             sampler,
+            format,
+            post: Mutex::new(None),
         }
     }
 
     /// Draws `frame` into `view` (`w` by `h`), letterboxed to the aspect ratio shown; with no
-    /// frame, only the black around it.
+    /// frame, only the black around it. With Supersampling or Sharpening on, through their
+    /// passes ([`melee_gpu::post`]); else the plain blit.
     pub fn draw(
         &self,
         gpu: &Gpu,
@@ -402,6 +427,26 @@ impl Blit {
         h: u32,
     ) {
         let device = &gpu.device;
+        let filters = *FILTERS.lock().unwrap();
+        if let Some(frame) = frame
+            && !filters.is_off()
+        {
+            let mut encoder = device.create_command_encoder(&Default::default());
+            let mut post = self.post.lock().unwrap();
+            let post = post.get_or_insert_with(|| melee_gpu::post::Post::new(device, self.format));
+            post.encode(
+                device,
+                &gpu.queue,
+                &mut encoder,
+                frame,
+                view,
+                picture(w, h),
+                filters,
+                gpu.timer.as_ref(),
+            );
+            gpu.queue.submit([encoder.finish()]);
+            return;
+        }
         let group = frame.map(|frame| {
             let fview = frame.create_view(&Default::default());
             device.create_bind_group(&wgpu::BindGroupDescriptor {
