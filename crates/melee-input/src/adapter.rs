@@ -11,6 +11,7 @@
 //! adapter's port `n` is `DeviceId::Adapter(n)` whichever path read it. [`Adapter::ports`] turns the report into what `PADRead` would return, with the origin
 //! calibration the console's SI and PAD library do. Ported from ssbm-rs's player.
 
+use std::collections::VecDeque;
 use std::convert::Infallible;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -67,6 +68,8 @@ struct Shared {
     sent: [bool; 4],
     /// Reports read, for the polling rate.
     reports: u64,
+    /// When the last second's reports came, oldest first, for [`Adapter::rate`].
+    arrivals: VecDeque<Instant>,
     /// PhobGCC's processing, for the ports it's on for.
     phob: [Option<Phob>; 4],
 }
@@ -123,6 +126,12 @@ impl Shared {
     fn take(&mut self, data: [u8; REPORT_LEN], now: Instant) {
         self.report = Some((data, now));
         self.reports += 1;
+        self.arrivals.push_back(now);
+        while let Some(&t) = self.arrivals.front()
+            && now.saturating_duration_since(t) > RATE_SPAN
+        {
+            self.arrivals.pop_front();
+        }
         for (i, phob) in self.phob.iter_mut().enumerate() {
             let Some(phob) = phob else { continue };
             let Some((_, button, raw)) = decode(&data[1 + 9 * i..][..9]) else {
@@ -146,7 +155,24 @@ impl Shared {
             phob.out = Some(phob.processor.process(&input, step));
         }
     }
+
+    /// Reports a second at `now`, from the reports of the second before it: those between the
+    /// first and the last of them over the time between, so the number holds still while the
+    /// reports' times jitter. None while the adapter is closed, or until its reports of the
+    /// last second span half of it (just opened, or stopped reporting).
+    fn rate(&self, now: Instant) -> Option<f64> {
+        self.report?;
+        let mut recent = (self.arrivals.iter())
+            .filter(|t| now.saturating_duration_since(**t) <= RATE_SPAN && **t <= now);
+        let first = *recent.next()?;
+        let (between, last) = recent.fold((0u32, first), |(n, _), t| (n + 1, *t));
+        let span = last.saturating_duration_since(first);
+        (span >= RATE_SPAN / 2).then(|| f64::from(between) / span.as_secs_f64())
+    }
 }
+
+/// How far back [`Adapter::rate`] looks.
+const RATE_SPAN: Duration = Duration::from_secs(1);
 
 #[derive(Clone, Copy, Default)]
 struct Port {
@@ -186,6 +212,7 @@ impl Adapter {
                 let was_open = {
                     let mut s = self.shared.lock().unwrap();
                     s.sent = [false; 4];
+                    s.arrivals.clear();
                     s.report.take().is_some()
                 };
                 if self.stop.load(Ordering::Relaxed) {
@@ -344,6 +371,13 @@ impl Adapter {
         self.shared.lock().unwrap().reports
     }
 
+    /// The adapter's polling rate, in reports a second, measured over the last second (125 on a
+    /// stock adapter, about 1000 overclocked); none while it's closed or until it has reported
+    /// for half a second.
+    pub fn rate(&self) -> Option<f64> {
+        self.shared.lock().unwrap().rate(Instant::now())
+    }
+
     /// When the latest report arrived, while the adapter is open: [`Adapter::ports`] reads it.
     pub fn report_time(&self) -> Option<Instant> {
         self.shared.lock().unwrap().report.map(|(_, t)| t)
@@ -483,7 +517,7 @@ fn buttons(b1: u8, b2: u8) -> u16 {
 
 /// What the PAD library makes of a controller's raw values (`SPEC2_MakeStatus` in analog mode
 /// 3, the default), given its origin (`UpdateOrigin`).
-fn status(button: u16, raw: [u8; 6], origin: [u8; 6]) -> PadStatus {
+pub(crate) fn status(button: u16, raw: [u8; 6], origin: [u8; 6]) -> PadStatus {
     let centered = |v: u8| v.wrapping_sub(128) as i8;
     let mut org = origin.map(centered);
     // The X patch, for controllers that report a bad stick x origin.
@@ -706,5 +740,50 @@ mod tests {
             .unwrap();
         assert_eq!(steps[40], 8.0);
         assert_eq!(a.phob(1, |_| ()), None);
+    }
+
+    /// The polling rate over a made-up clock: a stock adapter's 8 ms between reports, jittered
+    /// or not, reads 125; an overclocked one's 1 ms, 1000; only the last second counts; and
+    /// there's none while the adapter is closed, just opened or not reporting.
+    #[test]
+    fn the_rate_over_the_last_second() {
+        let ms = Duration::from_millis;
+        let t0 = Instant::now();
+        let mut s = Shared::default();
+        assert_eq!(s.rate(t0), None, "closed");
+        let report = one(0, [128; 6]);
+        // Reports at the given times, then the rate as the last came.
+        let mut at = t0;
+        let mut feed = |s: &mut Shared, gaps: &mut dyn Iterator<Item = Duration>| {
+            for gap in gaps {
+                at += gap;
+                s.take(report, at);
+            }
+            at
+        };
+        let now = feed(&mut s, &mut std::iter::repeat_n(ms(8), 60));
+        assert_eq!(s.rate(now), None, "under half a second of reports");
+        let now = feed(&mut s, &mut std::iter::repeat_n(ms(8), 200));
+        assert_eq!(s.rate(now), Some(125.0));
+        assert_eq!(
+            s.rate(now + ms(4)).map(f64::round),
+            Some(125.0),
+            "between reports"
+        );
+        // USB's jitter: 7 and 9 ms in turn.
+        let now = feed(&mut s, &mut [ms(7), ms(9)].into_iter().cycle().take(250));
+        assert_eq!(s.rate(now).map(f64::round), Some(125.0));
+        // Overclocked: the second before is all at 1 ms.
+        let now = feed(&mut s, &mut std::iter::repeat_n(ms(1), 1500));
+        assert_eq!(s.rate(now), Some(1000.0));
+        assert!(s.arrivals.len() <= 1001, "only the last second is kept");
+        // Half a second after the reports stopped, half a second's are left; then none.
+        assert_eq!(s.rate(now + ms(400)).map(f64::round), Some(1000.0));
+        assert_eq!(s.rate(now + ms(600)), None, "not reporting");
+        // An odd rate isn't rounded to a USB frame: 4 ms is 250.
+        let now = feed(&mut s, &mut std::iter::repeat_n(ms(4), 400));
+        assert_eq!(s.rate(now), Some(250.0));
+        s.report = None;
+        assert_eq!(s.rate(now), None, "closed again");
     }
 }

@@ -457,17 +457,28 @@ impl GamepadState for gilrs::Gamepad<'_> {
 pub struct GamepadReader<'a, S> {
     pub state: &'a S,
     pub taps: &'a [gilrs::Button],
+    /// "No deadzone, exact" (its state then unfiltered too, `Inputs::pump`): each axis the
+    /// nearest of the 256 bytes across its range, less the centre, and each trigger's travel the
+    /// nearest of 256, so a device sending the GameCube's bytes plays them as they are.
+    pub exact: bool,
 }
 
 impl<S: GamepadState> Reader for GamepadReader<'_, S> {
     fn read(&self, source: &Source, click: bool, reach: f32) -> Reading {
+        let travel = |v: f32| {
+            if self.exact {
+                f32::from(crate::boxes::byte_of_fraction(f64::from(v)))
+            } else {
+                v * 255.0
+            }
+        };
         match *source {
             Source::Button(b) => {
                 let value = self.state.button_value(b);
                 let held = self.state.is_pressed(b) || self.taps.contains(&b);
                 Reading {
                     axis: if held { reach } else { value * 127.0 },
-                    trigger: value * 255.0,
+                    trigger: travel(value),
                     // A trigger clicks at the end of its travel, as a GameCube trigger's does.
                     pressed: if click { value > 0.95 } else { held },
                 }
@@ -475,9 +486,15 @@ impl<S: GamepadState> Reader for GamepadReader<'_, S> {
             Source::Axis(a, pos) => {
                 let v = self.state.axis_value(a).clamp(-1.0, 1.0);
                 let half = if pos { v.max(0.0) } else { (-v).max(0.0) };
+                let axis = if self.exact {
+                    let s = crate::boxes::exact_stick(v);
+                    (if pos { s.max(0) } else { (-s).max(0) }) as f32
+                } else {
+                    half * 127.0
+                };
                 Reading {
-                    axis: half * 127.0,
-                    trigger: half * 255.0,
+                    axis,
+                    trigger: travel(half),
                     pressed: half >= 0.5,
                 }
             }
@@ -830,11 +847,61 @@ mod tests {
             let got = defaults.pad(&GamepadReader {
                 state: &gp,
                 taps: &taps,
+                exact: false,
             });
             let mut want = old_gamepad(&gp, &taps);
             want.err = ERR_NONE;
             assert_eq!(got, want);
         }
+    }
+
+    /// "No deadzone, exact": a gamepad sending each GameCube byte as its axis's `v × 257` over
+    /// 0 to 65535 (gilrs's `axis_value` of it) and each trigger's as `t / 255` plays those
+    /// bytes, −128 and every step off centre included; without it the old scaling truncates.
+    #[test]
+    fn exact_gamepads_play_their_bytes() {
+        use gilrs::{Axis, Button};
+        let value = |v: u8| (f32::from(v) * 257.0 + 1.0) / 65536.0 * 2.0 - 1.0;
+        // A trigger's byte as Windows Gaming Input and gilrs scale it (`t / 255` times
+        // `i32::MAX`, then over 0 to `i32::MAX`), which lands just short of `t / 255`.
+        let travel = |t: u8| {
+            let val = (f64::from(t) / 255.0 * f64::from(i32::MAX)) as i32;
+            (val as f32 / i32::MAX as f32).clamp(0.0, 1.0)
+        };
+        let b = Bindings::gamepad();
+        let mut moved = 0;
+        for v in 0..=255u8 {
+            let gp = Fake {
+                values: vec![
+                    (Button::LeftTrigger2, travel(v)),
+                    (Button::RightTrigger2, travel(255 - v)),
+                ],
+                axes: vec![
+                    (Axis::LeftStickX, value(v)),
+                    (Axis::LeftStickY, value(255 - v)),
+                    (Axis::RightStickX, value(v)),
+                    (Axis::RightStickY, value(v)),
+                ],
+                ..Fake::default()
+            };
+            let read = |exact| {
+                b.pad(&GamepadReader {
+                    state: &gp,
+                    taps: &[],
+                    exact,
+                })
+            };
+            let p = read(true);
+            let s = (i16::from(v) - 128) as i8;
+            assert_eq!(
+                (p.stick_x, p.stick_y, p.substick_x, p.substick_y),
+                (s, (127 - i16::from(v)) as i8, s, s),
+                "{v}"
+            );
+            assert_eq!((p.trigger_left, p.trigger_right), (v, 255 - v), "{v}");
+            moved += usize::from(read(false) != p);
+        }
+        assert!(moved > 200, "the old reading differs");
     }
 
     fn random_pad(rng: &mut Rng) -> PadStatus {

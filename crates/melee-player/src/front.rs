@@ -97,6 +97,7 @@ pub struct Given {
     pub renderer: bool,
     pub record: bool,
     pub replays: bool,
+    pub compress_replays: bool,
     pub record_sessions: bool,
     pub debug_level: bool,
     pub audio_exclusive: bool,
@@ -138,6 +139,9 @@ pub struct Settings {
     /// Saves each VS match as a Slippi replay, to `replays` (empty: the settings folder's).
     pub record: bool,
     pub replays: String,
+    /// Saves them compressed, as `.slpz` (design call 12 of docs/milestone-7.md: off by
+    /// default; reading is always on).
+    pub compress_replays: bool,
     /// Records each session from power-on (`session_rec`).
     pub record_sessions: bool,
     /// The developer setting: the debug level Melee's next power-on raises `DbLevel` to
@@ -160,6 +164,152 @@ pub struct Settings {
     /// The Controllers tab's: the ports chosen and the bindings changed (`port` and `bindings`
     /// lines, [`melee_input::Config::save`]).
     pub controllers: melee_input::Config,
+    /// Low-spec mode (the Display section's switch, [`LOW_SPEC`]): none while it's off; while
+    /// it's on, the settings it replaced, each by its key with the value it had in the file's
+    /// words (`low-spec-saved` lines), which [`Settings::low_spec_off`] puts back.
+    pub low_spec: Option<Vec<(&'static str, String)>>,
+    /// Asks GitHub once a day whether a newer release exists, in release builds
+    /// ([`crate::update`]; design call 11 of milestone 7: on by default).
+    pub update_check: bool,
+}
+
+/// A setting low-spec mode sets: its key in `settings.txt`, the value it sets in the file's
+/// words, what its help line calls what it turns off, and how the setting is read and written
+/// in the file's words (`set` refuses a value the file wouldn't take).
+pub struct LowSpec {
+    pub key: &'static str,
+    pub low: &'static str,
+    pub what: &'static str,
+    get: fn(&Settings) -> String,
+    set: fn(&mut Settings, &str) -> bool,
+}
+
+/// What low-spec mode sets (design call 3 of `docs/milestone-7.md`, Sarah 2026-11-27): what
+/// costs the most to draw on a weak machine, in the Display section's order. Resolution 1x,
+/// Antialiasing off, Texture filtering, Supersampling and Sharpening off (task 17's; Sharpening's
+/// strength stays), the fast renderer and High refresh off (no prediction, a frame a tick); the
+/// latency settings, the audio and the game are untouched. Task 18's screen filter joins the
+/// list, off, as it lands: an entry here is all that's needed, the help line included.
+pub const LOW_SPEC: [LowSpec; 7] = [
+    LowSpec {
+        key: "scale",
+        low: "1",
+        what: "resolutions above the console's",
+        get: |s| match s.scale {
+            0 => "auto".to_owned(),
+            n => n.to_string(),
+        },
+        set: |s, v| match v {
+            "auto" => {
+                s.scale = 0;
+                true
+            }
+            v => match v.parse().ok().filter(|n| (1..=8).contains(n)) {
+                Some(n) => {
+                    s.scale = n;
+                    true
+                }
+                None => false,
+            },
+        },
+    },
+    LowSpec {
+        key: "msaa",
+        low: "off",
+        what: "antialiasing",
+        get: |s| if s.msaa { "4" } else { "off" }.to_owned(),
+        set: |s, v| match v {
+            "4" => {
+                s.msaa = true;
+                true
+            }
+            "off" | "1" => {
+                s.msaa = false;
+                true
+            }
+            _ => false,
+        },
+    },
+    LowSpec {
+        key: "texture-filtering",
+        low: "off",
+        what: "texture filtering",
+        get: |s| factor_key(s.anisotropy.samples()),
+        set: |s, v| match parse_factor(v, &[1, 2, 4, 8, 16]) {
+            Some(n) => {
+                s.anisotropy = melee_gpu::Anisotropy::new(n);
+                true
+            }
+            None => false,
+        },
+    },
+    LowSpec {
+        key: "supersampling",
+        low: "off",
+        what: "supersampling",
+        get: |s| factor_key(s.supersampling),
+        set: |s, v| match parse_factor(v, &melee_gpu::post::Filters::SUPERSAMPLING) {
+            Some(n) => {
+                s.supersampling = n;
+                true
+            }
+            None => false,
+        },
+    },
+    LowSpec {
+        key: "sharpening",
+        low: "off",
+        what: "sharpening",
+        get: |s| if s.sharpening { "on" } else { "off" }.to_owned(),
+        set: |s, v| match v {
+            "on" | "off" => {
+                s.sharpening = v == "on";
+                true
+            }
+            _ => false,
+        },
+    },
+    LowSpec {
+        key: "renderer",
+        low: "fast",
+        what: "the exact renderer",
+        get: |s| if s.fast_renderer { "fast" } else { "exact" }.to_owned(),
+        set: |s, v| match v {
+            "fast" | "exact" => {
+                s.fast_renderer = v == "fast";
+                true
+            }
+            _ => false,
+        },
+    },
+    LowSpec {
+        // The mode by its own name, so a command line's Interpolate comes back as it was.
+        key: "high-refresh",
+        low: "off",
+        what: "high refresh",
+        get: |s| s.high_refresh.key().to_owned(),
+        set: |s, v| match Mode::parse(v) {
+            Ok(m) => {
+                s.high_refresh = m;
+                true
+            }
+            Err(_) => false,
+        },
+    },
+];
+
+/// The Low-spec mode switch's help line (the plan's, its list from [`LOW_SPEC`]; proposed
+/// 2026-11-28, awaiting Sarah's word).
+pub fn low_spec_help() -> String {
+    let what: Vec<&str> = LOW_SPEC.iter().map(|l| l.what).collect();
+    let list = match what.split_last() {
+        Some((last, [])) => (*last).to_owned(),
+        Some((last, rest)) => format!("{} and {last}", rest.join(", ")),
+        None => String::new(),
+    };
+    format!(
+        "Turns off what costs the most to draw: {list}. Turning it off puts your settings back."
+    )
 }
 
 /// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
@@ -208,6 +358,12 @@ fn replays_box(chosen: Ruleset, running: Ruleset) -> (bool, &'static str, Option
         (chosen != running).then_some(REPLAYS_NEXT_START),
     )
 }
+
+/// The replays' compression's box and its line (milestone 7's task 14, proposed 2026-11-27).
+pub const COMPRESS_LABEL: &str = "Compress replays (.slpz)";
+pub const COMPRESS_HELP: &str =
+    "Saves each replay about ten times smaller. Slippi's own tools may need it uncompressed first.";
+
 /// The "Save replays" help line while Melee runs under the Slippi ruleset (approved 2026-11-18;
 /// Slo-Mo Melee dropped from it as it became a live match, proposed the same day, awaiting
 /// Sarah's word): the matches design call 6 of `docs/slippi-ruleset.md` leaves unrecorded,
@@ -251,6 +407,11 @@ pub const STOP_TITLE: &str = "Melee stopped";
 pub const STOP_TEXT: &str = "Melee reached something melee-hd can't play yet, or a place where the original game would crash. It isn't anything you did. Report a bug saves what's needed to see it happen again; Restart Melee\u{2026} starts over from power-on.";
 /// Report a bug's button and help line (proposed 2026-11-14, awaiting Sarah's word).
 pub const REPORT_BUTTON: &str = "Report a bug";
+
+/// The panel's footer lines for a controller ([`crate::pad_nav`], [`crate::hooks`]).
+pub const PAD_KEYS: &str =
+    "Controller: the D-pad or stick moves, A: choose, B: back, Start: close.";
+pub const PAD_OPEN: &str = "Press Z on Melee's Options list, or hold Z for a second in its main menu, to open these settings with a controller.";
 pub const REPORT_HELP: &str = "Saves a zip in the settings folder with this session's recording, the log, your latest captures and your settings, and opens the folder. Nothing is sent anywhere: attach the zip to your report yourself.";
 
 /// The Renderer setting's choices and help lines (Sarah, 2026-11-20: signed off, Fast's line
@@ -315,6 +476,7 @@ impl Default for Settings {
             jit_margin: (crate::jit::DEFAULT_MARGIN.as_secs_f64() * 1000.0) as f32,
             record: true,
             replays: String::new(),
+            compress_replays: false,
             record_sessions: true,
             debug_level: 0,
             volume: 100,
@@ -325,6 +487,8 @@ impl Default for Settings {
             recordings: String::new(),
             ruleset: DEFAULT_RULESET,
             controllers: melee_input::Config::default(),
+            low_spec: None,
+            update_check: true,
         }
     }
 }
@@ -368,9 +532,10 @@ impl Settings {
             self.audio_device,
             on(self.audio_exclusive),
         ) + &format!(
-            "early-sfx = {}\nrecordings = {}\nruleset = {}\nrenderer = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            "early-sfx = {}\nrecordings = {}\ncompress-replays = {}\nruleset = {}\nrenderer = {}\nsettings-version = {SETTINGS_VERSION}\n",
             on(self.early_sfx),
             self.recordings,
+            on(self.compress_replays),
             ruleset_key(self.ruleset),
             if self.fast_renderer { "fast" } else { "exact" }
         ) + &format!(
@@ -379,7 +544,53 @@ impl Settings {
             factor_key(self.supersampling),
             on(self.sharpening),
             self.sharpness,
-        ) + &self.controllers.save()
+        ) + &format!("update-check = {}\n", on(self.update_check))
+            + &self.low_spec_lines()
+            + &self.controllers.save()
+    }
+
+    /// Low-spec mode's lines: whether it's on, and while it is, each setting it replaced.
+    fn low_spec_lines(&self) -> String {
+        let on = if self.low_spec.is_some() { "on" } else { "off" };
+        let mut lines = format!("low-spec = {on}\n");
+        for (key, was) in self.low_spec.iter().flatten() {
+            lines += &format!("low-spec-saved = {key} = {was}\n");
+        }
+        lines
+    }
+
+    /// Low-spec mode on: each of [`LOW_SPEC`]'s settings to its low value, what it replaced
+    /// kept (a setting already there keeps nothing). Already on, nothing changes.
+    pub fn low_spec_on(&mut self) {
+        if self.low_spec.is_some() {
+            return;
+        }
+        let mut saved = Vec::new();
+        for l in &LOW_SPEC {
+            let was = (l.get)(self);
+            if was != l.low {
+                (l.set)(self, l.low);
+                saved.push((l.key, was));
+            }
+        }
+        self.low_spec = Some(saved);
+    }
+
+    /// Low-spec mode off: what it replaced back, except a setting the player changed while it
+    /// was on, which keeps the player's change (design call 3). A setting still at its low
+    /// value counts as unchanged, even one changed and changed back. Already off, nothing
+    /// changes.
+    pub fn low_spec_off(&mut self) {
+        let Some(saved) = self.low_spec.take() else {
+            return;
+        };
+        for (key, was) in saved {
+            if let Some(l) = LOW_SPEC.iter().find(|l| l.key == key)
+                && (l.get)(self) == l.low
+            {
+                (l.set)(self, &was);
+            }
+        }
     }
 
     /// The present's filters these settings ask for.
@@ -406,6 +617,8 @@ impl Settings {
         // The controllers' lines replace what's set, all together.
         let mut controllers = melee_input::Config::default();
         let mut any_controllers = false;
+        // Low-spec mode's lines, together: whether it's on, and what it replaced.
+        let (mut low_spec, mut low_saved) = (None, Vec::new());
         let on = |v: &str| match v {
             "on" => Some(true),
             "off" => Some(false),
@@ -498,6 +711,11 @@ impl Settings {
                     }
                 }
                 "replays" if !given.replays => self.replays = v.to_owned(),
+                "compress-replays" if !given.compress_replays => {
+                    if let Some(b) = on(v) {
+                        self.compress_replays = b;
+                    }
+                }
                 "record-sessions" if !given.record_sessions => {
                     if let Some(b) = on(v) {
                         self.record_sessions = b;
@@ -531,9 +749,27 @@ impl Settings {
                     }
                 }
                 "recordings" => self.recordings = v.to_owned(),
+                "update-check" => {
+                    if let Some(b) = on(v) {
+                        self.update_check = b;
+                    }
+                }
                 "ruleset" if !given.ruleset => {
                     if let Some(r) = parse_ruleset(v) {
                         self.ruleset = r;
+                    }
+                }
+                "low-spec" => low_spec = on(v).or(low_spec),
+                "low-spec-saved" => {
+                    // `KEY = VALUE`, kept as the setting reads it back; one it wouldn't take is
+                    // dropped.
+                    let (k, was) = v.split_once('=').unwrap_or((v, ""));
+                    let mut read = Settings::default();
+                    if let Some(l) = LOW_SPEC.iter().find(|l| l.key == k.trim())
+                        && (l.set)(&mut read, was.trim())
+                    {
+                        low_saved.retain(|(k, _)| *k != l.key);
+                        low_saved.push((l.key, (l.get)(&read)));
                     }
                 }
                 key => any_controllers |= controllers.restore_line(key, v),
@@ -541,6 +777,9 @@ impl Settings {
         }
         if any_controllers {
             self.controllers = controllers;
+        }
+        if let Some(on) = low_spec {
+            self.low_spec = on.then_some(low_saved);
         }
         // Settings kept before 2026-11-14 (no version) hold the old defaults in every key, as
         // every save writes them all: the fixed timer and high refresh off move to the new
@@ -668,6 +907,8 @@ pub struct Panel {
     pub controllers: crate::controllers::Controllers,
     /// The adapter ports' PhobGCC sections.
     pub phob: crate::phob_ui::PhobPanel,
+    /// A newer release, once the update check found one ([`crate::update::start`]).
+    pub update: crate::update::Notice,
 }
 
 impl Panel {
@@ -692,6 +933,7 @@ impl Panel {
             disc,
             controllers: Default::default(),
             phob: Default::default(),
+            update: Default::default(),
         };
         p.look_at_save();
         p
@@ -720,7 +962,10 @@ impl Panel {
     /// Lays the panel out; what was pressed, if anything.
     pub fn show(&mut self, ui: &mut egui::Ui) -> Option<Action> {
         let mut action = None;
-        egui::ScrollArea::vertical().show(ui, |ui| action = self.show_panel(ui));
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            crate::ui::keep_focus_shown(ui);
+            action = self.show_panel(ui);
+        });
         action
     }
 
@@ -745,6 +990,7 @@ impl Panel {
                 ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
                 ui.vertical(|ui| {
                     ui.set_max_width(width);
+                    self.show_update(ui);
                     // A stop shows whichever tab is open.
                     if let Some(a) = self.show_stop(ui) {
                         action = Some(a);
@@ -820,9 +1066,25 @@ impl Panel {
             }
             ui.add_space(16.0);
             ui.weak("Esc: settings. F11 or Alt+Enter: fullscreen. F3: latency overlay. F12: bug capture.");
+            ui.weak(PAD_KEYS);
+            ui.weak(PAD_OPEN);
             ui.add_space(16.0);
         });
         action
+    }
+
+    /// A newer release's line, over whichever tab is open, while the setting is on.
+    fn show_update(&self, ui: &mut egui::Ui) {
+        let Some(release) = self.update.get().filter(|_| self.settings.update_check) else {
+            return;
+        };
+        ui.horizontal_wrapped(|ui| {
+            ui.label(release.notice());
+            if ui.link(crate::update::OPEN_RELEASE).clicked() {
+                crate::update::open(&release.page());
+            }
+        });
+        ui.add_space(8.0);
     }
 
     /// When Melee stopped: what happened in plain words, what stopped it, and Report a bug.
@@ -859,7 +1121,12 @@ impl Panel {
             .spacing([16.0, 8.0])
             .show(ui, |ui| {
                 ui.label("Volume");
-                ui.add(egui::Slider::new(&mut s.volume, 0..=100).suffix("%"));
+                // Steps of 1 for a controller's left and right (`crate::pad_nav`) in its box too.
+                ui.add(
+                    egui::Slider::new(&mut s.volume, 0..=100)
+                        .step_by(1.0)
+                        .suffix("%"),
+                );
                 ui.end_row();
                 ui.label("Music");
                 ui.add(egui::Slider::new(&mut s.music, 0..=100).suffix("%"));
@@ -904,6 +1171,17 @@ impl Panel {
             .num_columns(2)
             .spacing([16.0, 8.0])
             .show(ui, |ui| {
+                ui.label("");
+                let mut low = s.low_spec.is_some();
+                if ui.checkbox(&mut low, "Low-spec mode").changed() {
+                    if low {
+                        s.low_spec_on();
+                    } else {
+                        s.low_spec_off();
+                    }
+                }
+                ui.end_row();
+                help(ui, &low_spec_help());
                 ui.label("Resolution");
                 let (scale, aspect) = (&mut s.scale, s.aspect);
                 let name = |n: u32| match n {
@@ -1025,6 +1303,9 @@ impl Panel {
                 ui.add(
                     egui::DragValue::new(&mut s.added_delay)
                         .range(0..=15)
+                        // A frame a step, so a controller's left and right step it (egui's
+                        // whole-number speed, 0.25, rounds each step away).
+                        .speed(1.0)
                         .suffix(" frames"),
                 );
                 ui.end_row();
@@ -1138,6 +1419,13 @@ impl Panel {
                 );
                 ui.end_row();
                 ui.label("");
+                ui.add_enabled(
+                    saves && s.record,
+                    egui::Checkbox::new(&mut s.compress_replays, COMPRESS_LABEL),
+                );
+                ui.end_row();
+                help(ui, COMPRESS_HELP);
+                ui.label("");
                 ui.checkbox(&mut s.record_sessions, "Record sessions");
                 ui.end_row();
                 help(
@@ -1184,6 +1472,9 @@ impl Panel {
         if ui.button("Change disc\u{2026}").clicked() {
             action = Some(Action::ChangeDisc);
         }
+        section(ui, "Updates");
+        ui.checkbox(&mut self.settings.update_check, crate::update::CHECK_LABEL);
+        ui.weak(crate::update::CHECK_HELP);
         action
     }
 }
@@ -1286,6 +1577,57 @@ pub fn note(
     painter.paint(gpu, out, view, w, h);
 }
 
+/// Where the Options list's line goes, as fractions of the game's 73:60 picture (its left edge
+/// and its top): under the list's last entry, aligned with its entries.
+pub const OPTIONS_LINE_AT: [f32; 2] = [0.075, 0.782];
+
+/// The line under Melee's Options list ([`crate::hooks::OPTIONS_LINE`]) over a frame `w` by
+/// `h` shown at `aspect`: placed in the game's own picture, which a widened frame keeps in its
+/// middle and a stretched one stretches.
+pub fn options_line(
+    painter: &mut crate::ui::Painter,
+    gpu: &crate::present::Gpu,
+    aspect: Aspect,
+    view: &wgpu::TextureView,
+    w: u32,
+    h: u32,
+) {
+    let zoom = painter.ctx.zoom_factor();
+    let [left, top, pw, ph] = crate::present::picture(w, h);
+    let game_w = if aspect.widen {
+        ph * melee_render::frame::GAME_ASPECT
+    } else {
+        pw
+    };
+    let x = left + (pw - game_w) / 2.0 + OPTIONS_LINE_AT[0] * game_w;
+    let y = top + OPTIONS_LINE_AT[1] * ph;
+    let size = egui::vec2(w as f32, h as f32) / zoom;
+    let input = egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+        ..Default::default()
+    };
+    // The text's size follows the picture's, as the menu's own text does.
+    let text = (ph / zoom * 0.026).max(9.0);
+    let out = painter.ctx.run_ui(input, |ui| {
+        egui::Area::new(egui::Id::new("options-line"))
+            .fixed_pos(egui::pos2(x, y) / zoom)
+            .show(ui.ctx(), |ui| {
+                egui::Frame::new()
+                    .fill(egui::Color32::from_black_alpha(170))
+                    .inner_margin(egui::Margin::symmetric(8, 4))
+                    .corner_radius(4.0)
+                    .show(ui, |ui| {
+                        ui.label(
+                            egui::RichText::new(crate::hooks::OPTIONS_LINE)
+                                .size(text)
+                                .color(egui::Color32::WHITE),
+                        );
+                    });
+            });
+    });
+    painter.paint(gpu, out, view, w, h);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1308,6 +1650,7 @@ mod tests {
             jit_margin: 2.5,
             record: false,
             replays: "D:/Slippi/melee-hd".to_owned(),
+            compress_replays: true,
             record_sessions: false,
             debug_level: 4,
             volume: 35,
@@ -1318,7 +1661,214 @@ mod tests {
             recordings: "D:/Slippi".to_owned(),
             ruleset: Ruleset::Slippi,
             controllers: picked_controllers(),
+            low_spec: None,
+            update_check: false,
         }
+    }
+
+    /// A small xorshift, for random settings.
+    struct Rng(u64);
+
+    impl Rng {
+        fn below(&mut self, n: u64) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0 % n
+        }
+        fn pick<T: Copy>(&mut self, of: &[T]) -> T {
+            of[self.below(of.len() as u64) as usize]
+        }
+        fn yes(&mut self) -> bool {
+            self.below(2) == 1
+        }
+    }
+
+    /// Random settings: every setting the panel shows, low-spec's and the rest (the
+    /// controllers' and the folders' as [`picked`]'s), low-spec mode off.
+    fn random(rng: &mut Rng) -> Settings {
+        Settings {
+            aspect: rng.pick(&Aspect::CHOICES.map(|(a, _)| a)),
+            fullscreen: rng.yes(),
+            scale: rng.below(9) as u32,
+            msaa: rng.yes(),
+            anisotropy: rng.pick(&melee_gpu::Anisotropy::CHOICES),
+            supersampling: rng.pick(&melee_gpu::post::Filters::SUPERSAMPLING),
+            sharpening: rng.yes(),
+            sharpness: rng.below(101) as u32,
+            fast_renderer: rng.yes(),
+            high_refresh: rng.pick(&[Mode::Off, Mode::Interpolate, Mode::Extrapolate]),
+            present: rng.pick(&Present::CHOICES.map(|(p, _)| p)),
+            added_delay: rng.below(16) as u32,
+            tick_timing: rng.pick(&Timing::CHOICES.map(|(t, _)| t)),
+            jit_margin: rng.below(33) as f32 / 4.0,
+            record: rng.yes(),
+            record_sessions: rng.yes(),
+            debug_level: rng.pick(&[0, 3, 4]),
+            volume: rng.below(101) as u32,
+            music: rng.below(101) as u32,
+            audio_exclusive: rng.yes(),
+            early_sfx: rng.yes(),
+            ruleset: rng.pick(&[Ruleset::Vanilla, Ruleset::Slippi]),
+            ..picked()
+        }
+    }
+
+    /// Through the settings file and back, as quitting and starting again does.
+    fn kept(s: &Settings) -> Settings {
+        let mut back = Settings::default();
+        back.restore(&s.save(), &Given::default());
+        back
+    }
+
+    /// Low-spec mode sets what design call 3 lists and nothing else; switched off, every
+    /// setting is as it was, for random settings, and the same across a quit while it's on.
+    #[test]
+    fn low_spec_gives_every_setting_back() {
+        let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
+        for _ in 0..2000 {
+            let was = random(&mut rng);
+            let mut s = was.clone();
+            s.low_spec_on();
+            let low = Settings {
+                scale: 1,
+                msaa: false,
+                anisotropy: melee_gpu::Anisotropy::OFF,
+                supersampling: 1,
+                sharpening: false,
+                fast_renderer: true,
+                high_refresh: Mode::Off,
+                low_spec: s.low_spec.clone(),
+                ..was.clone()
+            };
+            assert_eq!(s, low);
+            assert_eq!(kept(&s), s, "{}", s.save());
+            // On again changes nothing.
+            s.low_spec_on();
+            assert_eq!(s, low);
+            let mut quit = kept(&s);
+            s.low_spec_off();
+            assert_eq!(s, was);
+            quit.low_spec_off();
+            assert_eq!(quit, was);
+            // Off again changes nothing.
+            s.low_spec_off();
+            assert_eq!(s, was);
+        }
+    }
+
+    /// A setting the player changed while low-spec mode was on keeps the change when it goes
+    /// off (design call 3), on its own list's and anything else; the rest come back.
+    #[test]
+    fn a_change_while_low_spec_survives() {
+        let mut rng = Rng(0x2545_f491_4f6c_dd1d);
+        let mut kept_changes = 0;
+        for _ in 0..2000 {
+            let was = random(&mut rng);
+            // The panel sets High refresh on or off; Interpolate is the command line's.
+            let other = random(&mut rng);
+            let other = Settings {
+                high_refresh: Mode::from_setting(other.high_refresh.setting()).unwrap(),
+                ..other
+            };
+            let mut s = was.clone();
+            s.low_spec_on();
+            let mut want = was.clone();
+            for l in &LOW_SPEC {
+                let v = (l.get)(&other);
+                if rng.yes() && v != l.low {
+                    (l.set)(&mut s, &v);
+                    (l.set)(&mut want, &v);
+                    kept_changes += 1;
+                }
+            }
+            s.volume = other.volume;
+            want.volume = other.volume;
+            if rng.yes() {
+                s = kept(&s);
+            }
+            s.low_spec_off();
+            assert_eq!(s, want);
+        }
+        assert!(kept_changes > 1000);
+        // Changed and changed back to the low value counts as unchanged.
+        let was = Settings {
+            scale: 3,
+            ..Settings::default()
+        };
+        let mut s = was.clone();
+        s.low_spec_on();
+        s.scale = 5;
+        s.scale = 1;
+        s.low_spec_off();
+        assert_eq!(s, was);
+    }
+
+    /// Each of [`LOW_SPEC`]'s settings is the file's own: its key and low value read as the
+    /// settings file reads them.
+    #[test]
+    fn low_spec_names_the_files_settings() {
+        let mut rng = Rng(0xd1b5_4a32_d192_ed03);
+        for _ in 0..200 {
+            let mut s = random(&mut rng);
+            for l in &LOW_SPEC {
+                // Versioned: an older file's `high-refresh = off` moves to on.
+                s.restore(
+                    &format!(
+                        "{} = {}\nsettings-version = {SETTINGS_VERSION}\n",
+                        l.key, l.low
+                    ),
+                    &Given::default(),
+                );
+                assert_eq!((l.get)(&s), l.low, "{}", l.key);
+                let mut set = random(&mut rng);
+                assert!((l.set)(&mut set, l.low));
+                assert_eq!((l.get)(&set), l.low);
+                assert!(!(l.set)(&mut set, "sometimes"));
+            }
+        }
+    }
+
+    /// The file keeps low-spec mode's lines; ones it can't read change nothing, and a file
+    /// without them leaves the mode as it is.
+    #[test]
+    fn low_spec_is_kept() {
+        let mut s = Settings {
+            scale: 0,
+            msaa: true,
+            high_refresh: Mode::Interpolate,
+            ..Settings::default()
+        };
+        s.low_spec_on();
+        let file = s.save();
+        assert!(
+            file.contains(
+                "low-spec = on\nlow-spec-saved = scale = auto\nlow-spec-saved = msaa = 4\nlow-spec-saved = high-refresh = interpolate\n"
+            ),
+            "{file}"
+        );
+        assert!(Settings::default().save().contains("low-spec = off\n"));
+        let mut back = Settings::default();
+        back.restore(
+            "low-spec = on\nlow-spec-saved = scale = 9\nlow-spec-saved = volume = 3\nlow-spec-saved = msaa\nlow-spec-saved = renderer = exact\n",
+            &Given::default(),
+        );
+        assert_eq!(back.low_spec, Some(vec![("renderer", "exact".to_owned())]));
+        back.restore("volume = 20\n", &Given::default());
+        assert!(back.low_spec.is_some());
+        back.restore("low-spec = sometimes\n", &Given::default());
+        assert!(back.low_spec.is_some());
+        back.restore("low-spec = off\n", &Given::default());
+        assert_eq!(back.low_spec, None);
+    }
+
+    /// The switch's help line, its list from [`LOW_SPEC`].
+    #[test]
+    fn low_spec_help_lists_what_it_turns_off() {
+        assert_eq!(
+            low_spec_help(),
+            "Turns off what costs the most to draw: resolutions above the console's, antialiasing, texture filtering, supersampling, sharpening, the exact renderer and high refresh. Turning it off puts your settings back."
+        );
     }
 
     /// Ports placed (one gamepad away, one device on no port) and two devices rebound.
@@ -1346,8 +1896,13 @@ mod tests {
                     name: "Keyboard".into(),
                 },
             ],
-            bindings: Vec::new(),
+            ..Default::default()
         };
+        // A gamepad set to read exact, the keyboard on the box layout with a key moved.
+        c.set_exact(&pad, true);
+        let mut keys = melee_input::boxes::BoxKeys::default();
+        keys.set(melee_phob::haybox::Button::Mb2, Some("Digit6".into()));
+        c.set_box_layout(&DeviceId::Keyboard, Some(keys));
         let mut b = Bindings::keyboard();
         b.set(Target::A, Some(Source::Key("Space".into())));
         b.set(Target::Modifier, None);
@@ -1486,6 +2041,24 @@ mod tests {
         assert!(s.fast_renderer);
     }
 
+    /// The update check is on by default (design call 11), and a file kept before it existed
+    /// leaves it on; the file keeps it off.
+    #[test]
+    fn the_update_check_is_on_by_default() {
+        assert!(Settings::default().update_check);
+        let mut s = Settings::default();
+        s.restore(
+            "renderer = exact\nsettings-version = 2\n",
+            &Given::default(),
+        );
+        assert!(s.update_check);
+        s.restore("update-check = off\n", &Given::default());
+        assert!(!s.update_check);
+        assert!(s.save().contains("update-check = off\n"));
+        s.restore("update-check = on\n", &Given::default());
+        assert!(s.update_check);
+    }
+
     /// High refresh and just-in-time ticks are on by default; an older file's Interpolate reads
     /// as on, and the file keeps on or off.
     #[test]
@@ -1563,7 +2136,7 @@ mod tests {
     fn an_unreadable_file_changes_nothing() {
         let mut s = Settings::default();
         s.restore(
-            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\nmusic = 101\naudio-exclusive = sometimes\nearly-sfx = soon\n\u{0}garbage\n",
+            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\nmusic = 101\naudio-exclusive = sometimes\nearly-sfx = soon\nlow-spec = maybe\nlow-spec-saved = scale = 99\n\u{0}garbage\n",
             &Given::default(),
         );
         assert_eq!(s, Settings::default());

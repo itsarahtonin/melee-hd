@@ -12,7 +12,11 @@
 //! PhobGCC-SW's `PhobGCC/common` (`stick.h`, `filter.h`, `curveFitting.h`, and `readSticks`,
 //! the calibration steps and the trigger output of `phobGCC.h`).
 //!
-//! This crate is GPL-3.0-only, as PhobGCC-SW is; the rest of melee-hd only calls into it.
+//! It also holds [`haybox`], HayBox's Melee mode (the B0XX's 20-button layout), ported from
+//! HayBox at 2cffcd23 for the keyboard's box layout; that module's header names HayBox's authors.
+//!
+//! This crate is GPL-3.0-only, as PhobGCC-SW and HayBox are; the rest of melee-hd only calls
+//! into it.
 //!
 //! The firmware reads its sensors at 12 bits and runs once a millisecond; on the adapter the
 //! controller's own 8-bit values arrive once a report. [`Processor::process`] runs once a report,
@@ -43,6 +47,7 @@ pub mod calibrate;
 pub mod curve_fit;
 pub mod diag;
 pub mod filter;
+pub mod haybox;
 pub mod processor;
 pub mod profile;
 pub mod settings;

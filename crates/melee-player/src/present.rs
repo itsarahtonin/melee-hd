@@ -498,7 +498,7 @@ impl Blit {
 
 /// Where the frame goes in an image `w` by `h`, letterboxed to the aspect ratio shown: left,
 /// top, width and height.
-fn picture(w: u32, h: u32) -> [f32; 4] {
+pub fn picture(w: u32, h: u32) -> [f32; 4] {
     let (sw, sh) = (w as f32, h as f32);
     let aspect = *ASPECT.lock().unwrap();
     let scale = (sw / aspect).min(sh);

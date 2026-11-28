@@ -15,13 +15,18 @@
 //! ports' `PADStatus`, so whatever this layer does is what the session recording and a `.slp`
 //! record, and plays back the same.
 //!
-//! For a new kind of device (task 3's box controllers): give it a [`DeviceId`] variant, a
-//! default in [`DeviceId::default_bindings`], a [`bindings::Reader`] for its state (with
-//! [`Source`] variants for its inputs if gilrs's names don't fit), and list it in
-//! [`Inputs::read`]'s present devices; [`Ports`] and the Controllers tab take it from there.
+//! For a new kind of device: give it a [`DeviceId`] variant, a default in
+//! [`DeviceId::default_bindings`], a [`bindings::Reader`] for its state (with [`Source`]
+//! variants for its inputs if gilrs's names don't fit), and list it in [`Inputs::read`]'s
+//! present devices; [`Ports`] and the Controllers tab take it from there. Task 3's box
+//! controllers ([`boxes`]) did so: a box recognized by its USB ids is a [`DeviceId::Box`],
+//! read without gilrs's filters and decoded to its GameCube report, which a GameCube
+//! controller's bindings read; a gamepad can be set to "No deadzone, exact"; and the keyboard
+//! can play through a box layout (HayBox's Melee mode) in place of its bindings.
 
 pub mod adapter;
 pub mod bindings;
+pub mod boxes;
 mod delay;
 pub mod ports;
 
@@ -92,10 +97,12 @@ pub struct InputAges {
     pub gamepad: Option<Duration>,
 }
 
-/// A connected gamepad: gilrs's id for it this run and its identity.
+/// A connected gamepad: gilrs's id for it this run, its identity, and the box it is, if
+/// melee-hd recognizes one.
 struct Pad {
     id: gilrs::GamepadId,
     device: DeviceId,
+    model: Option<&'static boxes::Model>,
 }
 
 /// Every controller the player reads, each playing its port ([`ports`]).
@@ -119,13 +126,23 @@ pub struct Inputs {
     names: Vec<(DeviceId, String)>,
     /// Each kind's default bindings, for devices the player didn't rebind.
     defaults: [Bindings; 3],
+    /// The box layouts' Melee mode for each device played through one, with the SOCD
+    /// resolution's memory from one read to the next.
+    box_modes: Vec<(DeviceId, melee_phob::haybox::Melee20Button)>,
     started: Instant,
 }
 
 impl Inputs {
     /// The controllers; `adapter` starts reading a GameCube adapter.
     pub fn new(adapter: bool) -> Inputs {
-        let gilrs = match gilrs::Gilrs::new() {
+        // gilrs's filters (its deadzone and jitter filter) and its state's updates are applied
+        // per device in `pump`: every gamepad gets them as gilrs's default does, except boxes
+        // and those set to "No deadzone, exact".
+        let gilrs = match gilrs::GilrsBuilder::new()
+            .with_default_filters(false)
+            .set_update_state(false)
+            .build()
+        {
             Ok(g) => Some(g),
             Err(e) => {
                 eprintln!("input: no gamepads ({e})");
@@ -148,12 +165,16 @@ impl Inputs {
                 Bindings::gamepad(),
                 Bindings::keyboard(),
             ],
+            box_modes: Vec::new(),
             started: Instant::now(),
         }
     }
 
     /// The player's ports and bindings, from the next read.
     pub fn set_config(&mut self, config: Config) {
+        // A box layout changed starts its Melee mode afresh.
+        self.box_modes
+            .retain(|m| config.box_layout(&m.0) == self.config.box_layout(&m.0));
         self.config = config;
     }
 
@@ -161,53 +182,101 @@ impl Inputs {
     /// keyboard controller takes the presses of the keys its bindings use, and every release,
     /// so no key stays held.
     pub fn key(&mut self, name: &str, pressed: bool) {
-        if !pressed || self.bindings(&DeviceId::Keyboard).uses_key(name) {
+        let uses = match self.config.box_layout(&DeviceId::Keyboard) {
+            Some(k) => k.uses_key(name),
+            None => self.bindings(&DeviceId::Keyboard).uses_key(name),
+        };
+        if !pressed || uses {
             self.keyboard.set(name, pressed);
         }
     }
 
-    /// Takes in gilrs's events: the gamepads connected and the buttons pressed since. The
-    /// newest event's time, if any.
+    /// Takes in gilrs's events: the gamepads connected and the buttons pressed since. Each
+    /// event goes through gilrs's default filters (its D-pad axes as buttons, the jitter filter,
+    /// the deadzone, as `Gilrs::next_event` applies them) unless its gamepad reads exact (a
+    /// box, or "No deadzone, exact"), then into gilrs's state. The newest event's time, if any.
     fn pump(&mut self) -> Option<SystemTime> {
-        let g = self.gilrs.as_mut()?;
+        use gilrs::Filter;
+        use gilrs::ev::filter::{Jitter, axis_dpad_to_button, deadzone};
+        let mut g = self.gilrs.take()?;
         let mut newest: Option<SystemTime> = None;
         while let Some(e) = g.next_event() {
-            if let gilrs::EventType::ButtonPressed(b, _) = e.event {
-                self.taps.push((e.id, b));
+            // A gamepad not yet known takes its identity before its first event is filtered;
+            // the adapter, which gilrs sees on macOS, never becomes one (`connect`).
+            if !self.pads.iter().any(|p| p.id == e.id) && !is_adapter(&g.gamepad(e.id)) {
+                self.connect(&g);
             }
-            newest = newest.max(Some(e.time));
+            let ev = if self.exact(e.id) {
+                Some(e)
+            } else {
+                Some(e)
+                    .filter_ev(&axis_dpad_to_button, &mut g)
+                    .filter_ev(&Jitter::new(), &mut g)
+                    .filter_ev(&deadzone, &mut g)
+            };
+            let Some(ev) = ev.filter(|ev| !ev.is_dropped()) else {
+                continue;
+            };
+            g.update(&ev);
+            if let gilrs::EventType::ButtonPressed(b, _) = ev.event {
+                self.taps.push((ev.id, b));
+            }
+            newest = newest.max(Some(ev.time));
         }
+        self.connect(&g);
+        self.gilrs = Some(g);
+        newest
+    }
+
+    /// Whether gilrs's gamepad `id` reads exact: a box, or set to "No deadzone, exact".
+    fn exact(&self, id: gilrs::GamepadId) -> bool {
+        self.pads
+            .iter()
+            .find(|p| p.id == id)
+            .is_some_and(|p| p.model.is_some() || self.config.is_exact(&p.device))
+    }
+
+    /// Takes in the gamepads connected now: a new one gets its identity (a box by its USB ids,
+    /// any other by gilrs's UUID), one gone is let go.
+    fn connect(&mut self, g: &gilrs::Gilrs) {
         let mut connected = Vec::new();
         for (id, gp) in g.gamepads() {
             // The adapter, where gilrs sees it (macOS's HID driver), is the adapter's to read,
             // its controllers `DeviceId::Adapter`: never a gamepad device.
-            if gp
-                .vendor_id()
-                .zip(gp.product_id())
-                .is_some_and(|(v, p)| adapter::is_adapter(v, p))
-            {
+            if is_adapter(&gp) {
                 continue;
             }
             connected.push(id);
             if !self.pads.iter().any(|p| p.id == id) {
+                let model = gp
+                    .vendor_id()
+                    .zip(gp.product_id())
+                    .and_then(|(v, p)| boxes::model(v, p));
                 let uuid = gp.uuid();
+                let device = |nth| match model {
+                    Some(m) => DeviceId::Box {
+                        vendor: m.vendor,
+                        product: m.product,
+                        nth,
+                    },
+                    None => DeviceId::Gamepad { uuid, nth },
+                };
                 // The first number no gamepad of its kind connected now has: one unplugged and
                 // plugged back in is the same gamepad again.
                 let nth = (0..)
-                    .find(|&n| {
-                        !self
-                            .pads
-                            .iter()
-                            .any(|p| p.device == DeviceId::Gamepad { uuid, nth: n })
-                    })
+                    .find(|&n| !self.pads.iter().any(|p| p.device == device(n)))
                     .unwrap_or(0);
-                let device = DeviceId::Gamepad { uuid, nth };
+                let base = model.map_or_else(|| gp.name().to_owned(), |m| m.name.to_owned());
                 let name = match nth {
-                    0 => gp.name().to_owned(),
-                    n => format!("{} ({})", gp.name(), n + 1),
+                    0 => base,
+                    n => format!("{base} ({})", n + 1),
                 };
-                remember(&mut self.names, &device, &name);
-                self.pads.push(Pad { id, device });
+                remember(&mut self.names, &device(nth), &name);
+                self.pads.push(Pad {
+                    id,
+                    device: device(nth),
+                    model,
+                });
             }
         }
         self.pads.retain(|p| connected.contains(&p.id));
@@ -215,7 +284,6 @@ impl Inputs {
         self.pads
             .sort_by_key(|p| connected.iter().position(|&c| c == p.id));
         self.taps.retain(|t| connected.contains(&t.0));
-        newest
     }
 
     /// The devices present, in [`Ports::assign`]'s order: the adapter's controllers, the
@@ -249,26 +317,40 @@ impl Inputs {
         match self.config.bindings.iter().find(|b| b.0 == *d) {
             Some(b) => &b.1,
             None => match d {
-                DeviceId::Adapter(_) => &self.defaults[0],
+                DeviceId::Adapter(_) | DeviceId::Box { .. } => &self.defaults[0],
                 DeviceId::Gamepad { .. } => &self.defaults[1],
                 DeviceId::Keyboard => &self.defaults[2],
             },
         }
     }
 
-    /// The `PADStatus` device `d` plays now.
-    fn pad_of(&self, d: &DeviceId, gc: &[Option<PadStatus>; 4]) -> Option<PadStatus> {
-        let b = self.bindings(d);
-        match d {
-            DeviceId::Adapter(n) => {
-                let p = gc[*n as usize]?;
-                // Its own inputs as themselves: the report as `PADRead` gives it.
-                Some(if *b == self.defaults[0] {
-                    p
-                } else {
-                    b.pad(&bindings::GcReader(&p))
-                })
+    /// The GameCube report box `d` sends now, as a `PADStatus` ([`boxes`]).
+    fn box_report(&self, d: &DeviceId) -> Option<PadStatus> {
+        let g = self.gilrs.as_ref()?;
+        let pad = self.pads.iter().find(|p| p.device == *d)?;
+        let gp = g.gamepad(pad.id);
+        Some(match pad.model?.report {
+            boxes::Report::HayBoxDInput => {
+                boxes::hid(boxes::PLATFORM, boxes::gilrs_values(&gp)).haybox_status()
             }
+            boxes::Report::HayBoxXInput => boxes::XInput::of(&gp).haybox_status(),
+        })
+    }
+
+    /// The `PADStatus` device `d` plays now. A box layout's Melee mode moves on by one report.
+    fn pad_of(&mut self, d: &DeviceId, gc: &[Option<PadStatus>; 4]) -> Option<PadStatus> {
+        let b = self.bindings(d);
+        // A GameCube report's own inputs as themselves: the report as `PADRead` gives it.
+        let report = |p: PadStatus| {
+            if *b == self.defaults[0] {
+                p
+            } else {
+                b.pad(&bindings::GcReader(&p))
+            }
+        };
+        match d {
+            DeviceId::Adapter(n) => Some(report(gc[*n as usize]?)),
+            DeviceId::Box { .. } => Some(report(self.box_report(d)?)),
             DeviceId::Gamepad { .. } => {
                 let g = self.gilrs.as_ref()?;
                 let pad = self.pads.iter().find(|p| p.device == *d)?;
@@ -279,9 +361,23 @@ impl Inputs {
                 Some(b.pad(&bindings::GamepadReader {
                     state: &g.gamepad(pad.id),
                     taps: &taps,
+                    exact: self.config.is_exact(d),
                 }))
             }
-            DeviceId::Keyboard => Some(b.pad(&self.keyboard)),
+            DeviceId::Keyboard => match self.config.box_layout(d) {
+                Some(keys) => {
+                    let held = keys.inputs(|k| self.keyboard.down(k));
+                    let mode = match self.box_modes.iter().position(|m| m.0 == *d) {
+                        Some(i) => &mut self.box_modes[i].1,
+                        None => {
+                            self.box_modes.push((d.clone(), Default::default()));
+                            &mut self.box_modes.last_mut().expect("just pushed").1
+                        }
+                    };
+                    Some(boxes::haybox_status(&mode.update(held)))
+                }
+                None => Some(b.pad(&self.keyboard)),
+            },
         }
     }
 
@@ -383,17 +479,26 @@ impl Inputs {
     /// the window's key events instead.
     pub fn active(&mut self, device: &DeviceId) -> Vec<Source> {
         let mut out = Vec::new();
+        let gc_held = |p: PadStatus, out: &mut Vec<Source>| {
+            let r = bindings::GcReader(&p);
+            for t in Target::ALL {
+                let s = Source::Gc(t);
+                if t != Target::Modifier && r.read(&s, false, 127.0).pressed {
+                    out.push(s);
+                }
+            }
+        };
         match device {
             DeviceId::Adapter(n) => {
                 let gc = self.adapter.as_ref().map_or([None; 4], |a| a.ports());
                 if let Some(p) = gc[*n as usize] {
-                    let r = bindings::GcReader(&p);
-                    for t in Target::ALL {
-                        let s = Source::Gc(t);
-                        if t != Target::Modifier && r.read(&s, false, 127.0).pressed {
-                            out.push(s);
-                        }
-                    }
+                    gc_held(p, &mut out);
+                }
+            }
+            DeviceId::Box { .. } => {
+                self.pump();
+                if let Some(p) = self.box_report(device) {
+                    gc_held(p, &mut out);
                 }
             }
             DeviceId::Gamepad { .. } => {
@@ -446,6 +551,13 @@ impl Drop for Inputs {
     fn drop(&mut self) {
         self.close();
     }
+}
+
+/// Whether gilrs's gamepad is the GameCube adapter (as macOS's HID driver shows it to gilrs).
+fn is_adapter(gp: &gilrs::Gamepad<'_>) -> bool {
+    gp.vendor_id()
+        .zip(gp.product_id())
+        .is_some_and(|(v, p)| adapter::is_adapter(v, p))
 }
 
 /// Keeps `d`'s name for while it's away.
@@ -630,6 +742,116 @@ mod tests {
             (into.button, into.stick_x, into.stick_y, into.trigger_left),
             (A | bindings::B, -127, -20, 100)
         );
+    }
+
+    /// The keyboard through the box layout: its default keys press the box's buttons, Mod X's
+    /// coordinates come out as HayBox's, a tap counts for one read, and left then right held
+    /// resolve as the Melee mode's SOCD does (and the ledgedash override gives a full right).
+    #[test]
+    fn the_keyboards_box_layout() {
+        use melee_phob::haybox::Melee20Button;
+        let keys = boxes::BoxKeys::default();
+        let mut mode = Melee20Button::default();
+        let mut k = Keyboard::default();
+        let mut read = |k: &mut Keyboard| {
+            let p = boxes::haybox_status(&mode.update(keys.inputs(|key| k.down(key))));
+            k.tapped.clear();
+            p
+        };
+        // F (right) and V (Mod X): 6625, 53 units.
+        k.set("KeyF", true);
+        k.set("KeyV", true);
+        assert_eq!((read(&mut k).stick_x, read(&mut k).stick_y), (53, 0));
+        // D (down) too: Mod X's up B angle down-right, 7375 3125.
+        k.set("KeyD", true);
+        let p = read(&mut k);
+        assert_eq!((p.stick_x, p.stick_y), (59, -25));
+        for key in ["KeyF", "KeyV", "KeyD"] {
+            k.set(key, false);
+        }
+        // Space tapped and released before the read: A for one read.
+        k.set("Space", true);
+        k.set("Space", false);
+        assert_eq!(read(&mut k).button & A, A);
+        assert_eq!(read(&mut k).button & A, 0);
+        // S (left), then F (right) with it: right, at 1.0 by the ledgedash override.
+        k.set("KeyS", true);
+        assert_eq!(read(&mut k).stick_x, -80);
+        k.set("KeyF", true);
+        assert_eq!(read(&mut k).stick_x, 80);
+        // Right released: neutral, left not reactivated.
+        k.set("KeyF", false);
+        assert_eq!(read(&mut k).stick_x, 0);
+        // A (L) and O (light shield): L's click with 140, and 49 on R.
+        k.set("KeyA", true);
+        k.set("KeyO", true);
+        let p = read(&mut k);
+        assert_eq!(
+            (p.button & L, p.trigger_left, p.trigger_right),
+            (L, 140, 49)
+        );
+    }
+
+    /// Inputs with no gamepad library and no adapter: the keyboard alone.
+    fn keyboard_only() -> Inputs {
+        Inputs {
+            keyboard: Keyboard::default(),
+            gilrs: None,
+            adapter: None,
+            ages: InputAges::default(),
+            config: Config::default(),
+            ports: Ports::default(),
+            pads: Vec::new(),
+            taps: Vec::new(),
+            playing: Vec::new(),
+            names: Vec::new(),
+            defaults: [
+                Bindings::gamecube(),
+                Bindings::gamepad(),
+                Bindings::keyboard(),
+            ],
+            box_modes: Vec::new(),
+            started: Instant::now(),
+        }
+    }
+
+    /// The keyboard on the box layout through `Inputs::read`: the layout's keys reach it (one
+    /// the standard bindings don't use too), its SOCD memory carries from one read to the
+    /// next, and a changed layout starts afresh while the same one keeps its memory.
+    #[test]
+    fn inputs_read_the_box_layout() {
+        let mut inputs = keyboard_only();
+        let mut config = Config::default();
+        config.set_box_layout(&DeviceId::Keyboard, Some(boxes::BoxKeys::default()));
+        inputs.set_config(config.clone());
+        // Semicolon is up only in the box layout.
+        inputs.key("Semicolon", true);
+        assert_eq!(inputs.read()[0].stick_y, 80);
+        inputs.key("Semicolon", false);
+        // Left, then right with it: right; right released: neutral, a read at a time.
+        inputs.key("KeyS", true);
+        assert_eq!(inputs.read()[0].stick_x, -80);
+        inputs.key("KeyF", true);
+        assert_eq!(inputs.read()[0].stick_x, 80);
+        inputs.key("KeyF", false);
+        assert_eq!(inputs.read()[0].stick_x, 0);
+        // The same layout again keeps the memory: still neutral.
+        inputs.set_config(config.clone());
+        assert_eq!(inputs.read()[0].stick_x, 0);
+        // A changed layout starts afresh: left held reads as left.
+        let mut keys = boxes::BoxKeys::default();
+        keys.set(melee_phob::haybox::Button::Mb2, Some("Digit6".into()));
+        config.set_box_layout(&DeviceId::Keyboard, Some(keys));
+        inputs.set_config(config.clone());
+        assert_eq!(inputs.read()[0].stick_x, -80);
+        // Back to the standard layout: the arrows, and Semicolon no longer taken.
+        inputs.key("KeyS", false);
+        config.set_box_layout(&DeviceId::Keyboard, None);
+        inputs.set_config(config);
+        inputs.key("Semicolon", true);
+        inputs.key("ArrowLeft", true);
+        let p = inputs.read()[0];
+        assert_eq!((p.stick_x, p.stick_y), (-127, 0));
     }
 
     /// Rumble follows the port: a controller in the adapter's second port playing port 4
