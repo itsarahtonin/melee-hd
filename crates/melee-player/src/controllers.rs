@@ -13,6 +13,10 @@
 //! Box controllers (task 3): a gamepad's section has "No deadzone, exact"; the keyboard's has
 //! its layout, and its bindings or the box layout's keys (`melee_input::boxes`), which Rebind…
 //! and Reset to default then work on.
+//!
+//! The adapter's polling rate (task 21): while the adapter reports, the Devices section opens
+//! with its reports a second over the last second (`melee_input::Adapter::rate`) and, below
+//! [`OVERCLOCKED`], a line that it's at its stock rate.
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -37,6 +41,20 @@ pub const LAYOUT: &str = "Layout";
 /// The keyboard's layout through its bindings.
 pub const STANDARD: &str = "Standard";
 pub const BOX_KEYS: &str = "Box layout keys";
+/// Under the adapter's polling rate while it's at the stock rate (below [`OVERCLOCKED`]).
+pub const STOCK_RATE: &str = "That's the adapter's stock rate (125 a second). Overclocking it lowers input latency by a few milliseconds.";
+/// The reports a second from which the adapter counts as overclocked (task 21).
+pub const OVERCLOCKED: u32 = 500;
+
+/// The adapter's polling rate as the tab shows it: "Adapter: N reports a second", and the stock
+/// rate's line below [`OVERCLOCKED`] (the number shown decides it, so the two agree).
+pub fn rate_lines(rate: f64) -> (String, Option<&'static str>) {
+    let n = rate.round() as u32;
+    (
+        format!("Adapter: {n} reports a second"),
+        (n < OVERCLOCKED).then_some(STOCK_RATE),
+    )
+}
 
 /// How long Rebind… waits for each input before skipping it.
 pub const WAIT: Duration = Duration::from_secs(5);
@@ -247,6 +265,15 @@ impl Controllers {
                 }
             });
         section(ui, DEVICES);
+        // The adapter's polling rate (task 21), while it's reporting.
+        if let Some(rate) = self.adapter.as_ref().and_then(|a| a.rate()) {
+            let (line, stock) = rate_lines(rate);
+            ui.label(line);
+            if let Some(stock) = stock {
+                ui.weak(stock);
+            }
+            ui.add_space(8.0);
+        }
         for d in self.devices.clone() {
             self.show_device(ui, config, &d, adapter_port);
             ui.add_space(8.0);
@@ -403,6 +430,22 @@ mod tests {
             connected: true,
             port: Some(0),
         }
+    }
+
+    /// The polling rate's lines: the stock line below 500 reports a second, by the number shown.
+    #[test]
+    fn the_stock_rate_line_shows_below_500() {
+        assert_eq!(
+            rate_lines(125.04),
+            ("Adapter: 125 reports a second".to_owned(), Some(STOCK_RATE))
+        );
+        assert_eq!(rate_lines(499.4).1, Some(STOCK_RATE));
+        // 499.6 shows as 500: no stock line beside it.
+        assert_eq!(
+            rate_lines(499.6),
+            ("Adapter: 500 reports a second".to_owned(), None)
+        );
+        assert_eq!(rate_lines(1000.0).1, None);
     }
 
     /// Rebind… takes one input after another: a new press binds the target asked for, what
