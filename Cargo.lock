@@ -1705,6 +1705,7 @@ dependencies = [
  "melee-local-data",
  "melee-sim",
  "melee-slippi",
+ "rayon",
  "rustc-hash 2.1.3",
 ]
 

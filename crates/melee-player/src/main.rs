@@ -122,7 +122,7 @@ use melee_input::{Inputs, Key};
 use melee_render::blend::{Blend, Capture};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
-use melee_render::predict::{Cost, Predictor};
+use melee_render::predict::{Beside, Cost, Predictor};
 use melee_sim::audio::clock::{DiscSpeed, TB_HZ};
 use melee_sim::game::gm::GameMode;
 use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules, Special};
@@ -785,6 +785,9 @@ impl Platform {
 /// What the console from power-on reads from and writes to besides the game's state.
 struct Platform {
     disc: Disc,
+    /// The disc's directory, read at the first prediction, which names files by it on its own
+    /// thread.
+    directory: std::sync::OnceLock<power::Directory>,
     /// The reads played back (`--inputs`), and the next; none: the controllers.
     feed: Option<(Vec<melee_sim::input::controller::PadData>, usize)>,
     /// The session's recording, and where it goes.
@@ -921,6 +924,7 @@ impl Session {
         }
         let mut platform = Box::new(Platform {
             disc,
+            directory: std::sync::OnceLock::new(),
             feed,
             rec_path: rec
                 .is_some()
@@ -1161,16 +1165,41 @@ impl Session {
         predictor: &mut Predictor<power::Run>,
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> Result<Cost, String> {
-        melee_sim::gekko_fp::set_fp_mode(self.fp);
+        predictor.predict(&self.run, self.predicted_step(pads))
+    }
+
+    /// [`Session::predict`] on the prediction's own thread while `here` (the real tick's first
+    /// frame, which doesn't need it) runs on this one ([`Predictor::predict_beside`]).
+    fn predict_beside<R>(
+        &self,
+        predictor: &mut Predictor<power::Run>,
+        pads: [melee_sim::input::pad::PadStatus; 4],
+        here: impl FnOnce() -> R,
+    ) -> (Result<Cost, String>, R, Beside) {
+        predictor.predict_beside(&self.run, self.predicted_step(pads), here)
+    }
+
+    /// The predicted tick, on the predictor's copy, in the session's floating point (set on the
+    /// thread it runs on): what it reads of the session (a replay's inputs, the disc's files)
+    /// it only reads.
+    fn predicted_step(
+        &self,
+        pads: [melee_sim::input::pad::PadStatus; 4],
+    ) -> impl FnOnce(&mut power::Run) -> melee_sim::game::vs_match::Frame + Send + '_ {
+        let fp = self.fp;
         let replay = self.replay.as_ref();
-        let disc = self.console.as_ref().map(|p| &p.disc);
-        predictor.predict(&self.run, |c| match c {
-            power::Run::Match(m) => match replay {
-                Some(r) => m.step_replay(&mut melee_slippi::Device(r)),
-                None => m.step(pads),
-            },
-            power::Run::Console(s) => power::step_predicted(s, pads, disc),
-        })
+        let disc = (self.console.as_ref())
+            .map(|p| p.directory.get_or_init(|| power::Directory::of(&p.disc)));
+        move |c| {
+            melee_sim::gekko_fp::set_fp_mode(fp);
+            match c {
+                power::Run::Match(m) => match replay {
+                    Some(r) => m.step_replay(&mut melee_slippi::Device(r)),
+                    None => m.step(pads),
+                },
+                power::Run::Console(s) => power::step_predicted(s, pads, disc),
+            }
+        }
     }
 }
 
@@ -1707,8 +1736,11 @@ impl App {
             {
                 session.recycle(old);
             }
+            // The prediction is the first frame's to make, beside it at t = 0 ([`paced`]): the
+            // controllers the next tick will see if they're known (an added delay has read
+            // them), else these held.
             if self.mode == pacing::Mode::Extrapolate {
-                self.predict(pads);
+                self.paced.will_predict(self.delay.next().unwrap_or(pads));
             }
             self.jit.tick_done(start, Instant::now(), plan.target);
         } else if long && !f.draws.is_empty() {
@@ -1844,21 +1876,27 @@ impl App {
         });
     }
 
-    /// With Extrapolate, after a tick that ran with `pads`: the next tick predicted with the
-    /// controllers it will see if they're known (an added delay has read them), else `pads`
-    /// held. After a tick without a display pass the frames hold the image shown, and nothing
-    /// is predicted. A predicted tick that loads (a trophy's model: the copy ran long; a new
-    /// scene's isn't predicted at all) is forgotten: its frame is the one after the load, which
-    /// the screen shows only once the load's length has passed, so the frames until the real
-    /// tick draw the latest as it is.
-    fn predict(&mut self, pads: [melee_sim::input::pad::PadStatus; 4]) {
-        let next = self.delay.next().unwrap_or(pads);
+    /// With Extrapolate, a frame at t > 0 that finds the latest tick's prediction still to
+    /// make: makes it now, before the frame ([`paced`]).
+    fn predict(&mut self, paced: &mut paced::Paced) {
         let session = self.session.as_ref().expect("a match");
-        match self.paced.predict(|p| session.predict(p, next)) {
+        let made = paced.predict(|p, next| session.predict(p, next));
+        self.predicted(paced, made);
+    }
+
+    /// With Extrapolate, after the latest tick's prediction was made (`made`, None when there
+    /// was none to make): it's counted, and said once if it stopped. After a tick without a
+    /// display pass the frames hold the image shown, and nothing is predicted. A predicted tick
+    /// that loads (a trophy's model: the copy ran long; a new scene's isn't predicted at all) is
+    /// forgotten: its frame is the one after the load, which the screen shows only once the
+    /// load's length has passed, so the frames until the real tick draw the latest as it is.
+    fn predicted(&mut self, paced: &mut paced::Paced, made: Option<Result<Cost, String>>) {
+        let session = self.session.as_ref().expect("a match");
+        match made {
             Some(Ok(cost)) => {
                 self.stats.predictions += 1;
                 self.stats.predicting += cost.total();
-                let predicted = (self.paced.predictor.predicted())
+                let predicted = (paced.predictor.predicted())
                     .and_then(|c| c.game().audio.clock.as_ref().map(|c| c.now));
                 if let Some(length) = session
                     .timeline()
@@ -1866,7 +1904,7 @@ impl App {
                     .map(|(b, a)| melee_time(b, a))
                     && jit::is_long(length, self.jit.tick())
                 {
-                    self.paced.predictor.forget();
+                    paced.predictor.forget();
                 }
             }
             Some(Err(why)) if !self.prediction_failed => {
@@ -1909,13 +1947,22 @@ impl App {
         }
         let target = pacer.target();
         let t = pacer.start(now, due);
-        let paced = std::mem::take(&mut self.paced);
+        let mut paced = std::mem::take(&mut self.paced);
         // None after a tick that drew nothing, or through a scene's load: the refresh shows the
-        // image shown before.
-        let drawn = paced
-            .frame(self.mode, t)
-            .filter(|_| !self.hold.holds(now))
-            .map(|(draws, blend)| self.draw_frame(draws, now, Some(blend)));
+        // image shown before. With Extrapolate, the tick's first frame drawn at t = 0 has the
+        // prediction made beside it; a frame at a later t makes it first if it's still to make.
+        let drawn = if self.hold.holds(now) {
+            None
+        } else if paced.pending() && t == 0.0 {
+            self.draw_beside(&mut paced, now)
+        } else {
+            if paced.pending() {
+                self.predict(&mut paced);
+            }
+            paced
+                .frame(self.mode, t)
+                .map(|(draws, blend)| self.draw_frame(draws, now, Some(blend)))
+        };
         self.paced = paced;
         if drawn.is_some() {
             self.stats.frame(now.elapsed());
@@ -2004,10 +2051,47 @@ impl App {
         }
     }
 
+    /// With Extrapolate, the tick's first frame at t = 0 with the latest tick's prediction still
+    /// to make: the frame, the tick's own, drawn and presented as the tick left the state while
+    /// the prediction runs on its own thread beside it ([`Session::predict_beside`]). None when
+    /// there's nothing to predict.
+    fn draw_beside(
+        &mut self,
+        paced: &mut paced::Paced,
+        now: Instant,
+    ) -> Option<Option<(latency::FrameTimes, present::Presented)>> {
+        let session = self.session.take().expect("a match");
+        let Some((draws, predictor, pads)) = paced.beside() else {
+            self.session = Some(session);
+            return None;
+        };
+        let (made, drawn, _) = session.predict_beside(predictor, pads, || {
+            self.draw_frame_of(&session, draws, now, None)
+        });
+        self.session = Some(session);
+        self.predicted(paced, Some(made));
+        Some(drawn)
+    }
+
     /// Draws and presents a frame, between two ticks with a blend: when its stages finished,
     /// from `start` (its tick's start, or the frame's), and how it was presented.
     fn draw_frame(
         &mut self,
+        draws: &[melee_sim::hsd::display::Draw],
+        start: Instant,
+        blend: Option<Blend<'_>>,
+    ) -> Option<(latency::FrameTimes, present::Presented)> {
+        let session = self.session.take().expect("a match");
+        let drawn = self.draw_frame_of(&session, draws, start, blend);
+        self.session = Some(session);
+        drawn
+    }
+
+    /// [`App::draw_frame`] of `m`, the session (out of the app meanwhile, so a prediction can
+    /// read it beside the frame).
+    fn draw_frame_of(
+        &mut self,
+        m: &Session,
         draws: &[melee_sim::hsd::display::Draw],
         start: Instant,
         blend: Option<Blend<'_>>,
@@ -2025,7 +2109,6 @@ impl App {
                 g.resize_efb(scale, width);
             }
         }
-        let m = self.session.as_ref().expect("a match");
         let last = self.frames.hsd.perf_host.take();
         self.frames.hsd.perf_host = Some(self.host_times.host(last));
         let gpu = self.renderer.get_or_insert_with(|| {
@@ -2051,10 +2134,7 @@ impl App {
         let after = before.as_ref().map(|_| capture::Regs::of(&gpu.state));
         if let Some(dir) = self.capture_next.take()
             && let (Some(before), Some(after)) = (before, after)
-            && let (Some(tex), Some(s)) = (
-                images.last().and_then(|f| f.texture.as_ref()),
-                &self.session,
-            )
+            && let (Some(tex), s) = (images.last().and_then(|f| f.texture.as_ref()), m)
         {
             let about = capture::About {
                 mode: self.mode.key(),
@@ -2096,8 +2176,7 @@ impl App {
                 .text(&format!("{:?}", shown.present_mode()), self.delay.frames())
         });
         // The menus' gate note, for three seconds after a refusal.
-        let note = (self.session.as_ref())
-            .and_then(|s| s.console.as_ref())
+        let note = (m.console.as_ref())
             .and_then(|p| p.gates.refused)
             .filter(|(_, at)| at.elapsed() < gates::NOTE)
             .map(|(g, _)| gates::note_text(g));
@@ -3433,6 +3512,13 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     // and wait are the time between frames.
     let in_flight = std::env::var("MELEE_BENCH_IN_FLIGHT").is_ok_and(|v| v == "1");
     let mut flying: Option<wgpu::SubmissionIndex> = None;
+    // Extrapolate's prediction is made on a thread of its own beside the tick's first frame, as
+    // the player makes it; MELEE_BENCH_SERIAL_PREDICTION=1 makes it on this thread after the
+    // tick, before the first frame, as the player did before 2026-11-27 (for before and after
+    // on one build).
+    let serial = std::env::var("MELEE_BENCH_SERIAL_PREDICTION").is_ok_and(|v| v == "1");
+    // How long each tick's second frame waited for the prediction beside the first.
+    let mut waits: Vec<Duration> = Vec::with_capacity(ticks as usize);
     for tick in 0..ticks {
         let t0 = Instant::now();
         let pads = args.holds.as_ref().map_or(rest, |h| h.at(u64::from(tick)));
@@ -3465,68 +3551,99 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
         }
         if !f.draws.is_empty() {
             if extrapolate {
-                match session.predict(&mut predictor, pads) {
-                    Ok(cost) => {
-                        costs.push(cost);
-                        ticked.push(t1 - t0 + cost.total());
+                if serial {
+                    match session.predict(&mut predictor, pads) {
+                        Ok(cost) => {
+                            costs.push(cost);
+                            ticked.push(t1 - t0 + cost.total());
+                        }
+                        Err(why) => eprintln!("the prediction stopped: {why}"),
                     }
-                    Err(why) => eprintln!("the prediction stopped: {why}"),
+                } else {
+                    // Made beside the tick's first frame, below.
+                    predictor.forget();
                 }
             } else {
                 std::mem::swap(&mut before, &mut after);
                 after.fill(session.game(), &f.draws);
             }
-            let (game, data) = (session.game(), session.data());
             let t2 = Instant::now();
             kept += t2 - t1;
             rendered += 1;
             let tick_parts = (t1 - t0, t2 - t1);
+            // The wait after the tick's first frame for the prediction beside it, before the
+            // next frame can start.
+            let mut ahead = Duration::ZERO;
             for k in 0..per_tick {
                 let t = k as f32 / per_tick as f32;
-                let blend = if extrapolate {
-                    predictor.blend(t)
-                } else {
-                    Blend { from: &before, t }
-                };
                 let made = melee_gpu::made::Made::now();
-                let ta = Instant::now();
-                // The fast renderer builds the frame as it runs it: all of it in the run's time.
-                let (images, tb) = if renderer.is_fast() {
-                    (
-                        renderer.draw(&mut frames, game, data, &f.draws, Some(blend)),
-                        ta,
-                    )
-                } else {
-                    let fifo = frames.frame_blended(game, data, &f.draws, Some(blend));
-                    let tb = Instant::now();
-                    (renderer.run(&frames.space, data, &fifo, None), tb)
-                };
-                let tc = Instant::now();
-                let mut submitted = tc;
-                if let Some(frame) = images.into_iter().last() {
-                    if in_flight {
-                        let now = target.present_queued(&gpu, &frame);
-                        submitted = Instant::now();
-                        if let Some(before) = std::mem::replace(&mut flying, now) {
-                            let _ = gpu.device.poll(wgpu::PollType::Wait {
-                                submission_index: Some(before),
-                                timeout: None,
-                            });
-                        }
+                let mut draw = |blend: Option<Blend<'_>>| {
+                    let (game, data) = (session.game(), session.data());
+                    let ta = Instant::now();
+                    // The fast renderer builds the frame as it runs it: all of it in the run's
+                    // time.
+                    let (images, tb) = if renderer.is_fast() {
+                        (renderer.draw(&mut frames, game, data, &f.draws, blend), ta)
                     } else {
-                        submitted = target.present(&gpu, &frame);
+                        let fifo = frames.frame_blended(game, data, &f.draws, blend);
+                        let tb = Instant::now();
+                        (renderer.run(&frames.space, data, &fifo, None), tb)
+                    };
+                    let tc = Instant::now();
+                    let mut submitted = tc;
+                    if let Some(frame) = images.into_iter().last() {
+                        if in_flight {
+                            let now = target.present_queued(&gpu, &frame);
+                            submitted = Instant::now();
+                            if let Some(before) = std::mem::replace(&mut flying, now) {
+                                let _ = gpu.device.poll(wgpu::PollType::Wait {
+                                    submission_index: Some(before),
+                                    timeout: None,
+                                });
+                            }
+                        } else {
+                            submitted = target.present(&gpu, &frame);
+                        }
+                        last = Some(frame);
                     }
-                    last = Some(frame);
-                }
-                let td = Instant::now();
+                    (ta, tb, tc, submitted, Instant::now())
+                };
+                let (ta, tb, tc, submitted, td) = if extrapolate && !serial && k == 0 {
+                    // At t = 0 the frame is the tick's own: the prediction runs beside it.
+                    let (made, times, beside) =
+                        session.predict_beside(&mut predictor, pads, || draw(None));
+                    match made {
+                        Ok(cost) => {
+                            costs.push(cost);
+                            ticked.push(t1 - t0 + cost.total());
+                        }
+                        Err(why) => eprintln!("the prediction stopped: {why}"),
+                    }
+                    ahead = beside.waited;
+                    waits.push(beside.waited);
+                    times
+                } else {
+                    let blend = if extrapolate {
+                        predictor.blend(t)
+                    } else {
+                        Blend { from: &before, t }
+                    };
+                    draw(Some(blend))
+                };
+                let before_it = if k == 1 {
+                    std::mem::take(&mut ahead)
+                } else {
+                    Duration::ZERO
+                };
                 parts[0] += tb - ta;
                 parts[1] += tc - tb;
                 parts[2] += td - tc;
                 drawing.push(tc - ta);
-                presented.push(td - ta);
+                presented.push(before_it + (td - ta));
                 rows.push(bench_frames::Row {
                     tick,
                     k,
+                    ahead: before_it,
                     draw: tc - ta,
                     submit: submitted - tc,
                     wait: td - submitted,
@@ -3608,6 +3725,23 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
             pct(&mut ticked, 0.99),
             pct(&mut ticked, 1.0)
         );
+        if serial {
+            println!(
+                "the prediction made after the tick, before its first frame (MELEE_BENCH_SERIAL_PREDICTION=1)"
+            );
+        } else {
+            // Waking from the wait takes some microseconds even when the prediction was done.
+            let waited = (waits.iter())
+                .filter(|w| **w > Duration::from_micros(100))
+                .count();
+            println!(
+                "the prediction beside the tick's first frame: the second frame waited over 0.1 ms for it after {waited} of {} ticks; the wait p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms",
+                waits.len(),
+                pct(&mut waits, 0.5),
+                pct(&mut waits, 0.99),
+                pct(&mut waits, 1.0)
+            );
+        }
     }
     if in_flight {
         println!(

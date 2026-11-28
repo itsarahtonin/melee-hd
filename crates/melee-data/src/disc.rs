@@ -149,6 +149,21 @@ impl Disc {
             .ok_or_else(|| DiscError::FileNotFound(format!("entry {entrynum}")))
     }
 
+    /// Every file's entry number and path, in file-system order: [`Disc::entrynum`]'s table read
+    /// once.
+    pub fn entries(&self) -> Result<Vec<(i32, String)>, DiscError> {
+        let mut partition = self
+            .reader
+            .open_partition_kind(PartitionKind::Data, &PartitionOptions::default())?;
+        let meta = partition.meta()?;
+        let fst = meta.fst().map_err(DiscError::InvalidFst)?;
+        Ok(fst
+            .iter()
+            .filter(|(_, node, _)| node.is_file())
+            .map(|(i, _, path)| (i as i32, path))
+            .collect())
+    }
+
     /// The paths of every file on the disc, in file-system order.
     pub fn files(&self) -> Result<Vec<String>, DiscError> {
         let mut partition = self

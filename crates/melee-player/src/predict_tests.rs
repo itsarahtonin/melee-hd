@@ -1,5 +1,7 @@
 //! Extrapolate's prediction has no side effects: a match played with the next tick predicted
-//! after every tick (the player's `Session::predict`, `melee_render::predict`) runs the same as
+//! after every tick (the player's `Session::predict`, `melee_render::predict`; every other one on
+//! the prediction's own thread beside a frame built from the real state, as the player makes it
+//! beside a tick's first frame, `Session::predict_beside`) runs the same as
 //! one played straight, every tick's state equal bit for bit (`StateEq`, as the sync test
 //! compares), every tick's output (sounds, rumble, draws) the same, and its sound mixed to the
 //! same samples. Plays the Fox ditto's benchmark replay, whose predictions come out exact, and a
@@ -53,6 +55,10 @@ fn compare(
     pads: impl Fn(u32) -> [PadStatus; 4],
 ) -> Predictions {
     let mut predictor = Predictor::<crate::power::Run>::default();
+    // The real tick's frame, built beside the predictions made on their own thread.
+    let mut frames = melee_render::frame::Frames::new();
+    frames.space.load_dol(&predicting.dol);
+    let mut drawn = Vec::new();
     let mut seen = Predictions::default();
     let mut samples = 0usize;
     for tick in 0..ticks {
@@ -87,6 +93,7 @@ fn compare(
             }
         }
         let rendered = !got.draws.is_empty();
+        drawn.clone_from(&got.draws);
         // The session's end (a console's frame ends only its scene).
         let ended = predicting.ended;
         straight.recycle(want);
@@ -99,7 +106,23 @@ fn compare(
             let held = (predicting.console.as_ref())
                 .and_then(|c| c.feed.as_ref())
                 .map_or(p, |(reads, next)| reads[(*next).min(reads.len() - 1)]);
-            if let Err(why) = predicting.predict(&mut predictor, held) {
+            // As the player makes them: on odd ticks on the prediction's own thread beside the
+            // tick's first frame, built here from the real state meanwhile (the player's t = 0
+            // frame); on even ticks on this thread, as a frame at a later t makes it.
+            let made = if tick % 2 == 1 {
+                let real = predicting.game();
+                let (made, stream, _) = predicting.predict_beside(&mut predictor, held, || {
+                    frames.frame(real, predicting.data(), &drawn)
+                });
+                assert!(
+                    !stream.is_empty(),
+                    "tick {tick}: no frame beside the prediction"
+                );
+                made
+            } else {
+                predicting.predict(&mut predictor, held)
+            };
+            if let Err(why) = made {
                 // A console's prediction stops where the tick would read the disc (a scene's
                 // song), and the frames draw the real tick (`power::step_predicted`).
                 assert!(

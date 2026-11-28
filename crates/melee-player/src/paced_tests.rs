@@ -6,7 +6,9 @@
 //! Off presents nothing; Extrapolate's image held through it is the tick before's own; and the
 //! next tick's Interpolate blends from the last tick that drew. It also shows why holding
 //! matters: the tick before's draws on the skipped tick's state make a different stream from
-//! the image they drew. Skips without `SSBM_DISC`.
+//! the image they drew. And Extrapolate as the player draws a tick's first frame, with the
+//! prediction made on its own thread beside it: that frame is Off's, and the frames after it draw
+//! as the prediction made before the frame does. Skips without `SSBM_DISC`.
 
 use std::time::Instant;
 
@@ -49,7 +51,10 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
         // Off's frames, and Interpolate's and Extrapolate's at their ends, each built by a frame
         // builder of its own that builds one frame for each tick that draws, as Off's does.
         let (mut off, mut at_1, mut at_0) = (fresh(&dol), fresh(&dol), fresh(&dol));
+        let mut at_side = fresh(&dol);
         let (mut interpolate, mut extrapolate) = (Paced::default(), Paced::default());
+        // Extrapolate as the player draws a tick's first frame at t = 0: the prediction beside it.
+        let mut side = Paced::default();
         // The last tick that drew: its state and draws.
         let mut last: Option<(Game, Vec<Draw>)> = None;
         // The last tick that drew whose next tick Extrapolate couldn't predict (it drew nothing).
@@ -65,14 +70,21 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
             let game = session.game();
             let old = [
                 interpolate.ran(Mode::Interpolate, game, f.clone(), due),
-                extrapolate.ran(Mode::Extrapolate, game, f, due),
+                extrapolate.ran(Mode::Extrapolate, game, f.clone(), due),
+                side.ran(Mode::Extrapolate, game, f, due),
             ];
             for f in old.into_iter().flatten() {
                 session.recycle(f);
             }
             let m = (session.game(), session.data());
-            let predicted = extrapolate.predict(|p| session.predict(p, none));
+            extrapolate.will_predict(none);
+            let predicted = extrapolate.predict(|p, pads| session.predict(p, pads));
+            side.will_predict(none);
             if draws.is_empty() {
+                assert!(
+                    side.beside().is_none(),
+                    "tick {tick}: a prediction after no draws"
+                );
                 if last.is_some() {
                     skips.push(tick);
                 }
@@ -133,6 +145,32 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
                 if let Some(Err(why)) = &predicted {
                     panic!("tick {tick}'s prediction stopped: {why}");
                 }
+                // The player's first frame at t = 0: drawn as the tick left the state while the
+                // prediction is made beside it, which is the prediction made before the frame.
+                let (d, p, pads) = side.beside().expect("a prediction to make");
+                let (made, first, _) =
+                    session.predict_beside(p, pads, || at_side.frame(m.0, m.1, d));
+                assert!(
+                    first == own,
+                    "tick {tick}: the frame beside the prediction isn't Off's"
+                );
+                assert!(
+                    made.is_ok(),
+                    "tick {tick}: the prediction beside the frame stopped"
+                );
+                assert!(
+                    !side.pending(),
+                    "tick {tick}: the prediction is still to make"
+                );
+                let (a, b) = (
+                    extrapolate.frame(Mode::Extrapolate, 0.5).expect("a frame"),
+                    side.frame(Mode::Extrapolate, 0.5).expect("a frame"),
+                );
+                assert!(
+                    fresh(&dol).frame_blended(m.0, m.1, a.0, Some(a.1))
+                        == fresh(&dol).frame_blended(m.0, m.1, b.0, Some(b.1)),
+                    "tick {tick}: at t = 0.5 the prediction made beside the first frame draws otherwise"
+                );
                 if !extrapolate.predictor.is_filled() {
                     // Nothing to blend toward: every frame until the next tick that draws is this
                     // tick's own, which is the image held through a tick that draws nothing.
