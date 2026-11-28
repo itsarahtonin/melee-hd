@@ -15,6 +15,15 @@
 //! is off: a clone starts without it and a restore leaves the copy's as it was
 //! (`#[clone_from(keep)]` on `Audio::mix`), so the mixer never sees the predicted tick's
 //! audio. The archives the copy shares are loaded data a tick only reads.
+//!
+//! **On a thread of its own.** Only the frames after the real tick's first need the prediction:
+//! that first frame, at t = 0, is the tick's own and blends toward nothing. So the player and
+//! the bench make it with [`Predictor::predict_beside`], on a thread kept for it, while the
+//! calling thread draws that first frame from the real state; both only read the real state,
+//! and the copy and the capture are the prediction's alone until it's done. The thread lives
+//! as long as the predictor, so the simulation's memos (`melee_sim::memo`, kept per thread)
+//! stay warm from tick to tick, and runs on the game's stack ([`STACK`]). The floating point
+//! mode is the thread's too: the caller's `step` sets it, as on any thread a tick runs on.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::{Duration, Instant};
@@ -55,6 +64,10 @@ impl Ahead for Match {
     }
 }
 
+/// The stack the prediction's thread runs the predicted tick on: the game's, as the player's game
+/// thread has it (the simulation recurses as the original does, through joint trees).
+pub const STACK: usize = 512 << 20;
+
 /// What a prediction took, by part.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Cost {
@@ -76,6 +89,8 @@ impl Cost {
 pub struct Predictor<S: Ahead = Match> {
     copy: Option<S>,
     capture: Capture,
+    /// The thread [`Predictor::predict_beside`] predicts on, made at its first prediction.
+    thread: Option<rayon::ThreadPool>,
 }
 
 impl<S: Ahead> Default for Predictor<S> {
@@ -83,8 +98,17 @@ impl<S: Ahead> Default for Predictor<S> {
         Predictor {
             copy: None,
             capture: Capture::default(),
+            thread: None,
         }
     }
+}
+
+/// What [`Predictor::predict_beside`] did beside the caller's work.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Beside {
+    /// How long the caller waited for the prediction after its own work was done: none when
+    /// the prediction finished first.
+    pub waited: Duration,
 }
 
 impl<S: Ahead> Predictor<S> {
@@ -97,47 +121,49 @@ impl<S: Ahead> Predictor<S> {
         real: &S,
         step: impl FnOnce(&mut S) -> Frame,
     ) -> Result<Cost, String> {
-        let t0 = Instant::now();
-        match &mut self.copy {
-            Some(copy) => copy.restore_from(real),
-            None => {
-                let mut copy = real.clone();
-                copy.game_mut().audio.mix = None;
-                self.copy = Some(copy);
-            }
-        }
-        let copy = self.copy.as_mut().expect("the copy");
-        let t1 = Instant::now();
-        let frame = match catch_unwind(AssertUnwindSafe(|| step(copy))) {
-            Ok(f) => f,
-            Err(p) => {
-                self.capture.clear();
-                // Half a tick's state: restored in full next time.
-                let why = p
-                    .downcast_ref::<String>()
-                    .cloned()
-                    .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_owned()))
-                    .unwrap_or_else(|| "a panic".to_owned());
-                return Err(why);
-            }
-        };
-        let t2 = Instant::now();
-        if frame.draws.is_empty() {
-            self.capture.clear();
-        } else {
-            self.capture.fill(copy.game(), &frame.draws);
-        }
-        // Its sounds, rumble and events go nowhere.
-        copy.recycle(frame);
-        let t3 = Instant::now();
-        Ok(Cost {
-            clone: t1 - t0,
-            tick: t2 - t1,
-            capture: t3 - t2,
-        })
+        predict_into(&mut self.copy, &mut self.capture, real, step)
     }
 
-    /// Forgets the prediction and the copy, for a new match.
+    /// [`Predictor::predict`] on the prediction's own thread while `here` runs on this one;
+    /// returns once both are done, with what `here` returned. `here` must not need the
+    /// prediction: it's the real tick's first frame, drawn as the tick left the state. Both read
+    /// `real`; nothing writes it until this returns.
+    pub fn predict_beside<R>(
+        &mut self,
+        real: &S,
+        step: impl FnOnce(&mut S) -> Frame + Send,
+        here: impl FnOnce() -> R,
+    ) -> (Result<Cost, String>, R, Beside)
+    where
+        S: Send + Sync,
+    {
+        let Predictor {
+            copy,
+            capture,
+            thread,
+        } = self;
+        let pool = thread.get_or_insert_with(|| {
+            rayon::ThreadPoolBuilder::new()
+                .num_threads(1)
+                .stack_size(STACK)
+                .thread_name(|_| "predict".to_owned())
+                .build()
+                .expect("the prediction's thread")
+        });
+        let mut made = None;
+        let into = &mut made;
+        let mut here_done = None;
+        let r = pool.in_place_scope(|s| {
+            s.spawn(move |_| *into = Some(predict_into(copy, capture, real, step)));
+            let r = here();
+            here_done = Some(Instant::now());
+            r
+        });
+        let waited = here_done.map_or(Duration::ZERO, |t| t.elapsed());
+        (made.expect("the prediction ran"), r, Beside { waited })
+    }
+
+    /// Forgets the prediction and the copy, for a new match (the thread stays).
     pub fn clear(&mut self) {
         self.copy = None;
         self.capture.clear();
@@ -171,4 +197,52 @@ impl<S: Ahead> Predictor<S> {
     pub fn predicted(&self) -> Option<&S> {
         self.copy.as_ref()
     }
+}
+
+/// [`Predictor::predict`] on the predictor's copy and capture: restores the copy from `real`,
+/// runs `step` on it and keeps its display pass.
+fn predict_into<S: Ahead>(
+    copy: &mut Option<S>,
+    capture: &mut Capture,
+    real: &S,
+    step: impl FnOnce(&mut S) -> Frame,
+) -> Result<Cost, String> {
+    let t0 = Instant::now();
+    match copy {
+        Some(copy) => copy.restore_from(real),
+        None => {
+            let mut c = real.clone();
+            c.game_mut().audio.mix = None;
+            *copy = Some(c);
+        }
+    }
+    let copy = copy.as_mut().expect("the copy");
+    let t1 = Instant::now();
+    let frame = match catch_unwind(AssertUnwindSafe(|| step(copy))) {
+        Ok(f) => f,
+        Err(p) => {
+            capture.clear();
+            // Half a tick's state: restored in full next time.
+            let why = p
+                .downcast_ref::<String>()
+                .cloned()
+                .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_owned()))
+                .unwrap_or_else(|| "a panic".to_owned());
+            return Err(why);
+        }
+    };
+    let t2 = Instant::now();
+    if frame.draws.is_empty() {
+        capture.clear();
+    } else {
+        capture.fill(copy.game(), &frame.draws);
+    }
+    // Its sounds, rumble and events go nowhere.
+    copy.recycle(frame);
+    let t3 = Instant::now();
+    Ok(Cost {
+        clone: t1 - t0,
+        tick: t2 - t1,
+        capture: t3 - t2,
+    })
 }

@@ -14,6 +14,7 @@ melee-data.workspace = true
 melee-sim.workspace = true
 melee-gx = { path = "../melee-gx" }
 melee-gpu = { path = "../melee-gpu" }
+rayon = "1"
 rustc-hash = "2"
 
 [features]
