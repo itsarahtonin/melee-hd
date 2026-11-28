@@ -88,6 +88,7 @@ mod paced;
 mod paced_tests;
 mod pacing;
 mod perf;
+mod phob_ui;
 mod pipelines;
 mod power;
 #[cfg(test)]
@@ -146,6 +147,23 @@ const TICK_RATE: f64 = 60.0;
 
 /// The stack the game runs on: the simulation recurses as the original does (joint trees).
 const GAME_STACK: usize = 512 << 20;
+
+/// Read by NVIDIA's Optimus driver from the executable's exports: 1 puts the program on the
+/// discrete GPU of a laptop with two. A binary exports nothing by default, so build.rs has the
+/// linker export it (`/EXPORT:NvOptimusEnablement,DATA`).
+#[cfg(windows)]
+#[used]
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals)]
+pub static NvOptimusEnablement: u32 = 1;
+
+/// AMD's PowerXpress (switchable graphics) counterpart of [`NvOptimusEnablement`], exported
+/// the same way.
+#[cfg(windows)]
+#[used]
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals)]
+pub static AmdPowerXpressRequestHighPerformance: u32 = 1;
 
 /// Runs a test's body on the game's stack ([`GAME_STACK`]), as every test that starts a
 /// [`Session`] does: a test thread's is the standard library's 2 MiB.
@@ -2484,6 +2502,7 @@ impl App {
         // The sound's device and volume, taken at once (the device opened again if need be).
         sound::set_output(s.output());
         sound::set_volume(s.volume);
+        sound::set_music(s.music);
         if let Some(snd) = self.session.as_ref().and_then(|s| s.sound.as_ref()) {
             snd.configure();
         }
@@ -3756,6 +3775,7 @@ fn run(args: Args) -> ExitCode {
     if let Some(f) = &front {
         sound::set_output(f.panel.settings.output());
         sound::set_volume(f.panel.settings.volume);
+        sound::set_music(f.panel.settings.music);
     }
     let session = if args.front {
         None
@@ -3866,6 +3886,11 @@ fn run(args: Args) -> ExitCode {
     // The player's ports and bindings (the Controllers tab's).
     if let Some(f) = &app.front {
         app.inputs.set_config(f.panel.settings.controllers.clone());
+    }
+    // PhobGCC's processing on the adapter ports it's on for, whether or not the panel shows.
+    match &app.front {
+        Some(f) => f.panel.phob.apply(app.inputs.adapter.as_deref()),
+        None => phob_ui::PhobPanel::default().apply(app.inputs.adapter.as_deref()),
     }
     if let Some(path) = &app.args.latency_log {
         match latency::Log::create(path) {

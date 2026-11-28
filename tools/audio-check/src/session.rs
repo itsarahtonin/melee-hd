@@ -1,10 +1,12 @@
 //! `melee-audio-check --session INPUTS AUDIO.wav [--card FILE] [--ticks N] [--window SECONDS]
-//! [--out MIX.wav]`: plays a recorded session (`SSBMINP1`, [the oracle](../../../docs/oracle.md#sessions))
+//! [--out MIX.wav] [--music PERCENT]`: plays a recorded session (`SSBMINP1`, [the oracle](../../../docs/oracle.md#sessions))
 //! natively from power-on with its console's setup and reads, mixes its audio with
 //! melee-audio from the boot's audio setup on, and compares the samples with ssbm-rs's
 //! recording of the same session's playback (`AUDIO_OUT=AUDIO.wav ssbm-run ... --inputs
 //! INPUTS`), as the replay mode compares a match's. The session runs to its last read or to
-//! `--ticks`, or to the first function it reaches that isn't ported.
+//! `--ticks`, or to the first function it reaches that isn't ported. `--music` mixes the music
+//! stream's voices at that volume, on the player's curve (the square of its fraction), and
+//! prints both mixes' levels: the default, 100, is the console's mix.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
@@ -72,7 +74,7 @@ fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
 pub fn run(args: &[String]) -> Result<bool, String> {
     let mut pos = Vec::new();
     let (mut ticks, mut window, mut out) = (u64::MAX, 1.0f64, None);
-    let (mut inputs, mut card_path) = (None, None);
+    let (mut inputs, mut card_path, mut music) = (None, None, 100u32);
     let mut it = args.iter();
     while let Some(a) = it.next() {
         let mut value = || it.next().ok_or(format!("{a} needs a value"));
@@ -82,11 +84,18 @@ pub fn run(args: &[String]) -> Result<bool, String> {
             "--ticks" => ticks = value()?.parse().map_err(|_| "--ticks N")?,
             "--window" => window = value()?.parse().map_err(|_| "--window SECONDS")?,
             "--out" => out = Some(value()?.clone()),
+            "--music" => {
+                music = value()?
+                    .parse()
+                    .ok()
+                    .filter(|p| *p <= 100)
+                    .ok_or("--music PERCENT")?
+            }
             _ => pos.push(a.as_str()),
         }
     }
     let (Some(inputs), [wav_path]) = (inputs, &pos[..]) else {
-        return Err("usage: melee-audio-check --session INPUTS AUDIO.wav [--card FILE] [--ticks N] [--window SECONDS] [--out MIX.wav]".into());
+        return Err("usage: melee-audio-check --session INPUTS AUDIO.wav [--card FILE] [--ticks N] [--window SECONDS] [--out MIX.wav] [--music PERCENT]".into());
     };
     let rec = Recording::read(Path::new(&inputs)).map_err(|e| e.to_string())?;
     if rec.reads.is_empty() {
@@ -119,6 +128,7 @@ pub fn run(args: &[String]) -> Result<bool, String> {
     };
     let mut s = Session::new(setup);
     let mut mixer = Mixer::new();
+    mixer.set_music((music as f32 / 100.0).powi(2));
     mixer.start(&mut s.game.audio, None);
     let mut ours: Vec<Sample> = Vec::new();
     let mut ran = 0u64;
@@ -151,8 +161,26 @@ pub fn run(args: &[String]) -> Result<bool, String> {
             .map(|&e| disc.path_of(e).unwrap_or_else(|_| format!("entry {e}")))
             .collect::<Vec<_>>()
     );
+    if music < 100 {
+        println!(
+            "music at {music}%: {} voice frames scaled; level {:.1} dB, the recording's {:.1} dB",
+            st.music,
+            level(&ours),
+            level(&theirs)
+        );
+    }
     if let Some(path) = &out {
         write_wav(path, &ours).map_err(|e| format!("{path}: {e}"))?;
     }
     compare(&ours, &theirs, window)
+}
+
+/// The samples' mean power, in dB below a full-scale square wave.
+fn level(samples: &[Sample]) -> f64 {
+    let sum: f64 = samples
+        .iter()
+        .flat_map(|s| s.iter().map(|&x| f64::from(x) * f64::from(x)))
+        .sum();
+    let mean = sum / (2 * samples.len().max(1)) as f64;
+    10.0 * (mean.max(1e-9) / (32768.0 * 32768.0)).log10()
 }
