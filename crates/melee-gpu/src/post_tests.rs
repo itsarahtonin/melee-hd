@@ -57,21 +57,30 @@ fn off_is_the_plain_blit() {
     assert!(!on(2, None).is_off() && !on(1, Some(0)).is_off());
 }
 
-/// A checkerboard of single black and white texels, at four times the picture's size each way,
-/// filtered down to the picture: every pixel the average, mid gray, where the plain bilinear
-/// blit's one sample a pixel shows the pattern's aliases. At twice, the same.
+/// Frames at twice and four times the picture's size each way, filtered down to it: every pixel
+/// the average of the texels under it. A checkerboard of single texels comes out mid gray; at
+/// four times, a grid with one texel in each 4 by 4 block white comes out a sixteenth of white,
+/// where one bilinear sample at the pixel's middle (the plain blit's, which reads only the
+/// block's middle 2 by 2) would give black.
 #[test]
 fn supersampling_averages_the_texels_under_each_pixel() {
     let Some((device, queue)) = device() else {
         return;
     };
     let mut post = Post::new(&device, wgpu::TextureFormat::Rgba8Unorm);
-    for factor in [2, 4] {
+    let checkerboard = |x: u32, y: u32| (x + y) % 2 == 1;
+    let grid = |x: u32, y: u32| x % 4 == 0 && y % 4 == 0;
+    let cases: [(u32, &dyn Fn(u32, u32) -> bool, i32); 3] = [
+        (2, &checkerboard, 128),
+        (4, &checkerboard, 128),
+        (4, &grid, 16),
+    ];
+    for (factor, white, expected) in cases {
         let (w, h) = (64, 48);
         let (fw, fh) = (w * factor, h * factor);
         let rgba: Vec<u8> = (0..fw * fh)
             .flat_map(|i| {
-                let v = if (i % fw + i / fw) % 2 == 0 { 0 } else { 255 };
+                let v = if white(i % fw, i / fw) { 255 } else { 0 };
                 [v, v, v, 255]
             })
             .collect();
@@ -83,10 +92,10 @@ fn supersampling_averages_the_texels_under_each_pixel() {
         let out = post.image(&device, &queue, &frame, w, h, filters);
         let worst = out
             .chunks(4)
-            .map(|p| (i32::from(p[0]) - 128).abs())
+            .map(|p| (i32::from(p[0]) - expected).abs())
             .max()
             .unwrap();
-        assert!(worst <= 1, "{factor}x: a pixel {worst} from mid gray");
+        assert!(worst <= 1, "{factor}x: a pixel {worst} from {expected}");
     }
 }
 
