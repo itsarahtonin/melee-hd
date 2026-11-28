@@ -21,7 +21,9 @@
 //! `game::roster`, what it has ported (`--help` lists them); a match the command line names is a
 //! developer's. With no `--p1` to `--p4`, `--stage`, `--replay` or `--inputs`, Melee boots from
 //! power-on with the native save ([`saves`]), its menus gated where they lead into unported
-//! code ([`gates`]), each session recorded ([`session_rec`]); Esc opens the settings ([`front`]).
+//! code ([`gates`]), each session recorded ([`session_rec`]); Esc opens the settings ([`front`]),
+//! and so do Z on Melee's Options list and Z held in its main menu ([`hooks`]), the panel then
+//! worked from a controller too ([`pad_nav`]).
 //! Controllers: GameCube controllers on a Wii U adapter play their own ports;
 //! gamepads and the keyboard play the first ports left (arrows: stick, IJKL: C-stick, X/Z/C/S:
 //! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
@@ -75,6 +77,7 @@ mod front;
 mod gates;
 mod handoff;
 mod holds;
+mod hooks;
 mod jit;
 mod latency;
 #[cfg(test)]
@@ -86,6 +89,7 @@ mod paced;
 #[cfg(test)]
 mod paced_tests;
 mod pacing;
+mod pad_nav;
 mod perf;
 mod pipelines;
 mod power;
@@ -749,7 +753,10 @@ impl Platform {
         let feed = self.feed.take();
         let gated = match &feed {
             Some(_) => pads,
-            None => self.gates.apply(&s.game, pads),
+            None => {
+                let pads = self.gates.apply(&s.game, pads);
+                self.hooks.apply(&s.game, pads)
+            }
         };
         let (f, next) = {
             let source = match &feed {
@@ -801,6 +808,8 @@ struct Platform {
     /// attract match isn't).
     slp: Option<(recording::Recording, bool)>,
     gates: gates::Gates,
+    /// The controllers' routes into the settings.
+    hooks: hooks::Hooks,
 }
 
 impl Drop for Session {
@@ -936,6 +945,7 @@ impl Session {
             .then(|| args.replays.clone()),
             slp: None,
             gates: gates::Gates::default(),
+            hooks: hooks::Hooks::default(),
         });
         let mut s = s;
         let dol = platform.disc.dol().map_err(|e| format!("main.dol: {e}"))?;
@@ -1362,6 +1372,8 @@ struct App {
     renderer: Option<Gpu>,
     shown: Option<present::Shown>,
     inputs: Inputs,
+    /// The controllers' moves in the settings panel while it shows.
+    pad_nav: pad_nav::PadNav,
     /// Each port's rumble motor as the match last set it (`PADControlMotor`'s commands):
     /// the controllers' rumble output, which the save's rumble options decide.
     motors: [bool; 4],
@@ -2101,12 +2113,20 @@ impl App {
             .and_then(|p| p.gates.refused)
             .filter(|(_, at)| at.elapsed() < gates::NOTE)
             .map(|(g, _)| gates::note_text(g));
-        if note.is_some() && self.note_painter.is_none() {
+        // The line under Melee's Options list: Z there opens the settings ([`hooks`]).
+        let options = note.is_none()
+            && self.front.is_some()
+            && self.replay.is_none()
+            && (self.session.as_ref()).is_some_and(|s| {
+                s.console.is_some() && hooks::place(s.game()) == hooks::Place::Options
+            });
+        if (note.is_some() || options) && self.note_painter.is_none() {
             let mut p = ui::Painter::new(&self.gpu, shown.format());
             p.clear = false;
             self.note_painter = Some(p);
         }
         let (gpu, overlay, note_painter) = (&self.gpu, &mut self.overlay, &mut self.note_painter);
+        let aspect = self.aspect;
         let meta = flicker::Meta {
             tick: self.ticks,
             t: blend.map(|b| b.t),
@@ -2117,8 +2137,10 @@ impl App {
             if let (Some(p), Some(text)) = (overlay, text) {
                 latency::overlay(p, gpu, &text, view, w, h);
             }
-            if let (Some(p), Some(text)) = (note_painter, note) {
-                front::note(p, gpu, &text, view, w, h);
+            match (note_painter, note) {
+                (Some(p), Some(text)) => front::note(p, gpu, &text, view, w, h),
+                (Some(p), None) if options => front::options_line(p, gpu, aspect, view, w, h),
+                _ => {}
             }
         });
         // Kept to draw the settings panel over.
@@ -2436,6 +2458,8 @@ impl App {
         f.panel.recordings.refresh();
         // Every key goes up: none stays held into the game when it resumes.
         self.inputs.keyboard = Default::default();
+        // What the controllers hold as it opens (the Z that opened it) does nothing in it.
+        self.pad_nav.reset(&self.inputs.read());
         if let Some(s) = &self.shown {
             s.window.request_redraw();
         }
@@ -2448,6 +2472,11 @@ impl App {
         f.panel.open = false;
         f.panel.message = None;
         let s = f.panel.settings.clone();
+        // A controller that worked the panel hands the game nothing it still holds.
+        let pads = self.inputs.read();
+        if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
+            p.hooks.after_panel(&pads, self.pad_nav.drove);
+        }
         s.keep();
         self.apply(&s);
         self.start_clock();
@@ -2455,6 +2484,28 @@ impl App {
         if self.hold.holds(Instant::now()) {
             // Through a scene's load the frame held shows again, not the panel over it.
             self.show_again();
+        }
+    }
+
+    /// A controller asked for the settings ([`hooks`]) in Melee from power-on.
+    fn panel_asked(&self) -> bool {
+        self.front.as_ref().is_some_and(|f| !f.panel.open)
+            && self.replay.is_none()
+            && (self.session.as_ref())
+                .and_then(|s| s.console.as_ref())
+                .is_some_and(|p| p.hooks.asked)
+    }
+
+    /// The controllers read while the panel shows: their moves to it, and what it then does.
+    fn poll_pads(&mut self, event_loop: &ActiveEventLoop) {
+        let navs = self.pad_nav.read(&self.inputs.read(), Instant::now());
+        let (Some(f), Some(shown)) = (&mut self.front, &self.shown) else {
+            return;
+        };
+        let halted = f.panel.halted;
+        let Some(w) = &mut f.window else { return };
+        if let Some(a) = w.pad(shown, &navs, halted) {
+            self.act(a, event_loop);
         }
     }
 
@@ -3034,6 +3085,12 @@ impl ApplicationHandler for App {
                 }
             }
         }
+        if self.panel_asked() {
+            if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
+                p.hooks.asked = false;
+            }
+            self.open_panel();
+        }
         let paneled = self.front.as_ref().is_some_and(|f| f.panel.open);
         if self.session.is_some() && !paneled {
             // Ticks and frames that are due run; the event loop sleeps until shortly before the
@@ -3041,7 +3098,7 @@ impl ApplicationHandler for App {
             // way. The fixed timer only sleeps.
             for _ in 0..32 {
                 let next_tick = self.run_due();
-                if self.ended() {
+                if self.ended() || self.panel_asked() {
                     break;
                 }
                 let next = self.draw_due().map_or(next_tick, |f| f.min(next_tick));
@@ -3089,7 +3146,18 @@ impl ApplicationHandler for App {
             ));
             return;
         }
-        // The panel: woken by events, or when egui asked for its next frame.
+        // The panel: woken by events, when egui asked for its next frame, and to read the
+        // controllers.
+        let paneled = self.front.as_ref().is_some_and(|f| f.panel.open);
+        if paneled {
+            self.poll_pads(event_loop);
+            if !self.front.as_ref().is_some_and(|f| f.panel.open) {
+                // Closed from a controller: the ticks go on at once.
+                event_loop.set_control_flow(ControlFlow::Poll);
+                return;
+            }
+        }
+        let poll = Instant::now() + pad_nav::POLL;
         let flow = match self.front.as_mut().and_then(|f| f.window.as_mut()) {
             Some(w) if paneled => match w.repaint_at {
                 Some(t) if t <= Instant::now() => {
@@ -3097,10 +3165,10 @@ impl ApplicationHandler for App {
                     if let Some(s) = &self.shown {
                         s.window.request_redraw();
                     }
-                    ControlFlow::Wait
+                    ControlFlow::WaitUntil(poll)
                 }
-                Some(t) => ControlFlow::WaitUntil(t),
-                None => ControlFlow::Wait,
+                Some(t) => ControlFlow::WaitUntil(t.min(poll)),
+                None => ControlFlow::WaitUntil(poll),
             },
             _ => ControlFlow::Wait,
         };
@@ -3795,6 +3863,7 @@ fn run(args: Args) -> ExitCode {
         renderer: None,
         shown: None,
         inputs: Inputs::new(args.adapter),
+        pad_nav: pad_nav::PadNav::default(),
         motors: [false; 4],
         jit: jit::Scheduler::new(
             Duration::from_secs_f64(1.0 / TICK_RATE),

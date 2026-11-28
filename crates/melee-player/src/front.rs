@@ -192,6 +192,11 @@ pub const STOP_TITLE: &str = "Melee stopped";
 pub const STOP_TEXT: &str = "Melee reached something melee-hd can't play yet, or a place where the original game would crash. It isn't anything you did. Report a bug saves what's needed to see it happen again; Restart Melee\u{2026} starts over from power-on.";
 /// Report a bug's button and help line (proposed 2026-11-14, awaiting Sarah's word).
 pub const REPORT_BUTTON: &str = "Report a bug";
+
+/// The panel's footer lines for a controller ([`crate::pad_nav`], [`crate::hooks`]).
+pub const PAD_KEYS: &str =
+    "Controller: the D-pad or stick moves, A: choose, B: back, Start: close.";
+pub const PAD_OPEN: &str = "Press Z on Melee's Options list, or hold Z for a second in its main menu, to open these settings with a controller.";
 pub const REPORT_HELP: &str = "Saves a zip in the settings folder with this session's recording, the log, your latest captures and your settings, and opens the folder. Nothing is sent anywhere: attach the zip to your report yourself.";
 
 /// The Renderer setting's choices and help lines (Sarah, 2026-11-20: signed off, Fast's line
@@ -593,7 +598,10 @@ impl Panel {
     /// Lays the panel out; what was pressed, if anything.
     pub fn show(&mut self, ui: &mut egui::Ui) -> Option<Action> {
         let mut action = None;
-        egui::ScrollArea::vertical().show(ui, |ui| action = self.show_panel(ui));
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            crate::ui::keep_focus_shown(ui);
+            action = self.show_panel(ui);
+        });
         action
     }
 
@@ -682,6 +690,8 @@ impl Panel {
             }
             ui.add_space(16.0);
             ui.weak("Esc: settings. F11 or Alt+Enter: fullscreen. F3: latency overlay. F12: bug capture.");
+            ui.weak(PAD_KEYS);
+            ui.weak(PAD_OPEN);
             ui.add_space(16.0);
         });
         action
@@ -720,7 +730,12 @@ impl Panel {
             .spacing([16.0, 8.0])
             .show(ui, |ui| {
                 ui.label("Volume");
-                ui.add(egui::Slider::new(&mut s.volume, 0..=100).suffix("%"));
+                // Steps of 1 for a controller's left and right (`crate::pad_nav`) in its box too.
+                ui.add(
+                    egui::Slider::new(&mut s.volume, 0..=100)
+                        .step_by(1.0)
+                        .suffix("%"),
+                );
                 ui.end_row();
                 ui.label("Output device");
                 let device = &mut s.audio_device;
@@ -842,6 +857,9 @@ impl Panel {
                 ui.add(
                     egui::DragValue::new(&mut s.added_delay)
                         .range(0..=15)
+                        // A frame a step, so a controller's left and right step it (egui's
+                        // whole-number speed, 0.25, rounds each step away).
+                        .speed(1.0)
                         .suffix(" frames"),
                 );
                 ui.end_row();
@@ -1097,6 +1115,57 @@ pub fn note(
                     .show(ui, |ui| {
                         ui.set_max_width(size.x * 0.8);
                         ui.label(egui::RichText::new(text).color(egui::Color32::WHITE));
+                    });
+            });
+    });
+    painter.paint(gpu, out, view, w, h);
+}
+
+/// Where the Options list's line goes, as fractions of the game's 73:60 picture (its left edge
+/// and its top): under the list's last entry, aligned with its entries.
+pub const OPTIONS_LINE_AT: [f32; 2] = [0.075, 0.782];
+
+/// The line under Melee's Options list ([`crate::hooks::OPTIONS_LINE`]) over a frame `w` by
+/// `h` shown at `aspect`: placed in the game's own picture, which a widened frame keeps in its
+/// middle and a stretched one stretches.
+pub fn options_line(
+    painter: &mut crate::ui::Painter,
+    gpu: &crate::present::Gpu,
+    aspect: Aspect,
+    view: &wgpu::TextureView,
+    w: u32,
+    h: u32,
+) {
+    let zoom = painter.ctx.zoom_factor();
+    let [left, top, pw, ph] = crate::present::picture(w, h);
+    let game_w = if aspect.widen {
+        ph * melee_render::frame::GAME_ASPECT
+    } else {
+        pw
+    };
+    let x = left + (pw - game_w) / 2.0 + OPTIONS_LINE_AT[0] * game_w;
+    let y = top + OPTIONS_LINE_AT[1] * ph;
+    let size = egui::vec2(w as f32, h as f32) / zoom;
+    let input = egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+        ..Default::default()
+    };
+    // The text's size follows the picture's, as the menu's own text does.
+    let text = (ph / zoom * 0.026).max(9.0);
+    let out = painter.ctx.run_ui(input, |ui| {
+        egui::Area::new(egui::Id::new("options-line"))
+            .fixed_pos(egui::pos2(x, y) / zoom)
+            .show(ui.ctx(), |ui| {
+                egui::Frame::new()
+                    .fill(egui::Color32::from_black_alpha(170))
+                    .inner_margin(egui::Margin::symmetric(8, 4))
+                    .corner_radius(4.0)
+                    .show(ui, |ui| {
+                        ui.label(
+                            egui::RichText::new(crate::hooks::OPTIONS_LINE)
+                                .size(text)
+                                .color(egui::Color32::WHITE),
+                        );
                     });
             });
     });
