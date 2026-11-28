@@ -2,13 +2,14 @@
 //! along the ground, turning with the stick, bounces off walls and the stage in the air, and
 //! breaks open at its end or when hit.
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::super::structs::{Vec2, ftCollisionBox};
-use super::super::common::GA_AIR;
 use super::super::parts::{HIP_N, TOP_N};
 use super::{addr, ms, u};
 use crate::fpu::{mem, reg};
@@ -269,7 +270,7 @@ impl Running<'_> {
         let frames_lost = self.ys_s_attr_i(gobj, sattr::X50);
         let frames_left = self.ys_mvi(gobj, mv::X0).wrapping_sub(frames_lost);
         self.ys_set_mvi(gobj, mv::X0, frames_left);
-        let cruise = if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        let cruise = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.ys_s_attr(gobj, sattr::X8C)
         } else {
             self.ys_s_attr(gobj, sattr::X7C)
@@ -353,7 +354,7 @@ impl Running<'_> {
         fp.set_u_i32(u::X222C, s.x.to_bits() as i32);
         fp.set_u_i32(u::X222C + 4, s.y.to_bits() as i32);
         fp.set_u_i32(u::X222C + 8, s.z.to_bits() as i32);
-        let speed = if fp.ground_or_air == super::super::common::GA_GROUND {
+        let speed = if fp.ground_or_air == GroundOrAir::Ground {
             self.ys_s_attr(gobj, sattr::X54)
         } else {
             self.ys_s_attr(gobj, sattr::X58)
@@ -516,11 +517,11 @@ impl Running<'_> {
         let since_renew = self.ys_mvi(gobj, mv::XC).wrapping_add(1);
         self.ys_set_mvi(gobj, mv::XC, since_renew);
         let fp = &mut self.game.fighters[f.0];
-        if since_renew >= renew_every && fp.hitboxes[0].state != 0 {
+        if since_renew >= renew_every && fp.hitboxes[0].state != HitCapsuleState::Disabled {
             fp.hitboxes[0].group = fp.hitboxes[0].group.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::XC, 0);
         }
-        if self.game.fighters[f.0].hitboxes[0].state == 0 {
+        if self.game.fighters[f.0].hitboxes[0].state == HitCapsuleState::Disabled {
             return;
         }
         let (damage_base, damage_scale) = (
@@ -528,7 +529,7 @@ impl Running<'_> {
             self.ys_s_attr(gobj, sattr::XC4),
         );
         let fp = &self.game.fighters[f.0];
-        let v = if fp.ground_or_air == GA_AIR {
+        let v = if fp.ground_or_air == GroundOrAir::Air {
             reg(fp.self_vel.x)
         } else {
             reg(fp.gr_vel)

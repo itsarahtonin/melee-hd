@@ -37,20 +37,20 @@ fn vs_start_data_matches_the_recorded() {
             .map(|i| {
                 let p = &rec.players[i];
                 Player {
-                    character: p.ckind as u8,
+                    character: p.ckind.raw() as u8,
                     costume: p.color,
                     port: i as u8,
-                    kind: p.slot_type,
+                    kind: p.slot_type.raw(),
                     cpu_level: p.cpu_level,
                     team: p.team,
                 }
             })
             .collect();
-        let ours = Settings::vs_with(rec.rules.stkind, &players, &rules, &prefs).start;
+        let ours = Settings::vs_with(rec.rules.stkind.raw(), &players, &rules, &prefs).start;
         assert_eq!(ours.rules, rec.rules, "{name}: rules");
         for (i, (o, r)) in ours.players.iter().zip(&rec.players).enumerate() {
             if r.slot_type == PlayerKind::None {
-                assert_eq!(o.slot_type, 3, "{name}: player {i}");
+                assert_eq!(o.slot_type, PlayerKind::None, "{name}: player {i}");
                 continue;
             }
             let mut o = o.clone();

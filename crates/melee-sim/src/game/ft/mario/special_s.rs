@@ -5,6 +5,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::super::code::Val;
@@ -46,7 +47,7 @@ impl Running<'_> {
         let bone = self.bone_index(&self.game.fighters[f.0], part::R_THUMB_NB);
         let kind = self.char_attr_word(f, attr::SPECIALS_CAPE_KIND) as i32;
         let facing = self.game.fighters[f.0].facing_dir;
-        let cape = mariocape::spawn(self, gobj, facing, pos, bone, kind);
+        let cape = mariocape::spawn(self, gobj, facing, pos, bone, ItKind::from_raw(kind));
         let fp = &mut self.game.fighters[f.0];
         fp.u.set_gobj_at(MARIO_CAPE, cape);
         fp.special_item = cape;

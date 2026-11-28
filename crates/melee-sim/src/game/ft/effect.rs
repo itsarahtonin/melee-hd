@@ -3,13 +3,13 @@
 //! command (`ftAction_80071028`), the random sound (`ftAction_80071FC8`) and the footstep
 //! dust with its terrain's sound (`ftAction_80072E4C`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ef::{self, Arg, SpawnKind};
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::colanim::Overlay;
-use super::common::GA_GROUND;
 use super::sound::Track;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -55,7 +55,7 @@ impl Running<'_> {
     /// The floor's angle under a grounded fighter, else 0.
     fn floor_angle(&self, f: FighterId) -> f32 {
         let fp = &self.game.fighters[f.0];
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             let n = fp.coll_data.floor.normal;
             crate::math::atan2(mem(fp::fneg(reg(n.x))), n.y)
         } else {

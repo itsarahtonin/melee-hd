@@ -7,7 +7,7 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::{addr, ms, mv};
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
+use crate::lb::hitcapsule::HitCapsuleState;
 
 /// `HitElement_Sleep`.
 const ELEMENT_SLEEP: u32 = 7;
@@ -52,7 +52,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         if fp.mv_i32(mv::HI_SLEEP) != 0
             && !fp.hitboxes[0].phantom
-            && fp.hitboxes[0].state != hitcapsule::DISABLED
+            && fp.hitboxes[0].state != HitCapsuleState::Disabled
         {
             fp.hitboxes[0].phantom = true;
             fp.hitboxes[0].element = ELEMENT_SLEEP;

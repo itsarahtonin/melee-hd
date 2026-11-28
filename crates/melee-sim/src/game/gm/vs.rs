@@ -8,6 +8,7 @@
 // NaN takes the original's branches, which the negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -172,7 +173,7 @@ impl Game {
 
     #[doc(alias = "gm_GetStKind")]
     pub fn vs_stkind(&self) -> u16 {
-        self.vs.start.stkind
+        self.vs.start.stkind.raw()
     }
 
     /// Whether this is a stock match, `gm_8016B094`.
@@ -650,7 +651,7 @@ impl Game {
         }
         let mut result = 0;
         for p in 0..6 {
-            result = self.player_pkind(p);
+            result = self.player_pkind(p).id();
             if result == PlayerKind::None {
                 continue;
             }
@@ -677,7 +678,7 @@ impl Game {
     pub fn update_ranks(&mut self) {
         let res = &self.vs.state.match_end;
         let (is_teams, penalty) = (res.is_teams, res.sd_penalty);
-        let pkinds: [u8; 6] = core::array::from_fn(|i| res.player_standings[i].pkind);
+        let pkinds: [u8; 6] = core::array::from_fn(|i| res.player_standings[i].pkind.raw());
         self.rank_players(is_teams, penalty);
         let r = &mut self.gm.ranks;
         if r.taken == 0 && 0 < r.lowest {
@@ -735,7 +736,7 @@ impl Running<'_> {
     pub fn vs_announce_entry(&mut self, slot: i32, pkind: u8) {
         let f = &mut self.game.vs.state.fighters[slot as usize];
         f.entry_timer = 0x82;
-        f.slot_type = pkind;
+        f.slot_type = Narrow::from_raw(pkind);
         self.stadium_entrance(slot, pkind.into());
     }
 
@@ -760,7 +761,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8016B7F8")]
     pub fn vs_go(&mut self, _kind: i32) {
         self.game.ft_enable_all_input();
-        let stkind = i32::from(self.game.vs.start.stkind);
+        let stkind = i32::from(self.game.vs.start.stkind.raw());
         self.start_stage(stkind);
         self.stadium_go();
         let kind = if self.game.vs.start.alt_go { 8 } else { 4 };
@@ -976,9 +977,9 @@ impl Running<'_> {
         let mode = g.game_mode;
         let stkind = g.vs.start.stkind;
         if mode == GameMode::TargetTest {
-            let ckind = self.game.game_data.vs.event.target_test.ckind as u8;
+            let ckind = self.game.game_data.vs.event.target_test.ckind.raw() as u8;
             self.target_test_score(ckind);
-        } else if mode == GameMode::Classic && (0x21..=0x3A).contains(&stkind) {
+        } else if mode == GameMode::Classic && (0x21..=0x3A).contains(&stkind.raw()) {
             let ckind = self.game.one_player.classic.base.player.ckind as u8;
             self.target_test_score(ckind);
         }
@@ -1277,7 +1278,7 @@ impl Running<'_> {
             .iter()
             .position(|f| f.platform_timer == 0)
             .unwrap_or(0);
-        let chr = self.game.player_ckind(slot) as i8;
+        let chr = self.game.player_ckind(slot).raw() as i8;
         let own = self.game.stage_info.bits().own_entry_points;
         let point = if own { slot } else { 0 };
         let pos = super::super::gr::stage::entry_point(self.game, self.data, point)
@@ -1321,7 +1322,7 @@ impl Running<'_> {
             && self.game.player_stocks(slot) == 0
         {
             let (ckind, costume) = (self.game.player_ckind(slot), self.game.player_costume(slot));
-            self.out_of_stocks(ckind as i8, costume as i8);
+            self.out_of_stocks(ckind.raw() as i8, costume as i8);
             return;
         }
         self.respawn(slot, i32::from(sub));
@@ -1613,14 +1614,15 @@ impl Running<'_> {
         let pos = self.slot_spawn_point(0);
         let g = &mut *self.game;
         if g.player_facing(0) == 0.0 {
-            let dir =
-                if super::super::gr::stage::is_special_target_stage(i32::from(g.vs.start.stkind)) {
-                    1.0
-                } else if pos.x >= 0.0 {
-                    -1.0
-                } else {
-                    1.0
-                };
+            let dir = if super::super::gr::stage::is_special_target_stage(i32::from(
+                g.vs.start.stkind.raw(),
+            )) {
+                1.0
+            } else if pos.x >= 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
             g.set_player_facing(0, dir);
         }
         g.set_player_pos(0, pos);
@@ -1629,7 +1631,7 @@ impl Running<'_> {
             g.player_port(0) as u8,
             g.player_team(0) as u8,
             teams,
-            g.player_pkind(0) as u8,
+            g.player_pkind(0).raw() as u8,
         );
         g.set_player_effect_color(0, i32::from(cap_color(color as u8)));
         self.player_create_fighters(0);
@@ -1637,8 +1639,8 @@ impl Running<'_> {
             self.sfx_play(0x41F4E, 0x7F, 0x40);
         }
         let (ckind, costume) = (self.game.player_ckind(0), self.game.player_costume(0));
-        self.joiner_kirby_copies(ckind as i8, costume as i8);
-        self.joiner_kirby_costumes(ckind as i8, costume as i8);
+        self.joiner_kirby_copies(ckind.raw() as i8, costume as i8);
+        self.joiner_kirby_costumes(ckind.raw() as i8, costume as i8);
     }
 
     /// The copies of the joiners' and the human's characters for the Kirbys among them,
@@ -1766,7 +1768,7 @@ impl Running<'_> {
             let g = &mut *self.game;
             if g.player_facing(i) == 0.0 {
                 let dir = if super::super::gr::stage::is_special_target_stage(i32::from(
-                    g.vs.start.stkind,
+                    g.vs.start.stkind.raw(),
                 )) {
                     1.0
                 } else if pos.x >= 0.0 {
@@ -1786,7 +1788,7 @@ impl Running<'_> {
                 g.player_port(i) as u8,
                 g.player_team(i) as u8,
                 teams,
-                g.player_pkind(i) as u8,
+                g.player_pkind(i).raw() as u8,
             );
             g.set_player_effect_color(i, i32::from(cap_color(color as u8)));
             self.player_create_fighters(i);
@@ -1803,10 +1805,10 @@ impl Game {
     /// Zelda and Sheik.
     #[doc(alias = "fn_8016D8AC")]
     pub fn init_vs_player(&mut self, slot: i32, d: &PlayerInitData) {
-        self.set_player_pkind(slot, i32::from(d.slot_type));
-        self.set_player_ckind(slot, i32::from(d.ckind));
+        self.set_player_pkind(slot, d.slot_type.get());
+        self.set_player_ckind(slot, CharacterKind::from_raw(d.ckind.get().id()));
         let f = &mut self.vs.state.fighters[slot as usize];
-        f.ckind = d.ckind as u8;
+        f.ckind = Narrow::from_raw(d.ckind.raw() as u8);
         self.set_player_stocks(slot, i32::from(d.stocks));
         self.set_player_costume(slot, i32::from(d.color));
         self.set_player_sub_color(slot, d.sub_color as i8);
@@ -1827,9 +1829,9 @@ impl Game {
             self.set_player_ckind(
                 slot,
                 if ck == CharacterKind::Zelda {
-                    CharacterKind::Seak.id()
+                    CharacterKind::Seak
                 } else {
-                    CharacterKind::Zelda.id()
+                    CharacterKind::Zelda
                 },
             );
             self.vs.state.fighters[slot as usize].flags[0] |= 0x08;
@@ -2048,7 +2050,7 @@ impl Running<'_> {
         super::super::gr::setup::reset_devices(self.game);
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
-        super::super::gr::setup::select(self, i32::from(d.rules.stkind), files.stage);
+        super::super::gr::setup::select(self, i32::from(d.rules.stkind.raw()), files.stage);
         self.game.vs.state.item_weight = item_weight(self.game);
         // `Item_80266F70`'s `lbArchive_80017040`: the common items from the preload cache.
         let kept = self.take_cached_named("ItCo.usd");
@@ -2063,7 +2065,7 @@ impl Running<'_> {
             self.game.audio(0x8002_785C, [0; 4]);
         }
         // `Stage_8022524C` and `Stage_80225298` hand the stage's ground kind on.
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::gr::setup::setup(self, grkind);
         let tilt = self.game.stage_info.camera_settings().cam_vertical_tilt;
         self.game.camera.set_default_fov(tilt);
@@ -2191,7 +2193,7 @@ mod c_stick_rule_tests {
         g.game_mode = mode.id();
         g.rules = g.rules.clone().with_c_stick_1p(c_stick);
         for p in &mut g.players[3..] {
-            p.pkind = crate::game::pl::player::PlayerKind::None.into();
+            p.pkind = crate::game::pl::player::PlayerKind::None;
         }
         let c = g.camera.raw_parts_mut().cam;
         c.zoom_distance = 1.0;

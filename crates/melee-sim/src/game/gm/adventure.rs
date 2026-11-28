@@ -979,10 +979,18 @@ pub fn match_start_kinds(game: &super::super::state::Game, stkind: u16) -> [i8; 
         s if s == StKind::AdventureGreens => k[0] = FT_KIRBY,
         s if s == StKind::AdventurePStadium => {
             k[0] = FT_PIKACHU;
-            if game.gm.unlocks.ckind_unlocked(CharacterKind::Pichu as u8) {
+            if game
+                .gm
+                .unlocks
+                .ckind_unlocked(CharacterKind::Pichu.raw() as u8)
+            {
                 k[1] = FT_PICHU;
             }
-            if game.gm.unlocks.ckind_unlocked(CharacterKind::Purin as u8) {
+            if game
+                .gm
+                .unlocks
+                .ckind_unlocked(CharacterKind::Purin.raw() as u8)
+            {
                 k[2] = FT_PURIN;
             }
         }
@@ -1100,8 +1108,8 @@ impl Running<'_> {
             p.ckind,
             p.color,
             &[
-                CharacterKind::Mario as i8,
-                CharacterKind::Luigi as i8,
+                CharacterKind::Mario.raw() as i8,
+                CharacterKind::Luigi.raw() as i8,
                 NONE as i8,
             ],
             &mut colors,
@@ -1119,7 +1127,7 @@ impl Running<'_> {
         let run = &self.game.one_player.adventure.base;
         let ckind = run.player.ckind as u8;
         let kind = if ckind == CharacterKind::Zelda && run.counters[6] != 0 {
-            CharacterKind::Seak as u8
+            CharacterKind::Seak.raw() as u8
         } else {
             ckind
         };
@@ -1262,10 +1270,10 @@ impl Running<'_> {
             .game
             .gm
             .unlocks
-            .ckind_unlocked(CharacterKind::Falco as u8)
+            .ckind_unlocked(CharacterKind::Falco.raw() as u8)
             && self.game.objs.rng.below(100) <= 33;
         self.game.one_player.adventure.star_fox_kind = if falco {
-            CharacterKind::Falco as u8
+            CharacterKind::Falco.raw() as u8
         } else {
             first
         };
@@ -1282,11 +1290,11 @@ impl Running<'_> {
             super::one_player::enemy_color_table(
                 p.ckind,
                 p.color,
-                &[CharacterKind::Falco as i8, NONE as i8, NONE as i8],
+                &[CharacterKind::Falco.raw() as i8, NONE as i8, NONE as i8],
                 &mut colors,
             );
             let s = &mut self.game.one_player.match_start.players[1];
-            s.ckind = CharacterKind::Falco as _;
+            s.ckind = CharacterKind::Falco.into();
             s.color = colors[0];
         }
     }
@@ -1310,10 +1318,10 @@ impl Running<'_> {
             .game
             .gm
             .unlocks
-            .ckind_unlocked(CharacterKind::Luigi as u8)
+            .ckind_unlocked(CharacterKind::Luigi.raw() as u8)
         {
             for p in &mut self.game.one_player.match_start.players[1..4] {
-                if p.ckind == CharacterKind::Luigi as i8 {
+                if p.ckind == CharacterKind::Luigi {
                     p.slot_type = PlayerKind::None.into();
                 }
             }
@@ -1409,7 +1417,7 @@ impl Running<'_> {
         if self.previous_scene_index() == LUIGI_CUTSCENE {
             let color = self.game.one_player.adventure_cutscene[3];
             let p = &mut self.game.one_player.match_start.players[1];
-            p.ckind = CharacterKind::Luigi as _;
+            p.ckind = CharacterKind::Luigi.into();
             p.color = color;
             self.game.one_player.adventure.feats[0] = 1;
         }
@@ -1460,7 +1468,7 @@ impl Running<'_> {
             let costume = u8::from(p.ckind as u8 == CharacterKind::Kirby && p.color == 0);
             self.load_kirby_hats(costume);
         }
-        for k in match_start_kinds(self.game, stkind) {
+        for k in match_start_kinds(self.game, stkind.raw()) {
             if k != FT_NONE {
                 self.load_fighter_all_costumes(i32::from(k));
             }
@@ -1478,15 +1486,18 @@ impl Running<'_> {
             self.check_preloaded(file);
             self.disc_load(file, MAIN_MEMORY);
         }
-        let t = kind_tables(kind);
+        let t = kind_tables(FighterKind::from_raw(kind));
         super::super::ef::load_sync(self, i32::from(t.effect_file));
         for c in 0..i32::from(t.costume_count) {
-            if let Some(file) = self.game.load_costume(self.data, kind, c) {
+            if let Some(file) = self
+                .game
+                .load_costume(self.data, FighterKind::from_raw(kind), c)
+            {
                 self.check_preloaded(&file);
                 self.disc_load(&file, MAIN_MEMORY);
             }
         }
-        self.put_anim_file(kind);
+        self.put_anim_file(FighterKind::from_raw(kind));
         if kind == FighterKind::Kirby {
             self.kirby_data_setup();
         }

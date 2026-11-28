@@ -11,19 +11,19 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::kirby::copy::KindFrom;
 use super::super::motion::flags::*;
 use super::{PAD_B, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 
 /// What tells one Shield Breaker from the other.
 pub struct ShieldBreaker {
@@ -153,7 +153,7 @@ impl Running<'_> {
                 _ => None,
             };
             let air = if p.one_flash {
-                self.game.fighter(gobj).ground_or_air != GA_GROUND
+                self.game.fighter(gobj).ground_or_air != GroundOrAir::Ground
             } else {
                 air
             };
@@ -420,7 +420,7 @@ impl Running<'_> {
             let base_damage = self.mars_n_attr_i32(gobj, p, attr::X4);
             let damage_per_step = self.mars_n_attr_i32(gobj, p, attr::X8);
             for i in 0..4 {
-                if self.game.fighters[f.0].hitboxes[i].state == hitcapsule::ENABLED {
+                if self.game.fighters[f.0].hitboxes[i].state == HitCapsuleState::Enabled {
                     let n = self.game.fighters[f.0].mv_i32(mv::N_CUR_FRAME);
                     let d = base_damage.wrapping_add((n / 30).wrapping_mul(damage_per_step));
                     let d = crate::ppc::cvt_fp2unsigned(fp::frsp(f64::from(d)));

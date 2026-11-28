@@ -18,6 +18,9 @@ pub struct Row {
     pub tick: u32,
     /// The frame's place between ticks (0 the first after the tick).
     pub k: u32,
+    /// Before the frame's drawing could start: waiting for Extrapolate's prediction, made beside
+    /// the tick's first frame, to finish (on the second frame, `k` 1).
+    pub ahead: Duration,
     /// Building and running the frame on the CPU, until the renderer hands it over.
     pub draw: Duration,
     /// Recording and submitting the present.
@@ -39,9 +42,9 @@ pub struct Row {
 }
 
 impl Row {
-    /// The frame with its present and the GPU's wait.
+    /// The frame with its present and the GPU's wait, and the wait for the prediction before it.
     pub fn presented(&self) -> Duration {
-        self.draw + self.submit + self.wait
+        self.ahead + self.draw + self.submit + self.wait
     }
 }
 
@@ -172,10 +175,15 @@ impl Frames {
             });
             let _ = writeln!(
                 out,
-                "  tick {} frame {}: {:.3} = drawing {:.3} + submitting {:.3} + waiting {:.3}; {gpu}{}",
+                "  tick {} frame {}: {:.3} = {}drawing {:.3} + submitting {:.3} + waiting {:.3}; {gpu}{}",
                 r.tick,
                 r.k,
                 ms(r.presented()),
+                if r.ahead.is_zero() {
+                    String::new()
+                } else {
+                    format!("the prediction {:.3} + ", ms(r.ahead))
+                },
                 ms(r.draw),
                 ms(r.submit),
                 ms(r.wait),
@@ -192,7 +200,7 @@ impl Frames {
     /// Every frame as a CSV row, times in microseconds.
     pub fn csv(&self) -> String {
         let mut out = String::from(
-            "tick,k,draw,submit,wait,build,stream,tick_sim,tick_keep,gpu_busy,gpu_span",
+            "tick,k,draw,submit,wait,build,stream,tick_sim,tick_keep,ahead,gpu_busy,gpu_span",
         );
         for s in Stage::ALL {
             let _ = write!(out, ",{0},{0}_passes", s.name().replace(' ', "_"));
@@ -205,7 +213,7 @@ impl Frames {
         for r in &self.rows {
             let _ = write!(
                 out,
-                "{},{},{},{},{},{},{},{},{}",
+                "{},{},{},{},{},{},{},{},{},{}",
                 r.tick,
                 r.k,
                 us(r.draw),
@@ -214,7 +222,8 @@ impl Frames {
                 us(r.build),
                 us(r.stream),
                 us(r.tick_sim),
-                us(r.tick_keep)
+                us(r.tick_keep),
+                us(r.ahead)
             );
             match &r.gpu {
                 Some(g) => {

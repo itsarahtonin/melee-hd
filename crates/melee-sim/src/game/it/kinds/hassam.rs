@@ -2,6 +2,7 @@
 //! along the floor, then leaps at the nearest opponent above it, and after its leap flies off
 //! towards the camera.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{fall, ground_or_fall};
@@ -80,7 +81,7 @@ fn bone_motion(r: &mut Running, gobj: GObjId) {
 }
 
 fn is_air(r: &Running, gobj: GObjId) -> bool {
-    item(r.game, gobj).ground_or_air == 1
+    item(r.game, gobj).ground_or_air == GroundOrAir::Air
 }
 
 /// Scizor out of the ball, `itHassam_802CDBE0`: facing the nearest opponent, at its first

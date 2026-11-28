@@ -2,6 +2,7 @@
 //! sent up at a random speed and angle in its spread, slowing as it goes, gone when it hits or
 //! its life runs out.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
@@ -72,7 +73,7 @@ pub fn spawn(
     r: &mut Running,
     parent: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {

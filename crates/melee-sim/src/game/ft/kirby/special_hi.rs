@@ -2,6 +2,7 @@
 //! once past its first frames, the blade slamming down where it meets the ground with the wave
 //! it sends (`it::kinds::kirbycutterbeam`), his body leaning along the floor's slope.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, eflib};
@@ -146,7 +147,7 @@ impl Running<'_> {
     pub fn kb_special_hi_end_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.kb_clear_lean(gobj);
-            if self.game.fighter(gobj).ground_or_air == 0 {
+            if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
                 self.enter_wait(gobj);
             } else {
                 self.enter_fall(gobj);

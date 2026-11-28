@@ -4,14 +4,11 @@
 //! check holds to the decomp's (`game::mirror`). The fields keep the original's order, so the
 //! sync test's hash reads them as the generated structs' did (a sub-struct adds nothing to it; an
 //! array would add its length, so the bubble's nine colors stay nine fields).
-//!
-//! `StageInfo::grkind` stays the original's `i32`: it compares with [`super::GrKind`] directly,
-//! and the enum has no variant for a value outside the game's list.
 
 use melee_data::archive::DataRef;
 
-use super::GroundUnion;
 use super::setup::{GroundX11Flags, StageCameras};
+use super::{GrKind, GroundUnion};
 use crate::game::handles::{CodeRef, StartHookId};
 use crate::game::structs::{_GXColor, ColorOverlay};
 use crate::hsd::gobj::GObjId;
@@ -31,7 +28,7 @@ pub struct StageInfo {
     #[at(0x84)]
     pub(in crate::game::gr) flags: u32,
     #[at(0x88)]
-    pub(in crate::game::gr) grkind: i32,
+    pub(in crate::game::gr) grkind: GrKind,
     #[at(0x8C)]
     #[doc(alias("unk8C"))]
     pub(in crate::game::gr) bits: StageBits,
@@ -171,7 +168,7 @@ impl Default for StageInfo {
             cam_info: Default::default(),
             blast_zone: Default::default(),
             flags: 0,
-            grkind: 0,
+            grkind: GrKind::Dummy,
             bits: Default::default(),
             watch_callback: None,
             watch_callback_2: None,
@@ -229,7 +226,7 @@ impl StageInfo {
     /// [`StageInfo::ground_kind`] for the kind itself.
     #[inline]
     pub fn ground_kind_id(&self) -> i32 {
-        self.grkind
+        self.grkind.id()
     }
 
     /// The camera's settings for the stage (`cam_info`): its bounds and offsets, its tilt, pan,

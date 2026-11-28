@@ -349,7 +349,7 @@ pub fn spawn_swarm(r: &mut Running, gobj: GObjId) {
         damage: 0,
         vel: pokemon::vars(r.game, gobj).vec(SWARM_VEL),
         ignore_id: 0,
-        kind: ItKind::UnownSwarm.id(),
+        kind: ItKind::UnownSwarm,
         owner,
         maker: Some(gobj),
         ..Default::default()

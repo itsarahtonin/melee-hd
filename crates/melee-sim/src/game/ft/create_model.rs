@@ -1,6 +1,8 @@
 //! The parts of a fighter's creation that build its model's extras and collision: its second
 //! model, hurt capsules, dynamic bones, lights, and the fighters' shared models and light.
 
+use crate::game::ft::types::HurtHeight;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use melee_data::archive::DataRef;
 
 use super::super::handles::{CodeRef, DObjListId, FighterId};
@@ -188,9 +190,9 @@ impl Running<'_> {
             let joint = self.game.fighter_parts[parts][bone_idx as usize].joint;
             let h = &mut self.game.fighters[f.0].hurt_capsules[i as usize];
             h.capsule.bone_idx = bone_idx;
-            h.height = self.data.u32(init.at(4)) as i32;
+            h.height = HurtHeight::from_raw(self.data.u32(init.at(4)) as i32);
             h.is_grabbable = self.data.u32(init.at(8)) as i32;
-            h.capsule.state = 0;
+            h.capsule.state = HurtCapsuleState::Enabled;
             h.capsule.bone = joint;
             h.capsule.a_offset = raw3(init.at(0xC));
             h.capsule.b_offset = raw3(init.at(0x18));

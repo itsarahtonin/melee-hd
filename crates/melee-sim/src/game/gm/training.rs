@@ -7,6 +7,8 @@
 // The menu's arrays run by index, as the original's loops do.
 #![allow(clippy::needless_range_loop)]
 
+use crate::game::ft::CpuKind;
+use crate::game::it::ItKind;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
@@ -179,12 +181,18 @@ impl Running<'_> {
             data.players[i].no_offscreen_damage = true;
         }
         let p0 = &vs.players[0];
-        super::setup_players::setup_human(&mut data.players[0], p0.ckind as u8, p0.color, 1, slot);
+        super::setup_players::setup_human(
+            &mut data.players[0],
+            p0.ckind.raw() as u8,
+            p0.color,
+            1,
+            slot,
+        );
         for i in 1..4 {
             let p = &vs.players[i];
             super::setup_players::setup_cpu(
                 &mut data.players[i],
-                p.ckind as u8,
+                p.ckind.raw() as u8,
                 p.color,
                 1,
                 p.slot.wrapping_sub(1),
@@ -228,9 +236,9 @@ impl Running<'_> {
         let p = &end.player_standings[0];
         self.add_1p_time(end.frame_count / 60);
         self.results_add_coins(i32::from(p.coins));
-        let best = self.training_best(i32::from(p.ckind));
-        self.training_record_combo(p.ckind, best as u16);
-        self.training_combo_trophies(p.ckind);
+        let best = self.training_best(i32::from(p.ckind.raw()));
+        self.training_record_combo(p.ckind.raw(), best as u16);
+        self.training_combo_trophies(p.ckind.raw());
         self.trophy_unlocks();
         let slot = self.game.one_player.training_slot;
         if !self.challenger_check(GameMode::Training, slot) {
@@ -483,7 +491,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8018846C")]
     fn training_combo_count(&mut self) -> i32 {
         let result = self.combo_count_on(0);
-        let ck = self.game.player_ckind(0) as usize;
+        let ck = self.game.player_ckind(0).raw() as usize;
         let t = &mut self.game.training;
         if t.char_data[ck] < result {
             t.char_data[ck] = result;
@@ -675,7 +683,7 @@ impl Running<'_> {
         self.game.training.cpu_type = kind as u8;
         for i in 1..4 {
             if count != 0 {
-                self.set_player_cpu_type(i, kind);
+                self.set_player_cpu_type(i, CpuKind::from_raw(kind));
                 count -= 1;
                 if count == 0 {
                     break;
@@ -786,7 +794,11 @@ impl Running<'_> {
                         };
                         let mut pos = self.game.objs.jobjs[j].translate;
                         pos.y = mem(fp::fadds(reg(pos.y), reg(10.0)));
-                        super::super::it::spawn::drop_at(self, pos, i32::from(kind));
+                        super::super::it::spawn::drop_at(
+                            self,
+                            pos,
+                            ItKind::from_raw(i32::from(kind)),
+                        );
                     }
                 }
                 4 => {
@@ -968,7 +980,7 @@ impl Running<'_> {
         let pos = self.slot_spawn_point(slot);
         let g = &mut *self.game;
         if g.player_facing(slot) == 0.0 {
-            let stage = i32::from(g.vs.start.stkind);
+            let stage = i32::from(g.vs.start.stkind.raw());
             let dir = if super::super::gr::stage::is_special_target_stage(stage) {
                 1.0
             } else if pos.x >= 0.0 {
@@ -985,7 +997,7 @@ impl Running<'_> {
             g.player_port(slot) as u8,
             g.player_team(slot) as u8,
             teams,
-            g.player_pkind(slot) as u8,
+            g.player_pkind(slot).raw() as u8,
         );
         g.set_player_effect_color(slot, i32::from(super::vs::cap_color(color as u8)));
         self.player_create_fighters(slot);

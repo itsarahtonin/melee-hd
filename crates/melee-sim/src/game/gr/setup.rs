@@ -74,7 +74,7 @@ pub fn reset(game: &mut Game) {
     i.blast_zone.right = 99999.0;
     i.blast_zone.top = 99999.0;
     i.blast_zone.bottom = -99999.0;
-    i.grkind = -1;
+    i.grkind = GrKind::from_raw(-1);
     i.target_count = 0;
     i.targets_left = 0;
     i.bgm = -1;
@@ -309,7 +309,7 @@ pub fn coll_joint_id(game: &Game, data: &Archives, map_id: i32, part: i32) -> i3
 /// those alone (a collision joint's callback).
 pub fn coll_joint_id_in(
     gr: &super::Globals,
-    grkind: i32,
+    grkind: GrKind,
     data: &Archives,
     map_id: i32,
     part: i32,
@@ -1261,7 +1261,7 @@ pub fn load_collision(game: &mut Game, data: &Archives) {
         data,
         game.stage_info.coll_data,
         scale(game),
-        game.stage_info.grkind,
+        game.stage_info.grkind.id(),
     );
     g.set_generation(generation);
     g.set_debug_rom(game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM);
@@ -1288,7 +1288,7 @@ pub fn create_collision_gobj(game: &mut Game) {
 #[doc(alias = "it_8026B40C")]
 #[doc(alias = "Ground_801C0800")]
 #[doc(alias = "Stage_8022524C")]
-pub fn setup(r: &mut Running, grkind: i32) {
+pub fn setup(r: &mut Running, grkind: GrKind) {
     setup_at(r, grkind, 0);
 }
 
@@ -1296,13 +1296,13 @@ pub fn setup(r: &mut Running, grkind: i32) {
 /// (`gm_Scene_Vs_OnEnter`'s 0x18 and `fn_8016E730`'s 0x20): Adventure's intro's entry
 /// (0x48) 0x10, Classic's intro's (0x18 and `fn_80186634`'s 0x48) 0x28. The stage's objects'
 /// scale joints made in the setup take their ID entries' stack keys that much lower.
-pub fn setup_at(r: &mut Running, grkind: i32, deeper: u32) {
+pub fn setup_at(r: &mut Running, grkind: GrKind, deeper: u32) {
     r.game.gr.setup_deeper = deeper;
     setup_inner(r, grkind);
     r.game.gr.setup_deeper = 0;
 }
 
-fn setup_inner(r: &mut Running, grkind: i32) {
+fn setup_inner(r: &mut Running, grkind: GrKind) {
     let (game, data) = (&mut *r.game, r.data);
     let p = game.gr.param.clone().expect("stage_info.param is null");
     let f = |x: i32| mem(fp::frsp(f64::from(x)));
@@ -1366,14 +1366,14 @@ fn setup_inner(r: &mut Running, grkind: i32) {
 /// Runs the stage's load hook, `Ground_OnLoad`.
 #[doc(alias = "Ground_OnLoad")]
 #[doc(alias = "Stage_80225298")]
-pub fn on_load(r: &mut Running, grkind: i32) {
+pub fn on_load(r: &mut Running, grkind: GrKind) {
     (registry::stage(grkind).load)(r);
 }
 
 /// Starts the match on the stage, `Ground_801C0FB8`: the stage's start hook, the queued start
 /// hooks (each process called with its object, then freed), and the watcher's GObj.
 #[doc(alias = "Ground_801C0FB8")]
-pub fn start(r: &mut Running, grkind: i32) {
+pub fn start(r: &mut Running, grkind: GrKind) {
     (registry::stage(grkind).start)(r);
     let mut cur = r.game.stage_info.start_hooks;
     while let Some(h) = cur {
@@ -1483,7 +1483,7 @@ fn forget_points(
 pub fn select(r: &mut Running, stkind: i32, archive: Option<ArchiveId>) {
     r.game.gr.stkind = stkind;
     let grkind = crate::lb::audio::ground_kind(stkind) as i32;
-    load(r, grkind, stkind, archive);
+    load(r, GrKind::from_raw(grkind), stkind, archive);
 }
 
 /// Loads a stage, `Ground_801C0754`: `stage_info` reset, the stage's archive and what it
@@ -1491,7 +1491,7 @@ pub fn select(r: &mut Running, stkind: i32, archive: Option<ArchiveId>) {
 /// bookkeeping.
 #[doc(alias = "Ground_801C5878")]
 #[doc(alias = "Ground_801C0754")]
-pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId>) {
+pub fn load(r: &mut Running, grkind: GrKind, stkind: i32, archive: Option<ArchiveId>) {
     reset(r.game);
     r.game.stage_info.grkind = grkind;
     let stage = registry::stage(grkind);
@@ -1776,11 +1776,17 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
                 8 => Some(false),
                 2 => Some(roll(game, true)),
                 3 => {
-                    let unlocked = game.gm.unlocks.ckind_unlocked(CharacterKind::Mars as u8);
+                    let unlocked = game
+                        .gm
+                        .unlocks
+                        .ckind_unlocked(CharacterKind::Mars.raw() as u8);
                     Some(roll(game, unlocked))
                 }
                 4 => {
-                    let unlocked = game.gm.unlocks.ckind_unlocked(CharacterKind::Clink as u8);
+                    let unlocked = game
+                        .gm
+                        .unlocks
+                        .ckind_unlocked(CharacterKind::Clink.raw() as u8);
                     Some(roll(game, unlocked))
                 }
                 5 => {
@@ -1843,7 +1849,7 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
         // The first player's character's songs, one drawn.
         let ckind = game.player_ckind(0);
         let which = game.objs.rng.below(2);
-        bgm = crate::lb::audio::character_song(ckind, which);
+        bgm = crate::lb::audio::character_song(ckind.id(), which);
     }
     (bgm, alternate)
 }

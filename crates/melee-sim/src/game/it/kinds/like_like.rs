@@ -14,10 +14,11 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{attr_of, change, change_state, play_sfx};
-use super::super::zako::{self, GA_AIR, attr, attr_f32, attr_i32, attr_s8, walk_speed as speed};
+use super::super::zako::{self, attr, attr_f32, attr_i32, attr_s8, walk_speed as speed};
 use super::super::{data, ground, hitbox, item, item_mut, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
@@ -872,7 +873,7 @@ pub fn anim_swallow(r: &mut Running, gobj: GObjId) -> bool {
 /// ground along the floor.
 #[doc(alias = "itLikelike_UnkMotion12_Phys")]
 pub fn phys12(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         zako::fall_physics(r, gobj);
         return;
     }
@@ -883,7 +884,7 @@ pub fn phys12(r: &mut Running, gobj: GObjId) {
 /// on the ground; on the ground, off it it lets go and falls.
 #[doc(alias = "itLikelike_UnkMotion12_Coll")]
 pub fn coll12(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         if ground::air(r, gobj) {
             maplib::enter_ground(item_mut(r.game, gobj));
             lib2725::clear_velocity(r.game, gobj);
@@ -1126,7 +1127,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802DC4BC")]
 pub fn spawn(r: &mut Running, ceiling: i32, pos: Vec3) -> Option<GObjId> {
     let zero = Vec3::new(0.0, 0.0, 0.0);
-    let gobj = zako::spawn(r, ItKind::LikeLike.id(), Some(pos), None, Some(zero), true)?;
+    let gobj = zako::spawn(r, ItKind::LikeLike, Some(pos), None, Some(zero), true)?;
     set(r, gobj, off::CEILING, ceiling);
     maplib::enter_air(item_mut(r.game, gobj));
     if ceiling == 0 {

@@ -2,6 +2,8 @@
 //! fall tumbling (state 0) and burst when they land or hit (state 1), hidden while the blast
 //! plays out.
 
+use crate::game::it::ItKind;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{change, change_state, debug_owner_bubbles, spawn_air};
@@ -59,7 +61,7 @@ pub fn spawn(
     owner: GObjId,
     prev_pos: Vec3,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) {
     let mut spawn = SpawnItem {
@@ -146,7 +148,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM_0 | COLL_1 => false,
         COLL_0 => {
-            if item(r.game, gobj).ground_or_air == 1 {
+            if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
                 super::super::ground::fall_until_touch_unstick(r, gobj, land);
             }
             false

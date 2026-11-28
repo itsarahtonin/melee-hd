@@ -5,6 +5,7 @@ use super::setup::counts_kos;
 use super::*;
 use crate::game::ft::CharacterKind;
 use crate::game::gm::GameMode;
+use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
 
 /// `mnCharSel_804DC560`, `804DC564`: a name list's white and the gray of names taken.
@@ -190,7 +191,7 @@ impl Running<'_> {
             }
         };
         let player = self.door_player(door);
-        self.css_start().players[player].ckind = ICONS[icon].ckind as i8;
+        self.css_start().players[player].ckind = Narrow::from_raw(ICONS[icon].ckind as i8);
         let d = usize::from(door);
         self.game.charsel.doors[d].sel_icon = icon as u8;
         if self.game.charsel.doors[d].sel_icon != self.game.charsel.doors[d].sel_icon_prev {
@@ -244,16 +245,16 @@ impl Running<'_> {
     pub(super) fn charsel_coin_back(&mut self, door: u8) -> i32 {
         let player = self.door_player(door);
         let ckind = self.css().vs.start.players[player].ckind;
-        if ckind >= (CharacterKind::PLAYABLE as i8) {
+        if ckind.raw() >= (CharacterKind::PLAYABLE as i8) {
             return 1;
         }
         let d = usize::from(door);
         let sel = usize::from(self.game.charsel.doors[d].sel_icon);
-        if i32::from(ckind) != i32::from(ICONS[sel].ckind) {
+        if i32::from(ckind.raw()) != i32::from(ICONS[sel].ckind) {
             self.game.charsel.doors[d].costume = 0;
         }
         let icon = (0..25)
-            .find(|&i| i32::from(ckind) == i32::from(ICONS[i].ckind))
+            .find(|&i| i32::from(ckind.raw()) == i32::from(ICONS[i].ckind))
             .unwrap_or(25);
         let bu = self.game.charsel.icons.get(icon).map_or(0.0, |i| i.bound_u);
         let t = self.game.charsel.tokens[d].as_mut().expect("a coin");
@@ -907,7 +908,7 @@ impl Running<'_> {
                 let up = in_play && self.game.charsel.tokens[i].expect("a coin").held_by != 0;
                 let e = &mut self.dvd_mut().cache.scene.game_cache.entries[i];
                 if in_play && !up {
-                    e.char_id = i32::from(ckind);
+                    e.char_id = i32::from(ckind.raw());
                     e.color = color;
                 } else {
                     e.char_id = i32::from(CharacterKind::NONE);
@@ -926,7 +927,7 @@ impl Running<'_> {
                 let up = self.game.charsel.tokens[i].expect("a coin").held_by != 0;
                 let e = &mut self.dvd_mut().cache.scene.game_cache.entries[i];
                 if (slot == PlayerKind::Human || slot == PlayerKind::Cpu) && !up {
-                    e.char_id = i32::from(ckind);
+                    e.char_id = i32::from(ckind.raw());
                     e.color = color;
                 } else {
                     e.char_id = i32::from(CharacterKind::NONE);
@@ -1025,7 +1026,7 @@ impl Running<'_> {
             if (slot == PlayerKind::Human || slot == PlayerKind::Cpu)
                 && !self.charsel_exit_coin_up(i)
             {
-                mask |= crate::lb::audio::character_banks(i32::from(ckind));
+                mask |= crate::lb::audio::character_banks(i32::from(ckind.raw()));
             }
         }
         self.game.audio.lb.unwant_banks(0x14);

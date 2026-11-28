@@ -457,16 +457,17 @@ fn year_day(mut days: u32) -> u32 {
 mod tests {
     use super::super::results_exit::move_handicaps;
     use super::*;
+    use crate::game::pl::player::PlayerKind;
     use crate::game::structs::MatchEnd;
 
     /// A match of `places.len()` players at those places.
     fn end(places: &[u8]) -> MatchEnd {
         let mut e = MatchEnd::default();
         for p in &mut e.player_standings {
-            p.pkind = 3;
+            p.pkind = PlayerKind::None.into();
         }
         for (i, &at) in places.iter().enumerate() {
-            e.player_standings[i].pkind = 0;
+            e.player_standings[i].pkind = PlayerKind::Human.into();
             e.player_standings[i].is_small_loser = at;
         }
         e

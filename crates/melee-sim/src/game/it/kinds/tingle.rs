@@ -8,6 +8,7 @@
 //! Its variables share the union's first words with the enemies' common member
 //! (`itZako_ItemVars`, which `it::zako`'s spawn writes), so [`TincleVars`] holds both.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state};
@@ -844,7 +845,7 @@ pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
 /// is past, he lands, and leaving the ground he falls.
 #[doc(alias = "itTincle_UnkMotion7_Coll")]
 pub fn coll7(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         ground::fall_to_floor(r, gobj, land);
     } else {
         if vars(r.game, gobj).countdown.get() < 0 {
@@ -1064,7 +1065,7 @@ pub fn set_box(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802ECA70")]
 pub fn create(r: &mut Running, owner: GObjId) -> Option<GObjId> {
     let pos = Vec3::new(0.0, 200.0, 0.0);
-    let gobj = zako::spawn(r, ItKind::Tingle.id(), Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Tingle, Some(pos), None, None, true)?;
     let s = super::super::super::gr::ground::scale(r.game);
     item_mut(r.game, gobj).scl = s;
     let j = jobj_of(r.game, gobj).expect("Tingle without a model");

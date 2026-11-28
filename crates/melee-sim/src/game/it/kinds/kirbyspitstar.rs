@@ -75,7 +75,7 @@ pub fn spawn(
     decel: f32,
 ) -> f32 {
     let mut spawn = SpawnItem {
-        kind: ItKind::KirbySpitStar.id(),
+        kind: ItKind::KirbySpitStar,
         ..Default::default()
     };
     spawn.prev_pos = pos;

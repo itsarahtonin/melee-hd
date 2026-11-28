@@ -4,6 +4,9 @@
 // The opponents' loop runs by index, as the original's does, over tables indexed alongside.
 #![allow(clippy::needless_range_loop)]
 
+use crate::game::ft::CpuKind;
+use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
 use gekko_fp as fp;
 
 use super::super::handles::CodeRef;
@@ -75,9 +78,9 @@ impl super::super::state::Game {
         for (k, f) in s.fighters.iter().enumerate() {
             let o = 0x38 + k * 0xE;
             st[o..o + 6].copy_from_slice(&[
-                f.ckind,
+                f.ckind.raw(),
                 f.entry_timer,
-                f.slot_type,
+                f.slot_type.raw(),
                 f.spawn_point as u8,
                 f.flags[0],
                 f.unused_5,
@@ -253,7 +256,7 @@ impl Running<'_> {
             r.timer_enabled = false;
         }
         r.score = run.score as u32;
-        r.stkind = stkind as u16;
+        r.stkind = Narrow::from_raw(stkind as u16);
         r.item_freq = Self::one_player_getter(run.getters[0], count, level, 0) as i8;
         r.item_switch = u64::MAX;
         let enemies = chars.iter().filter(|&&c| c != NONE).count();
@@ -297,10 +300,10 @@ impl Running<'_> {
         };
         let ckind = run.player.ckind;
         let player_ckind = if ckind == CharacterKind::Zelda && run.counters[6] != 0 {
-            CharacterKind::Seak as u8
+            CharacterKind::Seak.raw() as u8
         } else if run_flags & 0x80 != 0 && run.stage[1] == 1 && ckind == CharacterKind::IceClimbers
         {
-            CharacterKind::Popo as u8
+            CharacterKind::Popo.raw() as u8
         } else {
             ckind as u8
         };
@@ -327,12 +330,12 @@ impl Running<'_> {
             let team = start.players[0].team;
             let p = &mut start.players[idx];
             *p = player_defaults();
-            p.ckind = a.ckind;
-            p.slot_type = 1;
+            p.ckind = Narrow::from_raw(a.ckind);
+            p.slot_type = PlayerKind::Cpu.into();
             p.stocks = 1;
             p.team = team;
             p.color = a.color;
-            p.cpu_kind = a.cpu_kind;
+            p.cpu_kind = Narrow::from_raw(a.cpu_kind);
             p.cpu_level = a.cpu_level;
             p.attack_ratio = a.attack_ratio;
             p.defense_ratio = a.defense_ratio;
@@ -434,11 +437,11 @@ impl Running<'_> {
                 let teams = start.rules.is_teams == 1;
                 let p = &mut start.players[player_idx];
                 *p = player_defaults();
-                p.slot_type = 1;
-                p.ckind = kind;
+                p.slot_type = PlayerKind::Cpu.into();
+                p.ckind = Narrow::from_raw(kind);
                 p.stocks = 1;
                 p.cpu_level = enemy_level;
-                p.cpu_kind = enemy_cpu_type;
+                p.cpu_kind = Narrow::from_raw(enemy_cpu_type);
                 p.attack_ratio = attack;
                 p.defense_ratio = defense;
                 p.color = colors[i];
@@ -451,7 +454,7 @@ impl Running<'_> {
                 }
                 if run_flags & 4 != 0 {
                     p.vs_metal = true;
-                    p.cpu_kind = 0x1B;
+                    p.cpu_kind = CpuKind::Unafraid.into();
                 }
                 if p.ckind == CharacterKind::GKoopa {
                     p.enters = false;
@@ -463,7 +466,7 @@ impl Running<'_> {
                     p.hp_explodes = true;
                     p.spawn_dir = -1;
                     if p.ckind == CharacterKind::CrazyHand {
-                        p.slot_type = 3;
+                        p.slot_type = PlayerKind::None.into();
                     }
                     boss_count += 1;
                 }
@@ -475,12 +478,12 @@ impl Running<'_> {
                     break;
                 }
             } else if i == 0 && chars[1] == CharacterKind::MasterHand {
-                start.players[player_idx].slot_type = 3;
+                start.players[player_idx].slot_type = PlayerKind::None.into();
                 player_idx += 1;
             }
         }
         for p in start.players.iter_mut().skip(player_idx) {
-            p.slot_type = 3;
+            p.slot_type = PlayerKind::None.into();
         }
         if run_flags & 0x40 != 0 {
             run.counters[0] = 7;
@@ -555,12 +558,12 @@ impl Running<'_> {
             let p0 = &start.players[0];
             let (p0_ckind, p0_color) = (p0.ckind, p0.color);
             self.setup_opponents(
-                &[CharacterKind::GameWatch as i8, NONE, NONE],
+                &[CharacterKind::GameWatch.raw() as i8, NONE, NONE],
                 [0; 3],
                 1,
                 0,
                 0,
-                p0_ckind as u8,
+                p0_ckind.raw() as u8,
                 p0_color,
                 i32::from(n),
                 0x19,

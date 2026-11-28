@@ -2,7 +2,11 @@
 //! players' setup (`PlayerInitData`), which a mode fills before the match scene starts and the
 //! match reads as it sets up.
 
+use crate::game::ft::{CharacterKind, CpuKind};
+use crate::game::gr::StKind;
 use crate::game::handles::{CodeRef, RawPtr};
+use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
 
 /// The decomp's `StartMeleeRules`.
 #[derive(
@@ -178,7 +182,7 @@ pub struct StartMeleeRules {
     #[doc(alias("xD"))]
     pub end_wait: u8,
     #[at(0xE)]
-    pub stkind: u16,
+    pub stkind: Narrow<StKind, u16>,
     #[at(0x10)]
     pub time_limit: u32,
     #[at(0x14)]
@@ -239,9 +243,9 @@ pub struct StartMeleeRules {
 #[mirror(c = "PlayerInitData", size = 0x24, pad(0x16, 2))]
 pub struct PlayerInitData {
     #[at(0x0)]
-    pub ckind: i8,
+    pub ckind: Narrow<CharacterKind, i8>,
     #[at(0x1)]
-    pub slot_type: u8,
+    pub slot_type: Narrow<PlayerKind, u8>,
     #[at(0x2)]
     pub stocks: i8,
     #[at(0x3)]
@@ -316,7 +320,7 @@ pub struct PlayerInitData {
     #[doc(alias("xD_b7"))]
     pub unused_d_b7: bool,
     #[at(0xE)]
-    pub cpu_kind: u8,
+    pub cpu_kind: Narrow<CpuKind, u8>,
     #[at(0xF)]
     pub cpu_level: u8,
     #[at(0x10)]

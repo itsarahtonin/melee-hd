@@ -124,7 +124,7 @@ impl Running<'_> {
                 .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x10)),
         );
         let facing = self.game.fighters[f.0].facing_dir;
-        let veg = peachturnip::spawn(self, gobj, pos, part, kind, facing);
+        let veg = peachturnip::spawn(self, gobj, pos, part, ItKind::from_raw(kind), facing);
         let fp = &mut self.game.fighters[f.0];
         fp.item_gobj = veg;
         fp.u.set_gobj_at(u::VEG, veg);

@@ -11,15 +11,16 @@ use super::super::ft::create::AllocInfo;
 use super::super::state::{Game, Running};
 use super::types::{ActionStats, ComboStats, StaleMoveTable, StaticPlayer};
 use crate::game::ft::CharacterKind;
+use crate::game::ft::CpuKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
 crate::game::ft::registry::kind_enum! {
     /// Who plays a slot (`Gm_PKind`): the player blocks' `pkind`, the start rules' and the
     /// character select's `slot_type`, the results' standings. The game's own numbers. The
-    /// state keeps the number (a `u8` or an `i32` by struct); code compares it with these
-    /// (`p.slot_type == PlayerKind::Human`), writes them with `into()` and matches on
-    /// [`PlayerKind::from_id`].
+    /// player blocks hold the kind, the other structs a [`Narrow`](crate::game::mirror::Narrow)
+    /// of it in their byte; code compares them with these (`p.slot_type == PlayerKind::Human`),
+    /// writes them with `into()` and matches on the kind (`p.slot_type.get()`).
     PlayerKind:
     /// `Gm_PKind_Human`: a person at the controller.
     #[doc(alias("Gm_PKind_Human", "PKIND_HUMAN"))]
@@ -38,15 +39,10 @@ crate::game::ft::registry::kind_enum! {
     Boss = 4,
 }
 
-impl From<PlayerKind> for i32 {
-    fn from(k: PlayerKind) -> i32 {
-        k.id()
-    }
-}
-
 impl From<PlayerKind> for u8 {
+    /// Its number in a byte, as the character select's state holds it.
     fn from(k: PlayerKind) -> u8 {
-        k as u8
+        k.raw() as u8
     }
 }
 
@@ -182,35 +178,35 @@ impl Game {
     }
 
     #[doc(alias = "Player_GetPlayerCharacter")]
-    pub fn player_ckind(&self, slot: i32) -> i32 {
+    pub fn player_ckind(&self, slot: i32) -> CharacterKind {
         self.player(slot).ckind
     }
 
     #[doc(alias = "Player_SetPlayerCharacter")]
-    pub fn set_player_ckind(&mut self, slot: i32, ckind: i32) {
+    pub fn set_player_ckind(&mut self, slot: i32, ckind: CharacterKind) {
         self.player_mut(slot).ckind = ckind;
     }
 
     /// Who plays the slot (`Gm_PKind`), `Player_GetPlayerSlotType`.
     #[doc(alias = "Player_GetPlayerSlotType")]
-    pub fn player_pkind(&self, slot: i32) -> i32 {
+    pub fn player_pkind(&self, slot: i32) -> PlayerKind {
         self.player(slot).pkind
     }
 
     /// Who plays a slot's entity, `Player_8003248C`: a human's or computer's partner (Nana)
     /// plays as a computer; a transformation as its player.
     #[doc(alias = "Player_8003248C")]
-    pub fn player_kind(&self, slot: i32, sub: i32) -> i32 {
+    pub fn player_kind(&self, slot: i32, sub: i32) -> PlayerKind {
         let p = self.player(slot);
         if sub == 1 && mapping(p.ckind).has_transformation == 0 && p.is_playing() {
-            return PlayerKind::Cpu.into();
+            return PlayerKind::Cpu;
         }
         p.pkind
     }
 
     #[doc(alias = "Player_SetSlottype")]
-    pub fn set_player_pkind(&mut self, slot: i32, pkind: impl Into<i32>) {
-        self.player_mut(slot).pkind = pkind.into();
+    pub fn set_player_pkind(&mut self, slot: i32, pkind: PlayerKind) {
+        self.player_mut(slot).pkind = pkind;
     }
 
     /// The slot's entity's fighter kind (0: its fighter, 1: its second), `Player_80032610`.
@@ -347,8 +343,8 @@ impl Game {
     }
 
     #[doc(alias = "Player_GetCpuType")]
-    pub fn player_cpu_type(&self, slot: i32) -> i32 {
-        i32::from(self.player(slot).cpu_type)
+    pub fn player_cpu_type(&self, slot: i32) -> CpuKind {
+        self.player(slot).cpu_type.get()
     }
 
     #[doc(alias = "Player_GetHandicap")]
@@ -831,7 +827,7 @@ impl Game {
     #[doc(alias = "Player_80036394")]
     pub fn player_fighter_kind(&self, slot: i32) -> i32 {
         match self.player_entity(slot) {
-            Some(g) => self.ft_kind(g),
+            Some(g) => self.ft_kind(g).id(),
             None => -1,
         }
     }
@@ -908,20 +904,20 @@ impl Game {
     pub fn reset_player(&mut self, slot: i32) {
         let p = self.player_mut(slot);
         p.player_state = 0;
-        p.ckind = CharacterKind::Mario.id();
+        p.ckind = CharacterKind::Mario;
         let (t0, t1) = (p.entity_index(0), p.entity_index(1));
         for i in [t0, t1, 2, 3] {
             p.set_pose(i, Vec3::new(0.0, 0.0, 0.0));
         }
         p.costume_id = 0;
-        p.pkind = PlayerKind::None.into();
+        p.pkind = PlayerKind::None;
         p.transformed = [0, 1];
         p.effect_color = 0;
         p.sub_color = 0;
         p.team = 0;
         p.pad_port = 0;
         p.cpu_level = 0;
-        p.cpu_type = 4;
+        p.cpu_type = CpuKind::Normal.into();
         p.handicap = 0;
         p.entry_delay = 0;
         p.kirby_copy_kind = 4;
@@ -969,11 +965,11 @@ impl Game {
 
 /// A character's fighters, `ftMapping_list[ckind]`; a kind past the executable's bytes this
 /// models stops the simulation.
-pub fn mapping(ckind: i32) -> FtMapping {
-    let i = 3 * usize::try_from(ckind).expect("a negative character kind");
+pub fn mapping(ckind: CharacterKind) -> FtMapping {
+    let i = 3 * usize::try_from(ckind.id()).expect("a negative character kind");
     assert!(
         i + 3 <= FT_MAPPING.len(),
-        "ftMapping_list[{ckind}] isn't modeled"
+        "ftMapping_list[{ckind:?}] isn't modeled"
     );
     FtMapping {
         internal_id: FT_MAPPING[i] as i8,
@@ -985,7 +981,7 @@ pub fn mapping(ckind: i32) -> FtMapping {
 /// The fighter kind of a character's fighter (0) or second fighter (1), `Player_800325C8`.
 #[doc(alias = "Player_800325C8")]
 pub fn ckind_ftkind(ckind: i32, sub: i32) -> i32 {
-    let m = mapping(ckind);
+    let m = mapping(CharacterKind::from_raw(ckind));
     match sub {
         0 => i32::from(m.internal_id),
         1 => i32::from(m.extra_internal_id),
@@ -1097,7 +1093,7 @@ impl Running<'_> {
     }
 
     fn for_each_ftkind(&mut self, ckind: i32, f: u32, color: u8) {
-        let m = mapping(ckind);
+        let m = mapping(CharacterKind::from_raw(ckind));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind != -1 {
                 code::call(
@@ -1166,8 +1162,8 @@ impl Running<'_> {
     }
 
     #[doc(alias = "Player_SetPlayerAndEntityCpuType")]
-    pub fn set_player_cpu_type(&mut self, slot: i32, kind: i32) {
-        self.game.player_mut(slot).cpu_type = kind as u8;
+    pub fn set_player_cpu_type(&mut self, slot: i32, kind: CpuKind) {
+        self.game.player_mut(slot).cpu_type = kind.into();
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
                 self.ft_set_cpu_type(g, kind);

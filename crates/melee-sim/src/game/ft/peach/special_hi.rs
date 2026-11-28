@@ -1,13 +1,13 @@
 //! Peach's up special, the parasol (`ftpeachspecialhi.c`): she opens her parasol (putting away
 //! the item she held), rises, and floats down under it.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::it::kinds::{peachparasol, seakchain};
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
-use super::super::common::GA_AIR;
 use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
@@ -266,7 +266,7 @@ impl Running<'_> {
     /// `ftPe_SpecialHiStart_Phys`: the animation's motion, turned by the tilt in the air.
     #[doc(alias = "ftPe_SpecialHiStart_Phys")]
     pub fn peach_special_hi_start_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.air_anim_motion_angled(gobj);
         } else {
             self.ground_friction_or_anim(gobj);
@@ -315,7 +315,7 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialAirHiEnd_Coll")]
     pub fn peach_special_hi_coll(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             if fp.cmd_vars[0] == 0 || reg(fp.self_vel.y) >= 0.0 {
                 self.air_coll_stay(gobj);
                 return;
@@ -351,7 +351,7 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialHiEnd_Phys")]
     pub fn peach_special_hi_end_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             let vy = self.game.fighters[f.0].self_vel.y;
             self.air_anim_motion_angled(gobj);
             let fp = &mut self.game.fighters[f.0];

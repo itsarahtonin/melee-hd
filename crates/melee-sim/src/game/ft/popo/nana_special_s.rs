@@ -7,11 +7,11 @@
 //! (`External/FreezeGlitchFix`), which keeps her `x1A5C` when she's in hitstun
 //! ([`crate::game::state::Rules::fixes_freeze_glitch`]).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::addr;
 use super::special_s::spin_box;
 use crate::fpu::{mem, reg};
@@ -68,7 +68,7 @@ impl Running<'_> {
     /// (`801239A8`, a nop over that store) keeps it.
     #[doc(alias = "ftNn_Init_80123954")]
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
-    pub fn nana_join_special_s(&mut self, nana: Option<GObjId>, pp_ga: i32) -> bool {
+    pub fn nana_join_special_s(&mut self, nana: Option<GObjId>, pp_ga: GroundOrAir) -> bool {
         let Some(nana) = nana else {
             return true;
         };
@@ -100,7 +100,7 @@ impl Running<'_> {
             return true;
         }
         let ga = self.game.fighters[n.0].ground_or_air;
-        if pp_ga == GA_AIR {
+        if pp_ga == GroundOrAir::Air {
             if pp_ga != ga {
                 self.go_airborne(n);
             }

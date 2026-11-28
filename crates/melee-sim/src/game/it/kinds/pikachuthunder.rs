@@ -6,6 +6,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::spawn_air;
@@ -88,7 +89,7 @@ pub fn spawn(
     vel: Vec3,
     count: i32,
     delay: i32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     let attack = next_attack_id(r.game);
     let mut spawn = SpawnItem {

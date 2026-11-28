@@ -115,7 +115,7 @@ pub fn stage(key: &str) -> Option<&'static Stage> {
 
 /// A roster stage by its `StKind`.
 pub fn stage_by_kind(kind: u16) -> Option<&'static Stage> {
-    stages().find(|s| s.vs.is_some_and(|k| k.id() == kind))
+    stages().find(|s| s.vs.is_some_and(|k| k.id() == i32::from(kind)))
 }
 
 /// The stages the launcher and the command line offer ([`Stage::offered`]).

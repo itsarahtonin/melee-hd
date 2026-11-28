@@ -248,6 +248,22 @@ pub struct DObjList {
     pub data: Option<DObjListId>,
 }
 
+crate::c_enum! {
+    /// `HurtHeight`: the part of the body a fighter's hurtbox is (`FighterHurtCapsule::height`),
+    /// which picks the damage animation a hit to it plays.
+    pub enum HurtHeight: i32 {
+        /// `HurtHeight_Low`.
+        #[doc(alias("HurtHeight_Low"))]
+        Low = 0,
+        /// `HurtHeight_Mid`.
+        #[doc(alias("HurtHeight_Mid", "HURT_HEIGHT_MID"))]
+        Mid = 1,
+        /// `HurtHeight_High`.
+        #[doc(alias("HurtHeight_High"))]
+        High = 2,
+    }
+}
+
 /// The decomp's `FighterHurtCapsule`.
 #[derive(
     melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq, melee_derive::Mirror,
@@ -257,7 +273,7 @@ pub struct FighterHurtCapsule {
     #[at(0x0)]
     pub capsule: HurtCapsule,
     #[at(0x44)]
-    pub height: i32,
+    pub height: HurtHeight,
     #[at(0x48)]
     pub is_grabbable: i32,
 }

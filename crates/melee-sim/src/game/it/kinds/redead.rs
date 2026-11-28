@@ -12,12 +12,12 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{attr_of, change, change_state, play_sfx};
 use super::super::zako::{
-    self, GA_AIR, GA_GROUND, Knock, UNK_0X1, attr, attr_f32, attr_i32, attr_s16, health,
-    set_coll_facing, stop,
+    self, Knock, UNK_0X1, attr, attr_f32, attr_i32, attr_s16, health, set_coll_facing, stop,
 };
 use super::super::{data, ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
@@ -465,7 +465,7 @@ pub fn knocked_down_again(r: &mut Running, gobj: GObjId) {
 pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
     let t = get(r, gobj, off::TIMER);
     if t == 0 {
-        if item(r.game, gobj).ground_or_air == GA_GROUND {
+        if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
             land(r, gobj);
         }
     } else if t > 0 {
@@ -480,7 +480,7 @@ pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
 pub fn anim12(r: &mut Running, gobj: GObjId) -> bool {
     let t = get(r, gobj, off::TIMER);
     if t == 0 {
-        if item(r.game, gobj).ground_or_air == GA_GROUND {
+        if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
             lie_down(r, gobj);
         }
     } else if t > 0 {
@@ -493,7 +493,7 @@ pub fn anim12(r: &mut Running, gobj: GObjId) -> bool {
 /// and ceilings and stops on a floor; on the ground it stays or takes off.
 #[doc(alias = "itLeadead_UnkMotion12_Coll")]
 pub fn coll12(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         let coll = ground::air_touches_walls(r, gobj);
         if coll & 0xC != 0 {
             let _ = maplib::reflect_velocity(r.game, r.data, gobj);
@@ -933,7 +933,7 @@ pub fn touches_ahead(r: &mut Running, gobj: GObjId, _dx: f32, _dy: f32) -> i32 {
 /// too), its state 0's animation run once, in the air, falling.
 #[doc(alias = "it_802EA9FC")]
 pub fn spawn(r: &mut Running, pos: Vec3, facing: i32) -> Option<GObjId> {
-    let gobj = zako::spawn(r, ItKind::ReDead.id(), Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::ReDead, Some(pos), None, None, true)?;
     item_mut(r.game, gobj).facing_dir = mem(fp::frsp(f64::from(facing)));
     set_coll_facing(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
@@ -1002,7 +1002,7 @@ pub fn let_go(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802EADD8")]
 pub fn victim_hit(r: &mut Running, gobj: GObjId) {
     let_go(r, gobj);
-    if item(r.game, gobj).ground_or_air == GA_GROUND {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
         land(r, gobj);
     } else {
         fall(r, gobj);
@@ -1014,7 +1014,7 @@ pub fn victim_hit(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802EAE80")]
 pub fn victim_free(r: &mut Running, gobj: GObjId) {
     let_go(r, gobj);
-    if item(r.game, gobj).ground_or_air == GA_GROUND {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
         stop(r.game, gobj);
         zako::clear_dd0_b4(r.game, gobj);
         change_state(r, gobj, 6, change::ANIM_UPDATE);

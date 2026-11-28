@@ -3,6 +3,7 @@
 //! character's place, for 140 ticks. No mode's states enter it; only the debug mode's state 7
 //! (the Kim test's AllStar Enemy) does.
 
+use crate::game::ft::CharacterKind;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -152,7 +153,7 @@ impl Running<'_> {
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
         super::super::gr::setup::select(self, 0, None);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::gr::setup::setup(self, grkind);
         let kept = self.take_cached_named("ItCo.usd");
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
@@ -237,7 +238,8 @@ impl Running<'_> {
         let archive = s.archive.archive.expect("the screen's archive");
         let [ckind, costume] = s.enter;
         self.player_set_demo_archive_idx(ckind, archive, s.archive.file, 1);
-        self.game.set_player_ckind(0, ckind);
+        self.game
+            .set_player_ckind(0, CharacterKind::from_raw(ckind));
         self.game.set_player_costume(0, costume);
         self.game.set_player_port(0, 0);
         self.game.set_player_pkind(0, PlayerKind::Demo);
@@ -350,7 +352,7 @@ impl Running<'_> {
         f.songs.push(SONG as usize);
         let [ckind, costume] = self.intro_allstar_enter();
         f.player(0, ckind, costume as u8);
-        let m = super::super::pl::player::mapping(ckind);
+        let m = super::super::pl::player::mapping(CharacterKind::from_raw(ckind));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 || (kind == m.extra_internal_id && m.has_transformation != 0) {
                 continue;

@@ -11,6 +11,7 @@
 //! maker's hands by his scale. What only one of them does stays its own: the Charge Shot's
 //! glow in the hand, the Shadow Ball's wobble, burst and the forward throw's ball.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, pick_up, spawn_air};
@@ -305,7 +306,13 @@ pub fn hit_stage(r: &mut Running, gobj: GObjId) -> bool {
 
 /// A shot of `kind` made at `pos` by `parent` (`Item_InitSpawnPositionFromParent` and
 /// `Item_InitSpawnCommonFields(.., true)`).
-pub fn make(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing: f32) -> Option<GObjId> {
+pub fn make(
+    r: &mut Running,
+    parent: GObjId,
+    pos: Vec3,
+    kind: ItKind,
+    facing: f32,
+) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind,
         ..Default::default()
@@ -345,7 +352,7 @@ pub fn spawn_held(
     facing_dir: f32,
     init: fn(&mut Running, GObjId, GObjId),
 ) -> Option<GObjId> {
-    let shot = make(r, parent, pos, kind, facing_dir)?;
+    let shot = make(r, parent, pos, ItKind::from_raw(kind), facing_dir)?;
     clear_cmd_vars(r, shot);
     let life = attr_f32(r, shot, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, shot, life);
@@ -464,7 +471,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId, s: &ChargedShot) {
         if let Some(maker) = v.maker()
             && owner == Some(maker)
         {
-            (s.released)(r, maker, kind);
+            (s.released)(r, maker, kind.id());
         }
         vars(r, gobj, s).set_maker(None);
     }
@@ -497,7 +504,7 @@ pub fn animate_held(r: &mut Running, gobj: GObjId, s: &ChargedShot) -> bool {
     if let Some(m) = maker
         && owner == maker
     {
-        match (s.hold)(r, m, kind) {
+        match (s.hold)(r, m, kind.id()) {
             Hold::Unknown => {}
             Hold::Lost => return true,
             Hold::Charge(charge, max) => {
@@ -617,7 +624,7 @@ pub fn sparkle(r: &mut Running, gobj: GObjId, s: &ChargedShot) {
     let v = vars(r, gobj, s);
     let full = v.charge() == v.levels();
     if full && v.sparkle() == 0 {
-        for &gfx in (s.full_sparkles)(kind) {
+        for &gfx in (s.full_sparkles)(kind.id()) {
             ef::spawn(r, gfx, Some(gobj), &[Arg::JObj(j)]);
         }
     }

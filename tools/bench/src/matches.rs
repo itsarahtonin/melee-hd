@@ -121,7 +121,7 @@ pub struct Items {
 pub const FREQ_HIGH: i8 = 3;
 
 /// How many item kinds the random spawner draws from (`It_Kind_Capsule` to `It_Kind_M_Ball`).
-const RANDOM_KINDS: u8 = ItKind::COMMON_END as u8;
+const RANDOM_KINDS: u8 = ItKind::COMMON_END.raw() as u8;
 
 impl Items {
     /// Items off, the switch all on, as a menu-made match with items off records it.
@@ -310,35 +310,35 @@ pub const ROY: u8 = 0x17;
 pub const PICHU: u8 = 0x18;
 pub const GANONDORF: u8 = 0x19;
 
-pub const FOUNTAIN_OF_DREAMS: u16 = StKind::Izumi.id();
-pub const POKEMON_STADIUM: u16 = StKind::PStadium.id();
-pub const PEACHS_CASTLE: u16 = StKind::Castle.id();
-pub const KONGO_JUNGLE: u16 = StKind::Kongo.id();
-pub const BRINSTAR: u16 = StKind::Zebes.id();
-pub const CORNERIA: u16 = StKind::Corneria.id();
-pub const YOSHIS_STORY: u16 = StKind::Story.id();
-pub const ONETT: u16 = StKind::Onett.id();
-pub const MUTE_CITY: u16 = StKind::MuteCity.id();
-pub const RAINBOW_CRUISE: u16 = StKind::RCruise.id();
-pub const JUNGLE_JAPES: u16 = StKind::Garden.id();
-pub const GREAT_BAY: u16 = StKind::GreatBay.id();
-pub const HYRULE_TEMPLE: u16 = StKind::Shrine.id();
-pub const BRINSTAR_DEPTHS: u16 = StKind::Kraid.id();
-pub const YOSHIS_ISLAND: u16 = StKind::Yorster.id();
-pub const GREEN_GREENS: u16 = StKind::Greens.id();
-pub const FOURSIDE: u16 = StKind::Fourside.id();
-pub const MUSHROOM_KINGDOM: u16 = StKind::Inishie1.id();
-pub const MUSHROOM_KINGDOM_2: u16 = StKind::Inishie2.id();
-pub const VENOM: u16 = StKind::Venom.id();
-pub const POKE_FLOATS: u16 = StKind::Pura.id();
-pub const BIG_BLUE: u16 = StKind::BigBlue.id();
-pub const ICICLE_MOUNTAIN: u16 = StKind::Icemt.id();
-pub const FLAT_ZONE: u16 = StKind::Flatzone.id();
-pub const DREAM_LAND: u16 = StKind::OldPupupu.id();
-pub const YOSHIS_ISLAND_64: u16 = StKind::OldYoshi.id();
-pub const KONGO_JUNGLE_64: u16 = StKind::OldKongo.id();
-pub const BATTLEFIELD: u16 = StKind::Battle.id();
-pub const FINAL_DESTINATION: u16 = StKind::Last.id();
+pub const FOUNTAIN_OF_DREAMS: u16 = StKind::Izumi.id() as u16;
+pub const POKEMON_STADIUM: u16 = StKind::PStadium.id() as u16;
+pub const PEACHS_CASTLE: u16 = StKind::Castle.id() as u16;
+pub const KONGO_JUNGLE: u16 = StKind::Kongo.id() as u16;
+pub const BRINSTAR: u16 = StKind::Zebes.id() as u16;
+pub const CORNERIA: u16 = StKind::Corneria.id() as u16;
+pub const YOSHIS_STORY: u16 = StKind::Story.id() as u16;
+pub const ONETT: u16 = StKind::Onett.id() as u16;
+pub const MUTE_CITY: u16 = StKind::MuteCity.id() as u16;
+pub const RAINBOW_CRUISE: u16 = StKind::RCruise.id() as u16;
+pub const JUNGLE_JAPES: u16 = StKind::Garden.id() as u16;
+pub const GREAT_BAY: u16 = StKind::GreatBay.id() as u16;
+pub const HYRULE_TEMPLE: u16 = StKind::Shrine.id() as u16;
+pub const BRINSTAR_DEPTHS: u16 = StKind::Kraid.id() as u16;
+pub const YOSHIS_ISLAND: u16 = StKind::Yorster.id() as u16;
+pub const GREEN_GREENS: u16 = StKind::Greens.id() as u16;
+pub const FOURSIDE: u16 = StKind::Fourside.id() as u16;
+pub const MUSHROOM_KINGDOM: u16 = StKind::Inishie1.id() as u16;
+pub const MUSHROOM_KINGDOM_2: u16 = StKind::Inishie2.id() as u16;
+pub const VENOM: u16 = StKind::Venom.id() as u16;
+pub const POKE_FLOATS: u16 = StKind::Pura.id() as u16;
+pub const BIG_BLUE: u16 = StKind::BigBlue.id() as u16;
+pub const ICICLE_MOUNTAIN: u16 = StKind::Icemt.id() as u16;
+pub const FLAT_ZONE: u16 = StKind::Flatzone.id() as u16;
+pub const DREAM_LAND: u16 = StKind::OldPupupu.id() as u16;
+pub const YOSHIS_ISLAND_64: u16 = StKind::OldYoshi.id() as u16;
+pub const KONGO_JUNGLE_64: u16 = StKind::OldKongo.id() as u16;
+pub const BATTLEFIELD: u16 = StKind::Battle.id() as u16;
+pub const FINAL_DESTINATION: u16 = StKind::Last.id() as u16;
 
 /// Whether `stage` is one of the 29 VS stages (not the test stage, Akaneia or Icicle
 /// Mountain's top).
@@ -893,19 +893,19 @@ pub const FAMILIES: &[Family] = &[
     Family {
         name: "ported",
         kinds: &[
-            ItKind::Capsule as u8,
-            ItKind::Crate as u8,
-            ItKind::Barrel as u8,
-            ItKind::PartyBall as u8,
-            ItKind::BobOmb as u8,
-            ItKind::MrSaturn as u8,
-            ItKind::HeartContainer as u8,
-            ItKind::MaximTomato as u8,
-            ItKind::HomeRunBat as u8,
-            ItKind::BeamSword as u8,
-            ItKind::GreenShell as u8,
-            ItKind::RedShell as u8,
-            ItKind::Hammer as u8,
+            ItKind::Capsule.raw() as u8,
+            ItKind::Crate.raw() as u8,
+            ItKind::Barrel.raw() as u8,
+            ItKind::PartyBall.raw() as u8,
+            ItKind::BobOmb.raw() as u8,
+            ItKind::MrSaturn.raw() as u8,
+            ItKind::HeartContainer.raw() as u8,
+            ItKind::MaximTomato.raw() as u8,
+            ItKind::HomeRunBat.raw() as u8,
+            ItKind::BeamSword.raw() as u8,
+            ItKind::GreenShell.raw() as u8,
+            ItKind::RedShell.raw() as u8,
+            ItKind::Hammer.raw() as u8,
         ],
     },
     // Held and swung (task 7): heavy pickups (box, barrel), barrel cannon, parasol, star rod,
@@ -913,14 +913,14 @@ pub const FAMILIES: &[Family] = &[
     Family {
         name: "held",
         kinds: &[
-            ItKind::Crate as u8,
-            ItKind::Barrel as u8,
-            ItKind::BarrelCannon as u8,
-            ItKind::Parasol as u8,
-            ItKind::StarRod as u8,
-            ItKind::LipsStick as u8,
-            ItKind::Fan as u8,
-            ItKind::ScrewAttack as u8,
+            ItKind::Crate.raw() as u8,
+            ItKind::Barrel.raw() as u8,
+            ItKind::BarrelCannon.raw() as u8,
+            ItKind::Parasol.raw() as u8,
+            ItKind::StarRod.raw() as u8,
+            ItKind::LipsStick.raw() as u8,
+            ItKind::Fan.raw() as u8,
+            ItKind::ScrewAttack.raw() as u8,
         ],
     },
     // Shooting and thrown (task 8): egg, ray gun, Freezie, food, motion-sensor bomb, flipper,
@@ -928,14 +928,14 @@ pub const FAMILIES: &[Family] = &[
     Family {
         name: "shoot",
         kinds: &[
-            ItKind::Egg as u8,
-            ItKind::RayGun as u8,
-            ItKind::Freezie as u8,
-            ItKind::Food as u8,
-            ItKind::MotionSensorBomb as u8,
-            ItKind::Flipper as u8,
-            ItKind::SuperScope as u8,
-            ItKind::FireFlower as u8,
+            ItKind::Egg.raw() as u8,
+            ItKind::RayGun.raw() as u8,
+            ItKind::Freezie.raw() as u8,
+            ItKind::Food.raw() as u8,
+            ItKind::MotionSensorBomb.raw() as u8,
+            ItKind::Flipper.raw() as u8,
+            ItKind::SuperScope.raw() as u8,
+            ItKind::FireFlower.raw() as u8,
         ],
     },
     // Power-ups (task 9): starman, both mushrooms, hammer, Warp Star, bunny hood, metal box,
@@ -943,20 +943,20 @@ pub const FAMILIES: &[Family] = &[
     Family {
         name: "powerups",
         kinds: &[
-            ItKind::Starman as u8,
-            ItKind::SuperMushroom as u8,
-            ItKind::PoisonMushroom as u8,
-            ItKind::Hammer as u8,
-            ItKind::WarpStar as u8,
-            ItKind::BunnyHood as u8,
-            ItKind::MetalBox as u8,
-            ItKind::CloakingDevice as u8,
+            ItKind::Starman.raw() as u8,
+            ItKind::SuperMushroom.raw() as u8,
+            ItKind::PoisonMushroom.raw() as u8,
+            ItKind::Hammer.raw() as u8,
+            ItKind::WarpStar.raw() as u8,
+            ItKind::BunnyHood.raw() as u8,
+            ItKind::MetalBox.raw() as u8,
+            ItKind::CloakingDevice.raw() as u8,
         ],
     },
 ];
 
 /// The Poké Ball's kind (task 10).
-const POKE_BALL: u8 = ItKind::PokeBall as u8;
+const POKE_BALL: u8 = ItKind::PokeBall.raw() as u8;
 /// Items matches' length.
 const ITEMS_TIME: u32 = 120;
 /// Poké Ball matches, one seed each, so that the Pokémon it can't choose all come out.
@@ -1019,7 +1019,7 @@ pub fn coins_set() -> Vec<Match> {
         coin(
             "coins-items-fd",
             0x1F0F_0602,
-            Items::only(FREQ_HIGH, &[ItKind::Capsule as u8]),
+            Items::only(FREQ_HIGH, &[ItKind::Capsule.raw() as u8]),
         ),
     ]
 }
@@ -1035,25 +1035,27 @@ pub fn held_extra_set() -> Vec<Match> {
         (
             "items-cannon-fd",
             FINAL_DESTINATION,
-            &[ItKind::BarrelCannon as u8],
+            const { &[ItKind::BarrelCannon.raw() as u8] },
             (FOX, MARTH),
         ),
         (
             "items-swing-bf",
             BATTLEFIELD,
-            &[
-                ItKind::Parasol as u8,
-                ItKind::StarRod as u8,
-                ItKind::LipsStick as u8,
-                ItKind::Fan as u8,
-                ItKind::ScrewAttack as u8,
-            ],
+            const {
+                &[
+                    ItKind::Parasol.raw() as u8,
+                    ItKind::StarRod.raw() as u8,
+                    ItKind::LipsStick.raw() as u8,
+                    ItKind::Fan.raw() as u8,
+                    ItKind::ScrewAttack.raw() as u8,
+                ]
+            },
             (CAPTAIN, PEACH),
         ),
         (
             "items-heavy-ps",
             POKEMON_STADIUM,
-            &[ItKind::Crate as u8, ItKind::Barrel as u8],
+            const { &[ItKind::Crate.raw() as u8, ItKind::Barrel.raw() as u8] },
             (FALCO, SHEIK),
         ),
     ];
@@ -1198,15 +1200,17 @@ pub fn leftovers_set() -> Vec<Match> {
             "items-leftovers-fd",
             FINAL_DESTINATION,
             (FOX, FALCO),
-            &[
-                ItKind::BobOmb as u8,
-                ItKind::Parasol as u8,
-                ItKind::Freezie as u8,
-                ItKind::MotionSensorBomb as u8,
-                ItKind::Flipper as u8,
-                ItKind::ScrewAttack as u8,
-                ItKind::BunnyHood as u8,
-            ],
+            const {
+                &[
+                    ItKind::BobOmb.raw() as u8,
+                    ItKind::Parasol.raw() as u8,
+                    ItKind::Freezie.raw() as u8,
+                    ItKind::MotionSensorBomb.raw() as u8,
+                    ItKind::Flipper.raw() as u8,
+                    ItKind::ScrewAttack.raw() as u8,
+                    ItKind::BunnyHood.raw() as u8,
+                ]
+            },
             4,
             180,
         ),
@@ -1214,13 +1218,15 @@ pub fn leftovers_set() -> Vec<Match> {
             "items-leftovers-bf",
             BATTLEFIELD,
             (CAPTAIN, BOWSER),
-            &[
-                ItKind::BobOmb as u8,
-                ItKind::Parasol as u8,
-                ItKind::Freezie as u8,
-                ItKind::ScrewAttack as u8,
-                ItKind::BunnyHood as u8,
-            ],
+            const {
+                &[
+                    ItKind::BobOmb.raw() as u8,
+                    ItKind::Parasol.raw() as u8,
+                    ItKind::Freezie.raw() as u8,
+                    ItKind::ScrewAttack.raw() as u8,
+                    ItKind::BunnyHood.raw() as u8,
+                ]
+            },
             4,
             180,
         ),
@@ -1228,7 +1234,7 @@ pub fn leftovers_set() -> Vec<Match> {
             "items-box-kongo-jungle",
             KONGO_JUNGLE,
             (MARIO, LUIGI),
-            &[ItKind::Crate as u8],
+            const { &[ItKind::Crate.raw() as u8] },
             FREQ_HIGH,
             ITEMS_TIME,
         ),
@@ -1236,7 +1242,7 @@ pub fn leftovers_set() -> Vec<Match> {
             "items-foods-yoshis-story",
             YOSHIS_STORY,
             (SAMUS, YOSHI),
-            &[ItKind::Food as u8],
+            const { &[ItKind::Food.raw() as u8] },
             FREQ_HIGH,
             ITEMS_TIME,
         ),
@@ -1258,9 +1264,9 @@ pub fn leftovers_set() -> Vec<Match> {
 
 /// The containers: the box, barrel and Party Ball.
 const CONTAINERS: [u8; 3] = [
-    ItKind::Crate as u8,
-    ItKind::Barrel as u8,
-    ItKind::PartyBall as u8,
+    ItKind::Crate.raw() as u8,
+    ItKind::Barrel.raw() as u8,
+    ItKind::PartyBall.raw() as u8,
 ];
 
 /// The monsters set (the containers' monsters): the containers alone at item frequency very
@@ -1472,26 +1478,26 @@ pub fn fighters_set() -> Vec<Match> {
     // Starman, Lip's Stick (its flower), Bunny Hood, Metal Box and Cloaking Device, with the
     // Beam Sword and Ray Gun to hold; then the worn ones alone, and Lip's Stick alone.
     const HEAVY: &[u8] = &[
-        ItKind::Crate as u8,
-        ItKind::Barrel as u8,
-        ItKind::PartyBall as u8,
-        ItKind::BarrelCannon as u8,
+        ItKind::Crate.raw() as u8,
+        ItKind::Barrel.raw() as u8,
+        ItKind::PartyBall.raw() as u8,
+        ItKind::BarrelCannon.raw() as u8,
     ];
     const TRANSFORM: &[u8] = &[
-        ItKind::Starman as u8,
-        ItKind::BeamSword as u8,
-        ItKind::RayGun as u8,
-        ItKind::LipsStick as u8,
-        ItKind::BunnyHood as u8,
-        ItKind::MetalBox as u8,
-        ItKind::CloakingDevice as u8,
+        ItKind::Starman.raw() as u8,
+        ItKind::BeamSword.raw() as u8,
+        ItKind::RayGun.raw() as u8,
+        ItKind::LipsStick.raw() as u8,
+        ItKind::BunnyHood.raw() as u8,
+        ItKind::MetalBox.raw() as u8,
+        ItKind::CloakingDevice.raw() as u8,
     ];
     const WORN: &[u8] = &[
-        ItKind::LipsStick as u8,
-        ItKind::BunnyHood as u8,
-        ItKind::MetalBox as u8,
+        ItKind::LipsStick.raw() as u8,
+        ItKind::BunnyHood.raw() as u8,
+        ItKind::MetalBox.raw() as u8,
     ];
-    const FLOWER: &[u8] = &[ItKind::LipsStick as u8];
+    const FLOWER: &[u8] = &[ItKind::LipsStick.raw() as u8];
     let matches: [Fighters; 8] = [
         (
             "items-dk-heavy-fd",
@@ -1595,7 +1601,7 @@ pub fn sscope_set() -> Vec<Match> {
                 rules: Rules::Time {
                     time_limit: ITEMS_TIME,
                 },
-                items: Items::only(FREQ_VERY_HIGH, &[ItKind::SuperScope as u8]),
+                items: Items::only(FREQ_VERY_HIGH, &[ItKind::SuperScope.raw() as u8]),
                 special: Special::NONE,
             }
         })
@@ -2274,10 +2280,10 @@ pub fn starfox_set() -> Vec<Match> {
 
 /// The containers and the Freezie, which a Topi pushes when Freezies are on.
 const CONTAINERS_AND_FREEZIE: [u8; 4] = [
-    ItKind::Crate as u8,
-    ItKind::Barrel as u8,
-    ItKind::PartyBall as u8,
-    ItKind::Freezie as u8,
+    ItKind::Crate.raw() as u8,
+    ItKind::Barrel.raw() as u8,
+    ItKind::PartyBall.raw() as u8,
+    ItKind::Freezie.raw() as u8,
 ];
 
 /// The Topi-with-a-Freezie match's seed.
@@ -2703,9 +2709,9 @@ pub fn cpu_items_set() -> Vec<Match> {
 pub fn cpu_approach_set() -> Vec<Match> {
     // `It_Kind_Star`, `_DKinoko`, `_Hammer`.
     const KINDS: [u8; 3] = [
-        ItKind::Starman as u8,
-        ItKind::PoisonMushroom as u8,
-        ItKind::Hammer as u8,
+        ItKind::Starman.raw() as u8,
+        ItKind::PoisonMushroom.raw() as u8,
+        ItKind::Hammer.raw() as u8,
     ];
     let matches: [(u8, u8, u16, &str); 4] = [
         (YOSHI, FOX, BATTLEFIELD, "bf"),
@@ -2736,11 +2742,11 @@ pub fn cpu_approach_set() -> Vec<Match> {
 /// stages set's moving stages have, seeds `1F0F26xx`.
 pub fn bigblue_items_set() -> Vec<Match> {
     const KINDS: [u8; 5] = [
-        ItKind::PartyBall as u8,
-        ItKind::BeamSword as u8,
-        ItKind::SuperScope as u8,
-        ItKind::FireFlower as u8,
-        ItKind::BunnyHood as u8,
+        ItKind::PartyBall.raw() as u8,
+        ItKind::BeamSword.raw() as u8,
+        ItKind::SuperScope.raw() as u8,
+        ItKind::FireFlower.raw() as u8,
+        ItKind::BunnyHood.raw() as u8,
     ];
     const FREQ_LOW: i8 = 1;
     let players = [
@@ -3424,17 +3430,17 @@ mod tests {
         let items = Items::only(
             FREQ_HIGH,
             &[
-                ItKind::Capsule as u8,
-                ItKind::BobOmb as u8,
-                ItKind::PokeBall as u8,
+                ItKind::Capsule.raw() as u8,
+                ItKind::BobOmb.raw() as u8,
+                ItKind::PokeBall.raw() as u8,
             ],
         );
         assert_eq!(
             items.kinds(),
             vec![
-                ItKind::Capsule as u8,
-                ItKind::BobOmb as u8,
-                ItKind::PokeBall as u8
+                ItKind::Capsule.raw() as u8,
+                ItKind::BobOmb.raw() as u8,
+                ItKind::PokeBall.raw() as u8
             ]
         );
         assert_eq!(items.mask, 0xFFFF_FFF8_0000_0000 | 1 | 1 << 6 | 1 << 34);

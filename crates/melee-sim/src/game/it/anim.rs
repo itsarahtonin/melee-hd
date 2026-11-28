@@ -2,6 +2,7 @@
 //! (hitboxes, sounds, effects, rumble and the item's own variables), run each frame against its
 //! animation, and the item's color overlay.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -13,7 +14,6 @@ use crate::game::state::{Game, Running};
 use crate::game::structs::{ColorOverlay, Item};
 use crate::hsd::gobj::GObjId;
 use crate::lb::command::{self, WAIT_FOR_FRAME};
-use crate::lb::hitcapsule;
 use crate::vec::Vec3;
 
 /// `0.003906f`, the scale of a command's fixed-point sizes and offsets.
@@ -55,9 +55,9 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     {
         let ip = item_mut(r.game, gobj);
         let hit = &mut ip.hitboxes[idx].hit;
-        if hit.state == hitcapsule::DISABLED || hit.group != group {
+        if hit.state == HitCapsuleState::Disabled || hit.group != group {
             hit.group = group;
-            hit.state = hitcapsule::ENABLED;
+            hit.state = HitCapsuleState::Enabled;
             ip.flags.flags.hitbox_on = true;
             set_flag(&mut ip.debug_flags, 2, false);
             super::coll::share_group_victims(r.game, gobj, idx);

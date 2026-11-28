@@ -3,6 +3,7 @@
 //! hit, dropping an item or nothing. Its fall, its breaking and its opening are the containers'
 //! ([`container`]).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{air, ground, ground_or_fall};
@@ -215,7 +216,7 @@ pub fn roll(r: &mut Running, gobj: GObjId) {
     );
     let ip = item_mut(r.game, gobj);
     let v = ip.vars.taru();
-    if ip.ground_or_air == 1 {
+    if ip.ground_or_air == GroundOrAir::Air {
         let back = -reg(ip.facing_dir);
         v.turn
             .update(|old| mem(fp::fmadds(f64::from(0.104_719_76_f32), back, reg(old))));
@@ -316,7 +317,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x14);
     let ip = item_mut(r.game, gobj);
     let floor = crate::mp::coll::FLOOR_PUSH | crate::mp::coll::FLOOR_HUG;
-    if ip.ground_or_air != 1 && ip.coll.env_flags & floor != 0 {
+    if ip.ground_or_air != GroundOrAir::Air && ip.coll.env_flags & floor != 0 {
         let n = maplib::surface_normal(&ip.coll).expect("a floor's normal");
         let v = ip.vars.taru();
         v.normal.set(n);
@@ -493,7 +494,7 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, let_go);
     let (break_speed, wall_bounce) = (attr_f(r, gobj, 0x2C), attr_f(r, gobj, 0x30));
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air != 1 {
+    if ip.ground_or_air != GroundOrAir::Air {
         let floor = crate::mp::coll::FLOOR_PUSH | crate::mp::coll::FLOOR_HUG;
         if ip.coll.env_flags & floor != 0 {
             let n = maplib::surface_normal(&ip.coll).expect("a floor's normal");

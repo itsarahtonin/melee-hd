@@ -72,7 +72,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 
 /// Throws a fireball for `parent` from `pos`, `it_802C01AC`.
 #[doc(alias = "it_802C01AC")]
-pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: f32) {
+pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, kind: ItKind, facing_dir: f32) {
     let mut spawn = SpawnItem {
         kind,
         ..Default::default()

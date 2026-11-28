@@ -3,7 +3,10 @@
 //! match's end, and a copy of the start's rules.
 
 use super::{MatchEnd, StartMeleeRules};
+use crate::game::ft::CharacterKind;
 use crate::game::handles::RawPtr;
+use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
 
 /// The decomp's `VsSceneFighter`.
 #[derive(
@@ -13,13 +16,13 @@ use crate::game::handles::RawPtr;
 pub struct VsSceneFighter {
     #[at(0x0)]
     #[doc(alias("x0"))]
-    pub ckind: u8,
+    pub ckind: Narrow<CharacterKind, u8>,
     /// The entry's countdown (0x82 at entry): the announcer's line at 0x50.
     #[at(0x1)]
     #[doc(alias("x1"))]
     pub entry_timer: u8,
     #[at(0x2)]
-    pub slot_type: u8,
+    pub slot_type: Narrow<PlayerKind, u8>,
     #[at(0x3)]
     pub spawn_point: i8,
     /// `b0` metal, `b1` (`PlayerInitData`'s `unread_c_b3`), `b2` invisible, `b3` shows the

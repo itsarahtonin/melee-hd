@@ -837,7 +837,7 @@ impl Running<'_> {
         sd[d::ENEMIES] = enemies;
         let ckind = run.player.ckind;
         sd[d::ALLY_KINDS] = if ckind == CharacterKind::Zelda && run.counters[6] != 0 {
-            CharacterKind::Seak as u8
+            CharacterKind::Seak.raw() as u8
         } else {
             ckind as u8
         };

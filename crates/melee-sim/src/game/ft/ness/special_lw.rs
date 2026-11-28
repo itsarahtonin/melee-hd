@@ -2,11 +2,11 @@
 //! (the attributes' `AbsorbDesc`), healing Ness by what it takes. Its turnaround states have
 //! callbacks, but nothing enters them.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, SpawnKind};
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::motion::flags::*;
 use super::super::sound::Track;
 use super::{addr, attr, ms, mv};
@@ -111,7 +111,7 @@ impl Running<'_> {
         self.ness_special_lw_bubble_gfx(gobj);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(mv::LW_X10, 0);
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             self.ness_special_lw_hold_enter(gobj);
         } else {
             self.ness_special_air_lw_hold_enter(gobj);
@@ -167,7 +167,7 @@ impl Running<'_> {
     fn ness_special_lw_maybe_end(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.mv_i32(mv::LW_RELEASE_LAG) <= 0 && fp.mv_i32(mv::LW_IS_RELEASE) != 0 {
-            if fp.ground_or_air == GA_GROUND {
+            if fp.ground_or_air == GroundOrAir::Ground {
                 self.ness_special_lw_end_enter(gobj);
             } else {
                 self.ness_special_air_lw_end_enter(gobj);
@@ -278,7 +278,7 @@ impl Running<'_> {
     #[doc(alias = "ftNs_SpecialLwHold_GroundOrAir")]
     pub fn ness_special_lw_hold_ground_or_air(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        let ground = fp.ground_or_air == GA_GROUND;
+        let ground = fp.ground_or_air == GroundOrAir::Ground;
         if fp.mv_i32(mv::LW_RELEASE_LAG) <= 0 && fp.mv_i32(mv::LW_IS_RELEASE) != 0 {
             if ground {
                 self.ness_special_lw_end_enter(gobj);
@@ -360,7 +360,7 @@ impl Running<'_> {
         if (id != ms::SPECIAL_LW_HIT && id != ms::SPECIAL_AIR_LW_HIT)
             || !(fp.cur_anim_frame <= hit_end_frame)
         {
-            let msid = if fp.ground_or_air == GA_GROUND {
+            let msid = if fp.ground_or_air == GroundOrAir::Ground {
                 ms::SPECIAL_LW_HIT
             } else {
                 ms::SPECIAL_AIR_LW_HIT

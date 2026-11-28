@@ -289,7 +289,7 @@ pub fn flame(r: &mut Running, gobj: GObjId, kind: i32) {
     let sin = reg(crate::math::sin(mem(angle)));
     spawn.vel.y = mem(fp::fmuls(reg(speed), sin));
     spawn.vel.z = 0.0;
-    spawn.kind = kind;
+    spawn.kind = ItKind::from_raw(kind);
     spawn.owner = item(r.game, gobj).owner;
     spawn.maker = Some(gobj);
     spawn.flags[0] |= 0x80;

@@ -106,6 +106,20 @@ pub struct Hsd {
     /// The aspect ratio the frame is shown at, when wider than the game's 73:60
     /// (`frame::GAME_ASPECT`; see `frame::widen`).
     pub widescreen: Option<f32>,
+    /// Slippi's cosmetic codes, done in the presentation (`crate::cosmetic`): the game camera
+    /// drawn without the quake's displacement, and the stock icons as the PAL version draws
+    /// them.
+    pub no_screen_shake: bool,
+    pub pal_stock_icons: bool,
+    /// The current camera's shake, which no screen shake leaves out of it and of the views
+    /// the pass derived from it.
+    pub unshake: Option<crate::cosmetic::Unshake>,
+    /// The current camera's view as the display pass recorded it, before the presentation
+    /// moved it (blended, or the shake left out): the lights set up in it take the drawn one.
+    pub camera_recorded: Option<Mtx34>,
+    /// The matrix the drawn GObj's joints are drawn through in its world space (PAL stock
+    /// icons' row, `cosmetic::pal_stock_row`).
+    pub model_fix: Option<Mtx34>,
     /// What a frame between two ticks keeps track of as it draws (`crate::blend`).
     pub motion: Motion,
     /// The movie frame the planes' images hold (its file and record's place), decoded once.
@@ -202,6 +216,24 @@ fn next<K: PartialEq>(counts: &mut Vec<(K, u16)>, k: K) -> u16 {
 }
 
 impl Hsd {
+    /// A view the display pass derived from the current camera's (an instance joint's, an
+    /// app-SRT's), without the camera's shake when no screen shake leaves it out.
+    pub fn unshaken(&self, m: &Mtx34) -> Mtx34 {
+        match self.unshake {
+            Some(u) => u.derived(m),
+            None => *m,
+        }
+    }
+
+    /// The view a joint of the drawn GObj is drawn in: `vmtx`, through the GObj's own matrix
+    /// if it has one (PAL stock icons' row).
+    pub fn posed(&self, vmtx: Mtx34) -> Mtx34 {
+        match self.model_fix {
+            Some(m) => vmtx.concat(&m),
+            None => vmtx,
+        }
+    }
+
     /// The current camera's view matrix.
     pub fn view_mtx(&self) -> Mtx34 {
         self.camera.map_or(Mtx34::IDENTITY, |c| c.view_mtx)

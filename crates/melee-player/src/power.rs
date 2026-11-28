@@ -276,8 +276,34 @@ impl session::Console for Live<'_> {
 struct Held<'a> {
     pads: PadData,
     /// The disc's directory, for entry numbers, and the files the session has read already.
-    disc: Option<&'a Disc>,
+    disc: Option<&'a Directory>,
     read: &'a [i32],
+}
+
+/// The disc's directory: each file's entry number by its path, found as `Disc::entrynum` finds
+/// it (any case, the slashes around and between names trimmed), read once. A prediction runs on
+/// a thread of its own and names files by it: the disc's reader isn't shared between threads.
+#[derive(Debug, Default)]
+pub struct Directory(std::collections::HashMap<String, i32>);
+
+impl Directory {
+    pub fn of(disc: &Disc) -> Directory {
+        Directory(
+            (disc.entries().unwrap_or_default().into_iter())
+                .map(|(entrynum, path)| (directory_key(&path), entrynum))
+                .collect(),
+        )
+    }
+
+    pub fn entrynum(&self, path: &str) -> Option<i32> {
+        self.0.get(&directory_key(path)).copied()
+    }
+}
+
+/// A path as the file system table's lookup compares it: its names, any case.
+fn directory_key(path: &str) -> String {
+    let names: Vec<&str> = path.split('/').filter(|n| !n.is_empty()).collect();
+    names.join("/").to_ascii_lowercase()
 }
 
 impl session::Console for Held<'_> {
@@ -292,9 +318,7 @@ impl session::Console for Held<'_> {
     }
 
     fn file(&mut self, path: &str) -> DiscFile {
-        let entrynum = self
-            .disc
-            .and_then(|d| d.entrynum(path.trim_start_matches('/')).ok());
+        let entrynum = self.disc.and_then(|d| d.entrynum(path));
         match entrynum {
             Some(entrynum) if self.read.contains(&entrynum) => DiscFile {
                 entrynum,
@@ -318,8 +342,8 @@ pub fn step(s: &mut Session, console: &mut dyn session::Console) -> Frame {
 
 /// Extrapolate's step on the copy: none (no draws) when the tick starts a new scene, whose
 /// files only the real console reads, or takes a Camera Mode snapshot, whose frame is the real
-/// tick's. `disc` names the files the copy has read already ([`Held`]).
-pub fn step_predicted(s: &mut Session, pads: PadData, disc: Option<&Disc>) -> Frame {
+/// tick's. `disc`'s directory names the files the copy has read already ([`Held`]).
+pub fn step_predicted(s: &mut Session, pads: PadData, disc: Option<&Directory>) -> Frame {
     let busy = s.game.scene.ending != 0 || s.game.camera_mode.snap.image != 0;
     if busy {
         return Frame {
@@ -354,5 +378,30 @@ mod tests {
 
     fn days_since_2001() -> u64 {
         days_since_2000(2001, 1, 1)
+    }
+
+    /// The directory a prediction names files by gives every file the entry number the disc's
+    /// own lookup does, in any case and with slashes around and between its names, and none for
+    /// a file that isn't there. Skips without `SSBM_DISC`.
+    #[test]
+    fn the_directory_names_files_as_the_disc_does() {
+        let Some(disc) = crate::predict_tests::disc() else {
+            return;
+        };
+        let dir = Directory::of(&disc);
+        let files = disc.files().expect("the files");
+        assert!(files.len() > 1000, "{} files", files.len());
+        for path in &files {
+            let want = disc.entrynum(path.trim_start_matches('/')).ok();
+            assert!(want.is_some(), "{path}: not on the disc");
+            assert_eq!(dir.entrynum(path), want, "{path}");
+            let odd = format!("//{}", path.to_ascii_uppercase().replace('/', "//"));
+            assert_eq!(dir.entrynum(&odd), want, "{odd}");
+        }
+        assert_eq!(
+            dir.entrynum("/MnSlChr.usd"),
+            disc.entrynum("MnSlChr.usd").ok()
+        );
+        assert_eq!(dir.entrynum("/no-such-file.dat"), None);
     }
 }

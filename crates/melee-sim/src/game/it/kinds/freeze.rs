@@ -3,6 +3,7 @@
 //! and 5, through `itFreeze_ItemVars::unk_1C`): Icicle Mountain's, and with the Freezie on, the
 //! containers' ([`spawn_pushed`]).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{air_touches, fall_to_floor, ground_or_fall};
@@ -113,7 +114,7 @@ pub fn spawn_pushed(
     decel: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::Freezie.id(),
+        kind: ItKind::Freezie,
         ..SpawnItem::default()
     };
     spawn.prev_pos = pos;
@@ -209,7 +210,7 @@ pub fn slide(r: &mut Running, gobj: GObjId) {
         attr(r, gobj, 0x10),
     );
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air == 1 {
+    if ip.ground_or_air == GroundOrAir::Air {
         return;
     }
     let v = ip.vars.freeze();
@@ -305,7 +306,7 @@ fn hit_wall(r: &Running, gobj: GObjId) -> bool {
 #[doc(alias = "itFreeze_UnkMotion0_Coll")]
 pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, fell);
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         return false;
     }
     if item(r.game, gobj).coll.env_flags & 0x18000 != 0 {
@@ -344,7 +345,7 @@ pub fn gravity(r: &mut Running, gobj: GObjId) {
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     fall_to_floor(r, gobj, landed);
     let ip = item(r.game, gobj);
-    if ip.ground_or_air != 1 && ip.coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
+    if ip.ground_or_air != GroundOrAir::Air && ip.coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         keep_normal(r, gobj);
     }
     false
@@ -438,7 +439,7 @@ fn slide_on(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itFreeze_UnkMotion4_Coll")]
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, fell);
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         release_pusher(r, gobj);
         return false;
     }

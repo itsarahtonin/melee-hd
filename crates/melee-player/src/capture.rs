@@ -112,6 +112,8 @@ pub struct About<'a> {
     pub msaa: u32,
     pub aspect: present::Aspect,
     pub widescreen: Option<f32>,
+    /// No screen shake and PAL stock icons, as the frames had them.
+    pub cosmetic: (bool, bool),
     pub notes: String,
 }
 
@@ -140,6 +142,7 @@ pub fn save(
     let mut frames = Frames::new();
     frames.space.load_dol(dol);
     frames.hsd.widescreen = about.widescreen;
+    (frames.hsd.no_screen_shake, frames.hsd.pal_stock_icons) = about.cosmetic;
     let mut r = pipelines::renderer(gpu, about.scale, about.msaa, about.aspect);
     r.xfb_readback = true;
     let mut fresh = Gpu::new(r);
@@ -193,8 +196,8 @@ fresh:
     }
     let _ = writeln!(
         info,
-        "scale {}, msaa {}, aspect {:?}, widescreen {:?}",
-        about.scale, about.msaa, about.aspect, about.widescreen
+        "scale {}, msaa {}, aspect {:?}, widescreen {:?}, no screen shake and PAL stock icons {:?}",
+        about.scale, about.msaa, about.aspect, about.widescreen, about.cosmetic
     );
     let _ = writeln!(info, "draws {}", draws.len());
     let _ = writeln!(info, "notes:\n{}", about.notes);

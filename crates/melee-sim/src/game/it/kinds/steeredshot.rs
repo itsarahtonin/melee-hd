@@ -8,6 +8,7 @@
 //! sideways, the fire turns and speeds up), bursts (the flash waits, or fizzles on the stage)
 //! and how hard its blast rumbles stay each one's own, over a [`SteeredShot`] and a [`Blast`].
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
@@ -128,7 +129,7 @@ pub fn spawn(
     r: &mut Running,
     parent: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
     s: &SteeredShot,
 ) -> Option<GObjId> {
@@ -321,7 +322,7 @@ pub fn blast_spawn(
     owner: GObjId,
     shot: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
     charge: f32,
     b: &Blast,

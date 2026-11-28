@@ -3,6 +3,9 @@
 //! fighters' hitboxes, the damage log they leave, and items keeping clear of fighters and of
 //! each other on the ground.
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::lb::hitcapsule::HurtCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::Archives;
 
@@ -11,16 +14,12 @@ use super::item::{HoldKind, article, common_data, is_fighter};
 use super::{flag, item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::code;
-use crate::game::ft::common::{GA_AIR, GA_GROUND};
 use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::_itECB;
 use crate::hsd::gobj::GObjId;
 use crate::lb::hitcapsule;
 use crate::vec::Vec3;
-
-/// `HurtCapsuleState`: `HurtCapsule_Enabled` is 0.
-pub const HURT_ENABLED: i32 = 0;
 
 /// The item's grab boxes against fighters, `it_802701BC`: of the fighters it may catch (not
 /// its owner's player unless its flags say, nor a teammate, nor one intangible, held or
@@ -62,10 +61,10 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
             let ip = item(r.game, gobj);
             let fp = &r.game.fighters[f.0];
             let h = &ip.hitboxes[hi].hit;
-            let can = h.state != hitcapsule::DISABLED
+            let can = h.state != HitCapsuleState::Disabled
                 && h.element == ELEMENT_CATCH
-                && ((h.hits_air && fp.ground_or_air == GA_AIR)
-                    || (h.hits_ground && fp.ground_or_air == GA_GROUND))
+                && ((h.hits_air && fp.ground_or_air == GroundOrAir::Air)
+                    || (h.hits_ground && fp.ground_or_air == GroundOrAir::Ground))
                 && !hitcapsule::has_victim(h, Victim::Fighter(f));
             if !can {
                 continue;
@@ -148,8 +147,8 @@ fn log_damage(game: &mut Game, e: DamageLogEntry) {
 #[doc(alias = "it_8026B6C8")]
 pub(crate) fn is_enemy(game: &Game, gobj: GObjId) -> bool {
     let kind = item(game, gobj).kind;
-    ((ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
-        || (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&kind))
+    ((ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind.id())
+        || (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&kind.id()))
         && kind != ItKind::BirdoEgg
         && kind != ItKind::WhispyApple
 }
@@ -226,7 +225,9 @@ pub fn share_group_victims(game: &mut Game, gobj: GObjId, idx: usize) {
             if same {
                 let src = (0..4).find(|&i| {
                     let h = &other.hitboxes[i].hit;
-                    !(g == gobj && i == idx) && h.state != hitcapsule::DISABLED && h.group == group
+                    !(g == gobj && i == idx)
+                        && h.state != HitCapsuleState::Disabled
+                        && h.group == group
                 });
                 if let Some(i) = src {
                     let h = other.hitboxes[i].hit.clone();
@@ -297,11 +298,11 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
         for hi in 0..4 {
             let me = item(r.game, gobj);
             let h = &r.game.fighters[f.0].hitboxes[hi];
-            if h.state == hitcapsule::DISABLED
+            if h.state == HitCapsuleState::Disabled
                 || h.element == ELEMENT_CATCH
                 || !h.hits_items
-                || ((!h.hits_air || me.ground_or_air != GA_AIR)
-                    && (!h.hits_ground || me.ground_or_air != GA_GROUND))
+                || ((!h.hits_air || me.ground_or_air != GroundOrAir::Air)
+                    && (!h.hits_ground || me.ground_or_air != GroundOrAir::Ground))
                 || hitcapsule::has_victim(h, Victim::Item(me_id))
                 || me.invincibility == 2
             {
@@ -502,10 +503,10 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
             for k in 0..4 {
                 let (me, other) = (item(r.game, gobj), item(r.game, g));
                 let h = &me.hitboxes[k].hit;
-                let can = h.state != hitcapsule::DISABLED
+                let can = h.state != HitCapsuleState::Disabled
                     && h.element != ELEMENT_CATCH
-                    && ((h.hits_air && other.ground_or_air == GA_AIR)
-                        || (h.hits_ground && other.ground_or_air == GA_GROUND))
+                    && ((h.hits_air && other.ground_or_air == GroundOrAir::Air)
+                        || (h.hits_ground && other.ground_or_air == GroundOrAir::Ground))
                     && !hitcapsule::has_victim(h, Victim::Item(other_id));
                 r.game.it.clank_boxes[k] = u8::from(can);
                 if can {
@@ -516,10 +517,10 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
         for hi in 0..4 {
             let (me, other) = (item(r.game, gobj), item(r.game, g));
             let h = &other.hitboxes[hi].hit;
-            if h.state == hitcapsule::DISABLED
+            if h.state == HitCapsuleState::Disabled
                 || !h.hits_items
-                || (!(h.hits_air && me.ground_or_air == GA_AIR)
-                    && !(h.hits_ground && me.ground_or_air == GA_GROUND))
+                || (!(h.hits_air && me.ground_or_air == GroundOrAir::Air)
+                    && !(h.hits_ground && me.ground_or_air == GroundOrAir::Ground))
                 || hitcapsule::has_victim(h, Victim::Item(me_id))
             {
                 continue;
@@ -864,7 +865,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
             ip.source_player = src;
             ip.attacker = None;
             ip.attacker_owner = fighter;
-            ip.hit_by_kind = kind;
+            ip.hit_by_kind = kind.id();
             ip.hit_by_pos = pos;
             ip.damage_dir = dir;
             enemy_hit_by_item(r, e.source, gobj);
@@ -885,22 +886,22 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
 pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) {
     let hit = &item(game, gobj).hitboxes[idx].hit;
     match hit.state {
-        hitcapsule::ENABLED => {
+        HitCapsuleState::Enabled => {
             let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
             let ip = item_mut(game, gobj);
             let hit = &mut ip.hitboxes[idx].hit;
             hit.pos = p;
             hit.prev_pos = p;
-            hit.state = hitcapsule::PLACED;
+            hit.state = HitCapsuleState::Placed;
             set_flag(&mut ip.debug_flags, 2, true);
         }
-        hitcapsule::PLACED | hitcapsule::MOVING => {
+        HitCapsuleState::Placed | HitCapsuleState::Moving => {
             let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let ip = item_mut(game, gobj);
             let hit = &mut ip.hitboxes[idx].hit;
-            if hit.state == hitcapsule::PLACED {
-                hit.state = hitcapsule::MOVING;
+            if hit.state == HitCapsuleState::Placed {
+                hit.state = HitCapsuleState::Moving;
             }
             hit.prev_pos = hit.pos;
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
@@ -939,7 +940,7 @@ pub fn refresh_hurtboxes(game: &mut Game, gobj: GObjId) {
 
 /// Sets every hurtbox's state, `it_80271508`.
 #[doc(alias = "it_80271508")]
-pub fn set_hurtbox_state(game: &mut Game, gobj: GObjId, state: i32) {
+pub fn set_hurtbox_state(game: &mut Game, gobj: GObjId, state: HurtCapsuleState) {
     let ip = item_mut(game, gobj);
     let n = ip.hurtbox_count as usize;
     for h in &mut ip.hurtboxes[..n] {
@@ -976,7 +977,7 @@ pub fn init_hurtboxes(r: &mut Running, gobj: GObjId) {
                     )
                 };
                 let hurt = &mut item_mut(r.game, gobj).hurtboxes[i as usize];
-                hurt.state = HURT_ENABLED;
+                hurt.state = HurtCapsuleState::Enabled;
                 hurt.bone = b;
                 hurt.a_offset = v(4);
                 hurt.b_offset = v(0x10);
@@ -1131,7 +1132,7 @@ pub fn push_from_items(game: &mut Game, data: &Archives, gobj: GObjId, heavy_onl
         let me = item(game, gobj);
         let candidate = g != gobj
             && !other.flags.flags.held
-            && other.ground_or_air == 0
+            && other.ground_or_air == GroundOrAir::Ground
             && !flag(other.phys_flags, 0)
             && if heavy_only {
                 super::lib26b1::is_heavy(game, data, g)
@@ -1168,7 +1169,7 @@ pub fn keep_clear(game: &mut Game, data: &Archives, gobj: GObjId) {
     ip.nudge = Vec3::new(0.0, 0.0, 0.0);
     ip.push_flags = 0;
     let f = &ip.flags.flags;
-    if !f.held && f.keeps_clear && ip.ground_or_air == 0 {
+    if !f.held && f.keeps_clear && ip.ground_or_air == GroundOrAir::Ground {
         if f.clear_of_fighters {
             push_from_fighters(game, data, gobj);
         }
@@ -1177,7 +1178,10 @@ pub fn keep_clear(game: &mut Game, data: &Archives, gobj: GObjId) {
         }
     }
     let ip = item(game, gobj);
-    if !ip.flags.flags.held && ip.ground_or_air == 0 && super::lib26b1::is_heavy(game, data, gobj) {
+    if !ip.flags.flags.held
+        && ip.ground_or_air == GroundOrAir::Ground
+        && super::lib26b1::is_heavy(game, data, gobj)
+    {
         push_from_items(game, data, gobj, true);
     }
 }

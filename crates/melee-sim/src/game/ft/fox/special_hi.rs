@@ -4,13 +4,14 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
-use super::{GA_AIR, addr, attr, facing_dir_int, ms, mv};
+use super::{addr, attr, facing_dir_int, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -123,7 +124,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialHiHoldAir_Anim")]
     pub fn fox_special_hi_hold_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
-            if self.game.fighter(gobj).ground_or_air == GA_AIR {
+            if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
                 self.fox_special_air_hi_enter(gobj);
                 return;
             }
@@ -201,7 +202,7 @@ impl Running<'_> {
         let n = fp.mv_i32(mv::HI_TRAVEL_FRAMES).wrapping_sub(1);
         fp.set_mv_i32(mv::HI_TRAVEL_FRAMES, n);
         if n <= 0 {
-            if fp.ground_or_air == GA_AIR {
+            if fp.ground_or_air == GroundOrAir::Air {
                 self.fox_special_hi_landing_ground_to_air(gobj);
                 return;
             }
@@ -507,7 +508,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialHiFall_AirToGround")]
     pub fn fox_special_hi_fall_air_to_ground(&mut self, gobj: GObjId) {
         self.destroy_effects(gobj);
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.land(gobj);
         }
         self.change_motion_state(gobj, ms::SPECIAL_HI_LANDING, 0, 0.0, 1.0, 0.0, None);
@@ -531,14 +532,14 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let (m, l) = self.fox_special_hi_fall_attrs(f);
         let fp = &self.game.fighters[f.0];
-        if fp.cmd_vars[0] != 0 && fp.ground_or_air == GA_AIR {
+        if fp.cmd_vars[0] != 0 && fp.ground_or_air == GroundOrAir::Air {
             self.fall_special(gobj, m, l);
             let fp = &mut self.game.fighters[f.0];
             fp.jumps_used = fp.co_attrs.max_jumps as u8;
             return;
         }
         if !self.anim_frames_remaining(gobj) {
-            if self.game.fighters[f.0].ground_or_air == GA_AIR {
+            if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
                 self.fall_special(gobj, m, l);
                 let fp = &mut self.game.fighters[f.0];
                 fp.jumps_used = fp.co_attrs.max_jumps as u8;
@@ -551,7 +552,7 @@ impl Running<'_> {
     /// `ftFx_SpecialHiBound_Phys`.
     #[doc(alias = "ftFx_SpecialHiBound_Phys")]
     pub fn fox_special_hi_bound_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.air_anim_rise(gobj);
             self.self_accel_deaccel_quick_air(gobj);
             return;
@@ -562,7 +563,7 @@ impl Running<'_> {
     /// `ftFx_SpecialHiBound_Coll`.
     #[doc(alias = "ftFx_SpecialHiBound_Coll")]
     pub fn fox_special_hi_bound_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             let dir = facing_dir_int(self.game.fighter(gobj).facing_dir);
             if self.check_ground_and_ledge(gobj, dir) {
                 self.land(gobj);

@@ -671,7 +671,7 @@ impl<'a> Importer<'a> {
             self.game.ft.data.data_list[kind as usize] = self.data(d);
             let list = self.u32(COSTUME_LISTS + 8 * kind);
             let n = if list != 0 {
-                kind_tables(kind as i32).costume_count
+                kind_tables(FighterKind::from_raw(kind as i32)).costume_count
             } else {
                 0
             };
@@ -988,7 +988,7 @@ impl Importer<'_> {
         }
         // The GObjs the character keeps in `u` (Fox's and Falco's blaster, Sheik's needles and
         // chain).
-        for &off in melee_sim::game::ft::vars::gobj_words(f.kind) {
+        for &off in melee_sim::game::ft::vars::gobj_words(f.kind.id()) {
             f.u.import_gobj(off, &mem, a + 0x222C, self);
         }
         // Jigglypuff's hat (`ftPurin_FighterVars`): its model, its DObj list (as many DObjs as
@@ -1070,7 +1070,9 @@ impl Importer<'_> {
         if matches!(f.motion_id, 213 | 215 | 216 | 217) {
             f.mv.import_jobj(0x18, &mem, mv, self);
         }
-        if melee_sim::game::ft::vars::holds_blaster(f.kind) && (347..=352).contains(&f.motion_id) {
+        if melee_sim::game::ft::vars::holds_blaster(f.kind.id())
+            && (347..=352).contains(&f.motion_id)
+        {
             f.mv.import_gobj(0x44, &mem, mv, self);
         }
         // Pikachu's and Pichu's Thunder bolt (0) in their down special

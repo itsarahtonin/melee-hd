@@ -1,6 +1,7 @@
 //! Fox's and Falco's blaster shots, `melee/it/kinds/itfoxlaser.c`: a ray that flies straight,
 //! stretching to its full length, until its lifetime runs out or it meets the stage.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{article, change_state, spawn_air};
@@ -75,7 +76,7 @@ pub fn spawn(
     parent: GObjId,
     pos: Vec3,
     msid: i32,
-    kind: i32,
+    kind: ItKind,
     angle: f32,
     speed: f32,
 ) {
@@ -119,13 +120,13 @@ pub fn spawn(
 /// Fires a shot in state 0, `it_8029C6A4`.
 #[doc(alias = "it_8029C6A4")]
 pub fn spawn_0(r: &mut Running, angle: f32, speed: f32, parent: GObjId, pos: Vec3, kind: i32) {
-    spawn(r, parent, pos, 0, kind, angle, speed);
+    spawn(r, parent, pos, 0, ItKind::from_raw(kind), angle, speed);
 }
 
 /// Fires a shot in state 1, `it_8029C6CC`.
 #[doc(alias = "it_8029C6CC")]
 pub fn spawn_1(r: &mut Running, angle: f32, speed: f32, parent: GObjId, pos: Vec3, kind: i32) {
-    spawn(r, parent, pos, 1, kind, angle, speed);
+    spawn(r, parent, pos, 1, ItKind::from_raw(kind), angle, speed);
 }
 
 /// The shot's animation callback, `itFoxlaser_UnkMotion1_Anim` (`Item_UpdateRayAnimation`):

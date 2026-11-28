@@ -10,10 +10,11 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{change, change_state, play_sfx};
-use super::super::zako::{self, GA_GROUND, Knock, attr, attr_f32, set_coll_facing, stop};
+use super::super::zako::{self, Knock, attr, attr_f32, set_coll_facing, stop};
 use super::super::{ground, item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
 use crate::game::state::Running;
@@ -293,7 +294,7 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
 /// ceiling).
 #[doc(alias = "itOctarock_UnkMotion4_Coll")]
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_GROUND {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
         if !ground::ground_probe(r, gobj) {
             fall(r, gobj);
         }
@@ -371,7 +372,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itOctarock_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air == GA_GROUND && reg(ip.vel.y) > 0.0 {
+    if ip.ground_or_air == GroundOrAir::Ground && reg(ip.vel.y) > 0.0 {
         maplib::enter_air(ip);
     }
 }
@@ -380,7 +381,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 /// the air landing it's on the ground, else it keeps its collision's position.
 #[doc(alias = "itOctarock_UnkMotion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_GROUND {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
         if !ground::ground_probe(r, gobj) {
             fall(r, gobj);
         }

@@ -6,6 +6,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{change, change_state, debug_owner_bubbles, play_sfx1, spawn_air};
@@ -143,8 +144,12 @@ pub fn place(r: &mut Running, gobj: GObjId, pos: Vec3, coll: CollData, n: Vec3) 
     change_state(r, gobj, 0, change::ANIM_UPDATE | change::HIT_PRESERVE);
     super::super::item::animate(r, gobj);
     match item(r.game, gobj).kind {
-        148 | 90 => play_sfx1(r, gobj, 0x3A9CF, 127, 64),
-        150 | 92 => play_sfx1(r, gobj, 0x382B6, 127, 64),
+        ItKind::KirbyPikachuThunderJoltAir | ItKind::PikachuThunderJoltAir => {
+            play_sfx1(r, gobj, 0x3A9CF, 127, 64)
+        }
+        ItKind::KirbyPichuThunderJoltAir | ItKind::PichuThunderJoltAir => {
+            play_sfx1(r, gobj, 0x382B6, 127, 64)
+        }
         _ => {}
     }
 }
@@ -156,7 +161,7 @@ pub fn spawn(
     owner: Option<GObjId>,
     ground: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {

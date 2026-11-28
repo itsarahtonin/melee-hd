@@ -1925,7 +1925,7 @@ impl Run<'_> {
                     format!(
                         "port {} character {:#x}{}",
                         i + 1,
-                        s.game.player_ckind(i),
+                        s.game.player_ckind(i).id(),
                         if s.game.player_pkind(i) == PlayerKind::Cpu {
                             " (computer)"
                         } else {
@@ -1934,7 +1934,7 @@ impl Run<'_> {
                     )
                 })
                 .collect();
-            format!("stage {:#x}, {}", d.stkind, players.join(", "))
+            format!("stage {:#x}, {}", d.stkind.raw(), players.join(", "))
         };
         if in_live {
             println!("live match 1: {}", describe(s));

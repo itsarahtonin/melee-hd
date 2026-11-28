@@ -1,10 +1,10 @@
 //! The common action states' physics callbacks, run by `Fighter_procUpdate` before it applies
 //! the fighter's velocities.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math::{self, sqrt_reg};
@@ -82,7 +82,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DownDamage_Phys")]
     pub fn co_damage_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             if !fp.in_hitstun {
                 self.air_physics(gobj);
             } else {
@@ -241,7 +241,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CargoThrowLw_Phys")]
     pub fn co_throw_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             if fp.mv_i32(4) != 0 {
                 fp.self_vel.x = mem(fp::fmuls(reg(fp.mv_f32(0x14)), reg(fp.facing_dir)));
                 fp.self_vel.y = fp.mv_f32(0x10);

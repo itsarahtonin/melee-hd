@@ -2,6 +2,7 @@
 //! record a partner (Nana) follows.
 
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
+use crate::game::ft::{CpuBehavior, CpuKind};
 use crate::game::handles::*;
 use crate::game::structs::*;
 use crate::vec::Vec3;
@@ -23,7 +24,7 @@ pub struct CpuFighter {
     #[at(0x9)]
     pub rtrigger: u8,
     #[at(0xC)]
-    pub kind: i32,
+    pub kind: CpuKind,
     #[at(0x10)]
     pub level: i32,
     /// The spawn's third argument (`ftCo_800A101C`), kept for the restarts a kind or level
@@ -34,13 +35,13 @@ pub struct CpuFighter {
     /// The behavior, and the two the kind starts from.
     #[at(0x18)]
     #[doc(alias("x18"))]
-    pub behavior: i32,
+    pub behavior: CpuBehavior,
     #[at(0x1C)]
     #[doc(alias("x1C"))]
-    pub default_behavior: i32,
+    pub default_behavior: CpuBehavior,
     #[at(0x20)]
     #[doc(alias("x20"))]
-    pub alt_behavior: i32,
+    pub alt_behavior: CpuBehavior,
     /// Written by the spawn alone.
     #[at(0x24)]
     #[doc(alias("x24"))]
@@ -291,12 +292,12 @@ impl Default for CpuFighter {
             cstick: Default::default(),
             ltrigger: 0,
             rtrigger: 0,
-            kind: 0,
+            kind: CpuKind::Stay,
             level: 0,
             spawn_arg: 0,
-            behavior: 0,
-            default_behavior: 0,
-            alt_behavior: 0,
+            behavior: CpuBehavior::Idle,
+            default_behavior: CpuBehavior::Idle,
+            alt_behavior: CpuBehavior::Idle,
             unread_24: 0,
             unread_28: 0,
             item_worth_min: 0,

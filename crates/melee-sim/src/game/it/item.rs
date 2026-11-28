@@ -1,6 +1,10 @@
 //! The item core, `melee/it/item.c`: making items and their GObjs, the per-frame processes,
 //! state changes, and destroying items.
 
+use crate::game::camera::CmSubjectState;
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::lb::hitcapsule::HurtCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -119,8 +123,7 @@ crate::game::ft::registry::kind_enum! {
     /// (`Item_804A0C64`, [`ItemCounts`](super::super::structs::ItemCounts)) and its limit, and
     /// which the items' blink, damage scale, homing targets and hand offsets test. The game's
     /// own numbers; the decomp names them only by number (`ITEM_HOLD_0` to `_12`), so these
-    /// are the counts' names. The state keeps the number; code compares it with these and
-    /// matches on [`HoldKind::from_id`].
+    /// are the counts' names.
     HoldKind:
     /// `ITEM_HOLD_0`: the common items but food.
     #[doc(alias("ITEM_HOLD_0"))]
@@ -167,15 +170,10 @@ crate::game::ft::registry::kind_enum! {
 impl HoldKind {
     /// The items the missiles home in on and that take the single-player modes' damage scale:
     /// the stages' and the enemies' and what they shoot (`Item_UnkKinds`, 4 to 7).
-    pub fn is_stage_or_enemy(kind: i32) -> bool {
+    pub fn is_stage_or_enemy(self) -> bool {
         matches!(
-            HoldKind::from_id(kind),
-            Some(
-                HoldKind::StageItem
-                    | HoldKind::StageShot
-                    | HoldKind::Monster
-                    | HoldKind::MonsterShot
-            )
+            self,
+            HoldKind::StageItem | HoldKind::StageShot | HoldKind::Monster | HoldKind::MonsterShot
         )
     }
 }
@@ -214,26 +212,24 @@ pub fn hold_kind_of(kind: i32) -> HoldKind {
 
 /// Adds `delta` to the count a hold kind's items keep (`Item_804A0C64`), as `Item_802675A8`
 /// and `Item_802676F4` pick it.
-pub fn bump_count(n: &mut super::super::structs::ItemCounts, hold_kind: i32, delta: i32) {
+pub fn bump_count(n: &mut super::super::structs::ItemCounts, hold_kind: HoldKind, delta: i32) {
     let add = |c: &mut i32| *c = c.wrapping_add(delta);
     use HoldKind as H;
-    match HoldKind::from_id(hold_kind) {
-        Some(H::Common) => add(&mut n.common),
-        Some(H::CommonShot) => add(&mut n.common_shots),
-        Some(H::Food) => add(&mut n.food),
-        Some(H::StageHurtbox) => add(&mut n.stage_hurtboxes),
-        Some(H::StageItem) => add(&mut n.stage_items),
-        Some(H::StageShot) => add(&mut n.stage_shots),
-        Some(H::Monster) => add(&mut n.monsters),
-        Some(H::MonsterShot) => add(&mut n.monster_shots),
-        Some(H::FighterArticle) => {
-            n.fighter_articles = n.fighter_articles.wrapping_add(delta as u32)
-        }
-        Some(H::Pokemon) => add(&mut n.pokemon),
-        Some(H::PokemonShot) => add(&mut n.pokemon_shots),
-        Some(H::Trophy) => add(&mut n.trophies),
-        Some(H::Coin) => add(&mut n.coins),
-        None => {}
+    match hold_kind {
+        H::Common => add(&mut n.common),
+        H::CommonShot => add(&mut n.common_shots),
+        H::Food => add(&mut n.food),
+        H::StageHurtbox => add(&mut n.stage_hurtboxes),
+        H::StageItem => add(&mut n.stage_items),
+        H::StageShot => add(&mut n.stage_shots),
+        H::Monster => add(&mut n.monsters),
+        H::MonsterShot => add(&mut n.monster_shots),
+        H::FighterArticle => n.fighter_articles = n.fighter_articles.wrapping_add(delta as u32),
+        H::Pokemon => add(&mut n.pokemon),
+        H::PokemonShot => add(&mut n.pokemon_shots),
+        H::Trophy => add(&mut n.trophies),
+        H::Coin => add(&mut n.coins),
+        H::Other(_) => {}
     }
 }
 
@@ -260,11 +256,11 @@ pub fn count(game: &mut Game, gobj: GObjId) {
     if hold_kind != HoldKind::Pokemon {
         bump_count(&mut game.it.counts, hold_kind, 1);
     }
-    match HoldKind::from_id(hold_kind) {
-        Some(HoldKind::Common) if kind == ItKind::PokeBall => {
+    match hold_kind {
+        HoldKind::Common if kind == ItKind::PokeBall => {
             game.it.counts.pokemon = game.it.counts.pokemon.wrapping_add(1)
         }
-        Some(HoldKind::Food) => super::lib2725::count_food(game),
+        HoldKind::Food => super::lib2725::count_food(game),
         _ => {}
     }
     if super::super::gm::is_training(game) && spawn_origin == 1 {
@@ -275,17 +271,17 @@ pub fn count(game: &mut Game, gobj: GObjId) {
 /// Whether a hold kind's items are at their limit, `Item_8026784C`. For the Pokémon the
 /// count drops by one when over.
 #[doc(alias = "Item_8026784C")]
-pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
+pub fn at_limit(game: &mut Game, hold_kind: HoldKind) -> bool {
     let n = &mut game.it.counts;
     use HoldKind as H;
-    match HoldKind::from_id(hold_kind) {
-        Some(H::Common) => n.common >= n.common_limit,
-        Some(H::CommonShot) => n.common_shots >= n.common_shots_limit,
-        Some(H::Food) => n.food >= n.food_limit,
-        Some(H::StageHurtbox) => n.stage_hurtboxes >= n.stage_hurtboxes_limit,
-        Some(H::StageShot) => n.stage_shots >= n.stage_shots_limit,
-        Some(H::MonsterShot) => n.monster_shots >= n.monster_shots_limit,
-        Some(H::Pokemon) => {
+    match hold_kind {
+        H::Common => n.common >= n.common_limit,
+        H::CommonShot => n.common_shots >= n.common_shots_limit,
+        H::Food => n.food >= n.food_limit,
+        H::StageHurtbox => n.stage_hurtboxes >= n.stage_hurtboxes_limit,
+        H::StageShot => n.stage_shots >= n.stage_shots_limit,
+        H::MonsterShot => n.monster_shots >= n.monster_shots_limit,
+        H::Pokemon => {
             if n.pokemon > n.pokemon_limit {
                 n.pokemon = n.pokemon.wrapping_sub(1);
                 true
@@ -293,9 +289,9 @@ pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
                 false
             }
         }
-        Some(H::PokemonShot) => n.pokemon_shots >= n.pokemon_shots_limit,
-        Some(H::Trophy) => n.trophies >= n.trophies_limit,
-        Some(H::Coin) => n.coins >= n.coins_limit,
+        H::PokemonShot => n.pokemon_shots >= n.pokemon_shots_limit,
+        H::Trophy => n.trophies >= n.trophies_limit,
+        H::Coin => n.coins >= n.coins_limit,
         // The stages' items, the enemies and the characters' items have no limit.
         _ => false,
     }
@@ -348,8 +344,8 @@ pub fn article_of(game: &Game, data: &Archives, kind: i32) -> Option<DataRef> {
 #[doc(alias = "Item_80267978")]
 pub fn set_kind_data(game: &mut Game, data: &Archives, gobj: GObjId) {
     let kind = super::item(game, gobj).kind;
-    let article = article_of(game, data, kind);
-    let logic = tables::logic_ref(kind);
+    let article = article_of(game, data, kind.id());
+    let logic = tables::logic_ref(kind.id());
     let ip = item_mut(game, gobj);
     ip.article = article;
     ip.logic_table = Some(logic);
@@ -416,7 +412,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         set_flag(&mut ip.draw_flags, 7, false);
         ip.source_player = 6;
         ip.hit_by_kind = -1;
-        ip.hit_item_kind = -1;
+        ip.hit_item_kind = ItKind::from_raw(-1);
         ip.hit_by_pos = Vec3::new(0.0, 0.0, 0.0);
         ip.hit_item_pos = Vec3::new(0.0, 0.0, 0.0);
         set_flag(&mut ip.status_flags, 1, false);
@@ -679,7 +675,7 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     let gobj = r.game.world.create(CLASS_ITEM, P_LINK_ITEM, 0);
     r.game
         .world
-        .setup_gx_link(gobj, tables::render_func(spawn.kind), 6, 0);
+        .setup_gx_link(gobj, tables::render_func(spawn.kind.id()), 6, 0);
     let id = ItemId(r.game.items.alloc_stale(Item::default()));
     // A block new from the heap holds what the scenes before left there (docs/engine.md, a
     // session's heap leftovers).
@@ -744,8 +740,8 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     init_position(r, gobj, spawn);
     on_spawned(r, gobj);
     // `foobar`: common items and enemies blink as they appear.
-    match HoldKind::from_id(super::item(r.game, gobj).hold_kind) {
-        Some(HoldKind::Common | HoldKind::Monster) => {
+    match super::item(r.game, gobj).hold_kind {
+        HoldKind::Common | HoldKind::Monster => {
             let data = r.data;
             let t = common_data(r.game).i32(data, common::X2C);
             let ip = item_mut(r.game, gobj);
@@ -769,20 +765,24 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         let ip = super::item(r.game, gobj);
         (ip.kind, ip.owner)
     };
-    if (ItKind::MarioFireball.id()..ItKind::VsCoin.id()).contains(&kind)
+    if (ItKind::MarioFireball.id()..ItKind::VsCoin.id()).contains(&kind.id())
         && is_fighter(r.game, owner)
     {
         let f = super::owner::fighter_of(r.game, owner.unwrap());
         let fkind = r.game.fighters[f.0].kind;
         let ip = item_mut(r.game, gobj);
         ip.flags.flags.holds_fighter_data = true;
-        ip.ecb_lock = fkind;
+        ip.ecb_lock = fkind.id();
         super::owner::inc_fighter_refs(r.game, fkind);
     }
     // `foobar3`: the camera follows some items.
     let cam = super::item(r.game, gobj).hit_flags.bits.b01;
     if cam != 0 {
-        let b = r.game.camera.alloc_box(if cam == 1 { 0 } else { 2 });
+        let b = r.game.camera.alloc_box(if cam == 1 {
+            CmSubjectState::Active
+        } else {
+            CmSubjectState::Auto
+        });
         item_mut(r.game, gobj).camera_box = Some(b);
         {
             let c = common_data(r.game);
@@ -832,7 +832,7 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     }
     lib26b1::enable_pickup(r.game, gobj);
     item_mut(r.game, gobj).flags.flags.held = false;
-    if spawn.ground_or_air == 1 {
+    if spawn.ground_or_air == GroundOrAir::Air {
         super::maplib::enter_air(item_mut(r.game, gobj));
     } else {
         super::maplib::enter_ground(item_mut(r.game, gobj));
@@ -844,7 +844,7 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let max_fall = common_data(r.game).f32(r.data, common::X6C);
     lib2725::clamp_fall(r.game, gobj, max_fall);
     lib2725::clear_hitboxes(r.game, r.data, gobj);
-    coll::set_hurtbox_state(r.game, gobj, coll::HURT_ENABLED);
+    coll::set_hurtbox_state(r.game, gobj, HurtCapsuleState::Enabled);
     coll::clear_random_push(r.game, gobj);
     {
         let ip = item_mut(r.game, gobj);
@@ -923,25 +923,25 @@ pub fn logic(game: &Game, gobj: GObjId) -> &'static tables::ItemLogic {
 /// Makes an item in the air, `Item_80268B18`.
 #[doc(alias = "Item_80268B18")]
 pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
-    spawn.ground_or_air = 1;
+    spawn.ground_or_air = GroundOrAir::Air;
     spawn.origin = 0;
-    spawn.hold_kind = hold_kind_of(spawn.kind).id();
+    spawn.hold_kind = hold_kind_of(spawn.kind.id());
     create(r, spawn)
 }
 
 /// Makes an item on the ground, `Item_80268B5C`.
 #[doc(alias = "Item_80268B5C")]
 pub fn spawn_ground(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
-    spawn.ground_or_air = 0;
+    spawn.ground_or_air = GroundOrAir::Ground;
     spawn.origin = 0;
-    spawn.hold_kind = hold_kind_of(spawn.kind).id();
+    spawn.hold_kind = hold_kind_of(spawn.kind.id());
     create(r, spawn)
 }
 
 /// A drop by kind's spawn of `kind` at `pos`: no parent, facing left, still, with a first
 /// collision (the inline `Item_InitSpawnPosition` and `Item_InitSpawnCommonFields` of the
 /// items' spawns by position), its depth put on the plane when `on_plane`.
-pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
+pub fn drop_spawn(kind: ItKind, pos: Vec3, on_plane: bool) -> SpawnItem {
     let mut spawn = SpawnItem {
         kind,
         ..Default::default()
@@ -964,9 +964,9 @@ pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
 /// Makes an item on the ground with `x18` set, `Item_80268B9C`.
 #[doc(alias = "Item_80268B9C")]
 pub fn spawn_ground_marked(r: &mut Running, spawn: &mut SpawnItem) {
-    spawn.ground_or_air = 0;
+    spawn.ground_or_air = GroundOrAir::Ground;
     spawn.origin = 1;
-    spawn.hold_kind = hold_kind_of(spawn.kind).id();
+    spawn.hold_kind = hold_kind_of(spawn.kind.id());
     create(r, spawn);
 }
 
@@ -1141,7 +1141,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         let desc = descs.at(0x10 * state.anim_id as u32);
         ip.state_desc = Some(desc);
         let kind = super::item(r.game, gobj).kind;
-        let script = super::anim::state_script(r.game, data, kind, state.anim_id, desc);
+        let script = super::anim::state_script(r.game, data, kind.id(), state.anim_id, desc);
         if flags & ANIM_UPDATE != 0 {
             set_state_anims(r, gobj, desc);
             if flags & UNK_UPDATE != 0 {
@@ -1313,7 +1313,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     if !ip.flags.flags.held {
         if !ip.flags.flags.in_hitlag {
             let mut v = vec_add(ip.vel, ip.nudge);
-            if ip.ground_or_air == 0 && !ip.hit_flags.bits.no_slide {
+            if ip.ground_or_air == GroundOrAir::Ground && !ip.hit_flags.bits.no_slide {
                 super::maplib::slide(r.game, r.data, gobj, &mut v);
             }
             let ip = item_mut(r.game, gobj);
@@ -1327,12 +1327,12 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
             return;
         }
         let ip = super::item(r.game, gobj);
-        if reg(ip.spin_speed) != 0.0 && ip.ground_or_air == 1 {
+        if reg(ip.spin_speed) != 0.0 && ip.ground_or_air == GroundOrAir::Air {
             lib2725::spin(r.game, r.data, gobj);
         }
     }
     let ip = super::item(r.game, gobj);
-    if flag(ip.phys_flags, 1) && ip.ground_or_air == 1 {
+    if flag(ip.phys_flags, 1) && ip.ground_or_air == GroundOrAir::Air {
         let mut v = super::item(r.game, gobj).wind_push;
         crate::game::gr::grlib::item_wind(r.game, &mut v);
         item_mut(r.game, gobj).wind_push = v;
@@ -1341,7 +1341,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     ip.pos = vec_add(ip.pos, ip.wind_push);
     lib2725::clear_displacement(r.game, gobj);
     let ip = super::item(r.game, gobj);
-    if ip.ground_or_air == 0 {
+    if ip.ground_or_air == GroundOrAir::Ground {
         let line = if flag(ip.hurt_flags, 3) && super::ground::on_line(r.game, gobj) {
             ip.touched_line
         } else {
@@ -1489,7 +1489,7 @@ pub fn clear_hit_record(ip: &mut Item) {
     ip.absorber = None;
     ip.stomper = None;
     ip.hit_by_kind = -1;
-    ip.hit_item_kind = -1;
+    ip.hit_item_kind = ItKind::from_raw(-1);
     ip.hit_by_pos = Vec3::new(0.0, 0.0, 0.0);
     ip.hit_item_pos = Vec3::new(0.0, 0.0, 0.0);
     set_flag(&mut ip.hurt_flags, 5, false);
@@ -1529,7 +1529,7 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
         fp::fadds(90.0, reg(degrees)),
     );
     let bounce = flag(ip.hurt_flags, 5)
-        && ip.ground_or_air == 1
+        && ip.ground_or_air == GroundOrAir::Air
         && (flag(ip.hurt_flags, 4) || reg(ip.shield_angle) < limit);
     if bounce {
         let ip = item_mut(r.game, gobj);
@@ -1596,7 +1596,7 @@ pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
         for i in 0..4 {
             let ip = super::item(r.game, gobj);
             let hit = &ip.hitboxes[i].hit;
-            if hit.state != 0 {
+            if hit.state != HitCapsuleState::Disabled {
                 let d = fp::fmadds(
                     reg(hit.damage),
                     reg(ip.reflect_damage_mul),
@@ -2174,8 +2174,8 @@ pub fn init_globals(game: &mut Game, data: &Archives) {
     n.training_items_limit = w(0x148);
     game.it.ft_track.untracked[0] |= 0x80;
     game.it.ft_track.count = 1;
-    game.it.pokemon.last_kind = UNSELECTED;
-    game.it.pokemon.previous_kind = UNSELECTED;
+    game.it.pokemon.last_kind = ItKind::from_raw(UNSELECTED);
+    game.it.pokemon.previous_kind = ItKind::from_raw(UNSELECTED);
     game.it.pokemon.rare_spawned = 0;
     game.it.warp_star_last_anim = -1;
     game.it.next_attack_id = 1;

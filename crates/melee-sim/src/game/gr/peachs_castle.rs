@@ -8,6 +8,7 @@
 //! The castle steers a wind source that sways its flags, and the moat registers a wind
 //! device that slows a fighter's fall into it.
 
+use crate::game::camera::CmSubjectState;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -648,7 +649,7 @@ fn new_subject(r: &mut Running, at: u32) -> crate::game::handles::CameraBoxId {
     let p = param(r.game);
     let ext = [0, 4, 8, 0xC].map(|o| p.f(r.data, at + o));
     // Camera_80029044(2): framed only inside the camera bounds.
-    let b = r.game.camera.alloc_box(camera::AUTO);
+    let b = r.game.camera.alloc_box(CmSubjectState::Auto);
     let s = r.game.camera.subject_mut(b);
     s.target_ext.h.x = ext[0];
     s.target_ext.h.y = ext[1];

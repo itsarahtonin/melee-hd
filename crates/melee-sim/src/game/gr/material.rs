@@ -1,5 +1,6 @@
 //! Stage materials and color overlays, `melee/gr/grmaterial.c`.
 
+use crate::mp::coll::GroundOrAir;
 use melee_data::archive::{Archives, DataRef};
 
 use super::super::state::Game;
@@ -247,7 +248,7 @@ pub fn item_hurtbox_off(game: &mut Game, item: GObjId) {
 
 /// Puts a stage item on the ground or in the air, `grMaterial_801C8E68`.
 #[doc(alias = "grMaterial_801C8E68")]
-pub fn item_ground_or_air(game: &mut Game, item: GObjId, ground_or_air: i32) {
+pub fn item_ground_or_air(game: &mut Game, item: GObjId, ground_or_air: GroundOrAir) {
     super::super::it::item_mut(game, item).ground_or_air = ground_or_air;
 }
 

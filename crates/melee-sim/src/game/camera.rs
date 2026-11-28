@@ -30,7 +30,7 @@ use crate::vec::Vec3;
 
 pub mod types;
 
-pub use types::{CameraMode, QuakeKind};
+pub use types::{CameraMode, CmSubjectState, QuakeKind};
 
 /// `CameraType`'s values, by the decomp's names ([`CameraMode`]).
 pub const STANDARD: CameraMode = CameraMode::Standard;
@@ -42,12 +42,6 @@ pub const FREE: CameraMode = CameraMode::Free;
 pub const BOSS_INTRO: CameraMode = CameraMode::BossIntro;
 pub const DEBUG_FOLLOW: CameraMode = CameraMode::DebugFollow;
 pub const DEBUG_FREE: CameraMode = CameraMode::DebugFree;
-
-/// `CmSubjectState`: always framed, never framed, or framed only inside the stage's camera
-/// bounds.
-pub const ACTIVE: i32 = 0;
-pub const INACTIVE: i32 = 1;
-pub const AUTO: i32 = 2;
 
 /// Where a point lies relative to the camera bounds (`CAM_BOUNDS_OUTSIDE_*`).
 pub const OUTSIDE_TOP: u32 = 1;
@@ -673,7 +667,7 @@ impl CameraState {
         c.hide_layer_5 = false;
         c.layer = 0;
         c.hold_off_plane = false;
-        self.debug.last_mode = c.mode.raw();
+        self.debug.last_mode = c.mode;
         c.draw_collisions = false;
         c.draw_zones = false;
         c.stage_hidden = false;
@@ -760,7 +754,7 @@ pub fn create(game: &mut Game) {
 impl CameraState {
     /// Puts a camera box back to its starting state with `state`, `Camera_80028F5C`.
     #[doc(alias = "Camera_80028F5C")]
-    pub fn reset_box(&mut self, b: Option<CameraBoxId>, state: i32) {
+    pub fn reset_box(&mut self, b: Option<CameraBoxId>, state: CmSubjectState) {
         let boxes = &mut self.boxes;
         let Some(b) = b else { return };
         let s = &mut boxes[b];
@@ -791,7 +785,7 @@ impl CameraState {
     /// it and hangs.
     #[doc(alias = "Camera_80029044")]
     #[doc(alias = "Camera_80029020")]
-    pub fn alloc_box(&mut self, state: i32) -> CameraBoxId {
+    pub fn alloc_box(&mut self, state: CmSubjectState) -> CameraBoxId {
         let boxes = &mut self.boxes;
         let Some(b) = boxes.free else {
             panic!("couldn't get CmSubject struct.");
@@ -863,10 +857,10 @@ pub fn outside_bounds(s: &StageInfo, pos: Vec3, distance: i32) -> u32 {
 /// the middle of the camera bounds stops being framed for 600 checks.
 #[doc(alias = "Camera_8002928C")]
 pub fn is_framed(s: &StageInfo, b: &mut CmSubject) -> bool {
-    if b.state == INACTIVE || b.force_inactive {
+    if b.state == CmSubjectState::Inactive || b.force_inactive {
         return false;
     }
-    if b.state == AUTO {
+    if b.state == CmSubjectState::Auto {
         if b.state_timer != 0 {
             b.state_timer = b.state_timer.wrapping_sub(1);
             return false;
@@ -2236,7 +2230,7 @@ impl CameraState {
     /// Back to the mode before the debug cameras, `Camera_800300F0`.
     #[doc(alias = "Camera_800300F0")]
     pub fn leave_debug(&mut self) {
-        self.cam.mode = CameraMode::from_raw(self.debug.last_mode);
+        self.cam.mode = self.debug.last_mode;
     }
 
     /// `Camera_8003010C`.
@@ -2523,7 +2517,7 @@ pub fn debug_follow(game: &mut Game, data: &Archives, slot: i32) {
     }
     let state = &mut game.camera;
     if (state.cam.mode.raw() as u32) <= PAUSE.raw() as u32 {
-        state.debug.last_mode = state.cam.mode.raw();
+        state.debug.last_mode = state.cam.mode;
     }
     state.cam.mode = DEBUG_FOLLOW;
     state.debug.ply_slot = slot;
@@ -2562,7 +2556,7 @@ pub fn debug_free(game: &mut Game, data: &Archives) {
     }
     let state = &mut game.camera;
     if (state.cam.mode.raw() as u32) <= PAUSE.raw() as u32 {
-        state.debug.last_mode = state.cam.mode.raw();
+        state.debug.last_mode = state.cam.mode;
     }
     state.cam.mode = DEBUG_FREE;
     let c = camera_cobj(game);
@@ -3055,7 +3049,7 @@ pub fn update_pause(r: &mut Running) {
         .flatten()
         .filter(|&b| {
             is_framed(&game.stage_info, &mut game.camera.boxes[b])
-                && game.camera.boxes[b].state == ACTIVE
+                && game.camera.boxes[b].state == CmSubjectState::Active
                 && outside_bounds(&game.stage_info, game.camera.boxes[b].bone_pos, 0) == 0
                 && abs(reg(game.camera.boxes[b].bone_pos.z)) < reg(30.0)
         });

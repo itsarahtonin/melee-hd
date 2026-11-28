@@ -163,7 +163,7 @@ impl Running<'_> {
         let vs = self.game.vs_melee.css.vs.clone();
         let mut mask = 0u64;
         for p in &vs.start.players[..4] {
-            mask |= crate::lb::audio::character_banks(i32::from(p.ckind));
+            mask |= crate::lb::audio::character_banks(i32::from(p.ckind.raw()));
         }
         self.vs_table(table).clone_from(&vs);
         self.game.audio.lb.unwant_banks(20);
@@ -199,7 +199,7 @@ impl Running<'_> {
     pub fn vs_melee_exit_sss(&mut self, table: usize, cancel: u8) {
         if self.game.vs_melee.sss.start_game != 0 {
             let vs = self.game.vs_melee.sss.vs.clone();
-            let stkind = i32::from(vs.start.rules.stkind);
+            let stkind = i32::from(vs.start.rules.stkind.raw());
             self.vs_table(table).clone_from(&vs);
             self.game.audio.lb.unwant_banks(24);
             self.game
@@ -271,7 +271,8 @@ impl Running<'_> {
         let end = self.game.vs_melee.exit.match_end.clone();
         for p in &end.player_standings {
             if p.pkind == PlayerKind::Human {
-                self.game.count_character_play(p.ckind as u8, end.outcome);
+                self.game
+                    .count_character_play(p.ckind.raw() as u8, end.outcome);
             }
         }
         if super::records::any_human(&end) {
@@ -387,8 +388,8 @@ impl Running<'_> {
             0 => self.game.vs_melee.sss.cursor_port = 0,
             2 => {
                 let at = i32::from(self.game.vs_melee.sss.vs.ordered_stage_index);
-                for i in 0..i32::from(StKind::OldYoshi.id()) {
-                    let idx = (at + i + 1) % i32::from(StKind::OldYoshi.id());
+                for i in 0..StKind::OldYoshi.id() {
+                    let idx = (at + i + 1) % StKind::OldYoshi.id();
                     let stkind = super::super::mn::stagesel::STAGES[idx as usize].stkind;
                     if self.stage_unlocked_inline(u16::from(stkind)) {
                         let sss = &mut self.game.vs_melee.sss;

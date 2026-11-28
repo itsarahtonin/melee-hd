@@ -7,6 +7,7 @@
 
 use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
+use crate::game::mirror::Narrow;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
@@ -30,7 +31,7 @@ pub const SONG: i32 = 0x48;
 
 /// `MatchKind_Stock`, `CpuKind_4`.
 const MATCH_STOCK: u8 = 1;
-const CPU_KIND: u8 = crate::game::ft::CpuKind::Normal.byte();
+const CPU_KIND: crate::game::ft::CpuKind = crate::game::ft::CpuKind::Normal;
 
 /// `HSD_PAD_A | HSD_PAD_START`.
 const PAD_A_START: u32 = 0x1100;
@@ -61,7 +62,7 @@ const CHALLENGER_STAGES: [u16; 11] = [
 ];
 
 /// `St_Kind_Unk328`, no stage.
-const NO_STAGE: u16 = StKind::Unk328.id();
+const NO_STAGE: u16 = StKind::Unk328.id() as u16;
 
 /// `gm_80480D98`, the screen's statics, and `gmVsMelee_ApproachData`, its enter and exit
 /// data.
@@ -138,7 +139,7 @@ impl Running<'_> {
         start.rules.timer_enabled = false;
         start.rules.match_kind = MATCH_STOCK;
         start.rules.damage_display = 2;
-        start.rules.stkind = challenger_stage(c.cpu_ckind);
+        start.rules.stkind = Narrow::from_raw(challenger_stage(c.cpu_ckind));
         setup_human(
             &mut start.players[0],
             c.human_ckind,
@@ -149,7 +150,7 @@ impl Running<'_> {
         setup_cpu(&mut start.players[1], c.cpu_ckind, 0, 1, 1);
         start.players[0].nametag = c.human_nametag;
         start.players[1].nametag = NO_NAMETAG;
-        start.players[1].cpu_kind = CPU_KIND;
+        start.players[1].cpu_kind = CPU_KIND.into();
         start.players[1].cpu_level = level;
         load_rumble_enabled_with(start, &prefs, &tags);
     }

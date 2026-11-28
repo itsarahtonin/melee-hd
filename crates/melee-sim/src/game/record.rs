@@ -219,7 +219,7 @@ pub fn live_start(g: &Game, d: &StartMeleeData) -> (super::vs_match::ReplayStart
         // As the recording codes write it ([`Recorder::game_start`]): Zelda held A as the
         // match starts is Sheik, a costume past the character's count the first.
         if info[p] as i8 == CharacterKind::Zelda && g.pads.copy[port].button & PAD_A != 0 {
-            info[p] = CharacterKind::Seak as u8;
+            info[p] = CharacterKind::Seak.raw() as u8;
         }
         if info[p + 3] > super::playback::costume_count(info[p]) {
             info[p + 3] = 0;
@@ -419,7 +419,7 @@ impl Recorder {
             }
             // Zelda holding A as the match starts is Sheik.
             if info[p] as i8 == CharacterKind::Zelda && g.pads.copy[port].button & PAD_A != 0 {
-                info[p] = CharacterKind::Seak as u8;
+                info[p] = CharacterKind::Seak.raw() as u8;
             }
             // A costume past the character's count is the first (`ble`: the count itself
             // stays).
@@ -556,7 +556,7 @@ impl Recorder {
         w.i32(self.frame);
         w.u8(fp.player_idx);
         w.u8(u8::from(follower));
-        w.u8(fp.kind as u8);
+        w.u8(fp.kind.raw() as u8);
         w.u16(fp.motion_id as u16);
         w.f32(fp.cur_pos.x);
         w.f32(fp.cur_pos.y);
@@ -572,7 +572,7 @@ impl Recorder {
             w.u8(b);
         }
         w.bytes(&misc_as(g, fp));
-        w.u8(fp.ground_or_air as u8);
+        w.u8(fp.ground_or_air.raw() as u8);
         w.u16(fp.coll_data.floor.index as u16);
         w.u8((fp.co_attrs.max_jumps as u8).wrapping_sub(fp.jumps_used));
         w.u8(self.lcancel.get(f.0 as usize).copied().unwrap_or(0));
@@ -595,7 +595,7 @@ impl Recorder {
         self.last_frame = Some(self.frame);
         if !follower {
             let port = usize::from(fp.player_idx & 3);
-            let kind = fp.kind as u8;
+            let kind = fp.kind.raw() as u8;
             let c = &mut self.characters[port];
             match c.iter_mut().find(|e| e.0 == kind) {
                 Some(e) => e.1 += 1,
@@ -621,7 +621,7 @@ impl Recorder {
             let it = &g.items[id.0];
             w.u8(command::ITEM);
             w.i32(self.frame);
-            w.u16(it.kind as u16);
+            w.u16(it.kind.raw() as u16);
             w.u8(it.msid as u8);
             w.f32(it.facing_dir);
             w.f32(it.vel.x);
@@ -1053,7 +1053,7 @@ fn export_rules(o: &mut Bits<0x138>, r: &StartMeleeRules) {
     o.u8(0xB, r.item_freq as u8);
     o.u8(0xC, r.sd_penalty as u8);
     o.u8(0xD, r.end_wait);
-    o.be(0xE, &r.stkind.to_be_bytes());
+    o.be(0xE, &r.stkind.raw().to_be_bytes());
     o.be(0x10, &r.time_limit.to_be_bytes());
     o.u8(0x14, r.start_frame);
     o.be(0x18, &r.score.to_be_bytes());
@@ -1077,8 +1077,8 @@ fn export_rules(o: &mut Bits<0x138>, r: &StartMeleeRules) {
 }
 
 fn export_player(o: &mut Bits<0x138>, at: usize, p: &PlayerInitData) {
-    o.u8(at, p.ckind as u8);
-    o.u8(at + 0x1, p.slot_type);
+    o.u8(at, p.ckind.raw() as u8);
+    o.u8(at + 0x1, p.slot_type.raw());
     o.u8(at + 0x2, p.stocks as u8);
     o.u8(at + 0x3, p.color);
     o.u8(at + 0x4, p.slot);
@@ -1110,7 +1110,7 @@ fn export_player(o: &mut Bits<0x138>, at: usize, p: &PlayerInitData) {
     for (i, &f) in flags.iter().enumerate() {
         o.bits(at, 96 + i as u32, 1, u32::from(f));
     }
-    o.u8(at + 0xE, p.cpu_kind);
+    o.u8(at + 0xE, p.cpu_kind.raw());
     o.u8(at + 0xF, p.cpu_level);
     o.be(at + 0x10, &p.damage.to_be_bytes());
     o.be(at + 0x12, &p.damage1.to_be_bytes());

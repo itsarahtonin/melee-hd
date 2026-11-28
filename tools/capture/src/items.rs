@@ -81,9 +81,9 @@ impl Importer<'_> {
         let m = mem(&cap.call.mem1);
         self.stale = true;
         let mut item = Item::import(&m, a, self);
-        item.vars = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
+        item.vars = ItemVars::import_as(vars_kind(item.kind.id()), &m, a + VARS, self);
         if let Member::Pokemon(v) | Member::Zako(v) = &mut item.vars.member {
-            v.import_handles(item.kind, &m, a + VARS, self);
+            v.import_handles(item.kind.id(), &m, a + VARS, self);
         }
         self.stale = false;
         let table = cap.u32(a + 0xBBC);

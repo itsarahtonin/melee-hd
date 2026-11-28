@@ -53,16 +53,16 @@ pub fn start_point(game: &Game, i: i32) -> crate::vec::Vec3 {
 /// players carry their destination on it too.
 #[doc(alias = "grLib_801C9E60")]
 pub fn item_wind(game: &Game, v: &mut crate::vec::Vec3) -> bool {
-    match super::GrKind::from_id(game.stage_info.grkind) {
-        Some(super::GrKind::RCruise) => {
+    match game.stage_info.grkind {
+        super::GrKind::RCruise => {
             *v = super::rainbow_cruise::wind(game);
             return true;
         }
-        Some(super::GrKind::BigBlue) => {
+        super::GrKind::BigBlue => {
             *v = super::big_blue::wind(game);
             return true;
         }
-        Some(super::GrKind::Icemt) => {
+        super::GrKind::Icemt => {
             *v = super::icicle_mountain::wind(game);
             return true;
         }

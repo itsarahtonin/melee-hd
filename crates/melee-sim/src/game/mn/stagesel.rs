@@ -8,6 +8,7 @@
 // arrays of the same length alongside.
 #![allow(clippy::needless_range_loop)]
 
+use crate::game::mirror::Narrow;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::gm::title::ModelDesc;
@@ -905,7 +906,7 @@ impl Running<'_> {
         let (forced, no_lras) = (sss.force_stage_id, sss.no_lras);
         if forced >= 0 {
             self.game.stagesel.picked = 2;
-            self.sss_data_mut().vs.start.rules.stkind = forced as u8 as u16;
+            self.sss_data_mut().vs.start.rules.stkind = Narrow::from_raw(forced as u8 as u16);
             self.game.end_scene();
             return;
         }
@@ -961,7 +962,8 @@ impl Running<'_> {
         }
         if self.game.stagesel.picked == 2 {
             let h = usize::from(self.game.stagesel.hovered);
-            self.sss_data_mut().vs.start.rules.stkind = u16::from(STAGES[h].stkind);
+            self.sss_data_mut().vs.start.rules.stkind =
+                Narrow::from_raw(u16::from(STAGES[h].stkind));
             self.game.end_scene();
         }
     }
@@ -976,7 +978,7 @@ impl Running<'_> {
         let start = self.game.stagesel.picked == 2;
         self.sss_data_mut().start_game = u8::from(start);
         if start {
-            let stkind = i32::from(self.sss_data().vs.start.rules.stkind);
+            let stkind = i32::from(self.sss_data().vs.start.rules.stkind.raw());
             self.dvd_mut().cache.scene.game_cache.stkind = stkind;
             self.preload_refresh();
         }

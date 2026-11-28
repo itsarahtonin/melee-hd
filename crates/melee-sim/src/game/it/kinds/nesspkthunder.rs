@@ -141,7 +141,7 @@ pub fn owner(r: &Running, gobj: GObjId) -> Option<GObjId> {
 #[doc(alias = "it_802AB58C")]
 pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::NessPKThunder.id(),
+        kind: ItKind::NessPKThunder,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

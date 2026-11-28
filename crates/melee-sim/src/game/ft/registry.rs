@@ -16,10 +16,13 @@
 //! One type can't hold both: Fox is 1 in one and 2 in the other.
 //!
 //! A new character's port writes its module (its hooks and its `#[callbacks]` dispatch) and
-//! fills its entry here; nothing else lists characters. The state keeps the game's numbers
-//! (`Fighter::kind`, the players' character kinds), so it and the oracle are unchanged; code
-//! reads them through the enums (`fp.kind == FighterKind::Fox`, `match fp.fighter_kind() {
-//! FighterKind::Link | FighterKind::Clink => .. }`, `CharacterKind::Fox.id()`).
+//! fills its entry here; nothing else lists characters. The state holds the kinds as the enums
+//! (`Fighter::kind` a [`FighterKind`], the players' character kinds a [`CharacterKind`], in a
+//! narrower field a [`Narrow`](crate::game::mirror::Narrow) of it), each keeping any number the
+//! game stores (`Other`) and hashing as its integer, so the state's hash and the oracle are
+//! unchanged; code compares and matches them directly (`fp.kind == FighterKind::Fox`,
+//! `match fp.kind { FighterKind::Link | FighterKind::Clink => .. }`, `p.ckind.get()`) and reads
+//! a number from the game's tables with `from_raw` (`CharacterKind::Fox.id()` the other way).
 
 use super::super::code::{Entries, kind};
 use super::super::state::Running;
@@ -37,63 +40,106 @@ use super::{
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
-/// Declares a kind enum with the game's numbers: `ALL`, `COUNT`, `from_id`, `id`, and
-/// comparisons with the numbers the state holds.
+/// Declares a kind enum with the game's numbers, a [`c_enum!`](crate::c_enum) over the C
+/// enum's `int` whose `Other(raw)` keeps any number the game's list lacks (an empty slot's
+/// kind, a leftover), so a field of it keeps every bit pattern the game stores; on top, `ALL`,
+/// `COUNT`, `from_id` (a kind the list names), `id`, `index`, the order by number, and
+/// comparisons with the numbers the game's tables hold and with the kind kept in a narrower
+/// field ([`Narrow`](crate::game::mirror::Narrow)).
 macro_rules! kind_enum {
-    ($(#[$m:meta])* $name:ident: $($(#[$vm:meta])* $v:ident = $n:expr,)*) => {
-        $(#[$m])*
-        #[repr(u8)]
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-        pub enum $name {
-            $($(#[$vm])* $v = $n,)*
+    ($(#[$m:meta])* $name:ident: $($(#[$vm:meta])* $v:ident = $n:literal,)*) => {
+        $crate::c_enum! {
+            $(#[$m])*
+            pub enum $name: i32 {
+                $($(#[$vm])* $v = $n,)*
+            }
         }
 
         impl $name {
-            /// Every kind, by number.
+            /// Every kind the game's list names, by number.
             pub const ALL: [$name; [$($name::$v),*].len()] = [$($name::$v),*];
 
-            /// How many there are.
+            /// How many the game's list names.
             pub const COUNT: usize = Self::ALL.len();
 
-            /// The kind numbered `id`, if the game has one.
+            /// The kind numbered `id`, if the game's list names one.
+            #[inline]
             pub const fn from_id(id: i32) -> Option<$name> {
-                if id >= 0 && (id as usize) < Self::COUNT {
-                    Some(Self::ALL[id as usize])
-                } else {
-                    None
+                match $name::from_raw(id) {
+                    $name::Other(_) => None,
+                    k => Some(k),
                 }
             }
 
             /// Its number, as the state and the game's tables hold it.
+            #[inline]
             pub const fn id(self) -> i32 {
-                self as i32
+                self.raw()
             }
 
             /// Its number as an index into the game's tables by kind.
+            #[inline]
             pub const fn index(self) -> usize {
-                self as usize
+                self.raw() as usize
+            }
+        }
+
+        impl PartialOrd for $name {
+            #[inline]
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl Ord for $name {
+            /// By number.
+            #[inline]
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.id().cmp(&other.id())
+            }
+        }
+
+        impl<R: $crate::game::mirror::NarrowInt> PartialEq<$crate::game::mirror::Narrow<$name, R>>
+            for $name
+        {
+            #[inline]
+            fn eq(&self, k: &$crate::game::mirror::Narrow<$name, R>) -> bool {
+                *self == k.get()
+            }
+        }
+
+        impl<R: $crate::game::mirror::NarrowInt> PartialEq<$name>
+            for $crate::game::mirror::Narrow<$name, R>
+        {
+            #[inline]
+            fn eq(&self, k: &$name) -> bool {
+                self.get() == *k
             }
         }
 
         impl PartialEq<$name> for i32 {
+            #[inline]
             fn eq(&self, k: &$name) -> bool {
                 *self == k.id()
             }
         }
 
         impl PartialEq<i32> for $name {
+            #[inline]
             fn eq(&self, id: &i32) -> bool {
                 self.id() == *id
             }
         }
 
         impl PartialEq<$name> for u8 {
+            #[inline]
             fn eq(&self, k: &$name) -> bool {
                 i32::from(*self) == k.id()
             }
         }
 
         impl PartialEq<$name> for i8 {
+            #[inline]
             fn eq(&self, k: &$name) -> bool {
                 i32::from(*self) == k.id()
             }
@@ -251,7 +297,7 @@ kind_enum! {
 impl FighterKind {
     /// Its registry entry.
     pub fn character(self) -> &'static Character {
-        character(self.id())
+        character(self)
     }
 }
 
@@ -265,15 +311,15 @@ impl CharacterKind {
 
     /// Its number as a byte, as the rules and the replays hold it.
     pub const fn byte(self) -> u8 {
-        self as u8
+        self.raw() as u8
     }
 }
 
 impl super::super::structs::Fighter {
-    /// The fighter's kind (`kind`), which the game only ever sets to one of its own.
+    /// The fighter's kind (`kind`).
+    #[inline]
     pub fn fighter_kind(&self) -> FighterKind {
-        FighterKind::from_id(self.kind)
-            .unwrap_or_else(|| panic!("Fighter::kind {} is no fighter kind", self.kind))
+        self.kind
     }
 }
 
@@ -363,10 +409,13 @@ impl Character {
 }
 
 /// The character of fighter kind `kind`; stops if there's none.
-pub fn character(kind: i32) -> &'static Character {
-    match FighterKind::from_id(kind).and_then(|k| CHARACTERS[k.index()].as_ref()) {
+pub fn character(kind: FighterKind) -> &'static Character {
+    match CHARACTERS.get(kind.index()).and_then(Option::as_ref) {
         Some(c) => c,
-        None => unimplemented!("fighter kind {kind} isn't ported"),
+        None => {
+            let kind = kind.id();
+            unimplemented!("fighter kind {kind} isn't ported")
+        }
     }
 }
 

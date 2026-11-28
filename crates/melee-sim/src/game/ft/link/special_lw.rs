@@ -61,7 +61,7 @@ impl Running<'_> {
                 .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x10)),
         );
         let facing = self.game.fighters[f.0].facing_dir;
-        let bomb = linkbomb::spawn(self, gobj, pos, hand, kind, facing);
+        let bomb = linkbomb::spawn(self, gobj, pos, hand, ItKind::from_raw(kind), facing);
         self.game.fighters[f.0].item_gobj = bomb;
         self.game.set_part_vis(gobj, 2, 1);
         if bomb.is_some() {

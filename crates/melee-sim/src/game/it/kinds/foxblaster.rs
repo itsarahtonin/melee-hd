@@ -125,7 +125,7 @@ pub fn clear_from_owner(game: &mut Game, owner: GObjId) {
 
 /// Plays the Fox or Falco version of a sound (`itFoxBlaster_PlaySFX`).
 pub fn play_kind_sfx(r: &mut Running, gobj: GObjId, fox: i32, falco: i32) {
-    match ItKind::of(item(r.game, gobj).kind) {
+    match item(r.game, gobj).kind {
         ItKind::FoxBlaster | ItKind::KirbyFoxBlaster => play_sfx(r, gobj, fox, 0x7F, 0x40),
         ItKind::FalcoBlaster | ItKind::KirbyFalcoBlaster => play_sfx(r, gobj, falco, 0x7F, 0x40),
         _ => {}
@@ -175,7 +175,7 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
     let pos = r.game.ft_pos(o);
     // The muzzle and grip, and the flash: Fox's and Falco's own, or Kirby's copies'
     // (`ftKb_SpecialNFx_800FDC00`, `ftKb_SpecialNFx_800FDC70`).
-    let kirby = match ItKind::of(kind) {
+    let kirby = match kind {
         ItKind::FoxBlaster | ItKind::FalcoBlaster => false,
         ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => true,
         _ => return shift_history(r, gobj),
@@ -382,7 +382,7 @@ pub fn spawn(
     fighter: Option<GObjId>,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     let fighter = fighter?;
     let mut spawn = SpawnItem {
@@ -415,7 +415,7 @@ pub fn spawn(
 /// A blaster in a posing fighter's hand, `it_802AE994`: made at the fighter's place and
 /// facing, its variables cleared, its script's variables 1, held at `part`.
 #[doc(alias = "it_802AE994")]
-pub fn spawn_demo(r: &mut Running, fighter: GObjId, part: i32, kind: i32) -> Option<GObjId> {
+pub fn spawn_demo(r: &mut Running, fighter: GObjId, part: i32, kind: ItKind) -> Option<GObjId> {
     let fp = r.game.fighter_mut(fighter);
     let (pos, facing_dir) = (fp.cur_pos, fp.facing_dir);
     let mut spawn = SpawnItem {
@@ -469,7 +469,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
         change_state(r, gobj, 0xA, flags);
     } else {
         let owner = item_mut(r.game, gobj).vars.fox_blaster().owner.get();
-        let action = match ItKind::of(item(r.game, gobj).kind) {
+        let action = match item(r.game, gobj).kind {
             ItKind::FoxBlaster | ItKind::FalcoBlaster => blaster_action(r.game, owner),
             ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => r.kb_fx_blaster_action(owner),
             _ => 9,
@@ -486,7 +486,7 @@ pub fn release(r: &mut Running, gobj: GObjId) {
     let owner = ip.owner;
     let vowner = ip.vars.fox_blaster().owner.get();
     if owner == vowner {
-        match ItKind::of(item(r.game, gobj).kind) {
+        match item(r.game, gobj).kind {
             ItKind::FoxBlaster | ItKind::FalcoBlaster => {
                 if let Some(o) = vowner {
                     clear_from_owner(r.game, o);
@@ -510,7 +510,7 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
     let kind = item(r.game, gobj).kind;
     if !matches!(msid, 2 | 5..=8) {
         let owner = item_mut(r.game, gobj).vars.fox_blaster().owner.get();
-        let action = match ItKind::of(kind) {
+        let action = match kind {
             ItKind::FoxBlaster | ItKind::FalcoBlaster => blaster_action(r.game, owner),
             ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => r.kb_fx_blaster_action(owner),
             _ => 9,
@@ -525,7 +525,7 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
         clear(r, gobj);
         return false;
     };
-    let (action, removed) = match ItKind::of(kind) {
+    let (action, removed) = match kind {
         ItKind::FoxBlaster | ItKind::FalcoBlaster => {
             (blaster_action(r.game, owner), blaster_removed(r.game, o))
         }
@@ -537,7 +537,7 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
     if action == 9 || removed {
         clear(r, gobj);
     } else {
-        let not_needed = match ItKind::of(kind) {
+        let not_needed = match kind {
             ItKind::FoxBlaster | ItKind::FalcoBlaster => blaster_not_needed(r.game, owner),
             ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => {
                 r.kb_fx_blaster_not_needed(owner)

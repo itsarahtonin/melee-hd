@@ -281,10 +281,7 @@ fn run_yoshi(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         let ok = if a < EGG_START {
             ip.state_table.map(|s| s.0) == Some(0x803F_9480)
         } else {
-            matches!(
-                ItKind::of(ip.kind),
-                ItKind::YoshiEggLay | ItKind::KirbyYoshiEggLay
-            )
+            matches!(ip.kind, ItKind::YoshiEggLay | ItKind::KirbyYoshiEggLay)
         };
         if !ok {
             panic!("{SKIP}{name} takes an item on his tongue or its egg");

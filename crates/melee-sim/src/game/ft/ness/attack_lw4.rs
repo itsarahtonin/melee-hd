@@ -1,10 +1,10 @@
 //! The yo-yo's down smash (`ftnessattacklw4.c`): the up smash's yo-yo, swung along the ground
 //! on both sides ([`super::attack_hi4`] has the shared helpers).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -46,7 +46,7 @@ impl Running<'_> {
     /// the air the yo-yo goes.
     fn ness_attack_lw4_coll(&mut self, gobj: GObjId) {
         self.ground_coll(gobj);
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.ness_yoyo_item_despawn(gobj);
         }
     }

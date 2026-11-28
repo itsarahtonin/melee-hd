@@ -13,6 +13,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
@@ -21,7 +22,6 @@ use super::super::super::state::Running;
 use super::{addr, ms, part};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 
 /// The flags each phase keeps going between the ground and the air (both moves').
 const START_FLAGS: u32 = 0x0C4C_5284;
@@ -427,7 +427,7 @@ impl Running<'_> {
     fn missile_launch_tick(&mut self, gobj: GObjId, m: &Missile, grounded: bool) {
         let f = self.game.fighter_id(gobj);
         if !self.missile_misfires(gobj, m)
-            && self.game.fighters[f.0].hitboxes[0].state == hitcapsule::ENABLED
+            && self.game.fighters[f.0].hitboxes[0].state == HitCapsuleState::Enabled
         {
             let charge = fp::frsp(f64::from(self.game.fighters[f.0].mv_i32(mv::CHARGE)));
             let slope = reg(self.missile_attr(f, m, at::DAMAGE_SLOPE));

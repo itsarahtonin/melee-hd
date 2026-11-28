@@ -94,7 +94,7 @@ pub fn lay(
     let parent = parent?;
     let owner = item(r.game, parent).owner;
     let mut spawn = SpawnItem {
-        kind: ItKind::Egg.id(),
+        kind: ItKind::Egg,
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, true)`.

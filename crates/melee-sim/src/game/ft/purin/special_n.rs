@@ -13,19 +13,19 @@
 
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::state::Running;
 use super::super::super::structs::{Vec2, ftCollisionBox};
-use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::sound::Track;
 use super::{PART_TOP_N, PART_Y_ROT_N, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::hitcapsule;
 use crate::math;
 use crate::vec::Vec3;
 
@@ -246,7 +246,7 @@ impl Running<'_> {
 
     /// The roll's sound at each turn of the roll (`playRollSFX`).
     fn ro_roll_sfx(&mut self, f: FighterId) {
-        let id = if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        let id = if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             250_067
         } else {
             250_064
@@ -279,7 +279,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::N_HIT_TOGGLE).wrapping_add(1);
         fp.set_mv_i32(mv::N_HIT_TOGGLE, n);
-        if n >= every && fp.hitboxes[0].state != hitcapsule::DISABLED {
+        if n >= every && fp.hitboxes[0].state != HitCapsuleState::Disabled {
             fp.hitboxes[0].group = fp.hitboxes[0].group.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::N_HIT_TOGGLE, 0);
         }
@@ -329,7 +329,7 @@ impl Running<'_> {
         fp.death2_cb = Some(CodeRef(r.on_death));
         fp.take_dmg_cb = Some(CodeRef(r.on_damage));
         fp.deal_dmg_cb = None;
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             fp.self_vel.x = mem(fp::fmuls(reg(fp.gr_vel), vx));
             self.go_airborne(f);
         } else {
@@ -366,7 +366,7 @@ impl Running<'_> {
             self.ro_f(f, r, attr::N_DAMAGE_MUL),
         );
         let speed = |fp: &super::super::super::structs::Fighter| {
-            let v = if fp.ground_or_air == GA_AIR {
+            let v = if fp.ground_or_air == GroundOrAir::Air {
                 reg(fp.self_vel.x)
             } else {
                 reg(fp.gr_vel)
@@ -376,13 +376,13 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let state = fp.hitboxes[0].state;
         if speed(fp) < min {
-            fp.hitboxes[0].state = hitcapsule::DISABLED;
+            fp.hitboxes[0].state = HitCapsuleState::Disabled;
             crate::lb::colanim::clear(&mut fp.secondary_overlay);
-        } else if state == hitcapsule::DISABLED {
-            fp.hitboxes[0].state = hitcapsule::ENABLED;
+        } else if state == HitCapsuleState::Disabled {
+            fp.hitboxes[0].state = HitCapsuleState::Enabled;
         }
         let fp = &self.game.fighters[f.0];
-        if fp.hitboxes[0].state != hitcapsule::DISABLED {
+        if fp.hitboxes[0].state != HitCapsuleState::Disabled {
             let damage = fp::fctiwz(fp::fmuls(mul, fp::fadds(base, speed(fp)))).max(1);
             self.hitbox_damage(f, 0, false, damage as u32);
         }

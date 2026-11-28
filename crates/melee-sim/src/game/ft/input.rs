@@ -5,6 +5,7 @@
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::ft::types::SmashState;
 use gekko_fp as fp;
 
 use super::super::code::run_fighter_cb;
@@ -413,14 +414,14 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let a = fp.input.held_buttons[0] & PAD_A != 0;
         match fp.smash_attrs.state {
-            1 if a => {
+            SmashState::PreCharge if a => {
                 // The model shakes through `Fighter_SmashChargeShakeTable`'s rows.
                 let rate = fp.frame_speed_mul;
                 let table = self.load_common(0x2C);
                 let rows = self.data.u32(table.at(4)) as u8;
                 let fp = self.game.fighter_mut(gobj);
                 let s = &mut fp.smash_attrs;
-                s.state = 2;
+                s.state = SmashState::Charging;
                 s.frame_speed_mul = rate;
                 s.shake_row = 0;
                 s.shake_rows = rows;
@@ -433,9 +434,9 @@ impl Running<'_> {
                 let f = self.game.fighter_id(gobj);
                 self.start_rumble(f, 0x24, 0);
             }
-            1 => fp.smash_attrs.state = 0,
-            2 if !a => {
-                fp.smash_attrs.state = 3;
+            SmashState::PreCharge => fp.smash_attrs.state = SmashState::None,
+            SmashState::Charging if !a => {
+                fp.smash_attrs.state = SmashState::Release;
                 let (rate, color) = (fp.smash_attrs.frame_speed_mul, fp.smash_attrs.color_anim);
                 self.set_anim_rate(gobj, rate);
                 self.end_color_anim(gobj, color);

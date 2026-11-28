@@ -10,6 +10,8 @@
 //! the modes' loops to the next scene (`gm::machine`). A session taken up from a state (an
 //! imported trace tick, [`Session::resume`]) plays on with [`Session::step_tick`].
 
+use crate::game::gr::GrKind;
+use crate::game::mirror::Narrow;
 use melee_data::archive::{Archive, Archives};
 
 use super::gm::scene;
@@ -920,10 +922,10 @@ impl Session {
         super::vs_match::load_results_files(&mut self.game, &mut self.data, start, &mut |n| {
             console.file(n)
         });
-        let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
+        let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind.raw())) as i32;
         let mut names: Vec<&str> = Vec::new();
         let us = self.game.game_data.saved_language() == super::gm::main_lib::LANG_US;
-        if let Some(name) = super::gr::registry::stage(grkind).file(us) {
+        if let Some(name) = super::gr::registry::stage(GrKind::from_raw(grkind)).file(us) {
             names.push(name.trim_start_matches('/'));
         }
         if grkind == super::gr::GrKind::PStadium {
@@ -964,8 +966,8 @@ impl Session {
             let mut joining = start.clone();
             for p in joining.players.iter_mut().take(4).skip(1) {
                 // The 33 character kinds; past them a slot names no one.
-                if (0..0x21).contains(&p.ckind) {
-                    p.slot_type = 1;
+                if (0..0x21).contains(&p.ckind.raw()) {
+                    p.slot_type = PlayerKind::Cpu.into();
                 }
             }
             super::vs_match::load_fighter_files(
@@ -983,7 +985,7 @@ impl Session {
             let mut kinds: Vec<i32> = Vec::new();
             for &c in &self.game.gm.opponents.kinds {
                 if (0..0x21).contains(&c) {
-                    let m = super::pl::player::mapping(i32::from(c));
+                    let m = super::pl::player::mapping(CharacterKind::from_raw(i32::from(c)));
                     for k in [m.internal_id, m.extra_internal_id] {
                         if k >= 0 && !kinds.contains(&i32::from(k)) {
                             kinds.push(i32::from(k));
@@ -1021,7 +1023,7 @@ impl Session {
             ))
         {
             let kinds: Vec<i32> =
-                super::gm::adventure::match_start_kinds(&self.game, start.rules.stkind)
+                super::gm::adventure::match_start_kinds(&self.game, start.rules.stkind.raw())
                     .iter()
                     .filter(|&&k| k != CharacterKind::NONE as i8)
                     .map(|&k| i32::from(k))
@@ -1042,7 +1044,8 @@ impl Session {
                     .iter()
                     .filter(|p| p.slot_type != PlayerKind::None)
                     .map(|p| {
-                        let m = super::pl::player::mapping(i32::from(p.ckind));
+                        let m =
+                            super::pl::player::mapping(CharacterKind::from_raw(p.ckind.get().id()));
                         (i32::from(m.internal_id), i32::from(m.extra_internal_id))
                     })
                     .collect();
@@ -1067,11 +1070,11 @@ impl Session {
                 == Some(GameScene::Vs);
         if multi_man {
             let mut joining = start.clone();
-            for (i, ck) in [(1, 0x1B), (2, 0x1C)] {
+            for (i, ck) in [(1, CharacterKind::Boy), (2, CharacterKind::Girl)] {
                 let p = &mut joining.players[i];
-                p.ckind = ck;
+                p.ckind = ck.into();
                 p.color = 0;
-                p.slot_type = 1;
+                p.slot_type = PlayerKind::Cpu.into();
             }
             super::vs_match::load_fighter_files(
                 &mut self.game,
@@ -1111,15 +1114,14 @@ impl Session {
                         .filter(|&i| joining.players[i].slot_type == PlayerKind::None)
                         .collect();
                     for (&i, &(ck, c)) in free.iter().zip(&set) {
-                        let t = super::ft::data::kind_tables(super::pl::player::ckind_ftkind(
-                            i32::from(ck),
-                            0,
+                        let t = super::ft::data::kind_tables(FighterKind::from_raw(
+                            super::pl::player::ckind_ftkind(i32::from(ck), 0),
                         ));
                         let p = &mut joining.players[i];
 
-                        p.ckind = ck;
+                        p.ckind = Narrow::from_raw(ck);
                         p.color = if c < t.costume_count { c } else { 0 };
-                        p.slot_type = 1;
+                        p.slot_type = PlayerKind::Cpu.into();
                     }
                     super::vs_match::load_fighter_files(
                         &mut self.game,
@@ -1130,14 +1132,16 @@ impl Session {
                 }
             }
         }
-        if training && let Some(name) = super::gr::registry::stage(grkind).file(us) {
+        if training
+            && let Some(name) = super::gr::registry::stage(GrKind::from_raw(grkind)).file(us)
+        {
             let archive = self
                 .game
                 .ft
                 .data
                 .files
                 .archive(name.trim_start_matches('/'));
-            let stkind = i32::from(start.rules.stkind);
+            let stkind = i32::from(start.rules.stkind.raw());
             for bgm in super::gr::setup::stage_songs(&self.data, archive, stkind) {
                 let path = format!("audio/{}", crate::lb::audio::HPS_NAMES[bgm as usize]);
                 let file = console.file(&path);

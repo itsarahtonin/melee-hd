@@ -75,8 +75,8 @@ pub struct KindTables {
 pub const MAIN_MEMORY: u32 = 0x8000_0000;
 
 /// A fighter kind's tables.
-pub fn kind_tables(kind: i32) -> &'static KindTables {
-    &KINDS[usize::try_from(kind).expect("a negative fighter kind")]
+pub fn kind_tables(kind: FighterKind) -> &'static KindTables {
+    &KINDS[usize::try_from(kind.id()).expect("a negative fighter kind")]
 }
 
 /// A costume's loaded model (`UnkCostumeStruct`): its joint and material animation, which
@@ -312,7 +312,7 @@ impl Game {
         if self.ft.data.data_list[k].is_some() {
             return None;
         }
-        let t = kind_tables(kind);
+        let t = kind_tables(FighterKind::from_raw(kind));
         let file = t.dat_file.expect("a fighter kind without a data file");
         let archive = self.ft.data.files.archive(file);
         let symbol = t.data_symbol.expect("a fighter kind without data");
@@ -326,10 +326,10 @@ impl Game {
     pub fn load_costume(
         &mut self,
         data: &Archives,
-        kind: i32,
+        kind: FighterKind,
         costume: i32,
     ) -> Option<std::borrow::Cow<'static, str>> {
-        let (k, c) = (kind as usize, costume as usize);
+        let (k, c) = (kind.raw() as usize, costume as usize);
         if self.ft.data.costumes[k][c].joint.is_some() {
             return None;
         }
@@ -375,8 +375,8 @@ impl Running<'_> {
 
     /// A kind's animation file put in ARAM unless it's there (`ftData_80085A14`, as
     /// `ftData_80085B10` and `ftLib_LoadFighterAllCostumes` call it).
-    pub fn put_anim_file(&mut self, kind: i32) {
-        if let Some((name, mut aram)) = self.game.load_anim_file(kind) {
+    pub fn put_anim_file(&mut self, kind: FighterKind) {
+        if let Some((name, mut aram)) = self.game.load_anim_file(kind.id()) {
             // `lbFile_800168A0`: a file the preload cache doesn't hold (a match whose mode
             // state preloads nothing, as the challenger approach's) goes into a block of the
             // ARAM heap (`lbHeap_80015BD0(1, ...)`), best fit, where the console puts it.
@@ -393,7 +393,7 @@ impl Running<'_> {
                     )
                     .expect("the ARAM heap");
                 aram = d.memory.entries[usize::from(e)].addr;
-                self.game.ft.anim_files[kind as usize]
+                self.game.ft.anim_files[kind.raw() as usize]
                     .as_mut()
                     .expect("the animation file just put")
                     .aram = aram;
@@ -401,13 +401,13 @@ impl Running<'_> {
             let at = self.disc_load(name, aram);
             // Taken from the preload cache: where its ARAM heap's block put it.
             if self.game.ft.data.files.from_cache && at != 0 {
-                let k = kind as usize;
+                let k = kind.raw() as usize;
                 self.game.ft.anim_files[k]
                     .as_mut()
                     .expect("the animation file just loaded")
                     .aram = at;
             }
-            self.image_anim_addresses(kind);
+            self.image_anim_addresses(kind.id());
         }
     }
 
@@ -432,7 +432,7 @@ impl Running<'_> {
         };
         let data = self.data;
         crate::hsd::heap::with(|h| {
-            for i in 0..kind_tables(kind).anim_count {
+            for i in 0..kind_tables(FighterKind::from_raw(kind)).anim_count {
                 let e = table.at(0x18 * i);
                 if data.u32(e.at(8)) != 0 {
                     h.image
@@ -603,7 +603,7 @@ impl Game {
         if self.ft.anim_files[k].is_some() {
             return None;
         }
-        let name = kind_tables(kind)
+        let name = kind_tables(FighterKind::from_raw(kind))
             .anim_file
             .expect("a fighter kind without animations");
         let file = self.ft.data.files.anim_file(name).clone();

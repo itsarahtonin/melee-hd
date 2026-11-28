@@ -6,6 +6,9 @@
 //! [`code::call`](super::code::call) and the scheduler's process table; until those ports fill
 //! their arms in, a match stops at the first unported function it reaches, saying which.
 
+use crate::game::gr::GrKind;
+use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
 use melee_data::archive::{Archive, ArchiveId, Archives};
 
 use super::gm::{scene, vs, vs_mode};
@@ -23,7 +26,6 @@ use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
 use crate::game::it::ItKind;
-use crate::game::pl::player::PlayerKind;
 use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
 
@@ -200,19 +202,19 @@ impl Settings {
     ) -> Settings {
         assert!(players.len() <= 4, "a VS match has up to four players");
         let mut vs = vs_mode::start_defaults();
-        vs.rules.stkind = stage;
+        vs.rules.stkind = Narrow::from_raw(stage);
         // What the character select leaves in the four ports' blocks as it sets up its coins
         // and doors on its first entry: a port with no character on the screen takes `0x1A`
         // (`CharacterKind::PLAYABLE`), and every port's computer level is at least 1 (docs/oracle.md,
         // the shortcut's check against the menus' match).
         for d in &mut vs.players[..4] {
-            d.ckind = 0x1A;
+            d.ckind = CharacterKind::MasterHand.into();
             d.cpu_level = d.cpu_level.max(1);
         }
         for p in players {
             let d = &mut vs.players[usize::from(p.port)];
-            d.ckind = p.character as i8;
-            d.slot_type = p.kind;
+            d.ckind = Narrow::from_raw(p.character as i8);
+            d.slot_type = Narrow::from_raw(p.kind);
             d.color = p.costume;
             d.team = p.team;
             d.cpu_level = p.cpu_level.max(1);
@@ -401,7 +403,7 @@ impl Settings {
 /// Recordings tab marks such a replay unplayable by the same rule, from its game start.
 pub fn retail_kinds(start: &StartMeleeData) -> Result<(), CodeError> {
     for (slot, p) in start.players.iter().enumerate() {
-        let kind = p.ckind as u8;
+        let kind = p.ckind.raw() as u8;
         if kind > CharacterKind::NONE
             || (kind == CharacterKind::NONE && p.slot_type != PlayerKind::None)
         {
@@ -412,8 +414,10 @@ pub fn retail_kinds(start: &StartMeleeData) -> Result<(), CodeError> {
         }
     }
     let stage = start.rules.stkind;
-    if usize::from(stage) >= crate::lb::audio::STAGE_KINDS {
-        return Err(CodeError::ModdedStage { kind: stage });
+    if usize::from(stage.raw()) >= crate::lb::audio::STAGE_KINDS {
+        return Err(CodeError::ModdedStage {
+            kind: (stage).raw(),
+        });
     }
     Ok(())
 }
@@ -585,8 +589,9 @@ impl Match {
             it_co: data.add(archive("ItCo.usd")),
             // `Stage_802251E8`'s stage archive.
             stage: {
-                let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind));
-                super::gr::registry::stage(grkind as i32)
+                let grkind =
+                    crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind.raw()));
+                super::gr::registry::stage(GrKind::from_raw(grkind as i32))
                     .data
                     .file
                     .map(|name| data.add(archive(name)))
@@ -594,9 +599,9 @@ impl Match {
         };
         // Pokémon Stadium's transformation files, which it loads during the match: disc data
         // the frontend loads with the match's archives, as the fighters' files are.
-        let stadium_files: Vec<(&str, ArchiveId)> = if super::gr::registry::stage(
-            crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind)) as i32,
-        )
+        let stadium_files: Vec<(&str, ArchiveId)> = if super::gr::registry::stage(GrKind::from_raw(
+            crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind.raw())) as i32,
+        ))
         .kind
             == super::gr::GrKind::PStadium
         {
@@ -654,9 +659,11 @@ impl Match {
         .into_iter()
         .map(|(n, id)| (n.to_owned(), id))
         .collect();
-        let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind));
+        let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind.raw()));
         if let (Some(name), Some(id)) = (
-            super::gr::registry::stage(grkind as i32).data.file,
+            super::gr::registry::stage(GrKind::from_raw(grkind as i32))
+                .data
+                .file,
             files.stage,
         ) {
             // The stage table's paths start at the disc's root.
@@ -962,8 +969,8 @@ pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, 
             out.push(name.to_owned());
         }
     };
-    let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
-    if let Some(name) = super::gr::registry::stage(grkind).file(saved_us) {
+    let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind.raw())) as i32;
+    if let Some(name) = super::gr::registry::stage(GrKind::from_raw(grkind)).file(saved_us) {
         add(name);
     }
     // `grIzumi_801CD2D4` and `grStadium_801D511C`.
@@ -976,12 +983,12 @@ pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, 
         if p.slot_type == PlayerKind::None {
             continue;
         }
-        let m = super::pl::player::mapping(i32::from(p.ckind));
+        let m = super::pl::player::mapping(CharacterKind::from_raw(p.ckind.get().id()));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 {
                 continue;
             }
-            let t = kind_tables(i32::from(kind));
+            let t = kind_tables(FighterKind::from_raw(i32::from(kind)));
             if let Some(name) = t.dat_file {
                 add(name);
             }
@@ -1039,12 +1046,12 @@ pub fn load_fighter_files(
         if p.slot_type == PlayerKind::None {
             continue;
         }
-        let m = super::pl::player::mapping(i32::from(p.ckind));
+        let m = super::pl::player::mapping(CharacterKind::from_raw(p.ckind.get().id()));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 {
                 continue;
             }
-            let t = kind_tables(i32::from(kind));
+            let t = kind_tables(FighterKind::from_raw(i32::from(kind)));
             add(
                 files,
                 data,
@@ -1073,7 +1080,9 @@ pub fn load_fighter_files(
     let kirby_costumes: Vec<usize> = start
         .players
         .iter()
-        .filter(|p| p.slot_type != PlayerKind::None && i32::from(p.ckind) == CharacterKind::Kirby)
+        .filter(|p| {
+            p.slot_type != PlayerKind::None && i32::from(p.ckind.raw()) == CharacterKind::Kirby
+        })
         .map(|p| usize::from(p.color))
         .collect();
     if !kirby_costumes.is_empty() {
@@ -1082,7 +1091,7 @@ pub fn load_fighter_files(
             if p.slot_type == PlayerKind::None {
                 continue;
             }
-            let m = super::pl::player::mapping(i32::from(p.ckind));
+            let m = super::pl::player::mapping(CharacterKind::from_raw(p.ckind.get().id()));
             for kind in [m.internal_id, m.extra_internal_id] {
                 if kind < 0 || i32::from(kind) == FighterKind::Kirby {
                     continue;
@@ -1186,12 +1195,12 @@ pub fn load_joiner_files(
         if !(0..NONE).contains(&ckind) {
             continue;
         }
-        let m = super::pl::player::mapping(i32::from(ckind));
+        let m = super::pl::player::mapping(CharacterKind::from_raw(i32::from(ckind)));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 {
                 continue;
             }
-            let t = kind_tables(i32::from(kind));
+            let t = kind_tables(FighterKind::from_raw(i32::from(kind)));
             let c = usize::try_from(color).unwrap_or(0);
             let c = if c >= usize::from(t.costume_count) {
                 0
@@ -1239,7 +1248,7 @@ pub fn load_kind_files(
     use super::ft::data::kind_tables;
     let mut names: Vec<(std::borrow::Cow<'static, str>, bool)> = Vec::new();
     for &kind in kinds {
-        let t = kind_tables(kind);
+        let t = kind_tables(FighterKind::from_raw(kind));
         names.push((
             std::borrow::Cow::Borrowed(t.dat_file.expect("a fighter kind without a data file")),
             false,
@@ -1391,7 +1400,7 @@ pub fn load_results_files(
         if p.slot_type == PlayerKind::None {
             continue;
         }
-        let ck = i32::from(p.ckind);
+        let ck = i32::from(p.ckind.raw());
         let cks: &[i32] = if ck == CharacterKind::Zelda || ck == CharacterKind::Seak {
             &[0x12, 0x13]
         } else {
@@ -1402,7 +1411,7 @@ pub fn load_results_files(
                 continue;
             };
             let results = add(files, data, name);
-            let m = super::pl::player::mapping(ck);
+            let m = super::pl::player::mapping(CharacterKind::from_raw(ck));
             for kind in [m.internal_id, m.extra_internal_id] {
                 if kind < 0 {
                     continue;
@@ -1414,7 +1423,7 @@ pub fn load_results_files(
                 let Some(base) = data.get(results).public(&sym) else {
                     continue;
                 };
-                let t = kind_tables(kind);
+                let t = kind_tables(FighterKind::from_raw(kind));
                 let dat = files.archive(t.dat_file.expect("a fighter kind without a data file"));
                 let ft_data = super::ft::data::public(
                     data,
@@ -1451,7 +1460,7 @@ pub fn load_results_files(
 
 #[cfg(test)]
 mod tests {
-    use super::{CharacterKind, CodeError, Player, Settings};
+    use super::{CharacterKind, CodeError, Player, PlayerKind, Settings};
 
     fn player(character: u8, port: u8) -> Player {
         Player {
@@ -1517,7 +1526,7 @@ mod tests {
             let want = on.then(crate::hsd::heap::Layout::slippi_playback);
             assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, want);
             // A computer Samus too.
-            start.players[1].slot_type = 1;
+            start.players[1].slot_type = PlayerKind::Cpu.into();
             let (r, _) = crate::game::record::live_start(&g, &start);
             assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, want);
         }

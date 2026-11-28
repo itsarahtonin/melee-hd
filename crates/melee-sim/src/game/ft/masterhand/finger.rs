@@ -114,7 +114,7 @@ impl Running<'_> {
             let j = self.hand_part_joint(gobj, part);
             let v = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
             let facing = self.game.fighters[f.0].facing_dir;
-            let l = masterhandlaser::spawn(self, gobj, v, v, part, kind, facing);
+            let l = masterhandlaser::spawn(self, gobj, v, v, part, ItKind::from_raw(kind), facing);
             self.game.fighters[f.0].mv.set_gobj_at(off, l);
         }
         for (off, id) in h.hums.into_iter().zip(SFX_BEAM) {
@@ -299,7 +299,7 @@ impl Running<'_> {
             gobj,
             pos,
             from,
-            ItKind::MasterHandBullet.id(),
+            ItKind::MasterHandBullet,
             fast,
             facing,
             sx,

@@ -55,7 +55,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     let parent = parent?;
     let mut spawn = SpawnItem {
-        kind: ItKind::GameAndWatchTrampoline.id(),
+        kind: ItKind::GameAndWatchTrampoline,
         ..Default::default()
     };
     gamewatch::spawn_position(&mut spawn, pos, true);

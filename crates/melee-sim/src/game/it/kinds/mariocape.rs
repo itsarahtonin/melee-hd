@@ -5,6 +5,7 @@ use super::super::effect::queue;
 use super::super::item::{animate, change, change_state, debug_owner_bubbles, destroy, spawn_air};
 use super::super::{item, item_mut, lib2725};
 use crate::game::ef::SpawnKind;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -44,7 +45,7 @@ pub fn spawn(
     facing_dir: f32,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind,

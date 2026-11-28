@@ -12,10 +12,11 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{change, change_state, play_sfx};
-use super::super::zako::{self, GA_AIR, GA_GROUND, Knock, QUAKE_SMALL};
+use super::super::zako::{self, Knock, QUAKE_SMALL};
 use super::super::{ground, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::camera;
@@ -397,7 +398,9 @@ pub fn unshell(r: &mut Running, gobj: GObjId) {
 /// over its spawner slot; the Koopa goes.
 #[doc(alias = "itNokonoko_UnkMotion5_Anim")]
 pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) && item(r.game, gobj).ground_or_air == GA_GROUND {
+    if !lib2725::is_animating(r.game, gobj)
+        && item(r.game, gobj).ground_or_air == GroundOrAir::Ground
+    {
         let j = jobj_of(r.game, gobj).expect("a Koopa Troopa without a model");
         let rot_y = r.game.objs.jobjs[j].rotate.y;
         let deg = fp::fmuls(57.295_78, reg(rot_y));
@@ -424,7 +427,7 @@ pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
 /// it stops on the ground; on the ground it stays on it or leaves it.
 #[doc(alias = "itNokonoko_UnkMotion5_Coll")]
 pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         if ground::air_touches_walls(r, gobj) & 1 != 0 {
             maplib::enter_ground(item_mut(r.game, gobj));
             zako::stop(r.game, gobj);
@@ -531,7 +534,7 @@ pub fn spawn(
     vel: Option<Vec3>,
     facing: i32,
 ) -> Option<GObjId> {
-    let gobj = zako::spawn(r, ItKind::KoopaTroopa.id(), Some(pos), None, vel, true)?;
+    let gobj = zako::spawn(r, ItKind::KoopaTroopa, Some(pos), None, vel, true)?;
     let j = jobj_of(r.game, gobj).expect("a Koopa Troopa without a model");
     let f = mem(fp::frsp(f64::from(facing)));
     item_mut(r.game, gobj).facing_dir = f;

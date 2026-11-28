@@ -8,11 +8,13 @@ use super::*;
 use crate::game::ft::counted::{ItemDynamicBones, ItemHurtboxes};
 use crate::game::handles::*;
 use crate::game::held::Kept;
+use crate::game::it::ItKind;
+use crate::game::it::item::HoldKind;
 use crate::game::it::{IgnoreId, ItemVars};
 use crate::game::structs::*;
 use crate::hsd::gobj::GObjId;
 use crate::lb::colanim::ColorOverlay;
-use crate::mp::coll::CollData;
+use crate::mp::coll::{CollData, GroundOrAir};
 use crate::vec::Vec3;
 
 /// The decomp's `Item`.
@@ -40,9 +42,9 @@ pub struct Item {
     #[at(0xC)]
     pub spawn_kind: i32,
     #[at(0x10)]
-    pub kind: i32,
+    pub kind: ItKind,
     #[at(0x14)]
-    pub hold_kind: i32,
+    pub hold_kind: HoldKind,
     /// The spawn's `x10`; 1 counts the item among the training mode's (`Item_802676F4`).
     #[at(0x18)]
     #[doc(alias("x18"))]
@@ -120,7 +122,7 @@ pub struct Item {
     #[doc(alias("xBC_itemStateContainer"))]
     pub state_table: Option<ItemStatesRef>,
     #[at(0xC0)]
-    pub ground_or_air: i32,
+    pub ground_or_air: GroundOrAir,
     #[at(0xC4)]
     #[doc(alias("xC4_article_data"))]
     pub article: Option<DataRef>,
@@ -262,7 +264,7 @@ pub struct Item {
     /// The kind and position of the item it last hit (`itFlipper_DmgDealt`).
     #[at(0xC38)]
     #[doc(alias("xC38"))]
-    pub hit_item_kind: i32,
+    pub hit_item_kind: ItKind,
     /// Its hitboxes' damage scales: the enemies' and stage items' by the CPU level
     /// (`ItUnkHoldKind`), the state's, and the one a throw or drop gives the next state.
     #[at(0xC3C)]

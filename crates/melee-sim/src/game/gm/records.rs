@@ -493,12 +493,12 @@ impl Game {
             if ps[i].pkind == PlayerKind::None {
                 continue;
             }
-            let si = usize::from(selkind(ps[i].ckind as u8));
+            let si = usize::from(selkind(ps[i].ckind.raw() as u8));
             for j in 0..4 {
                 if i == j || ps[j].pkind == PlayerKind::None {
                     continue;
                 }
-                let sj = usize::from(selkind(ps[j].ckind as u8));
+                let sj = usize::from(selkind(ps[j].ckind.raw() as u8));
                 let fd = &mut self.game_data.card.save_data.fighters[si];
                 let sum = u32::from(ps[i].kills[j]) + u32::from(fd.fighter_kos[sj]);
                 fd.fighter_kos[sj] = sum.min(0xFFFF) as u16;
@@ -522,7 +522,7 @@ impl Game {
                     nt.vs_kos[at] = v as u16;
                 }
             }
-            let s = usize::from(selkind(p.ckind as u8));
+            let s = usize::from(selkind(p.ckind.raw() as u8));
             let mut walk = self.game_data.card.save_data.trophy_records.walk_distance;
             let nt = self.game_data.name_tag(usize::from(p.nametag));
             nt.play_time_by_fighter[s] =

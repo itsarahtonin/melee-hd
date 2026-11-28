@@ -3,6 +3,7 @@
 //! objects using a character's data, the fighters the items keep clear of). The fighter core
 //! is ported separately; these read the generated `Fighter` directly.
 
+use crate::game::ft::FighterKind;
 use gekko_fp as fp;
 use melee_data::archive::Archives;
 
@@ -53,8 +54,8 @@ pub fn ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
 /// (`ftData_80085560` with 1).
 #[doc(alias = "ftLib_IncFighterRefCount")]
 #[doc(alias = "ftData_80085560")]
-pub fn inc_fighter_refs(game: &mut Game, kind: i32) {
-    let r = &mut game.ft.data.ref_counts[kind as usize];
+pub fn inc_fighter_refs(game: &mut Game, kind: FighterKind) {
+    let r = &mut game.ft.data.ref_counts[kind.raw() as usize];
     *r = r.wrapping_add(1);
 }
 

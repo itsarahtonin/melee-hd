@@ -1,13 +1,14 @@
 //! Fox Illusion and Falco Phantasm (`ftfoxspecials.c`): the wind-up, the dash with its
 //! afterimages, and the end, on the ground and in the air.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::code::Val;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::motion::flags::SKIP_RUMBLE;
-use super::{GA_AIR, PAD_B, addr, attr, facing_dir_int, ms, mv};
+use super::{PAD_B, addr, attr, facing_dir_int, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::game::it::ItKind;
@@ -227,8 +228,13 @@ impl Running<'_> {
             ItKind::FalcoPhantasm.id()
         };
         let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-        let ghost =
-            super::super::super::it::kinds::foxillusion::spawn(self, gobj, pos, kind, facing);
+        let ghost = super::super::super::it::kinds::foxillusion::spawn(
+            self,
+            gobj,
+            pos,
+            ItKind::from_raw(kind),
+            facing,
+        );
         if let Some(g) = ghost {
             let fp = &mut self.game.fighters[f.0];
             fp.mv.set_gobj_at(mv::S_GHOST_GOBJ, Some(g));
@@ -260,7 +266,7 @@ impl Running<'_> {
     pub fn fox_special_s_iasa(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.input.pressed_buttons & PAD_B != 0 {
-            if fp.ground_or_air == GA_AIR {
+            if fp.ground_or_air == GroundOrAir::Air {
                 self.fox_special_air_s_end_enter(gobj);
             } else {
                 self.fox_special_s_end_enter(gobj);

@@ -9,6 +9,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -197,7 +198,7 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
             super::material::stage_item(r, 0, 0, g, joint, None, Some(CodeRef(BLOCK_HIT)), None);
         r.game.grounds[g.0].u.yorster().blocks[i].item = item;
         let item = item.expect("gryorster.c: a block's item");
-        super::material::item_ground_or_air(r.game, item, 0);
+        super::material::item_ground_or_air(r.game, item, GroundOrAir::Ground);
         let coll = setup::coll_joint_id(r.game, r.data, m, part);
         r.game.geometry_mut().set_callback(
             coll,

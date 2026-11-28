@@ -1,11 +1,11 @@
 //! Hitstun and tumbling (`ftCo_Damage.c`'s state callbacks, `ftCo_DamageFall.c`).
 
 use crate::game::ucf::Ucf;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef;
 use super::super::super::state::Running;
-use super::super::common::{GA_AIR, GA_GROUND};
 use super::PAD_XY;
 use super::checks::abs;
 use super::ids::ms;
@@ -57,7 +57,7 @@ impl Running<'_> {
                 fp.mv[DAMAGE_X1B] = fp.mv[DAMAGE_X1B].wrapping_sub(1);
             }
             if fp.mv[DAMAGE_X1B] == 0
-                && fp.ground_or_air == GA_AIR
+                && fp.ground_or_air == GroundOrAir::Air
                 && fp.kb_vel.y < 0.0
                 && (self.special_hi_air_out_check(gobj) || self.jump_aerial_check_z(gobj))
             {
@@ -86,7 +86,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D69C4")]
     pub fn special_hi_air_out_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        let kind = fp.kind as usize;
+        let kind = fp.kind.raw() as usize;
         if kinds::KINDS[kind].special_hi == 0 {
             return false;
         }
@@ -109,7 +109,7 @@ impl Running<'_> {
             return;
         }
         if self.holding_hammer(gobj) {
-            if self.game.fighter(gobj).ground_or_air == GA_AIR {
+            if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
                 self.co_hammer_fall_iasa(gobj);
             } else {
                 self.co_hammer_wait_iasa(gobj);
@@ -122,7 +122,7 @@ impl Running<'_> {
         if tech_buffer != 0.0 && tech_buffer <= window {
             fp.input.pressed_buttons |= PAD_XY;
         }
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             self.co_fall_iasa(gobj);
         } else {
             self.co_wait_iasa(gobj);
@@ -133,7 +133,7 @@ impl Running<'_> {
     /// air, landing hard enough to be knocked down, or landing, or touching down.
     #[doc(alias = "ftCo_Damage_Coll")]
     pub fn co_damage_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.ground_coll_slip_then(gobj, |g, gobj| g.damage_go_airborne(gobj));
             return;
         }
@@ -216,7 +216,7 @@ impl Running<'_> {
         if fp.mv_i32(8) != 0 {
             return;
         }
-        let (x, y) = if fp.ground_or_air == GA_AIR {
+        let (x, y) = if fp.ground_or_air == GroundOrAir::Air {
             (reg(fp.kb_vel.y), reg(fp.kb_vel.x))
         } else {
             let kb = reg(fp.ground_kb_vel);
@@ -238,7 +238,7 @@ impl Running<'_> {
         let c = self.common();
         let t = |off: u32| reg(c.f32(off));
         let fp = self.game.fighter(gobj);
-        let kb = if fp.ground_or_air == GA_AIR {
+        let kb = if fp.ground_or_air == GroundOrAir::Air {
             let k = &fp.kb_vel;
             let sq = |v: f32| fp::fmuls(reg(v), reg(v));
             reg(crate::math::sqrt(mem(fp::fadds(
@@ -276,7 +276,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80090780")]
     pub fn enter_damage_fall(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             self.go_airborne(f);
         }
         if self.parasol_status(gobj) != -1 {

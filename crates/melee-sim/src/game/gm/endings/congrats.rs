@@ -444,14 +444,14 @@ impl Running<'_> {
         let locked = |r: &Self, ck: u8| !r.game.gm.unlocks.ckind_unlocked(ck);
         if run.counters[1] == 0 {
             if run.player.ckind as u8 == CharacterKind::Mars
-                && locked(self, CharacterKind::Emblem as u8)
+                && locked(self, CharacterKind::Emblem.raw() as u8)
             {
-                return CharacterKind::Emblem as u8;
+                return CharacterKind::Emblem.raw() as u8;
             }
             if run.player.ckind as u8 == CharacterKind::Mario
-                && locked(self, CharacterKind::DrMario as u8)
+                && locked(self, CharacterKind::DrMario.raw() as u8)
             {
-                return CharacterKind::DrMario as u8;
+                return CharacterKind::DrMario.raw() as u8;
             }
         }
         let r = &self.game.game_data.card.save_data.challenger_records;
@@ -460,20 +460,21 @@ impl Running<'_> {
                 (r.classic_cleared | r.adventure_cleared | r.all_star_cleared) & (1 << i) != 0
             })
             .count();
-        if count >= 10 && locked(self, CharacterKind::Clink as u8) {
-            return CharacterKind::Clink as u8;
+        if count >= 10 && locked(self, CharacterKind::Clink.raw() as u8) {
+            return CharacterKind::Clink.raw() as u8;
         }
-        if self.all_cleared_one_mode() && locked(self, CharacterKind::GameWatch as u8) {
-            return CharacterKind::GameWatch as u8;
+        if self.all_cleared_one_mode() && locked(self, CharacterKind::GameWatch.raw() as u8) {
+            return CharacterKind::GameWatch.raw() as u8;
         }
         if n == 0 {
             let a = &self.game.one_player.adventure;
-            if locked(self, CharacterKind::Luigi as u8) && a.feats[0] != 0 && a.feats[1] != 0 {
-                return CharacterKind::Luigi as u8;
+            if locked(self, CharacterKind::Luigi.raw() as u8) && a.feats[0] != 0 && a.feats[1] != 0
+            {
+                return CharacterKind::Luigi.raw() as u8;
             }
         }
-        if locked(self, CharacterKind::Purin as u8) {
-            return CharacterKind::Purin as u8;
+        if locked(self, CharacterKind::Purin.raw() as u8) {
+            return CharacterKind::Purin.raw() as u8;
         }
         CharacterKind::NONE
     }
@@ -508,10 +509,10 @@ impl Running<'_> {
         };
         give(self, ckind);
         if ckind == CharacterKind::Zelda {
-            give(self, CharacterKind::Seak as u8);
+            give(self, CharacterKind::Seak.raw() as u8);
         }
         if ckind == CharacterKind::Seak {
-            give(self, CharacterKind::Zelda as u8);
+            give(self, CharacterKind::Zelda.raw() as u8);
         }
     }
 

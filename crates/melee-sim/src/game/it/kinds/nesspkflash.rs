@@ -140,12 +140,19 @@ pub fn spawn(
     kind: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    steeredshot::spawn(r, parent, pos, kind, facing_dir, &PK_FLASH)
+    steeredshot::spawn(
+        r,
+        parent,
+        pos,
+        ItKind::from_raw(kind),
+        facing_dir,
+        &PK_FLASH,
+    )
 }
 
 /// Its end's word to its owner, Ness's or Kirby's special (`ftNs_SpecialN_SetNULL`).
 fn owner_done(r: &mut Running, gobj: GObjId, ness: GObjId) {
-    match ItKind::of(item(r.game, gobj).kind) {
+    match item(r.game, gobj).kind {
         ItKind::NessPKFlash => r.ness_special_n_set_null(ness, &NESS),
         ItKind::KirbyNessPKFlash => r.ness_special_n_set_null(ness, &NS_KIRBY),
         _ => {}
@@ -174,7 +181,7 @@ fn rise(r: &mut Running, gobj: GObjId) {
 
 /// Whether the flash's owner (`xDE0`) still charges it.
 fn owner_holding(r: &mut Running, gobj: GObjId, owner: GObjId) -> bool {
-    match ItKind::of(item(r.game, gobj).kind) {
+    match item(r.game, gobj).kind {
         ItKind::NessPKFlash => r.ness_special_n_holding(owner, &NESS),
         ItKind::KirbyNessPKFlash => r.ness_special_n_holding(owner, &NS_KIRBY),
         // The original reads a register it never set.
@@ -229,22 +236,13 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
         && n >= fp::fctiwz(reg(delay)).wrapping_sub(2)
     {
         let size = v.grown.get();
-        let blast = match ItKind::of(kind) {
+        let blast = match kind {
             ItKind::NessPKFlash => Some(ItKind::NessPKFlashExplosion),
             ItKind::KirbyNessPKFlash => Some(ItKind::KirbyNessPKFlashExplosion),
             _ => None,
         };
         if let Some(blast) = blast {
-            steeredshot::blast_spawn(
-                r,
-                ness,
-                gobj,
-                pos,
-                blast.id(),
-                facing,
-                size,
-                &PK_FLASH_BLAST,
-            );
+            steeredshot::blast_spawn(r, ness, gobj, pos, blast, facing, size, &PK_FLASH_BLAST);
         }
         return true;
     }

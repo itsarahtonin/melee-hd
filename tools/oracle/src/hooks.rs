@@ -25,7 +25,9 @@
 
 use std::cell::{Cell, RefCell};
 
+use melee_sim::game::mirror::Narrow;
 use melee_sim::game::oracle_hooks::{self, Entry};
+use melee_sim::game::pl::player::PlayerKind;
 use melee_sim::game::state::Game;
 use melee_sim::game::structs::StartMeleeData;
 
@@ -55,10 +57,6 @@ impl Rng {
     }
 }
 
-/// `Gm_PKind`: a slot's kind.
-const HUMAN: u8 = 0;
-const CPU: u8 = 1;
-const NA: u8 = 3;
 /// `MatchKind`.
 const TIME: u8 = 0;
 const STOCK: u8 = 1;
@@ -287,11 +285,13 @@ fn hook(game: &mut Game, at: Entry) {
                 if s.hooks.cpu_players {
                     let data = oracle_hooks::scene_enter_data(game, scene_mode);
                     for p in &mut data.players[..4] {
-                        if p.slot_type == HUMAN {
-                            p.slot_type = CPU;
+                        if p.slot_type == PlayerKind::Human {
+                            p.slot_type = PlayerKind::Cpu.into();
                             p.cpu_level = 9;
                             if let Some(kinds) = &s.hooks.rules.cpu_kinds {
-                                p.cpu_kind = kinds[s.kinds_rng.below(kinds.len() as u64) as usize];
+                                p.cpu_kind = Narrow::from_raw(
+                                    kinds[s.kinds_rng.below(kinds.len() as u64) as usize],
+                                );
                             }
                         }
                     }
@@ -343,7 +343,7 @@ fn hands_lineup(rng: &Rng, fighters: &[i32], ports: usize) -> Vec<usize> {
 fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
     let rules = &mut data.rules;
     let stage = chosen.stages[rng.below(chosen.stages.len() as u64) as usize];
-    rules.stkind = stage as u16;
+    rules.stkind = Narrow::from_raw(stage as u16);
     rules.match_kind = TIME;
     rules.timer_enabled = true;
     rules.time_limit = chosen.time;
@@ -397,7 +397,7 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
     for i in 0..4 {
         let p = &mut data.players[i];
         if chosen.players.is_some_and(|n| i >= n) {
-            p.slot_type = NA;
+            p.slot_type = PlayerKind::None.into();
             continue;
         }
         playing.push(i);
@@ -422,8 +422,13 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
         } else {
             fighter >= PLAYABLE || rng.chance(50)
         };
-        p.ckind = fighter as i8;
-        p.slot_type = if cpu { CPU } else { HUMAN };
+        p.ckind = Narrow::from_raw(fighter as i8);
+        p.slot_type = if cpu {
+            PlayerKind::Cpu
+        } else {
+            PlayerKind::Human
+        }
+        .into();
         p.cpu_level = if cpu { 1 + rng.below(9) as u8 } else { 0 };
         p.color = 0;
         if fighter >= PLAYABLE {
@@ -439,7 +444,7 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
             p.enters = false;
         }
         if cpu && let Some(kinds) = &chosen.cpu_kinds {
-            p.cpu_kind = kinds[rng.below(kinds.len() as u64) as usize];
+            p.cpu_kind = Narrow::from_raw(kinds[rng.below(kinds.len() as u64) as usize]);
         }
         if let Some(hp) = chosen.stamina
             && lineup.is_none()

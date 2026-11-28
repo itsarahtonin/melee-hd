@@ -4,13 +4,14 @@
 //! enemy, goes for an item in reach or heads for the human enemy standing best, and picks its
 //! behavior ([`Running::cpu_choose_behavior`]).
 
+use crate::game::ft::FighterKind;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
 use super::super::gr::{GrKind, great_bay, grlib, ground, stage};
 use super::super::handles::FighterId;
 use super::super::state::Running;
-use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{CPU_FRAME, CPU_FRAME_SP, DECIDE_FRAME, Leftover, P_LINK_FIGHTER};
 use super::cpu_move::LINE_FLAG_PLATFORM;
 use crate::fpu::{mem, reg};
@@ -277,7 +278,7 @@ impl Running<'_> {
         if self.cpu_should_act(f) {
             if cmd >= 0 {
                 self.cpu_toward_safe_ground(f, at);
-            } else if self.game.fighters[f.0].ground_or_air != GA_AIR {
+            } else if self.game.fighters[f.0].ground_or_air != GroundOrAir::Air {
                 let left = reg(stage::blast_left(self.game));
                 let cx = fp::fmuls(0.5, fp::fadds(reg(stage::blast_right(self.game)), left));
                 let bottom = reg(stage::blast_bottom(self.game));
@@ -318,7 +319,7 @@ impl Running<'_> {
     /// (`ftCo_800A8210_inline0`), within 5.
     #[doc(alias = "ftCo_800A8210")]
     fn cpu_toward_safe_ground(&mut self, f: FighterId, from: Vec3) {
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             return;
         }
         let found = match self.game.stage_info.ground_kind() {
@@ -573,13 +574,13 @@ impl Running<'_> {
     }
 
     /// The character's distance threshold (`Fighter_804D64FC->x20[kind]`).
-    pub(super) fn cpu_distance_threshold(&self, kind: i32) -> f32 {
+    pub(super) fn cpu_distance_threshold(&self, kind: FighterKind) -> f32 {
         let data = self.common_ptr(CPU_DATA);
         let table = self
             .data
             .ptr(data.at(DISTANCES))
             .expect("the computer players' distance thresholds");
-        self.data.f32(table.at(4 * kind as u32))
+        self.data.f32(table.at(4 * kind.raw() as u32))
     }
 
     /// Whether the fighter stands near its target, `ftCo_800A20A0` (`xF8_b6`): on the ground
@@ -588,7 +589,7 @@ impl Running<'_> {
     fn cpu_near_target(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         let near = match fpp.cpu.target {
-            Some(t) if fpp.ground_or_air == GA_GROUND => {
+            Some(t) if fpp.ground_or_air == GroundOrAir::Ground => {
                 let limit = fp::fmuls(2.0, reg(self.cpu_distance_threshold(fpp.kind)));
                 self.cpu_distance(f, t) < limit
             }
@@ -603,7 +604,7 @@ impl Running<'_> {
     fn cpu_beside_target(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         let Some(t) = fpp.cpu.target else { return };
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return;
         }
         let (me, other) = (fpp.cur_pos, self.game.fighters[t.0].cur_pos);
@@ -704,7 +705,7 @@ impl Running<'_> {
             reg(self.game.fighters[f.0].cpu.reach),
             reg(p.cpu.hurt_middle),
         ));
-        if p.ground_or_air == GA_AIR {
+        if p.ground_or_air == GroundOrAir::Air {
             let below = mem(fp::fsubs(reg(ppos.y), 1000.0));
             let above = mem(fp::fadds(10.0, reg(ppos.y)));
             let hit = self
@@ -760,8 +761,8 @@ impl Running<'_> {
         let me = &self.game.fighters[f.0];
         let p = &self.game.fighters[t.0];
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
-        let same_island = me.ground_or_air != GA_AIR
-            && p.ground_or_air != GA_AIR
+        let same_island = me.ground_or_air != GroundOrAir::Air
+            && p.ground_or_air != GroundOrAir::Air
             && geo
                 .island_of_line(me.coll_data.floor.index)
                 .is_some_and(|i| geo.island_of_line(p.coll_data.floor.index) == Some(i));
@@ -796,7 +797,9 @@ impl Running<'_> {
             return;
         };
         let ip = &self.game.items[item.0];
-        if self.game.fighters[f.0].ground_or_air == GA_AIR || ip.ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air
+            || ip.ground_or_air == GroundOrAir::Air
+        {
             return;
         }
         let (ix, iy, item_line) = (ip.pos.x, ip.pos.y, ip.coll.floor.index);
@@ -819,7 +822,7 @@ impl Running<'_> {
         let me = &self.game.fighters[f.0];
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
         // The item is still on the ground: nothing since has moved it.
-        let same_island = me.ground_or_air != GA_AIR
+        let same_island = me.ground_or_air != GroundOrAir::Air
             && geo
                 .island_of_line(me.coll_data.floor.index)
                 .is_some_and(|i| geo.island_of_line(item_line) == Some(i));

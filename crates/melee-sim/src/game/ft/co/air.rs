@@ -1,6 +1,7 @@
 //! Falling, aerials and landing (`ftCo_Fall.c`, `ftCo_FallAerial.c`, `ftCo_FallSpecial.c`,
 //! `ftCo_AttackAir.c`, `ftCo_Landing.c`, `ftCo_LandingAir.c`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::code::{self, Val};
@@ -297,7 +298,7 @@ impl Running<'_> {
         } else if reg(fp.gr_vel) > max {
             fp.gr_vel = mem(max);
         }
-        fp.ground_or_air = super::super::common::GA_GROUND;
+        fp.ground_or_air = GroundOrAir::Ground;
         fp.gr_vel = fp.self_vel.x;
         fp.jumps_used = 0;
         fp.walljumps_used = 0;
@@ -498,7 +499,7 @@ impl Running<'_> {
         fp.set_mv_i32(FALL_SPECIAL_ALLOW_INTERRUPT, allow_interrupt);
         fp.set_mv_i32(FALL_SPECIAL_X0, 26);
         fp.set_mv_f32(FALL_SPECIAL_X4, 0.0);
-        if fp.ground_or_air == super::super::common::GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             let f = self.game.fighter_id(gobj);
             self.go_airborne_jumped(f);
         } else if use_jumps {

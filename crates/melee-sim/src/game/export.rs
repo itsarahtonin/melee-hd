@@ -757,7 +757,7 @@ fn camera_boxes(game: &Game, img: &mut Image) {
         let at = 0x6C * i as u32;
         l.u32(at, addr(s.next));
         l.u32(at + 4, addr(s.prev));
-        l.u32(at + 8, s.state as u32);
+        l.u32(at + 8, s.state.raw() as u32);
         l.u8(
             at + 0xC,
             u8::from(s.on_ledge) << 7

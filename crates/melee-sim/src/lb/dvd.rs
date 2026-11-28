@@ -9,6 +9,7 @@
 //! callbacks run in the disc interrupt, so the cache lives with the audio library's state
 //! ([`crate::audio::Audio::dvd`]), the preload heaps and their blocks with it.
 
+use crate::game::ft::FighterKind;
 use melee_data::archive::Archives;
 
 use super::heap::{self, LbHeaps};
@@ -107,7 +108,7 @@ pub const SCENE_DEFAULT: SceneCache = SceneCache {
         pad_a: 0,
         pad_b: 0,
         pad_c: 0,
-        stkind: StKind::Unk328.id() as i32,
+        stkind: StKind::Unk328.id(),
         entries: [CacheFighter {
             char_id: CharacterKind::NONE as i32,
             color: 0,
@@ -192,7 +193,7 @@ pub fn game_cache_files() -> Vec<String> {
         }
     };
     for kind in 0..0x21 {
-        let t = kind_tables(kind);
+        let t = kind_tables(FighterKind::from_raw(kind));
         if let Some(n) = t.dat_file {
             add(n);
         }
@@ -227,7 +228,7 @@ pub fn game_cache_files() -> Vec<String> {
         let st = crate::game::gm::opening::stage_select_kind(i);
         let gr = crate::lb::audio::ground_kind(i32::from(st)) as i32;
         for us in [true, false] {
-            if let Some(n) = crate::game::gr::registry::stage(gr).file(us) {
+            if let Some(n) = crate::game::gr::registry::stage(GrKind::from_raw(gr)).file(us) {
                 add(n);
             }
         }
@@ -236,7 +237,7 @@ pub fn game_cache_files() -> Vec<String> {
     for st in 0xCA..=0x111 {
         let gr = crate::lb::audio::ground_kind(st) as i32;
         for us in [true, false] {
-            if let Some(n) = crate::game::gr::registry::stage(gr).file(us) {
+            if let Some(n) = crate::game::gr::registry::stage(GrKind::from_raw(gr)).file(us) {
                 add(n);
             }
         }
@@ -331,7 +332,7 @@ impl Dvd {
     /// 0xFF), its effect file and its animation file.
     #[doc(alias = "ftData_800855C8")]
     fn want_fighter(&mut self, kind: i32, color: u8) {
-        let t = crate::game::ft::data::kind_tables(kind);
+        let t = crate::game::ft::data::kind_tables(FighterKind::from_raw(kind));
         let mut color = color;
         if color != 0xFF && color >= t.costume_count {
             color = 0;
@@ -364,7 +365,7 @@ impl Dvd {
     #[doc(alias = "ftKb_SpecialN_800EEC34")]
     fn want_kirby_copy(&mut self, kind: i32, color: u8) {
         use crate::game::ft::kirby::init;
-        let count = crate::game::ft::data::kind_tables(4).costume_count;
+        let count = crate::game::ft::data::kind_tables(FighterKind::Kirby).costume_count;
         let mut color = color;
         if color != 0xFF && color >= count {
             color = 0;
@@ -397,7 +398,7 @@ impl Dvd {
     #[doc(alias = "Player_80031CB0")]
     #[doc(alias = "Player_80031D2C")]
     fn want_character(&mut self, ckind: i32, color: u8, copy: bool) {
-        let m = crate::game::pl::player::mapping(ckind);
+        let m = crate::game::pl::player::mapping(CharacterKind::from_raw(ckind));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 {
                 continue;
@@ -447,7 +448,7 @@ impl Dvd {
         }
         if gc.stkind != StKind::Unk328 {
             let gr = crate::lb::audio::ground_kind(gc.stkind) as i32;
-            if let Some(n) = crate::game::gr::registry::stage(gr).file(saved_us) {
+            if let Some(n) = crate::game::gr::registry::stage(GrKind::from_raw(gr)).file(saved_us) {
                 self.want_named(4, n, 4, 4, 1, 7, 16, 0);
             }
             let tex = |w, h, f| crate::hsd::heap::tex_buffer_size(w, h, f).next_multiple_of(32);

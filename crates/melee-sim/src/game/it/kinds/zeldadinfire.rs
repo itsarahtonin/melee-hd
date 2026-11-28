@@ -122,7 +122,7 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Opt
         r,
         parent,
         pos,
-        ItKind::ZeldaDinsFire.id(),
+        ItKind::ZeldaDinsFire,
         facing_dir,
         &DINS_FIRE,
     )
@@ -244,7 +244,7 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
             zelda,
             gobj,
             pos,
-            ItKind::ZeldaDinsFireExplosion.id(),
+            ItKind::ZeldaDinsFireExplosion,
             facing,
             size,
             &DINS_FIRE_BLAST,

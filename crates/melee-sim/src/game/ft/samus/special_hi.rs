@@ -1,11 +1,11 @@
 //! The Screw Attack (`ftsamusspecialhi.c`): a spinning rise she can turn once, from the ground
 //! (rising when the script says) or the air, ending in a helpless fall.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::{PART_Y_ROT_N, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -125,7 +125,7 @@ impl Running<'_> {
             fp.cmd_vars[0] = 0;
             fp.self_vel.x = mem(fp::fmuls(vx, reg(fp.facing_dir)));
         }
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             self.air_anim_rise(gobj);
             let drift = reg(self.samus_attr_f32(f, attr::HI_DRIFT));
             let max = reg(self.samus_attr_f32(f, attr::HI_DRIFT_MAX));
@@ -153,7 +153,7 @@ impl Running<'_> {
     pub fn samus_special_hi_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.ground_or_air != GA_AIR {
+        if fp.ground_or_air != GroundOrAir::Air {
             self.ground_coll(gobj);
             return;
         }

@@ -62,7 +62,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     let ness = ness?;
     let mut spawn = SpawnItem {
-        kind: ItKind::NessBat.id(),
+        kind: ItKind::NessBat,
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, true)`.
@@ -98,7 +98,7 @@ pub fn spawn_demo(r: &mut Running, ness: GObjId, part: i32) -> Option<GObjId> {
     let fp = r.game.fighter_mut(ness);
     let (pos, facing_dir) = (fp.cur_pos, fp.facing_dir);
     let mut spawn = SpawnItem {
-        kind: ItKind::NessBat.id(),
+        kind: ItKind::NessBat,
         ..Default::default()
     };
     spawn.prev_pos = pos;

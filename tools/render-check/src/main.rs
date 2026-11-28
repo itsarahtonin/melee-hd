@@ -24,9 +24,11 @@
 //!     native frame FRAME widened to W:H (16:9 by default): every vertex of Fountain of Dreams'
 //!     water on screen takes coordinates inside the reflection's image, those in the added
 //!     sides too
-//! melee-render-check snap DISC REPLAY.slp OUT_DIR [--aspect W:H] FRAME...
+//! melee-render-check snap DISC REPLAY.slp OUT_DIR [--aspect W:H] [--no-screen-shake]
+//!     [--pal-stock-icons] FRAME...
 //!     native frames drawn at 1x, saved as OUT_DIR/frame_N.png; with --aspect, as the player
-//!     shows them at that aspect ratio (wider than 73:60, the cameras widened)
+//!     shows them at that aspect ratio (wider than 73:60, the cameras widened); with the
+//!     cosmetic flags, with Slippi's cosmetic codes as the player's settings turn them on
 //! melee-render-check filters DISC REPLAY.slp OUT_DIR [--scale N] [--aspect W:H] FRAME...
 //!     native frames with each of the player's Texture filtering, Supersampling and
 //!     Sharpening on, beside the frame with them off: OUT_DIR/frame_N_NAME.png, for looking at
@@ -240,6 +242,14 @@ fn run(args: &[String]) -> ExitCode {
                 let (w, h) = ratio.split_once(':').expect("--aspect W:H");
                 let aspect = w.parse::<f32>().expect("W") / h.parse::<f32>().expect("H");
                 view = native::View::shown(1, aspect);
+                rest = more;
+            }
+            while let [flag, more @ ..] = rest {
+                match flag.as_str() {
+                    "--no-screen-shake" => view.cosmetic.0 = true,
+                    "--pal-stock-icons" => view.cosmetic.1 = true,
+                    _ => break,
+                }
                 rest = more;
             }
             let at: Vec<u32> = rest.iter().map(|a| a.parse().expect("FRAME")).collect();

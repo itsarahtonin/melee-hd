@@ -13,6 +13,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -1237,7 +1238,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
 /// growth, set knockback, base knockback and element), as `lbColl_80008D30` copies one.
 pub(super) fn shot_hit(w: [u32; 6]) -> super::super::structs::HitCapsule {
     super::super::structs::HitCapsule {
-        state: 1,
+        state: HitCapsuleState::Enabled,
         damage: mem(fp::frsp(f64::from(w[0]))),
         kb_angle: w[1] as i32,
         kb_growth: w[2],

@@ -183,7 +183,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     let j = cs::grandchild(r, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-    let gfx = match ItKind::of(item(r.game, gobj).kind) {
+    let gfx = match item(r.game, gobj).kind {
         ItKind::SamusChargeShot => GFX_HELD,
         ItKind::KirbySamusChargeShot => GFX_HELD_KIRBY,
         _ => return,

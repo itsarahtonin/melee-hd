@@ -8,6 +8,7 @@ use super::super::pokemon::{self, attr_f32, attr_i32};
 use super::super::{item, item_mut, lib26b1, lib2725, maplib};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
+use crate::mp::coll::GroundOrAir;
 
 pub const SPAWNED: u32 = 0x802D_36B0;
 pub const LANDED: u32 = 0x802D_3728;
@@ -27,9 +28,6 @@ pub const COLL0: u32 = 0x802D_3AF0;
 
 /// Its variables past the release's (`itPokemon_ItemVars`): the idle loops left (`timer`).
 const TIMER: usize = 0x60;
-
-/// `GA_Air`.
-const GA_AIR: i32 = 1;
 
 /// Runs one of Togepi's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -113,7 +111,7 @@ fn replay(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTogepy_UnkMotion1_Phys")]
 #[doc(alias = "itTogepy_UnkMotion6_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         super::gravity(r, gobj);
     }
 }
@@ -122,7 +120,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTogepy_UnkMotion1_Coll")]
 #[doc(alias = "itTogepy_UnkMotion6_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         fall(r, gobj, landed);
     } else {
         ground_or_fall(r, gobj, landed);

@@ -2,13 +2,14 @@
 //! reflecting a hit, and the end, on the ground and in the air, through platforms and off
 //! edges.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::motion::flags::{KEEP_GFX, SKIP_COL_ANIM, UPDATE_CMD};
-use super::{GA_GROUND, PAD_B, addr, attr, ms, mv};
+use super::{PAD_B, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 
@@ -111,7 +112,7 @@ impl Running<'_> {
     pub fn fox_special_lw_start_anim(&mut self, gobj: GObjId) {
         self.fox_lw_check_release(gobj);
         if !self.anim_frames_remaining(gobj) {
-            if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+            if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
                 self.fox_special_lw_loop_enter(gobj);
             } else {
                 self.fox_special_air_lw_loop_enter(gobj);
@@ -238,7 +239,7 @@ impl Running<'_> {
         self.fox_lw_update_release(gobj);
         let fp = self.game.fighter(gobj);
         if fp.mv_i32(mv::LW_RELEASE_LAG) <= 0 && fp.mv_i32(mv::LW_IS_RELEASE) != 0 {
-            if fp.ground_or_air == GA_GROUND {
+            if fp.ground_or_air == GroundOrAir::Ground {
                 self.fox_special_lw_end_enter(gobj);
                 return;
             }
@@ -413,7 +414,7 @@ impl Running<'_> {
         if !self.turn_input(gobj) {
             return false;
         }
-        let msid = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        let msid = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             ms::SPECIAL_LW_TURN
         } else {
             ms::SPECIAL_AIR_LW_TURN
@@ -437,7 +438,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialLwHit_Check")]
     pub fn fox_special_lw_hit_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        let ground = fp.ground_or_air == GA_GROUND;
+        let ground = fp.ground_or_air == GroundOrAir::Ground;
         if fp.mv_i32(mv::LW_RELEASE_LAG) <= 0 && fp.mv_i32(mv::LW_IS_RELEASE) != 0 {
             if ground {
                 self.fox_special_lw_end_enter(gobj);
@@ -506,7 +507,7 @@ impl Running<'_> {
         let at = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         let third = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0)));
         crate::lb::wind::blast(self.game.gr.winds_mut(), at, 120, 3.0, 0.1, third);
-        let msid = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        let msid = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             ms::SPECIAL_LW_HIT
         } else {
             ms::SPECIAL_AIR_LW_HIT

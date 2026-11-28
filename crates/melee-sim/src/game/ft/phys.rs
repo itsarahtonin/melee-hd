@@ -4,6 +4,7 @@
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::ft::FighterKind;
 use gekko_fp as fp;
 
 use super::super::state::Running;
@@ -17,7 +18,7 @@ fn abs(v: f64) -> f64 {
 }
 
 /// `Ft_Kind_Popo` and `Ft_Kind_Nana`: the Ice Climbers, whom no floor makes slippery.
-const ICE_CLIMBERS: [i32; 2] = [10, 11];
+const ICE_CLIMBERS: [FighterKind; 2] = [FighterKind::Popo, FighterKind::Nana];
 
 impl Running<'_> {
     /// The floor's friction multiplier, `ft_GetGroundFrictionMultiplier`: the terrain's

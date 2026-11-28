@@ -5,6 +5,7 @@
 // NaN takes the original's branches, which the negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
@@ -12,7 +13,6 @@ use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::samusgrapple::GRAPPLE;
 use super::super::super::it::kinds::tether::{self, Tether};
 use super::super::super::state::Running;
-use super::super::common::{GA_AIR, GA_GROUND};
 use super::{attr, ms};
 use crate::fpu::{mem, reg};
 use crate::game::it::ItKind;
@@ -143,7 +143,7 @@ impl Running<'_> {
             }
             TetherKind::Item(k) => k.id(),
         };
-        let hs = tether::spawn(self, gobj, pos, facing, kind, t);
+        let hs = tether::spawn(self, gobj, pos, facing, ItKind::from_raw(kind), t);
         self.game.fighter_mut(gobj).u.set_gobj_at(t.slot, hs);
         hs
     }
@@ -342,7 +342,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C3BE8")]
     pub fn enter_air_catch(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.ground_or_air != GA_AIR {
+        if fp.ground_or_air != GroundOrAir::Air {
             return;
         }
         fp.set_mv_f32(MV_FRAME, 0.0);
@@ -385,7 +385,7 @@ impl Running<'_> {
         Self::clamp_self_vel_x(fp, drift);
         fp.set_mv_i32(MV_HIT_X0, 20);
         fp.set_mv_f32(MV_HIT_X4, 0.0);
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             let f = self.game.fighter_id(gobj);
             self.go_airborne(f);
         }

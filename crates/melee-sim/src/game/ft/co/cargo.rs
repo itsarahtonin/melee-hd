@@ -758,7 +758,7 @@ impl Running<'_> {
             Some(holder),
             held,
             1,
-            akind,
+            akind.id(),
             attack_flags,
             super::super::super::pl::trick::AttackRecord::Fighter(holder),
             instance,

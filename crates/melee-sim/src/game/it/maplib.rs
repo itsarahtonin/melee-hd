@@ -1,6 +1,7 @@
 //! Items against the stage, `melee/it/itmaplib.c`: their collision data's setup, landing and
 //! taking off, and sliding on floors.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::Archives;
 
@@ -87,13 +88,13 @@ fn with_coll<R>(
 /// Puts the item on the ground, `it_802762B0`.
 #[doc(alias = "it_802762B0")]
 pub fn enter_ground(ip: &mut Item) {
-    ip.ground_or_air = 0;
+    ip.ground_or_air = GroundOrAir::Ground;
 }
 
 /// Puts the item in the air, `it_802762BC`.
 #[doc(alias = "it_802762BC")]
 pub fn enter_air(ip: &mut Item) {
-    ip.ground_or_air = 1;
+    ip.ground_or_air = GroundOrAir::Air;
     ip.flags.flags.may_skid = false;
 }
 
@@ -133,7 +134,7 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     with_coll(r, &mut cd, |c, cd| c.init(cd));
     let ip = item_mut(r.game, gobj);
     ip.coll = cd;
-    if let Some(k) = coll_kind(ip.kind) {
+    if let Some(k) = coll_kind(ip.kind.id()) {
         ip.coll.ecb_flags.b1234 = k;
     }
     let s = reg(ip.scl);
@@ -150,7 +151,7 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let weight = attr_of(ip).f32(data, super::data::attr::DAMAGE_MUL);
     ip.coll.weight = weight;
     if spawn.flags[0] & 0x80 != 0 {
-        if spawn.ground_or_air == 1 {
+        if spawn.ground_or_air == GroundOrAir::Air {
             place_air(r, gobj, spawn.pos);
         } else {
             place_ground(r.game, r.data, gobj, spawn.pos);

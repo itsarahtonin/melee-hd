@@ -7,6 +7,8 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{air, ground, ground_or_fall};
@@ -173,7 +175,7 @@ pub fn release(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80295F38")]
 pub fn fire(r: &mut Running, gobj: GObjId) {
     let mut hit = HitCapsule {
-        state: crate::lb::hitcapsule::ENABLED,
+        state: HitCapsuleState::Enabled,
         damage: mem(fp::frsp(f64::from(attr_u(r, gobj, 0x30)))),
         ..HitCapsule::default()
     };
@@ -297,7 +299,7 @@ pub fn roll(r: &mut Running, gobj: GObjId) {
     let ground_or_air = ip.ground_or_air;
     let facing = reg(ip.facing_dir);
     let v = ip.vars.taru_cann();
-    if ground_or_air != 1 {
+    if ground_or_air != GroundOrAir::Air {
         let slope = reg(v.normal.x());
         if abs(slope) > f64::from(0.1_f32) {
             if abs(reg(v.roll_speed.get())) < stop_speed {
@@ -606,7 +608,7 @@ pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, let_go);
     let wall_bounce = reg(attr_f(r, gobj, 0x1C));
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air != 1 {
+    if ip.ground_or_air != GroundOrAir::Air {
         let floor = crate::mp::coll::FLOOR_PUSH | crate::mp::coll::FLOOR_HUG;
         if ip.coll.env_flags & floor != 0 {
             if let Some(n) = maplib::surface_normal(&ip.coll) {

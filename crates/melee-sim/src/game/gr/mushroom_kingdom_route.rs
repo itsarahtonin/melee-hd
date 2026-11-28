@@ -8,6 +8,7 @@
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -560,7 +561,7 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
             let z = Vec3::new(0.0, 0.0, 0.0);
             material::set_item_hurtbox(r.game, item, z, z, 7.0);
             material::item_hurtbox_on(r.game, item);
-            material::item_ground_or_air(r.game, item, 0);
+            material::item_ground_or_air(r.game, item, GroundOrAir::Ground);
         }
     }
 }

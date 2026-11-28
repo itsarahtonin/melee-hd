@@ -5,6 +5,7 @@
 //! The script's read and write positions are offsets into the buffer ([`super::cpu::SelfRef`]),
 //! as the original's pointers into the fighter are.
 
+use crate::game::ft::CpuBehavior;
 use gekko_fp as fp;
 
 use super::super::handles::FighterId;
@@ -238,7 +239,7 @@ impl Running<'_> {
                         return;
                     }
                 }
-                cmd::SET_X18 => fp.cpu.behavior = i32::from(arg(fp) as u8),
+                cmd::SET_X18 => fp.cpu.behavior = CpuBehavior::from_raw(i32::from(arg(fp) as u8)),
                 cmd::LSTICK_TOWARD_DESTINATION_CLAMPED => {
                     let step = i32::from(arg(fp));
                     let clamp = i32::from(arg(fp));

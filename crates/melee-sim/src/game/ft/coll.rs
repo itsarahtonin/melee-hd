@@ -2,6 +2,8 @@
 //! callback runs mpcoll on the fighter's `CollData` from its position, keeps the result, and
 //! changes state when the fighter leaves the ground, lands, meets a wall or catches a ledge.
 
+use crate::game::gr::GrKind;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
@@ -9,7 +11,6 @@ use super::super::gr::{DynamicAttrs, Geometry, StageColl};
 use super::super::handles::{CodeRef, FighterId};
 use super::super::state::Running;
 use super::super::structs::{CollData, ftCollisionBox};
-use super::common::GA_AIR;
 use crate::fpu::{mem, reg};
 use crate::hsd::Objects;
 use crate::hsd::gobj::GObjId;
@@ -180,7 +181,13 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     let (gr, grkind, data) =
                         (self.stage_maps.gr, self.stage_maps.grkind(), self.data);
                     let part_joint = |m: i32, p: i32| {
-                        super::super::gr::setup::coll_joint_id_in(gr, grkind, data, m, p)
+                        super::super::gr::setup::coll_joint_id_in(
+                            gr,
+                            GrKind::from_raw(grkind),
+                            data,
+                            m,
+                            p,
+                        )
                     };
                     super::super::gr::yoshis_island::block_landed(
                         &mut self.grounds[g.0],
@@ -1405,7 +1412,7 @@ impl Running<'_> {
 
     /// Whether the fighter is airborne.
     pub fn is_airborne(&self, gobj: GObjId) -> bool {
-        self.game.fighter(gobj).ground_or_air == GA_AIR
+        self.game.fighter(gobj).ground_or_air == GroundOrAir::Air
     }
 }
 

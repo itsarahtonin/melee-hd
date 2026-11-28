@@ -1,12 +1,12 @@
 //! Item hitbox flags and sizes, `melee/it/ithitbox.c`.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::{item, item_mut, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::state::Game;
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 use melee_data::archive::Archives;
 
 /// Clears what the item's hits dealt and its damage multipliers, `it_802753DC`.
@@ -45,7 +45,7 @@ pub fn clear_hit_ids2(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80275594")]
 pub fn scale_hitbox(game: &mut Game, gobj: GObjId, idx: usize, mult: f64) {
     let hit = &mut item_mut(game, gobj).hitboxes[idx].hit;
-    if hit.state != hitcapsule::DISABLED {
+    if hit.state != HitCapsuleState::Disabled {
         hit.scale = mem(fp::fmuls(reg(hit.scale), mult));
     }
 }
@@ -68,7 +68,7 @@ pub fn clear_dcd_b7(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_802758D4")]
 pub fn max_damage(game: &Game, gobj: GObjId) -> f32 {
     let ip = super::item(game, gobj);
-    let on = |k: usize| ip.hitboxes[k].hit.state != crate::lb::hitcapsule::DISABLED;
+    let on = |k: usize| ip.hitboxes[k].hit.state != HitCapsuleState::Disabled;
     let mut damage = 0.0;
     if (0..4).any(on) {
         for k in (0..4).filter(|&k| on(k)) {
@@ -106,7 +106,7 @@ pub fn update_boxes(game: &mut Game, gobj: GObjId) {
 pub fn scale_damage(game: &mut Game, data: &Archives, gobj: GObjId, mult: f64) {
     for i in 0..4 {
         let hit = &item(game, gobj).hitboxes[i].hit;
-        if hit.state != hitcapsule::DISABLED {
+        if hit.state != HitCapsuleState::Disabled {
             let d = crate::ppc::cvt_fp2unsigned(fp::fmuls(reg(hit.damage), mult));
             super::coll::set_hit_damage(game, data, gobj, i, d);
         }
@@ -153,7 +153,7 @@ pub fn set_hit_ids2(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80275534")]
 pub fn set_hit_scale(game: &mut Game, gobj: GObjId, scale: f32) {
     for h in &mut item_mut(game, gobj).hitboxes {
-        if h.hit.state != hitcapsule::DISABLED {
+        if h.hit.state != HitCapsuleState::Disabled {
             h.hit.scale = scale;
         }
     }

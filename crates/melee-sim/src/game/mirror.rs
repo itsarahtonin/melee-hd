@@ -10,6 +10,7 @@ use melee_data::archive::DataRef;
 
 use super::handles::CodeRef;
 use crate::quat::Quat;
+use crate::state_eq::StateEq;
 use crate::vec::Vec3;
 
 /// A run of big-endian memory, as the game keeps it, at address `base`.
@@ -446,6 +447,7 @@ macro_rules! c_enum {
         }
 
         impl $name {
+            #[inline]
             pub const fn from_raw(v: $raw) -> $name {
                 match v {
                     $($value => $name::$variant,)*
@@ -453,6 +455,7 @@ macro_rules! c_enum {
                 }
             }
 
+            #[inline]
             pub const fn raw(self) -> $raw {
                 match self {
                     $($name::$variant => $value,)*
@@ -462,6 +465,7 @@ macro_rules! c_enum {
         }
 
         impl Default for $name {
+            #[inline]
             fn default() -> $name {
                 $name::from_raw(0)
             }
@@ -488,10 +492,30 @@ macro_rules! c_enum {
             }
         }
 
+        impl $crate::game::mirror::Export for $name {
+            fn export(&self, m: &mut $crate::game::mirror::MemMut, at: u32) {
+                $crate::game::mirror::Export::export(&self.raw(), m, at);
+            }
+        }
+
+        impl $crate::game::mirror::CEnum for $name {
+            type Raw = $raw;
+            #[inline]
+            fn from_raw(v: $raw) -> Self {
+                $name::from_raw(v)
+            }
+            #[inline]
+            fn raw(self) -> $raw {
+                $name::raw(self)
+            }
+        }
+
         impl $crate::game::mirror::BitField for $name {
+            #[inline]
             fn from_bits(v: u32) -> Self {
                 $name::from_raw(v as $raw)
             }
+            #[inline]
             fn bits(&self) -> u32 {
                 self.raw() as u32
             }
@@ -507,6 +531,144 @@ macro_rules! c_enum {
             }
         }
     };
+}
+
+/// A [`c_enum!`] type: its C integer both ways, every value round-tripping.
+pub trait CEnum: Copy {
+    type Raw;
+    fn from_raw(v: Self::Raw) -> Self;
+    fn raw(self) -> Self::Raw;
+}
+
+/// An integer type narrower than a C enum, which a struct holds an enum in (`s8 ckind`,
+/// `u16 stkind`): how C converts between the two.
+pub trait NarrowInt:
+    Copy + Default + Eq + std::hash::Hash + std::fmt::Debug + Mirror + LayOut + Export + StateEq
+{
+    /// The field's value as the enum's `int`: sign- or zero-extended by the field's type.
+    fn widen(self) -> i32;
+    /// An `int` stored in the field: its low bits.
+    fn narrow(v: i32) -> Self;
+}
+
+macro_rules! narrow_int {
+    ($($t:ty),*) => {$(
+        impl NarrowInt for $t {
+            fn widen(self) -> i32 {
+                i32::from(self)
+            }
+            fn narrow(v: i32) -> Self {
+                v as $t
+            }
+        }
+    )*};
+}
+
+narrow_int!(i8, u8, i16, u16);
+
+/// A [`c_enum!`] kept in a field narrower than its C enum, as the game keeps a character kind
+/// in a byte (`s8 ckind`) or a stage kind in a halfword: the field's own integer, so it keeps
+/// its size and every bit pattern the game stores there, read and written as the enum
+/// ([`get`](Narrow::get), [`set`](Narrow::set), `From`) the way C converts (a write keeps the
+/// enum's low bits, a read sign- or zero-extends by the field's type). It compares with the
+/// enum (`p.ckind == CharacterKind::Fox`), reads, lays out and hashes as its integer, and the
+/// comparer shows it as the enum.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Narrow<K, R> {
+    raw: R,
+    kind: std::marker::PhantomData<K>,
+}
+
+impl<K: CEnum<Raw = i32>, R: NarrowInt> Narrow<K, R> {
+    /// The field holding its integer as memory has it.
+    #[inline]
+    pub fn from_raw(raw: R) -> Self {
+        Narrow {
+            raw,
+            kind: std::marker::PhantomData,
+        }
+    }
+
+    /// The field holding `k`: its low bits.
+    #[inline]
+    pub fn new(k: K) -> Self {
+        Self::from_raw(R::narrow(k.raw()))
+    }
+
+    /// The enum the field holds.
+    #[inline]
+    pub fn get(self) -> K {
+        K::from_raw(self.raw.widen())
+    }
+
+    #[inline]
+    pub fn set(&mut self, k: K) {
+        *self = Self::new(k);
+    }
+
+    /// The field's integer.
+    #[inline]
+    pub fn raw(self) -> R {
+        self.raw
+    }
+}
+
+impl<K: CEnum<Raw = i32>, R: NarrowInt> From<K> for Narrow<K, R> {
+    fn from(k: K) -> Self {
+        Self::new(k)
+    }
+}
+
+impl<K, R: Default> Default for Narrow<K, R> {
+    fn default() -> Self {
+        Narrow {
+            raw: R::default(),
+            kind: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<K: CEnum<Raw = i32> + std::fmt::Debug, R: NarrowInt> std::fmt::Debug for Narrow<K, R> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.get().fmt(f)
+    }
+}
+
+impl<K: CEnum<Raw = i32> + std::fmt::Debug, R: NarrowInt> Mirror for Narrow<K, R> {
+    const SIZE: u32 = R::SIZE;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        Self::from_raw(R::import(m, at, cx))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let theirs = Self::from_raw(R::import(m, at, cx));
+        if self.raw != theirs.raw {
+            cx.mismatch(path, format!("{self:?}"), format!("{theirs:?}"));
+        }
+    }
+}
+
+impl<K, R: NarrowInt> LayOut for Narrow<K, R> {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn LayCx) {
+        self.raw.lay(l, at, cx);
+    }
+}
+
+impl<K, R: NarrowInt> Export for Narrow<K, R> {
+    fn export(&self, m: &mut MemMut, at: u32) {
+        self.raw.export(m, at);
+    }
+}
+
+impl<K: CEnum<Raw = i32> + std::fmt::Debug + PartialEq, R: NarrowInt> StateEq for Narrow<K, R> {
+    fn state_diff(&self, other: &Self) -> Option<crate::state_eq::Diff> {
+        (self != other).then(|| crate::state_eq::Diff::values(self, other))
+    }
+
+    fn state_hash(&self, h: &mut crate::state_eq::StateHasher) {
+        self.raw.state_hash(h);
+    }
 }
 
 /// A run of big-endian memory to write a struct into, at address `base`.

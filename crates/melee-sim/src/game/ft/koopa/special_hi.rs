@@ -2,11 +2,11 @@
 //! the ground steered by the stick, in the air rising and drifting, turning his model's lean
 //! with the floor; the shell's intangibility follows the script (`ftKp_SpecialN_80135780`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef;
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -93,7 +93,7 @@ impl Running<'_> {
         self.kp_hi_tick(gobj);
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[2] == 2 {
-            if self.game.fighters[f.0].ground_or_air == GA_AIR {
+            if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
                 self.go_airborne_jumped(f);
                 ef::eflib::destroy_all(self, gobj);
                 let fp = &mut self.game.fighters[f.0];

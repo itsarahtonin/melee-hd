@@ -55,7 +55,7 @@ pub fn spawn(
     dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::KirbyHammer.id(),
+        kind: ItKind::KirbyHammer,
         ..Default::default()
     };
     spawn.prev_pos = pos;

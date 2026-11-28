@@ -37,6 +37,7 @@ use melee_capture::{
 };
 use melee_data::archive::Archives;
 use melee_data::disc::Disc;
+use melee_sim::game::ft::CpuKind;
 use melee_sim::game::gm::{input, pause};
 use melee_sim::game::mirror::Mirror;
 use melee_sim::game::state::Running;
@@ -1552,7 +1553,7 @@ fn player_set_cpu_level() {
 #[test]
 fn player_set_cpu_type() {
     check("Player_SetPlayerAndEntityCpuType", |r, a| {
-        r.set_player_cpu_type(a.i(3), a.i(4));
+        r.set_player_cpu_type(a.i(3), CpuKind::from_raw(a.i(4)));
         vec![]
     });
 }
@@ -1573,7 +1574,7 @@ fn player_set_cpu_on_fighters() {
             if a.r(5) == 0 {
                 r.set_player_cpu_level(a.i(3), a.i(4));
             } else {
-                r.set_player_cpu_type(a.i(3), a.i(4));
+                r.set_player_cpu_type(a.i(3), CpuKind::from_raw(a.i(4)));
             }
             vec![]
         },
@@ -1631,7 +1632,7 @@ fn player_awake() {
 #[test]
 fn player_kind() {
     check("Player_8003248C", |r, a| {
-        vec![Out::R3(r.game.player_kind(a.i(3), a.i(4)) as u32)]
+        vec![Out::R3(r.game.player_kind(a.i(3), a.i(4)).raw() as u32)]
     });
 }
 

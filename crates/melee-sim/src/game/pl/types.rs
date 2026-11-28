@@ -9,8 +9,10 @@
 //! structs' did. The stale-move table's last-KO hit (`ft_800898B4_t`), which a fighter's damage
 //! holds too, stays generated in `game::structs`.
 
+use crate::game::ft::{CharacterKind, CpuKind};
 use crate::game::handles::CodeRef;
-use crate::game::mirror::{Export, MemMut};
+use crate::game::mirror::{Export, MemMut, Narrow};
+use crate::game::pl::player::PlayerKind;
 use crate::game::structs::HitRecord;
 use crate::hsd::gobj::GObjId;
 use crate::state_eq::{Diff, StateEq, StateHasher};
@@ -628,9 +630,9 @@ pub struct StaticPlayer {
     #[at(0x0)]
     pub player_state: i32,
     #[at(0x4)]
-    pub ckind: i32,
+    pub ckind: CharacterKind,
     #[at(0x8)]
-    pub pkind: i32,
+    pub pkind: PlayerKind,
     #[at(0xC)]
     pub transformed: [u8; 2],
     #[at(0xE)]
@@ -654,7 +656,7 @@ pub struct StaticPlayer {
     #[at(0x49)]
     pub cpu_level: u8,
     #[at(0x4A)]
-    pub cpu_type: u8,
+    pub cpu_type: Narrow<CpuKind, u8>,
     #[at(0x4B)]
     pub handicap: u8,
     #[at(0x4C)]
@@ -734,8 +736,8 @@ impl Default for StaticPlayer {
     fn default() -> Self {
         StaticPlayer {
             player_state: 0,
-            ckind: 0,
-            pkind: 0,
+            ckind: CharacterKind::Captain,
+            pkind: PlayerKind::Human,
             transformed: [0; 2],
             unused_0e: 0,
             player_poses: [0; 48],
@@ -746,7 +748,7 @@ impl Default for StaticPlayer {
             team: 0,
             pad_port: 0,
             cpu_level: 0,
-            cpu_type: 0,
+            cpu_type: CpuKind::Stay.into(),
             handicap: 0,
             entry_delay: 0,
             kirby_copy_kind: 0,

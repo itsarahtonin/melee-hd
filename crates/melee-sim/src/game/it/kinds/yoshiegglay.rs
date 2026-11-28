@@ -2,6 +2,7 @@
 //! fighter's egg, it falls and sits until its time is up (hits shorten it), then breaks and
 //! is gone a little later.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::effect::queue;
@@ -79,7 +80,7 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut itYoshiEggLay_ItemVars {
 #[doc(alias = "it_802F2F34")]
 pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: laid.kind,
+        kind: ItKind::from_raw(laid.kind),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, true)`.

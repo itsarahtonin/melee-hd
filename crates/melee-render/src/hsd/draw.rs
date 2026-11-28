@@ -1170,7 +1170,8 @@ impl Ctx<'_> {
                 .note_once("a fighter joint drawn by something not a fighter");
             return;
         };
-        let vmtx = vmtx.copied().unwrap_or_else(|| self.hsd.view_mtx());
+        let vmtx = vmtx.map_or_else(|| self.hsd.view_mtx(), |m| self.hsd.unshaken(m));
+        let vmtx = self.hsd.posed(vmtx);
         self.hsd.motion.joints = self
             .blend
             .is_some_and(|b| self.hsd.motion.camera_blends && b.has_joint(self.objs(), j));
@@ -1194,7 +1195,8 @@ impl Ctx<'_> {
     /// ([`Draw::SpecularInit`]), with the joint's position matrix in the view `vmtx` (the
     /// current camera's by default).
     pub fn specular_init(&mut self, j: JObjId, vmtx: Option<&Mtx34>) {
-        let vmtx = vmtx.copied().unwrap_or_else(|| self.hsd.view_mtx());
+        let vmtx = vmtx.map_or_else(|| self.hsd.view_mtx(), |m| self.hsd.unshaken(m));
+        let vmtx = self.hsd.posed(vmtx);
         self.hsd.motion.joints = self
             .blend
             .is_some_and(|b| self.hsd.motion.camera_blends && b.has_joint(self.objs(), j));
@@ -1239,6 +1241,8 @@ impl Ctx<'_> {
         self.hsd.motion.joints = self
             .blend
             .is_some_and(|b| self.hsd.motion.camera_blends && b.has_shape(key, n));
+        // A view the pass named (inside an instance joint) was derived from the camera's.
+        let vmtx = vmtx.map(|m| self.hsd.unshaken(&m));
         let vmtx = match self.blend {
             Some(b) if self.hsd.motion.joints => {
                 let current_b = self
@@ -1246,10 +1250,12 @@ impl Ctx<'_> {
                     .motion
                     .camera_b
                     .map_or(Mtx34::IDENTITY, |c| c.view_mtx);
-                b.shape_view(key, n, vmtx, &self.hsd.view_mtx(), &current_b)
+                let unshake = self.hsd.no_screen_shake;
+                b.shape_view(key, n, vmtx, &self.hsd.view_mtx(), &current_b, unshake)
             }
             _ => vmtx.unwrap_or_else(|| self.hsd.view_mtx()),
         };
+        let vmtx = self.hsd.posed(vmtx);
         let pmtx = self.joint_position_mtx(j, &vmtx);
         self.clear_mtx_mark(0);
         let mut i = 0;

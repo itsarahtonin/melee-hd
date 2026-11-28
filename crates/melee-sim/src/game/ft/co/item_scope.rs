@@ -16,6 +16,7 @@ use crate::game::ef::Arg;
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
+use crate::mp::coll::GroundOrAir;
 use crate::vec::Vec3;
 use gekko_fp as fp;
 
@@ -373,7 +374,7 @@ impl Running<'_> {
                 self.enter_scope_end(gobj);
             }
         } else if self.game.fighter(gobj).item_gobj.is_some() && self.scope_empty(gobj) {
-            let msid = if self.game.fighter(gobj).ground_or_air == 0 {
+            let msid = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
                 ms::ITEM_SCOPE_RAPID_EMPTY
             } else {
                 ms::ITEM_SCOPE_AIR_RAPID_EMPTY

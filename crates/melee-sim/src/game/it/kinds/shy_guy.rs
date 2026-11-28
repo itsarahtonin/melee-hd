@@ -242,7 +242,7 @@ fn face_model(game: &mut Game, gobj: GObjId) {
 /// and the ticks before it starts.
 #[doc(alias = "it_802D8618")]
 pub fn spawn(r: &mut Running, i: i32, pos: Vec3, speed: i32, delay: i32) {
-    let gobj = zako::spawn(r, ItKind::ShyGuy.id(), Some(pos), None, None, true)
+    let gobj = zako::spawn(r, ItKind::ShyGuy, Some(pos), None, None, true)
         .expect("it_802D8618: no Shy Guy");
     let v = vars(r.game, gobj);
     v.flight_place.set(i as i8);

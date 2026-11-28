@@ -9,13 +9,14 @@
 //! Kirby's (`ft::kirby::special_koopa::KIRBY`), and each function here carries both
 //! originals' names.
 
+use crate::lb::hitcapsule::HurtCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::camera;
 use super::super::super::code::Val;
 use super::super::super::it::kinds::koopaflame;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::kirby::copy::KindFrom;
 use super::super::motion::flags::SKIP_RUMBLE;
 use super::{addr, attr, ms, mv, u};
@@ -177,7 +178,17 @@ impl Running<'_> {
         let (facing, id) = (fp.facing_dir, fp.mv_i32(mv::N_ATTACK_ID) as u32);
         let speed = fp::fctiwz(reg(fp.u_f32(p.u + u::FLAME_SPEED)));
         let size = fp::fctiwz(reg(fp.u_f32(p.u + u::FLAME_SIZE)));
-        koopaflame::spawn(self, gobj, v, facing, id, dir, speed, size, p.flame_kind);
+        koopaflame::spawn(
+            self,
+            gobj,
+            v,
+            facing,
+            id,
+            dir,
+            speed,
+            size,
+            ItKind::from_raw(p.flame_kind),
+        );
         if self.game.fighters[f.0].mv_i32(mv::N_X14) == 0 {
             let id = super::super::super::it::item::next_attack_id(self.game);
             self.game.fighters[f.0].set_mv_i32(mv::N_ATTACK_ID, id as i32);
@@ -484,7 +495,7 @@ impl Running<'_> {
     pub fn kp_hi_shell(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let var = if fp.ground_or_air == GA_GROUND {
+        let var = if fp.ground_or_air == GroundOrAir::Ground {
             fp.cmd_vars[2]
         } else {
             fp.cmd_vars[1]
@@ -492,13 +503,13 @@ impl Running<'_> {
         if var & 1 != 0 {
             self.set_model_variant(f, 0, 1);
             for b in SHELL_BONES {
-                self.set_bone_hurtbox_state(f, b, 2);
+                self.set_bone_hurtbox_state(f, b, HurtCapsuleState::Intangible);
             }
             self.set_item_visible(gobj, false);
             self.game.fighters[f.0].articles_visible = false;
         } else {
             self.set_model_variant(f, 0, 0);
-            self.set_hurtbox_state(f, 0);
+            self.set_hurtbox_state(f, HurtCapsuleState::Enabled);
             self.set_item_visible(gobj, true);
             self.game.fighters[f.0].articles_visible = true;
         }

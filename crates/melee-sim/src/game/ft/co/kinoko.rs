@@ -6,6 +6,7 @@
 //! keeps the fighter's speeds while it scales (`mv.co.common`), the state to fall into
 //! (`mv.co.mushroom.x0`) and its own end (`x4`), which a hit also runs.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
@@ -222,7 +223,7 @@ impl Running<'_> {
             (false, true) => GIANT_START,
             (false, false) => SMALL_START,
         };
-        let air = self.game.fighter(gobj).ground_or_air != 0;
+        let air = self.game.fighter(gobj).ground_or_air != GroundOrAir::Ground;
         if other {
             self.enter_kinoko_end(gobj, state, air, true);
         } else {
@@ -248,7 +249,7 @@ impl Running<'_> {
         if !self.can_end_mushroom(gobj) {
             return false;
         }
-        let air = self.game.fighter(gobj).ground_or_air != 0;
+        let air = self.game.fighter(gobj).ground_or_air != GroundOrAir::Ground;
         self.enter_kinoko_end(gobj, k, air, false);
         true
     }
@@ -468,7 +469,7 @@ impl Running<'_> {
             self.stop_dead(gobj);
             self.game.fighter_mut(gobj).set_mv_i32(MV_X8, 0);
         }
-        if self.game.fighter(gobj).ground_or_air == 0 {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.enter_wait_blend(gobj, -1.0);
             return;
         }

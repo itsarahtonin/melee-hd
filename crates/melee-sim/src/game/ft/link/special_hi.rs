@@ -2,12 +2,12 @@
 //! a ledge into the air version, which rises once and ends in a helpless fall; and the
 //! helpers his boomerang reads.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::parts::TRANS_N;
 use super::{addr, attr, ms, u};
 use crate::fpu::{mem, reg};
@@ -41,7 +41,7 @@ impl Running<'_> {
         };
         let to = self.bone_joint(gobj, to_part);
         if !self.game.fighter(gobj).effect_once {
-            let id = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+            let id = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
                 GFX_SPIN
             } else {
                 GFX_SPIN_AIR
@@ -118,7 +118,7 @@ impl Running<'_> {
     /// `ftLk_SpecialHi_Phys`: the air's when off the ground, else friction.
     #[doc(alias = "ftLk_SpecialHi_Phys")]
     pub fn link_special_hi_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air != GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air != GroundOrAir::Ground {
             self.link_special_air_hi_phys(gobj);
         } else {
             self.ground_friction(gobj);

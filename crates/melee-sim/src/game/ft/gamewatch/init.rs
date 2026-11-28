@@ -6,12 +6,12 @@ use super::super::super::code::Val;
 use super::super::super::handles::FighterId;
 use super::super::super::state::Running;
 use super::super::super::structs::_GXColor;
-use super::super::common::GA_AIR;
 use super::{ITEMS, attack_air, attr, panic, special_lw, special_s, u};
 use crate::hsd::Objects;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::tobj::Color;
+use crate::mp::coll::GroundOrAir;
 
 /// Sets every material's diffuse color in a model, `ftMaterial_800BFB4C` (and the items'
 /// `it_80278574`, the same walk): each joint's display objects, then its children unless it's
@@ -148,7 +148,7 @@ impl Running<'_> {
     /// collision.
     #[doc(alias = "ftGw_Init_8014A538")]
     pub fn gw_drop_items_in_air(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.gw_on_damage(gobj);
         }
     }

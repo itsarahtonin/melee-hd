@@ -9,6 +9,10 @@
 //! ([`Running::menu_call`]) and the variables are the debug menus' own statics
 //! ([`DebugVars`]), the debug level, and the words the tables name.
 
+use crate::game::ft::CpuKind;
+use crate::game::ft::FighterKind;
+use crate::game::gr::StKind;
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 
 use super::debug_tables::{SETTINGS_INIT, TABLES, WORDS};
@@ -197,7 +201,7 @@ impl DebugVars {
                 r.timer_enabled = false;
             }
         }
-        r.stkind = w(0x8) as u16;
+        r.stkind = Narrow::from_raw(w(0x8) as u16);
         r.item_switch = u64::MAX;
         r.item_freq = w(0xD8).wrapping_sub(1) as i8;
         r.sd_penalty = -1;
@@ -205,8 +209,8 @@ impl DebugVars {
         all_player_defaults(&mut d.players);
         for (i, p) in d.players[..4].iter_mut().enumerate() {
             let i = 4 * i as u32;
-            p.ckind = w(0x10 + i) as i8;
-            p.slot_type = w(0x24 + i) as u8;
+            p.ckind = Narrow::from_raw(w(0x10 + i) as i8);
+            p.slot_type = Narrow::from_raw(w(0x24 + i) as u8);
             p.color = w(0x38 + i) as u8;
             p.sub_color = w(0x48 + i) as u8;
             p.team = w(0x58 + i) as u8;
@@ -214,7 +218,7 @@ impl DebugVars {
             p.damage1 = w(0x68 + i) as u16;
             p.attack_ratio = f(0x78 + i);
             p.defense_ratio = f(0x88 + i);
-            p.cpu_kind = w(0xA8 + i) as u8;
+            p.cpu_kind = Narrow::from_raw(w(0xA8 + i) as u8);
             p.cpu_level = w(0xB8 + i) as u8;
             p.stocks = w(0xD4) as i8;
             p.enters = false;
@@ -1485,7 +1489,7 @@ impl Running<'_> {
         me.is_teams = 0;
         for i in 0..4 {
             let p = &mut me.player_standings[i];
-            p.ckind = ckinds[i];
+            p.ckind = Narrow::from_raw(ckinds[i]);
             p.flags[0] = (p.flags[0] & 3) | (color & 0x3F) << 2;
             let score = 10i32.wrapping_sub(i32::from(ranks[i]));
             p.score = score;
@@ -1495,25 +1499,25 @@ impl Running<'_> {
             let err = self.game.pads.master[i].err;
             let p = &mut me.player_standings[i];
             p.sub_rank = p.sub_rank.wrapping_add(6 - i as u32);
-            p.pkind = if p.ckind == CharacterKind::NONE as i8 {
-                3
+            p.pkind = if p.ckind.raw() == CharacterKind::NONE as i8 {
+                PlayerKind::None.into()
             } else if err == 0 {
-                0
+                PlayerKind::Human.into()
             } else {
-                1
+                PlayerKind::Cpu.into()
             };
             if p.ckind == CharacterKind::Seak {
-                p.ckind = 0x12;
-                p.ftkind = 7;
+                p.ckind = CharacterKind::Zelda.into();
+                p.ftkind = FighterKind::Seak.into();
             }
         }
-        me.player_standings[4].pkind = 3;
-        me.player_standings[5].pkind = 3;
+        me.player_standings[4].pkind = PlayerKind::None.into();
+        me.player_standings[5].pkind = PlayerKind::None.into();
         self.game.rank_results_standalone(me);
         let mut sfx = 0u64;
         for p in &me.player_standings[..4] {
             if p.pkind != PlayerKind::None && p.is_big_loser == 0 {
-                sfx |= crate::lb::audio::character_banks(i32::from(p.ckind));
+                sfx |= crate::lb::audio::character_banks(i32::from(p.ckind.raw()));
             }
         }
         self.game.debug_mode.results1 = e;
@@ -1554,20 +1558,30 @@ impl Running<'_> {
         );
         let start = &mut self.game.vs_melee.start;
         start.rules = rules_defaults();
-        start.rules.stkind = 0x20;
+        start.rules.stkind = StKind::Last.into();
         start.rules.item_freq = -1;
         start.rules.sd_penalty = -1;
         start.rules.match_kind = 0;
         for p in &mut start.players {
             *p = player_defaults();
             p.stocks = 0;
-            p.cpu_kind = 4;
+            p.cpu_kind = CpuKind::Normal.into();
         }
-        for (p, ckind) in start.players.iter_mut().zip([6, 8, 6, 6]) {
-            p.ckind = ckind;
+        for (p, ckind) in start.players.iter_mut().zip([
+            CharacterKind::Link,
+            CharacterKind::Mario,
+            CharacterKind::Link,
+            CharacterKind::Link,
+        ]) {
+            p.ckind = ckind.into();
         }
-        for (p, kind) in start.players.iter_mut().zip([0, 0, 3, 3]) {
-            p.slot_type = kind;
+        for (p, kind) in start.players.iter_mut().zip([
+            PlayerKind::Human,
+            PlayerKind::Human,
+            PlayerKind::None,
+            PlayerKind::None,
+        ]) {
+            p.slot_type = kind.into();
         }
         for p in &mut start.players[..4] {
             p.rumble_enabled = false;

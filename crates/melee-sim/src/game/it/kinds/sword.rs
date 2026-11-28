@@ -515,7 +515,7 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
     // `Item_InitSpawnPosition` on the plane.
     let at = Vec3::new(pos.x, pos.y, 0.0);
     let mut spawn = SpawnItem {
-        kind: ItKind::BeamSword.id(),
+        kind: ItKind::BeamSword,
         pos: at,
         prev_pos: at,
         ..Default::default()

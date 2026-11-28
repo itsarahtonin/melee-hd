@@ -5,6 +5,7 @@
 
 use melee_data::archive::DataRef;
 
+use crate::game::camera::{CameraMode, CmSubjectState};
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
@@ -16,6 +17,8 @@ use crate::game::handles::*;
 use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
+use crate::game::it::ItKind;
+use crate::game::it::item::HoldKind;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
@@ -26,8 +29,8 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
-use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
+use crate::lb::hitcapsule::{HitCapsuleState, HitJObj, HitOwner, HurtCapsuleState, Victim};
+use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
@@ -234,7 +237,7 @@ impl Default for HitVictim {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct HitCapsule {
     /// +0x0
-    pub state: i32,
+    pub state: HitCapsuleState,
     /// +0x4
     #[doc(alias("x4"))]
     pub group: u32,
@@ -375,7 +378,7 @@ pub struct HitCapsule {
 impl Default for HitCapsule {
     fn default() -> Self {
         HitCapsule {
-            state: 0,
+            state: Default::default(),
             group: 0,
             whole_damage: 0,
             damage: 0.0,
@@ -433,7 +436,7 @@ impl Default for HitCapsule {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct HurtCapsule {
     /// +0x0
-    pub state: i32,
+    pub state: HurtCapsuleState,
     /// +0x4
     pub a_offset: Vec3,
     /// +0x10
@@ -476,7 +479,7 @@ pub struct HurtCapsule {
 impl Default for HurtCapsule {
     fn default() -> Self {
         HurtCapsule {
-            state: 0,
+            state: Default::default(),
             a_offset: Default::default(),
             b_offset: Default::default(),
             scale: 0.0,
@@ -671,7 +674,7 @@ pub struct CmSubject {
     /// +0x4
     pub prev: Option<CameraBoxId>,
     /// +0x8
-    pub state: i32,
+    pub state: CmSubjectState,
     /// +0xc (bits 0..+1)
     pub on_ledge: bool,
     /// +0xc (bits 1..+1)
@@ -703,7 +706,7 @@ impl Default for CmSubject {
         CmSubject {
             next: None,
             prev: None,
-            state: 0,
+            state: Default::default(),
             on_ledge: false,
             force_inactive: false,
             was_framed: false,
@@ -723,7 +726,7 @@ impl Default for CmSubject {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct CameraDebugMode {
     /// +0x0
-    pub last_mode: i32,
+    pub last_mode: CameraMode,
     /// +0x4
     pub ply_slot: i32,
     /// +0x8
@@ -750,7 +753,7 @@ pub struct CameraDebugMode {
 impl Default for CameraDebugMode {
     fn default() -> Self {
         CameraDebugMode {
-            last_mode: 0,
+            last_mode: Default::default(),
             ply_slot: 0,
             follow_int_offset: Default::default(),
             follow_eye_offset: Default::default(),
@@ -1132,9 +1135,9 @@ pub struct SpawnItem {
     #[doc(alias("x4_parent_gobj2"))]
     pub maker: Option<GObjId>,
     /// +0x8
-    pub kind: i32,
+    pub kind: ItKind,
     /// +0xc
-    pub hold_kind: i32,
+    pub hold_kind: HoldKind,
     /// +0x10
     #[doc(alias("x10"))]
     pub origin: i32,
@@ -1169,7 +1172,7 @@ pub struct SpawnItem {
     pub unused_47: [u8; 1],
     /// +0x48
     #[doc(alias("x48_ground_or_air"))]
-    pub ground_or_air: i32,
+    pub ground_or_air: GroundOrAir,
 }
 
 impl Default for SpawnItem {
@@ -1177,8 +1180,8 @@ impl Default for SpawnItem {
         SpawnItem {
             owner: None,
             maker: None,
-            kind: 0,
-            hold_kind: 0,
+            kind: Default::default(),
+            hold_kind: Default::default(),
             origin: 0,
             pos: Default::default(),
             prev_pos: Default::default(),
@@ -1191,7 +1194,7 @@ impl Default for SpawnItem {
             unread_45: [0; 1],
             unused_46: [0; 1],
             unused_47: [0; 1],
-            ground_or_air: 0,
+            ground_or_air: Default::default(),
         }
     }
 }
@@ -3598,7 +3601,7 @@ pub struct db_ItemAndPokemonMenu_t {
     /// +0x14
     pub CurrentlySelectedPokemon: i32,
     /// +0x18
-    pub LastSelectedItem: i32,
+    pub LastSelectedItem: ItKind,
     /// +0x1c
     pub LastSelectedPokemon: i32,
     /// +0x20 (bits 0..+1)
@@ -3618,7 +3621,7 @@ impl Default for db_ItemAndPokemonMenu_t {
             Player: 0,
             CurrentlySelectedItem: 0,
             CurrentlySelectedPokemon: 0,
-            LastSelectedItem: 0,
+            LastSelectedItem: Default::default(),
             LastSelectedPokemon: 0,
             ShowEnemyStompRange: false,
             ShowItemPickupRange: false,
@@ -5322,9 +5325,9 @@ impl itFFlowerFlame_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct PokemonSelectionState {
     /// +0x0
-    pub last_kind: i32,
+    pub last_kind: ItKind,
     /// +0x4
-    pub previous_kind: i32,
+    pub previous_kind: ItKind,
     /// +0x8
     pub rare_spawned: i32,
 }
@@ -5332,8 +5335,8 @@ pub struct PokemonSelectionState {
 impl Default for PokemonSelectionState {
     fn default() -> Self {
         PokemonSelectionState {
-            last_kind: 0,
-            previous_kind: 0,
+            last_kind: Default::default(),
+            previous_kind: Default::default(),
             rare_spawned: 0,
         }
     }

@@ -1,6 +1,9 @@
 //! Helpers the processes share, from the common fighter units (`ftcommon.c`, `ft_*.c`,
 //! `ftCo_*.c`).
 
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::{run_fighter_cb, unported_call};
@@ -15,12 +18,6 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
-
-/// `GA_Ground`.
-pub const GA_GROUND: i32 = 0;
-
-/// `GA_Air`.
-pub const GA_AIR: i32 = 1;
 
 /// The process link fighters' GObjs are on.
 pub const FIGHTER_P_LINK: u8 = 8;
@@ -104,10 +101,10 @@ impl Running<'_> {
     pub fn item_pickup_stat(&mut self, slot: i32, _sub: i32, item: GObjId) {
         let ip = crate::game::it::item(self.game, item);
         let kind = ip.kind;
-        let kind2 = if (0..ItKind::COMMON_END.id()).contains(&kind) {
-            kind
+        let kind2 = if (0..ItKind::COMMON_END.id()).contains(&kind.id()) {
+            kind.id()
         } else {
-            match ItKind::of(kind) {
+            match kind {
                 ItKind::ChanseyEgg => ItKind::RayGunShot.id(),
                 ItKind::WhispyApple => ItKind::StarRodStar.id(),
                 ItKind::WhispyHealApple => ItKind::LipsStickSpore.id(),
@@ -244,7 +241,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_800804FC")]
     pub fn forget_attacker_grounded(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             fp.dmg.source_player = 6;
             fp.dmg.source_attack = -1;
         }
@@ -342,8 +339,8 @@ impl Running<'_> {
     pub fn smash_charge_tick(&mut self, gobj: GObjId) {
         let sfx_frame = self.common().f32(0x7C8);
         let attr = &mut self.game.fighter_mut(gobj).smash_attrs;
-        let charging = attr.state == 2;
-        if !charging && attr.state != 4 {
+        let charging = attr.state == SmashState::Charging;
+        if !charging && attr.state != SmashState::Held {
             return;
         }
         attr.frames = mem(fp::fadds(reg(attr.frames), 1.0));
@@ -355,7 +352,7 @@ impl Running<'_> {
             if attr.frames > attr.hold_frame {
                 attr.frames = attr.hold_frame;
             }
-            attr.state = 3;
+            attr.state = SmashState::Release;
             let (rate, color) = (attr.frame_speed_mul, attr.color_anim);
             self.set_anim_rate(gobj, rate);
             self.end_color_anim(gobj, color);
@@ -386,7 +383,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.nudge_vel.y = 0.0;
         fp.nudge_vel.x = 0.0;
-        if fp.out_of_play || fp.in_hitlag || fp.ground_or_air != GA_GROUND {
+        if fp.out_of_play || fp.in_hitlag || fp.ground_or_air != GroundOrAir::Ground {
             return;
         }
         let c = self.common();
@@ -462,7 +459,7 @@ impl Running<'_> {
             }
             let other = self.game.fighter(o);
             if other.is_sleeping
-                || other.ground_or_air != GA_GROUND
+                || other.ground_or_air != GroundOrAir::Ground
                 || other.victim_gobj.is_some()
                 || other.is_sub_fighter
             {
@@ -514,7 +511,7 @@ impl Running<'_> {
             .player_entity(slot)
             .expect("a second fighter without its player's fighter");
         let other = self.game.fighter(leader);
-        if !other.is_sleeping && other.ground_or_air == GA_GROUND {
+        if !other.is_sleeping && other.ground_or_air == GroundOrAir::Ground {
             let me = self.game.fighter(gobj);
             if self.floors_meet(me.coll_data.floor.index, other.coll_data.floor.index) {
                 let p = Self::pending_pos(other);
@@ -542,14 +539,8 @@ impl Running<'_> {
             fp.bury_timer_1 -= 1;
         }
         if matches!(
-            GrKind::from_id(fp.bury_grkind),
-            Some(
-                GrKind::OldKongo
-                    | GrKind::Kongo
-                    | GrKind::ShrineRoute
-                    | GrKind::Pushon
-                    | GrKind::Zebes
-            )
+            fp.bury_grkind,
+            GrKind::OldKongo | GrKind::Kongo | GrKind::ShrineRoute | GrKind::Pushon | GrKind::Zebes
         ) && fp.bury_timer_2 != 0
         {
             fp.bury_timer_2 -= 1;
@@ -645,7 +636,7 @@ impl Running<'_> {
             return;
         }
         fp.combo_push_frames -= 1;
-        if fp.victim_gobj.is_none() && fp.ground_or_air == GA_GROUND {
+        if fp.victim_gobj.is_none() && fp.ground_or_air == GroundOrAir::Ground {
             let n = fp.coll_data.floor.normal;
             let push = if i32::from(fp.combo_count) < limit {
                 near
@@ -692,7 +683,9 @@ impl Running<'_> {
             return true;
         }
         if y > top
-            && (fp.ground_or_air == GA_GROUND || fp.no_blast_rise || reg(fp.kb_vel.y) > kb_limit)
+            && (fp.ground_or_air == GroundOrAir::Ground
+                || fp.no_blast_rise
+                || reg(fp.kb_vel.y) > kb_limit)
         {
             let (slot, ice) = (
                 i32::from(fp.player_idx),
@@ -774,7 +767,10 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let h = &fp.hitboxes[i];
         let state = h.state;
-        if !(1..=3).contains(&state) {
+        if !matches!(
+            state,
+            HitCapsuleState::Enabled | HitCapsuleState::Placed | HitCapsuleState::Moving
+        ) {
             return;
         }
         let offset = if h.unscaled_offset {
@@ -789,17 +785,17 @@ impl Running<'_> {
             h.b_offset
         };
         let j = h.jobj.get("ftColl_8007AD18");
-        if state == 1 {
+        if state == HitCapsuleState::Enabled {
             let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
             let h = &mut self.game.fighter_mut(gobj).hitboxes[i];
             h.pos = p;
             h.prev_pos = p;
-            h.state = 2;
+            h.state = HitCapsuleState::Placed;
             return;
         }
         let h = &mut self.game.fighter_mut(gobj).hitboxes[i];
-        if state == 2 {
-            h.state = 3;
+        if state == HitCapsuleState::Placed {
+            h.state = HitCapsuleState::Moving;
         }
         h.prev_pos = h.pos;
         let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
@@ -813,17 +809,17 @@ impl Running<'_> {
         let h = &self.game.fighter(gobj).thrown_hitbox;
         let (state, j, offset) = (h.state, h.jobj.get("ft_8007C224"), h.b_offset);
         match state {
-            1 => {
+            HitCapsuleState::Enabled => {
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
                 let h = &mut self.game.fighter_mut(gobj).thrown_hitbox;
                 h.pos = p;
                 h.prev_pos = p;
-                h.state = 2;
+                h.state = HitCapsuleState::Placed;
             }
-            2 | 3 => {
+            HitCapsuleState::Placed | HitCapsuleState::Moving => {
                 let h = &mut self.game.fighter_mut(gobj).thrown_hitbox;
-                if state == 2 {
-                    h.state = 3;
+                if state == HitCapsuleState::Placed {
+                    h.state = HitCapsuleState::Moving;
                 }
                 h.prev_pos = h.pos;
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));

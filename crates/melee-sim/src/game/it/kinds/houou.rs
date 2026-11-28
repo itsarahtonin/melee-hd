@@ -172,7 +172,7 @@ pub fn sacred_fire(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     let (facing, owner) = (ip.facing_dir, ip.owner);
     let mut spawn = SpawnItem {
-        kind: ItKind::HoOhSacredFire.id(),
+        kind: ItKind::HoOhSacredFire,
         ..Default::default()
     };
     spawn.prev_pos = hit.pos;

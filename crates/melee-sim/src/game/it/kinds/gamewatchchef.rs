@@ -2,6 +2,7 @@
 //! each of the five by its own speed, spin and fall (the attributes' entries), turning back
 //! off walls and stopping on the floor, a hit or a shield, then blinking out.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state};
@@ -88,7 +89,7 @@ pub fn spawn(
     r: &mut Running,
     parent: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     index: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {

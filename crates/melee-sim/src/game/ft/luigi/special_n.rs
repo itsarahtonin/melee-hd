@@ -133,7 +133,7 @@ impl Running<'_> {
         let hand = self.part_joint(gobj, f.hand);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, hand, None);
         let facing = self.game.fighter(gobj).facing_dir;
-        luigifireball::spawn(self, gobj, pos, f.item_kind, facing);
+        luigifireball::spawn(self, gobj, pos, ItKind::from_raw(f.item_kind), facing);
         let hand = self.part_joint(gobj, f.hand);
         let facing = self.game.fighter(gobj).facing_dir;
         spawn(

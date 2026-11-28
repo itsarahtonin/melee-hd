@@ -1568,7 +1568,7 @@ impl crate::game::state::Running<'_> {
         if self.game.vs_is_singleplayer() {
             // The human's and the joining opponents' setup's three characters
             // (`gm_80169370`), Kirby's copies' with Kirby's.
-            result = character_banks(self.game.player_ckind(0));
+            result = character_banks(self.game.player_ckind(0).id());
             for k in (0..3).map(|i| self.game.gm.opponents.kind(i)) {
                 if k != CharacterKind::NONE as i8 {
                     result |= character_banks(i32::from(k));
@@ -1580,7 +1580,7 @@ impl crate::game::state::Running<'_> {
         } else {
             for i in 0..4 {
                 if self.game.player_pkind(i) != PlayerKind::None {
-                    result |= character_banks(self.game.player_ckind(i));
+                    result |= character_banks(self.game.player_ckind(i).id());
                 }
             }
         }

@@ -2,6 +2,10 @@
 //! team's and player's standing and statistics, and the decisions (the results' bonuses) each
 //! player earned.
 
+use crate::game::ft::{CharacterKind, FighterKind};
+use crate::game::mirror::Narrow;
+use crate::game::pl::player::PlayerKind;
+
 /// The decomp's `MatchTeamData`.
 #[derive(
     melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq, melee_derive::Mirror,
@@ -27,11 +31,11 @@ pub struct MatchTeamData {
 #[mirror(c = "MatchPlayerData", size = 0xA8, pad(0x1A, 2))]
 pub struct MatchPlayerData {
     #[at(0x0)]
-    pub pkind: u8,
+    pub pkind: Narrow<PlayerKind, u8>,
     #[at(0x1)]
-    pub ckind: i8,
+    pub ckind: Narrow<CharacterKind, i8>,
     #[at(0x2)]
-    pub ftkind: i8,
+    pub ftkind: Narrow<FighterKind, i8>,
     /// The costume (the top six bits), the rumble and the stamina flags (bits 1 and 0).
     #[at(0x3, union)]
     #[doc(alias("x3_u"))]

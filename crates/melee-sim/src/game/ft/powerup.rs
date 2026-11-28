@@ -8,7 +8,7 @@ use super::attack::victim;
 use crate::game::ft::FighterKind;
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
+use crate::lb::hitcapsule::HitCapsuleState;
 
 /// The Starman's color animation.
 pub const STAR_COLANIM: i32 = 107;
@@ -25,10 +25,10 @@ impl Running<'_> {
         if self.game.fighters[me.0].stamina_dead {
             return;
         }
-        match ItKind::of(it::item(self.game, g).kind) {
+        match it::item(self.game, g).kind {
             ItKind::Starman => {
                 let ip = it::item_mut(self.game, g);
-                ip.hitboxes[j].hit.state = hitcapsule::DISABLED;
+                ip.hitboxes[j].hit.state = HitCapsuleState::Disabled;
                 ip.damage_dealt = 1;
                 let frames = it::lib2725::special_word(self.game, self.data, g);
                 self.start_star(me, frames);
@@ -37,13 +37,13 @@ impl Running<'_> {
             }
             ItKind::SuperMushroom => {
                 let ip = it::item_mut(self.game, g);
-                ip.hitboxes[j].hit.state = hitcapsule::DISABLED;
+                ip.hitboxes[j].hit.state = HitCapsuleState::Disabled;
                 self.game.fighters[me.0].queued_grows += 1;
                 it::item_mut(self.game, g).damage_dealt = 1;
             }
             ItKind::PoisonMushroom => {
                 let ip = it::item_mut(self.game, g);
-                ip.hitboxes[j].hit.state = hitcapsule::DISABLED;
+                ip.hitboxes[j].hit.state = HitCapsuleState::Disabled;
                 self.game.fighters[me.0].queued_shrinks += 1;
                 it::item_mut(self.game, g).damage_dealt = 1;
             }

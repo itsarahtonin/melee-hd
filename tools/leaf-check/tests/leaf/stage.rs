@@ -454,8 +454,8 @@ fn int_arg(cap: &Capture, i: usize) -> u32 {
 }
 
 /// The stage kind of a `StageIdPair*` argument.
-fn pair_grkind(cap: &Capture) -> i32 {
-    cap.u32(int_arg(cap, 0)) as i32
+fn pair_grkind(cap: &Capture) -> melee_sim::game::gr::GrKind {
+    melee_sim::game::gr::GrKind::from_raw(cap.u32(int_arg(cap, 0)) as i32)
 }
 
 use melee_sim::game::gr::{final_destination, setup};

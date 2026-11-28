@@ -5,6 +5,7 @@
 //! [`Draw`]: melee_sim::hsd::display::Draw
 
 pub mod blend;
+pub mod cosmetic;
 pub mod frame;
 pub mod gpu;
 pub mod gx;

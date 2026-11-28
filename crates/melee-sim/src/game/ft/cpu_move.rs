@@ -2,13 +2,13 @@
 //! and turn toward the destination on the ground (`ftCo_800AB224`), drift, jump and recover
 //! toward it in the air (`ftCo_800A9CB4`), and leave the respawn platform.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
 use super::super::handles::FighterId;
 use super::super::ruleset::NanaDeterminism;
 use super::super::state::Running;
-use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
@@ -201,21 +201,22 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800ABA34")]
     pub(super) fn cpu_walk(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        match CpuKind::from_id(fpp.cpu.kind) {
-            Some(CpuKind::SpLwLink) => {
+        match fpp.cpu.kind {
+            CpuKind::SpLwLink => {
                 if fpp.item_gobj.is_none() {
                     self.cpu_data_script(f, 38);
                     return;
                 }
             }
-            Some(CpuKind::SpLwSamus) => {
+            CpuKind::SpLwSamus => {
                 if fpp.cpu.frame_counter % 30 == 0 {
                     self.cpu_data_script(f, 38);
                     return;
                 }
             }
-            Some(CpuKind::Air)
-                if fpp.ground_or_air == GA_GROUND && fpp.cpu.frame_counter % 0x12C == 0 =>
+            CpuKind::Air
+                if fpp.ground_or_air == GroundOrAir::Ground
+                    && fpp.cpu.frame_counter % 0x12C == 0 =>
             {
                 self.cpu_jump_toward_target(f);
                 return;
@@ -230,7 +231,7 @@ impl Running<'_> {
             self.game.fighters[f.0].cpu.coin_flip = false;
         } else if self.cpu_entering_enemy(f).is_none() && self.game.fighters[f.0].motion_id == 13 {
             self.cpu_leave_platform(f);
-        } else if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        } else if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             self.cpu_air_move(f);
         } else {
             self.cpu_ground_move(f);
@@ -249,7 +250,7 @@ impl Running<'_> {
         if c.off_stage {
             return fpp.pos_delta.y < 0.1;
         }
-        if fpp.ground_or_air != GA_AIR || fpp.pos_delta.y > 0.0 || fpp.motion_id == 244 {
+        if fpp.ground_or_air != GroundOrAir::Air || fpp.pos_delta.y > 0.0 || fpp.motion_id == 244 {
             return false;
         }
         // Ft_Kind_Yoshi.
@@ -589,7 +590,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A28D0")]
     pub(super) fn cpu_near_edge(&self, f: FighterId, scale: f64) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return false;
         }
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -610,7 +611,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A2A70")]
     pub(super) fn cpu_island_end_distance(&self, f: FighterId, left: bool) -> f64 {
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return fp::fneg(1.0);
         }
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -655,7 +656,7 @@ impl Running<'_> {
             }
         }
         let fpp = &self.game.fighters[f.0];
-        if !fpp.cpu.near_target || fpp.ground_or_air != GA_GROUND {
+        if !fpp.cpu.near_target || fpp.ground_or_air != GroundOrAir::Ground {
             return false;
         }
         let r = reg(self.game.objs.rng.draw_f32());
@@ -696,7 +697,7 @@ impl Running<'_> {
         }
         // `ftCo_800A21FC`: the destination on the fighter's island.
         let fpp = &self.game.fighters[f.0];
-        let on_island = if fpp.ground_or_air == GA_AIR {
+        let on_island = if fpp.ground_or_air == GroundOrAir::Air {
             false
         } else {
             let line = fpp.coll_data.floor.index;
@@ -1322,7 +1323,7 @@ impl Running<'_> {
     pub(super) fn cpu_hop(&mut self, f: FighterId) {
         if !self.cpu_at_destination(f, 1.0) {
             self.cpu_back_to_usual(f);
-        } else if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        } else if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             self.cpu_finish_neutral(f);
         } else {
             let window = self.common().i32(0x74);
@@ -1343,7 +1344,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800AD54C")]
     pub(super) fn cpu_pace(&mut self, f: FighterId) {
         let (stick, clamp) = self.cpu_walk_speed(f);
-        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             self.cpu_cmd2(f, cmd::LSTICK_FORWARD_CLAMPED, stick as u8, clamp as u8);
             self.cpu_finish_neutral_y(f);
         } else if self.cpu_near_edge(f, 1.0) {
@@ -1654,7 +1655,7 @@ impl Running<'_> {
         let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
         // `It_Kind_Capsule`, `_Egg`, `_M_Ball`.
         let drop = matches!(
-            ItKind::from_id(kind),
+            ItKind::from_id(kind.id()),
             Some(ItKind::Capsule | ItKind::Egg | ItKind::PokeBall)
         );
         let enemy = fpp.cpu.target;
@@ -1816,7 +1817,7 @@ impl Running<'_> {
             }
             3 => {
                 let fpp = &self.game.fighters[f.0];
-                if fpp.ground_or_air != GA_AIR {
+                if fpp.ground_or_air != GroundOrAir::Air {
                     back(self);
                 } else if f64::from(fpp.pos_delta.y) > 0.0 {
                     self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);

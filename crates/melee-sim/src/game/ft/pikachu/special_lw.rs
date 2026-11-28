@@ -4,6 +4,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::super::camera::request_quake;
@@ -112,7 +113,8 @@ impl Running<'_> {
         let count = self.pk_attr_i32(f, attr::XD4);
         let delay = self.pk_attr_i32(f, attr::XD8);
         let kind = self.pk_attr_i32(f, attr::XDC);
-        let thunder = pikachuthunder::spawn(self, gobj, pos, vel, count, delay, kind);
+        let thunder =
+            pikachuthunder::spawn(self, gobj, pos, vel, count, delay, ItKind::from_raw(kind));
         self.game.fighters[f.0]
             .mv
             .set_gobj_at(mv::LW_THUNDER, thunder);

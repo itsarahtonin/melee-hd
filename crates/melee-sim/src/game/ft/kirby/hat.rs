@@ -426,7 +426,7 @@ impl Running<'_> {
         let table = self.load_common(0x14);
         let entry = self
             .data
-            .ptr(table.at(4 * FighterKind::Kirby as u32))
+            .ptr(table.at(4 * FighterKind::Kirby.raw() as u32))
             .expect("Fighter_804D6540[kind]");
         let count = self.data.u32(entry.at(4));
         let parts = self.data.ptr(entry).expect("Fighter_804D6540[kind]->x0");
@@ -569,7 +569,7 @@ impl Running<'_> {
         let mut stack = DataStack::<MAX_JOINT_DEPTH>::new();
         let mut part = 0i32;
         while let Some(ma) = cur {
-            if self.part_mask(FighterKind::Kirby.id(), part) != 0 {
+            if self.part_mask(FighterKind::Kirby, part) != 0 {
                 part += 1;
                 continue;
             }
@@ -648,7 +648,7 @@ impl Running<'_> {
             let fp = &self.game.fighters[f.0];
             let parts = fp.parts.expect("a fighter without parts").0;
             let (main, second) = (fp.dobj_list.data, fp.second_dobjs.data);
-            for i in 0..self.parts_table(FighterKind::Kirby.id()).len() as usize {
+            for i in 0..self.parts_table(FighterKind::Kirby).len() as usize {
                 let bone = &self.game.fighter_parts[parts][i];
                 let Some(j) = bone.joint else { continue };
                 if bone.flags[0] & 0x02 == 0 && bone.flags[1] & 0x01 == 0 {
@@ -698,7 +698,7 @@ impl Running<'_> {
         let table = self.load_common(0x14);
         let entry = self
             .data
-            .ptr(table.at(4 * FighterKind::Kirby as u32))
+            .ptr(table.at(4 * FighterKind::Kirby.raw() as u32))
             .expect("Fighter_804D6540[kind]");
         let count = self.data.u32(entry.at(4));
         let descs = self.data.ptr(entry).expect("Fighter_804D6540[kind]->x0");

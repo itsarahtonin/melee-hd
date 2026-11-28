@@ -7,6 +7,7 @@ use super::super::structs::{MatchEnd, PlayerInitData, StartMeleeData};
 use super::vs_melee::CssData;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
 
 /// `OUTCOME_TIMEOUT`.
@@ -52,12 +53,12 @@ pub fn setup_sudden_death(start: &mut StartMeleeData, end: &MatchEnd) {
             let mut c = ps.ckind;
             if c == CharacterKind::Zelda || c == CharacterKind::Seak {
                 c = if ps.ftkind == FighterKind::Seak {
-                    CharacterKind::Seak.id() as i8
+                    CharacterKind::Seak.into()
                 } else {
-                    CharacterKind::Zelda.id() as i8
+                    CharacterKind::Zelda.into()
                 };
             }
-            p.ckind = c;
+            p.ckind = Narrow::from_raw(c.raw());
             p.stocks = 1;
             p.damage1 = 300;
         } else {
@@ -82,7 +83,7 @@ pub fn set_slot(player: &mut PlayerInitData, slot: i32) {
 #[doc(alias = "gm_SetupHumanPlayer")]
 pub fn setup_human(player: &mut PlayerInitData, ckind: u8, color: u8, stocks: u8, slot: u8) {
     player.slot_type = PlayerKind::Human.into();
-    player.ckind = ckind as i8;
+    player.ckind = Narrow::from_raw(ckind as i8);
     player.color = color;
     player.stocks = stocks as i8;
     set_slot(player, i32::from(slot));
@@ -92,7 +93,7 @@ pub fn setup_human(player: &mut PlayerInitData, ckind: u8, color: u8, stocks: u8
 #[doc(alias = "gm_SetupCpuPlayer")]
 pub fn setup_cpu(player: &mut PlayerInitData, ckind: u8, color: u8, stocks: u8, slot: u8) {
     player.slot_type = PlayerKind::Cpu.into();
-    player.ckind = ckind as i8;
+    player.ckind = Narrow::from_raw(ckind as i8);
     player.color = color;
     player.stocks = stocks as i8;
     set_slot(player, i32::from(slot));
@@ -122,7 +123,7 @@ pub fn css_one_player(
     css.match_type = match_type;
     css.first_port = u16::from(slot) + 1;
     let p = &mut css.vs.start.players[usize::from(slot)];
-    p.ckind = ckind;
+    p.ckind = Narrow::from_raw(ckind);
     p.stocks = stocks;
     p.color = color as u8;
     p.cpu_level = level;
@@ -138,7 +139,13 @@ pub fn css_one_player(
 pub fn css_one_player_choice(css: &CssData) -> (i8, u8, u8, u8, u8) {
     let slot = usize::from(css.first_port.wrapping_sub(1));
     let p = &css.vs.start.players[slot];
-    (p.ckind, p.stocks as u8, p.color, p.nametag, p.cpu_level)
+    (
+        p.ckind.raw(),
+        p.stocks as u8,
+        p.color,
+        p.nametag,
+        p.cpu_level,
+    )
 }
 
 /// A one-player screen's partner's block (`gm_801B07B4`): the second block for `first` 0,
@@ -155,7 +162,7 @@ pub fn css_set_partner(
 ) {
     let i = usize::from(first == 0);
     let p = &mut css.vs.start.players[i];
-    p.ckind = ckind;
+    p.ckind = Narrow::from_raw(ckind);
     p.stocks = stocks;
     p.color = color as u8;
     p.cpu_level = level;
@@ -169,7 +176,7 @@ pub fn css_partner_choice(css: &CssData) -> (i8, i8, i8, i8, u8) {
     let slot = usize::from(css.first_port.wrapping_sub(1) == 0);
     let p = &css.vs.start.players[slot];
     (
-        p.ckind,
+        p.ckind.raw(),
         p.stocks,
         p.color as i8,
         p.nametag as i8,
