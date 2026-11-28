@@ -90,6 +90,7 @@ fn read(tick: u32, pad: &Bindings, gc: &Bindings) -> [PadStatus; 4] {
     out[0] = pad.pad(&GamepadReader {
         state: &Held(held[0]),
         taps: &[],
+        exact: false,
     });
     out[1] = gc.pad(&GcReader(&held[1]));
     out

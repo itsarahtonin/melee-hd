@@ -483,7 +483,7 @@ fn buttons(b1: u8, b2: u8) -> u16 {
 
 /// What the PAD library makes of a controller's raw values (`SPEC2_MakeStatus` in analog mode
 /// 3, the default), given its origin (`UpdateOrigin`).
-fn status(button: u16, raw: [u8; 6], origin: [u8; 6]) -> PadStatus {
+pub(crate) fn status(button: u16, raw: [u8; 6], origin: [u8; 6]) -> PadStatus {
     let centered = |v: u8| v.wrapping_sub(128) as i8;
     let mut org = origin.map(centered);
     // The X patch, for controllers that report a bad stick x origin.

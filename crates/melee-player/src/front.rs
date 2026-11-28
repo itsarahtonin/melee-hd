@@ -1693,8 +1693,13 @@ mod tests {
                     name: "Keyboard".into(),
                 },
             ],
-            bindings: Vec::new(),
+            ..Default::default()
         };
+        // A gamepad set to read exact, the keyboard on the box layout with a key moved.
+        c.set_exact(&pad, true);
+        let mut keys = melee_input::boxes::BoxKeys::default();
+        keys.set(melee_phob::haybox::Button::Mb2, Some("Digit6".into()));
+        c.set_box_layout(&DeviceId::Keyboard, Some(keys));
         let mut b = Bindings::keyboard();
         b.set(Target::A, Some(Source::Key("Space".into())));
         b.set(Target::Modifier, None);

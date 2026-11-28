@@ -9,11 +9,17 @@
 //! **Extension point:** each GameCube adapter port listed gets a call to the closure
 //! [`Controllers::show`] takes, under its bindings, with the port (0 to 3) and the adapter:
 //! task 2 (PhobGCC) draws its section there (`front::Panel::show_panel` passes it).
+//!
+//! Box controllers (task 3): a gamepad's section has "No deadzone, exact"; the keyboard's has
+//! its layout, and its bindings or the box layout's keys (`melee_input::boxes`), which Rebind…
+//! and Reset to default then work on.
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use melee_input::boxes::{self, BoxKeys};
 use melee_input::{Adapter, Config, DeviceId, DeviceInfo, Source, Target, bindings};
+use melee_phob::haybox;
 
 /// The tab's name.
 pub const TAB: &str = "Controllers";
@@ -24,6 +30,13 @@ pub const RESET: &str = "Reset to default";
 pub const PORTS: &str = "Ports";
 pub const DEVICES: &str = "Devices";
 pub const BINDINGS: &str = "Bindings";
+pub const EXACT: &str = "No deadzone, exact";
+pub const EXACT_LINE: &str =
+    "For box controllers and other devices whose values must reach Melee exactly.";
+pub const LAYOUT: &str = "Layout";
+/// The keyboard's layout through its bindings.
+pub const STANDARD: &str = "Standard";
+pub const BOX_KEYS: &str = "Box layout keys";
 
 /// How long Rebind… waits for each input before skipping it.
 pub const WAIT: Duration = Duration::from_secs(5);
@@ -36,6 +49,16 @@ pub fn port_name(p: u8) -> String {
 /// Rebind…'s prompt for `t`.
 pub fn press(t: Target) -> String {
     format!("Press the key or button for {} (Esc skips it)", t.name())
+}
+
+/// Rebind…'s prompt for a box layout's button.
+pub fn press_box(b: haybox::Button) -> String {
+    format!("Press the key for {} (Esc skips it)", b.function())
+}
+
+/// What a box layout's Rebind… asks for, in turn.
+fn box_buttons() -> &'static [haybox::Button] {
+    &haybox::Button::ALL
 }
 
 /// A device's name, saying so while it's away.
@@ -67,6 +90,30 @@ struct Capture {
     held: Option<Vec<Source>>,
     /// The input pressed for the target, bound at the next frame.
     pressed: Option<Source>,
+    /// Rebinding a box layout's keys (`at` then indexes [`box_buttons`]).
+    boxed: bool,
+}
+
+impl Capture {
+    fn new(device: DeviceId, boxed: bool) -> Capture {
+        Capture {
+            device,
+            at: 0,
+            since: Instant::now(),
+            held: None,
+            pressed: None,
+            boxed,
+        }
+    }
+
+    /// How many inputs it asks for.
+    fn len(&self) -> usize {
+        if self.boxed {
+            box_buttons().len()
+        } else {
+            Target::ALL.len()
+        }
+    }
 }
 
 impl Controllers {
@@ -121,7 +168,7 @@ impl Controllers {
         c.at += 1;
         c.since = Instant::now();
         c.pressed = None;
-        if c.at == Target::ALL.len() {
+        if c.at == c.len() {
             self.capture = None;
         }
     }
@@ -134,9 +181,17 @@ impl Controllers {
             return;
         }
         if let Some(s) = c.pressed.take() {
-            let mut b = config.bindings(&c.device);
-            b.set(Target::ALL[c.at], Some(s));
-            config.set_bindings(&c.device, b);
+            if c.boxed {
+                if let (Source::Key(k), Some(mut keys)) = (s, config.box_layout(&c.device).cloned())
+                {
+                    keys.set(box_buttons()[c.at], Some(k));
+                    config.set_box_layout(&c.device, Some(keys));
+                }
+            } else {
+                let mut b = config.bindings(&c.device);
+                b.set(Target::ALL[c.at], Some(s));
+                config.set_bindings(&c.device, b);
+            }
             self.next();
         } else if c.since.elapsed() >= WAIT {
             self.next();
@@ -205,7 +260,11 @@ impl Controllers {
         d: &DeviceInfo,
         adapter_port: &mut dyn FnMut(&mut egui::Ui, u8, Option<&Adapter>),
     ) {
-        let rebound = config.bindings.iter().any(|b| b.0 == d.id);
+        let keys = config.box_layout(&d.id).cloned();
+        let rebound = match &keys {
+            Some(k) => *k != BoxKeys::default(),
+            None => config.bindings.iter().any(|b| b.0 == d.id),
+        };
         ui.horizontal(|ui| {
             ui.strong(shown_name(d));
             if let Some(p) = d.port {
@@ -218,49 +277,108 @@ impl Controllers {
                 .add_enabled(idle && d.connected, egui::Button::new(REBIND))
                 .clicked()
             {
-                self.capture = Some(Capture {
-                    device: d.id.clone(),
-                    at: 0,
-                    since: Instant::now(),
-                    held: None,
-                    pressed: None,
-                });
+                self.capture = Some(Capture::new(d.id.clone(), keys.is_some()));
             }
             if ui
                 .add_enabled(idle && rebound, egui::Button::new(RESET))
                 .clicked()
             {
-                config.set_bindings(&d.id, d.id.default_bindings());
+                if keys.is_some() {
+                    config.set_box_layout(&d.id, Some(BoxKeys::default()));
+                } else {
+                    config.set_bindings(&d.id, d.id.default_bindings());
+                }
             }
         });
+        if d.id.can_have_box_layout() {
+            let idle = self.capture.is_none();
+            ui.horizontal(|ui| {
+                ui.label(LAYOUT);
+                let shown = if keys.is_some() {
+                    boxes::LAYOUT_NAME
+                } else {
+                    STANDARD
+                };
+                ui.add_enabled_ui(idle, |ui| {
+                    egui::ComboBox::from_id_salt(("layout", d.id.key()))
+                        .selected_text(shown)
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(keys.is_none(), STANDARD).clicked() {
+                                config.set_box_layout(&d.id, None);
+                            }
+                            if ui
+                                .selectable_label(keys.is_some(), boxes::LAYOUT_NAME)
+                                .clicked()
+                                && keys.is_none()
+                            {
+                                config.set_box_layout(&d.id, Some(BoxKeys::default()));
+                            }
+                        });
+                });
+            });
+        }
+        if d.id.can_be_exact() {
+            let mut exact = config.is_exact(&d.id);
+            if ui
+                .checkbox(&mut exact, EXACT)
+                .on_hover_text(EXACT_LINE)
+                .changed()
+            {
+                config.set_exact(&d.id, exact);
+            }
+        }
         if let Some(c) = &self.capture
             && c.device == d.id
         {
-            let t = Target::ALL[c.at];
+            let prompt = if c.boxed {
+                press_box(box_buttons()[c.at])
+            } else {
+                press(Target::ALL[c.at])
+            };
             egui::Frame::group(ui.style())
                 .stroke(egui::Stroke::new(1.0, ui.visuals().selection.stroke.color))
                 .inner_margin(8.0)
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.label(press(t));
-                    ui.weak(format!("{} / {}", c.at + 1, Target::ALL.len()));
+                    ui.label(prompt);
+                    ui.weak(format!("{} / {}", c.at + 1, c.len()));
                 });
         }
-        let b = config.bindings(&d.id);
-        egui::CollapsingHeader::new(BINDINGS)
-            .id_salt(("bindings", d.id.key()))
-            .show(ui, |ui| {
-                egui::Grid::new(("binding-grid", d.id.key()))
-                    .num_columns(2)
-                    .spacing([16.0, 4.0])
-                    .show(ui, |ui| {
-                        for t in Target::ALL {
-                            ui.label(t.name());
-                            ui.label(b.get(t).map_or_else(|| NONE.to_owned(), Source::name));
-                            ui.end_row();
-                        }
-                    });
-            });
+        if let Some(keys) = &keys {
+            egui::CollapsingHeader::new(BOX_KEYS)
+                .id_salt(("box-keys", d.id.key()))
+                .show(ui, |ui| {
+                    egui::Grid::new(("box-key-grid", d.id.key()))
+                        .num_columns(2)
+                        .spacing([16.0, 4.0])
+                        .show(ui, |ui| {
+                            for b in box_buttons() {
+                                ui.label(b.function());
+                                ui.label(
+                                    keys.get(*b)
+                                        .map_or_else(|| NONE.to_owned(), bindings::key_name),
+                                );
+                                ui.end_row();
+                            }
+                        });
+                });
+        } else {
+            let b = config.bindings(&d.id);
+            egui::CollapsingHeader::new(BINDINGS)
+                .id_salt(("bindings", d.id.key()))
+                .show(ui, |ui| {
+                    egui::Grid::new(("binding-grid", d.id.key()))
+                        .num_columns(2)
+                        .spacing([16.0, 4.0])
+                        .show(ui, |ui| {
+                            for t in Target::ALL {
+                                ui.label(t.name());
+                                ui.label(b.get(t).map_or_else(|| NONE.to_owned(), Source::name));
+                                ui.end_row();
+                            }
+                        });
+                });
+        }
         if let DeviceId::Adapter(n) = d.id {
             adapter_port(ui, n, self.adapter.as_deref());
         }
@@ -296,13 +414,7 @@ mod tests {
             ..Controllers::default()
         };
         let mut config = Config::default();
-        c.capture = Some(Capture {
-            device: DeviceId::Keyboard,
-            at: 0,
-            since: Instant::now(),
-            held: None,
-            pressed: None,
-        });
+        c.capture = Some(Capture::new(DeviceId::Keyboard, false));
         assert!(c.key("Space"));
         c.take(&mut config);
         c.skip();
@@ -318,6 +430,37 @@ mod tests {
         }
         assert!(c.capturing().is_none());
         assert!(!c.key("KeyN"), "nothing takes a key once it's done");
+    }
+
+    /// The keyboard in the box layout: Rebind… asks for each of the box's buttons and sets
+    /// the layout's keys, leaving its bindings alone.
+    #[test]
+    fn rebind_sets_a_box_layouts_keys() {
+        let mut c = Controllers {
+            devices: vec![keyboard()],
+            ..Controllers::default()
+        };
+        let mut config = Config::default();
+        config.set_box_layout(&DeviceId::Keyboard, Some(BoxKeys::default()));
+        c.capture = Some(Capture::new(DeviceId::Keyboard, true));
+        assert!(c.key("KeyQ"));
+        c.take(&mut config);
+        c.skip();
+        assert!(c.key("Digit1"));
+        c.take(&mut config);
+        let keys = config.box_layout(&DeviceId::Keyboard).unwrap();
+        assert_eq!(keys.get(box_buttons()[0]), Some("KeyQ"));
+        assert_eq!(box_buttons()[0], haybox::Button::Lf4);
+        assert_eq!(
+            keys.get(box_buttons()[1]),
+            BoxKeys::default().get(box_buttons()[1])
+        );
+        assert_eq!(keys.get(box_buttons()[2]), Some("Digit1"));
+        assert!(config.bindings.is_empty());
+        for _ in 3..box_buttons().len() {
+            c.skip();
+        }
+        assert!(c.capturing().is_none());
     }
 
     /// What a gamepad held as Rebind… began binds nothing; its next press does.
@@ -337,13 +480,7 @@ mod tests {
             ..Controllers::default()
         };
         let mut config = Config::default();
-        c.capture = Some(Capture {
-            device: pad.id.clone(),
-            at: 0,
-            since: Instant::now(),
-            held: None,
-            pressed: None,
-        });
+        c.capture = Some(Capture::new(pad.id.clone(), false));
         let south = Source::Button(melee_input::gilrs::Button::South);
         c.offer(vec![south.clone()]);
         c.take(&mut config);

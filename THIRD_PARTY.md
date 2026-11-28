@@ -37,6 +37,10 @@ Floating-point behavior, the DSP's AX mixing and the GPU's formats and rendering
 
 [PhobGCC-SW](https://github.com/PhobGCC/PhobGCC-SW) (GPL version 3, no "or later"; its contributors are listed in its `CONTRIBUTORS.md`): `crates/melee-phob` is ported from its `PhobGCC/common` (`stick.h`, `filter.h`, `curveFitting.h`, and the stick pipeline, calibration steps and trigger output of `phobGCC.h`) and the RP2040 board's trigger reads, at `b4f175ea` (v0.31). That crate is GPL-3.0-only, as each of its files says, and the rest of melee-hd only calls into it; builds that include it are distributed under GPL-3.0. `curveFitting.h` is itself by Rowan Easter-Robinson, released into the public domain. `tools/phob-check` builds PhobGCC-SW's own source from a checkout at that commit into its tests only, as the oracle melee-phob is compared with; nothing of it is in the repository or the player.
 
+## HayBox
+
+[HayBox](https://github.com/JonnyHaystack/HayBox) (GPL version 3, no "or later"; by Jonathan Haylett, with the contributors its history lists): `crates/melee-phob/src/haybox.rs` is ported from its Melee mode (`src/modes/Melee20Button.cpp` and its header), the SOCD resolution of `src/core/socd.cpp` and `src/core/InputMode.cpp`, `ControllerMode::UpdateDirections`, the input and output state of `include/core/state.hpp` and the Melee mode's defaults in `HAL/pico/include/config_defaults.hpp`, at `2cffcd23` (firmware 3.1.0). It plays the keyboard's box layout. It's GPL-3.0-only, as its header says, inside the same GPL-3.0-only crate as PhobGCC's port. `crates/melee-input/src/boxes.rs` is melee-hd's own: it recognizes HayBox's USB ids and reads its DInput and XInput reports, whose formats come from HayBox's backends (`HAL/pico/src/comms/DInputBackend.cpp`, `XInputBackend.cpp`) and the MIT-licensed `TUGamepad` report it builds on; no code is taken from those.
+
 ## Aurora
 
 [Aurora](https://github.com/encounter/aurora) (MIT) is a design reference for the renderer's pipeline cache (`crates/melee-player/src/pipelines.rs`). No code is taken from it.
