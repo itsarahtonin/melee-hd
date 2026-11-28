@@ -31,6 +31,7 @@ const AUX_BYTES: u32 = 3 * FRAME_SAMPLES as u32 * 4;
 const SCRATCH_SIZE: usize = 0x4000;
 
 // Parameter block words (the early microcode's layout).
+const STATE: usize = 7;
 const DPOP: usize = 41;
 const PRED_SCALE: usize = 80;
 const YN2: usize = 82;
@@ -59,7 +60,16 @@ impl Music {
     /// The music's place from the stream's state, read only; none at full volume (the mix
     /// then touches nothing) or before the boot gave the stream its ARAM.
     fn of(stream: &melee_sim::audio::synth::Stream, gain: f32) -> Option<Music> {
-        if gain >= 1.0 || stream.base == 0 {
+        if gain >= 1.0 {
+            return None;
+        }
+        Music::stream(stream).map(|m| Music { gain, ..m })
+    }
+
+    /// The stream's place at full volume, which the early starts leave alone; none before the
+    /// boot gave the stream its ARAM.
+    fn stream(stream: &melee_sim::audio::synth::Stream) -> Option<Music> {
+        if stream.base == 0 {
             return None;
         }
         let base = stream.base.wrapping_mul(2);
@@ -69,7 +79,7 @@ impl Music {
                 stream.silence,
                 stream.silence.wrapping_add(2 * STREAM_SILENCE),
             ),
-            gain,
+            gain: 1.0,
         })
     }
 
@@ -218,6 +228,13 @@ pub struct Stats {
     pub aux_active: [u64; 2],
     /// Voice frames scaled as the music's (`Mixer::set_music` under 1).
     pub music: u64,
+    /// Sounds keyed on (a frame's sync setting a playing state), and those whose samples the
+    /// mixer started a frame sooner (`Mixer::set_early`).
+    pub starts: u64,
+    pub early: u64,
+    /// Voice frames played a frame ahead while playing, and those of them the CPU wrote to.
+    pub ahead: u64,
+    pub ahead_writes: u64,
 }
 
 impl Stats {
@@ -250,6 +267,12 @@ pub struct Mixer {
     /// The voices whose envelope the last frame scaled as music, which the drift check
     /// leaves out of the comparison.
     scaled: u64,
+    /// Whether a sound keyed on in a tick's later frame starts a frame sooner (`set_early`).
+    early: bool,
+    /// The voices playing a frame ahead of the simulation's blocks since their start moved,
+    /// and those whose start the last frame took from this one.
+    lead: u64,
+    moved: u64,
     pub stats: Stats,
 }
 
@@ -277,6 +300,9 @@ impl Mixer {
             boot_groups: Vec::new(),
             music: 1.0,
             scaled: 0,
+            early: false,
+            lead: 0,
+            moved: 0,
             stats: Stats::default(),
         }
     }
@@ -289,6 +315,15 @@ impl Mixer {
         self.music = gain.clamp(0.0, 1.0);
     }
 
+    /// Starts a sound effect one frame (5 ms) sooner where it can, from the next mix: a voice
+    /// the game keys on in a tick's later frame is known while the frame before it is mixed,
+    /// so its samples start in that frame, and it plays a frame ahead of the simulation's
+    /// block until a new sound set whole takes the voice. What the game changes in it later
+    /// applies at the frame the game changes it. Off, the default, the mix is the console's.
+    pub fn set_early(&mut self, on: bool) {
+        self.early = on;
+    }
+
     /// Turns the simulation's mix log on and starts from its audio state: the sound banks it
     /// has in ARAM and, from a boot state's memory when there is one, the AX library's mix
     /// state (depop sums, surround buffer, aux buffers and effects). Started before the boot's
@@ -298,6 +333,7 @@ impl Mixer {
         audio.mix = Some(MixLog::default());
         self.boot_groups = audio.synth.banks.groups.iter().flatten().copied().collect();
         self.have_prev = false;
+        (self.lead, self.moved) = (0, 0);
         let Some(m) = boot else {
             return;
         };
@@ -363,18 +399,47 @@ impl Mixer {
             self.place_group(audio, data, &g);
         }
         let music = Music::of(&audio.synth.stream, self.music);
-        let mut writes = log.aram.iter().peekable();
-        for (i, f) in log.frames.iter().enumerate() {
-            while let Some(w) = writes.next_if(|w| w.frame as usize <= i) {
-                self.aram_write(audio, data, w);
-            }
-            self.frame(f, music.as_ref(), out);
-        }
-        for w in writes {
-            self.aram_write(audio, data, w);
-        }
+        let stream = Music::stream(&audio.synth.stream);
+        let on: &Audio = audio;
+        self.tick(
+            &log.frames,
+            &log.aram,
+            music.as_ref(),
+            stream.as_ref(),
+            out,
+            &mut |m, w| m.aram_write(on, data, w),
+        );
         log.clear();
         audio.mix = Some(log);
+    }
+
+    /// A tick's frames, each after the ARAM writes before it (`write`). With the early starts
+    /// on, each frame but the last sees the next, unless an ARAM write comes between them (a
+    /// sound started before it could read samples not there yet).
+    fn tick(
+        &mut self,
+        frames: &[MixFrame],
+        writes: &[AramWrite],
+        music: Option<&Music>,
+        stream: Option<&Music>,
+        out: &mut Vec<[i16; 2]>,
+        write: &mut dyn FnMut(&mut Mixer, &AramWrite),
+    ) {
+        let mut writes = writes.iter().peekable();
+        for (i, f) in frames.iter().enumerate() {
+            while let Some(w) = writes.next_if(|w| w.frame as usize <= i) {
+                write(self, w);
+            }
+            let between = writes.peek().is_some_and(|w| w.frame as usize == i + 1);
+            let next = frames
+                .get(i + 1)
+                .filter(|_| self.early && !between)
+                .map(|frame| Next { frame, stream });
+            self.frame(f, next, music, out);
+        }
+        for w in writes {
+            write(self, w);
+        }
     }
 
     /// A group's samples where the boot left them: the bank file's samples start after its
@@ -417,8 +482,14 @@ impl Mixer {
     /// One frame: the studio's depop (`__AXSyncPBs`, `__AXPrintStudio`), the blocks, the
     /// command list (`__AXNextFrame`'s), the DSP's run, then the CPU's aux processing
     /// (`__AXProcessAux`). With `music`, its voices' envelopes are scaled in the blocks the
-    /// microcode gets.
-    fn frame(&mut self, f: &MixFrame, music: Option<&Music>, out: &mut Vec<[i16; 2]>) {
+    /// microcode gets. With `next`, the voices keyed on in it start in this one.
+    fn frame(
+        &mut self,
+        f: &MixFrame,
+        next: Option<Next>,
+        music: Option<&Music>,
+        out: &mut Vec<[i16; 2]>,
+    ) {
         self.stats.frames += 1;
         // `__AXDepopVoice`, with the DSP's blocks as the last mix left them.
         if self.have_prev {
@@ -449,26 +520,48 @@ impl Mixer {
             self.mem.pbs = vec![0; VOICES * PB_BYTES as usize + 0x40];
         }
         let scaled = std::mem::take(&mut self.scaled);
+        let moved = std::mem::take(&mut self.moved);
         for (i, pb) in f.pbs.iter().enumerate() {
+            let bit = 1u64 << i;
+            let s = f.sync[i];
+            self.stats.starts += u64::from(s & sync::COPYSTATE != 0 && pb.state == 1);
             let mut w = pb.words();
-            if self.have_prev {
-                let s = f.sync[i];
-                let all = s & sync::COPYALL != 0;
+            if self.have_prev && moved & bit != 0 {
+                // The start the last frame took: the DSP's block as it left it.
+                w = self.prev[i];
+            } else if self.have_prev && self.lead & bit != 0 {
+                // A frame ahead: the DSP's block, with what the CPU wrote now, and stopped
+                // where the simulation's AX library stopped it with no sync (a voice dropped
+                // for the DSP's budget, or freed).
+                w = service(&self.prev[i], pb, s);
+                if pb.state == 1 {
+                    self.stats.ahead += 1;
+                    self.stats.ahead_writes += u64::from(s != 0);
+                }
+                if pb.state == 0 {
+                    w[STATE] = 0;
+                }
+                // Once what the CPU wrote leaves nothing of the voice's lead (a new sound
+                // set whole), the block is the simulation's, and the voice follows it again.
+                if w == follow(pb, &self.prev[i], s) {
+                    self.lead &= !bit;
+                }
+            } else if self.have_prev {
                 let prev = &self.prev[i];
                 if s == 0 && pb.state == 1 && drifted(&w, prev, scaled >> i & 1 != 0) {
                     self.stats.drift += 1;
                 }
-                if !all && s & sync::COPYADPCM == 0 {
-                    w[PRED_SCALE..=YN2].copy_from_slice(&prev[PRED_SCALE..=YN2]);
-                }
-                let src = s & sync::COPYRATIO == 0 && s & sync::COPYSRC != 0;
-                if !all && !src {
-                    w[SRC_LAST..SRC_LAST + 4].copy_from_slice(&prev[SRC_LAST..SRC_LAST + 4]);
-                }
-                if !all && s & sync::COPYDPOP == 0 {
-                    w[DPOP..DPOP + 9].copy_from_slice(&prev[DPOP..DPOP + 9]);
-                }
-                w[PAD..].copy_from_slice(&prev[PAD..]);
+                w = follow(pb, prev, s);
+            }
+            if let Some(n) = &next
+                && n.starts(f, i)
+            {
+                // The next frame's sync over this frame's block, as `__AXSyncPBs` hands it
+                // to the DSP a frame from now.
+                w = service(&w, &n.frame.pbs[i], n.frame.sync[i]);
+                self.lead |= bit;
+                self.moved |= bit;
+                self.stats.early += 1;
             }
             if let Some(m) = music.filter(|m| m.plays(pb)) {
                 m.scale(&mut w);
@@ -522,6 +615,130 @@ impl Mixer {
         }
         self.aux_write = (self.aux_write + 1) % 3;
     }
+}
+
+/// The frame after the one being mixed, in the same tick, for the early starts.
+struct Next<'a> {
+    frame: &'a MixFrame,
+    /// The music stream's place, whose voices keep their start.
+    stream: Option<&'a Music>,
+}
+
+impl Next<'_> {
+    /// Whether voice `i`, idle in `now`, is keyed on in the next frame and can start in
+    /// `now`: it isn't the stream's, and isn't depopped or dropped as it starts (the studio's
+    /// sums would take the new sound's depop words instead of the old one's).
+    fn starts(&self, now: &MixFrame, i: usize) -> bool {
+        let (pb, bit) = (&self.frame.pbs[i], 1u64 << i);
+        now.pbs[i].state == 0
+            && pb.state == 1
+            && self.frame.sync[i] & sync::COPYSTATE != 0
+            && (self.frame.depop | self.frame.dropped) & bit == 0
+            && !self.stream.is_some_and(|m| m.plays(pb))
+    }
+}
+
+/// The block the microcode gets for a voice in step with the simulation: the simulation's
+/// block `pb`, with the words only the mix computes (the samples' history, the depop words,
+/// the padding) carried from the mix's last output `prev` unless the sync `s` says the CPU
+/// just wrote them.
+fn follow(pb: &melee_sim::audio::ax::Pb, prev: &[u16; PB_WORDS], s: u32) -> [u16; PB_WORDS] {
+    let mut w = pb.words();
+    let all = s & sync::COPYALL != 0;
+    if !all && s & sync::COPYADPCM == 0 {
+        w[PRED_SCALE..=YN2].copy_from_slice(&prev[PRED_SCALE..=YN2]);
+    }
+    let src = s & sync::COPYRATIO == 0 && s & sync::COPYSRC != 0;
+    if !all && !src {
+        w[SRC_LAST..SRC_LAST + 4].copy_from_slice(&prev[SRC_LAST..SRC_LAST + 4]);
+    }
+    if !all && s & sync::COPYDPOP == 0 {
+        w[DPOP..DPOP + 9].copy_from_slice(&prev[DPOP..DPOP + 9]);
+    }
+    w[PAD..].copy_from_slice(&prev[PAD..]);
+    w
+}
+
+/// `__AXServiceVPB`'s copy into the DSP's block: `dsp`, the block as the DSP left it, with
+/// what the CPU wrote (the sync flags `s`) taken from `user`, the simulation's block after the
+/// same sync, which holds the CPU's values where `s` says it wrote them. The padding, where
+/// the microcode counts a stream's loops, stays the DSP's.
+fn service(dsp: &[u16; PB_WORDS], user: &melee_sim::audio::ax::Pb, s: u32) -> [u16; PB_WORDS] {
+    if s == 0 {
+        return *dsp;
+    }
+    let mut d = melee_sim::audio::ax::Pb::from_words(dsp);
+    if s & sync::COPYALL != 0 {
+        d = *user;
+    } else {
+        if s & sync::COPYSELECT != 0 {
+            d.src_select = user.src_select;
+            d.coef_select = user.coef_select;
+        }
+        if s & sync::COPYMXRCTRL != 0 {
+            d.mixer_ctrl = user.mixer_ctrl;
+        }
+        if s & sync::COPYSTATE != 0 {
+            d.state = user.state;
+        }
+        if s & sync::COPYTYPE != 0 {
+            d.kind = user.kind;
+        }
+        if s & sync::COPYAXPBMIX != 0 {
+            d.mix = user.mix;
+        }
+        if s & sync::COPYTSHIFT != 0 {
+            d.itd.target_shift_l = user.itd.target_shift_l;
+            d.itd.target_shift_r = user.itd.target_shift_r;
+        } else if s & sync::COPYITD != 0 {
+            d.itd = user.itd;
+        }
+        if s & sync::COPYUPDATE != 0 {
+            d.update = user.update;
+        }
+        if s & sync::COPYDPOP != 0 {
+            d.dpop = user.dpop;
+        }
+        if s & sync::SWAPVOL != 0 {
+            d.ve.current_delta = user.ve.current_delta;
+        } else if s & sync::COPYVOL != 0 {
+            d.ve = user.ve;
+        }
+        if s & sync::COPYFIR != 0 {
+            d.fir = user.fir;
+        }
+        let parts = sync::COPYLOOP | sync::COPYLOOPADDR | sync::COPYENDADDR | sync::COPYCURADDR;
+        if s & parts != 0 {
+            if s & sync::COPYLOOP != 0 {
+                d.addr.loop_flag = user.addr.loop_flag;
+            }
+            if s & sync::COPYLOOPADDR != 0 {
+                d.addr.loop_address = user.addr.loop_address;
+            }
+            if s & sync::COPYENDADDR != 0 {
+                d.addr.end_address = user.addr.end_address;
+            }
+            if s & sync::COPYCURADDR != 0 {
+                d.addr.current_address = user.addr.current_address;
+            }
+        } else if s & sync::COPYADDR != 0 {
+            d.addr = user.addr;
+        }
+        if s & sync::COPYADPCM != 0 {
+            d.adpcm = user.adpcm;
+        }
+        if s & sync::COPYRATIO != 0 {
+            d.src.ratio = user.src.ratio;
+        } else if s & sync::COPYSRC != 0 {
+            d.src = user.src;
+        }
+        if s & sync::COPYADPCMLOOP != 0 {
+            d.adpcm_loop = user.adpcm_loop;
+        }
+    }
+    let mut w = d.words();
+    w[PAD..].copy_from_slice(&dsp[PAD..]);
+    w
 }
 
 /// A disc file the device command queue reads, by entry number.
@@ -715,7 +932,7 @@ mod tests {
         let music = Music::of(&stream(), m.music);
         let mut out = Vec::new();
         for _ in 0..frames {
-            m.frame(f, music.as_ref(), &mut out);
+            m.frame(f, None, music.as_ref(), &mut out);
         }
         out
     }
@@ -730,7 +947,7 @@ mod tests {
             fill(&mut m, EFFECT, 3);
             let mut out = Vec::new();
             for _ in 0..6 {
-                m.frame(&f, None, &mut out);
+                m.frame(&f, None, None, &mut out);
             }
             out
         };
@@ -787,5 +1004,280 @@ mod tests {
         assert!(!at(2 * EFFECT + 2));
         assert!(Music::of(&stream(), 1.0).is_none());
         assert!(Music::of(&Stream::default(), 0.5).is_none());
+    }
+
+    /// The early starts' sounds: their ARAM, 0x1000 bytes each, and the voices that play them.
+    const SOUNDS: u32 = 0x0020_0000;
+    const A: usize = 2;
+    const B: usize = 9;
+    const C: usize = 12;
+    const D: usize = 20;
+
+    /// The sync a sound's key-on gives its voice: the synth's setup and the playing state.
+    const KEY_ON: u32 = sync::COPYSTATE
+        | sync::COPYADDR
+        | sync::COPYADPCM
+        | sync::COPYSRC
+        | sync::COPYAXPBMIX
+        | sync::COPYMXRCTRL
+        | sync::COPYVOL
+        | sync::COPYSELECT;
+
+    /// ADPCM frames at `at` whose samples change every nibble (a seeded xorshift), each frame's
+    /// header taking the predictor's first or second coefficient pair in turn, so a sample out
+    /// of place, or a decoder's history or a resampler's last samples not carried, shows.
+    fn fill_varied(m: &mut Mixer, at: u32, seed: u32) {
+        let mut x = seed.wrapping_mul(0x9E37_79B9) | 1;
+        for f in 0..0x200u32 {
+            let a = (at + 8 * f) as usize;
+            m.aram[a] = ((f & 1) << 4) as u8 | 0x09;
+            for b in &mut m.aram[a + 1..a + 8] {
+                x ^= x << 13;
+                x ^= x >> 17;
+                x ^= x << 5;
+                *b = x as u8;
+            }
+        }
+    }
+
+    /// Sound `n`'s block on voice `i`, at the resampler's `ratio` (16.16; 1 plays without it).
+    fn sound(i: usize, n: u32, ratio: u32) -> Pb {
+        let mut pb = voice(i, SOUNDS + 0x1000 * n, 0x7FFF, 0);
+        pb.mix = Mix {
+            l: 0x2000,
+            r: 0x1800,
+            aux_a_l: 0x1000,
+            aux_a_r: 0x0800,
+            ..Mix::default()
+        };
+        pb.adpcm.a[..4].copy_from_slice(&[0x0400, 0, 0x0200, 0x0100]);
+        pb.adpcm.pred_scale = 0x09;
+        if ratio != 0x1_0000 {
+            pb.src_select = 0;
+            pb.src.ratio = ratio;
+        }
+        pb
+    }
+
+    /// What the game does to a voice in a frame.
+    #[derive(Clone, Copy)]
+    enum Cpu {
+        /// Keys on a sound.
+        On(Pb),
+        /// Keys it off, with the depop `AXSetVoiceState` asks for.
+        Off,
+        /// Sets its volume envelope.
+        Volume(u16),
+        /// Keys on a sound with a new ratio (`AXSetVoiceSrcRatio`), the resampler's position
+        /// and last samples left as the DSP has them.
+        Rekey(Pb),
+        /// Asks for a depop alone (`AXFreeVoice` of a voice that played).
+        Depop,
+        /// Drops it for the DSP's budget (`__AXDumpVPB`: stopped with no sync).
+        Drop,
+    }
+
+    /// What the game does (`Cpu`) in a frame, to a voice.
+    type Event = (usize, usize, Cpu);
+
+    /// The simulation's frames: each event's voice changed in its frame as the AX library's
+    /// sync hands it to the DSP, and melee-sim's DSP model (`Ax::dsp_frame`) walking the blocks
+    /// between frames, as the mix log holds them.
+    fn game(events: &[Event], frames: usize) -> Vec<MixFrame> {
+        let mut ax = melee_sim::audio::ax::Ax {
+            dsp: std::array::from_fn(idle),
+            ..Default::default()
+        };
+        let list = List {
+            mode: 0,
+            aux_a: true,
+            aux_b: false,
+        };
+        (0..frames)
+            .map(|j| {
+                let (mut sync, mut depop, mut dropped) = ([0; VOICES], 0u64, 0u64);
+                for &(_, i, cpu) in events.iter().filter(|e| e.0 == j) {
+                    let d = &mut ax.dsp[i];
+                    match cpu {
+                        Cpu::On(pb) => {
+                            *d = pb;
+                            sync[i] |= KEY_ON;
+                        }
+                        Cpu::Off => {
+                            d.state = 0;
+                            sync[i] |= sync::COPYSTATE;
+                            depop |= 1 << i;
+                        }
+                        Cpu::Volume(v) => {
+                            d.ve.current_volume = v;
+                            sync[i] |= sync::COPYVOL;
+                        }
+                        Cpu::Rekey(pb) => {
+                            let src = d.src;
+                            *d = pb;
+                            d.src.current_address_frac = src.current_address_frac;
+                            d.src.last_samples = src.last_samples;
+                            sync[i] |= KEY_ON & !sync::COPYSRC | sync::COPYRATIO;
+                        }
+                        Cpu::Depop => depop |= 1 << i,
+                        Cpu::Drop => {
+                            d.state = 0;
+                            dropped |= 1 << i;
+                        }
+                    }
+                }
+                let f = MixFrame {
+                    pbs: ax.dsp,
+                    sync,
+                    depop,
+                    dropped,
+                    list,
+                    now: list,
+                };
+                ax.dsp_frame();
+                f
+            })
+            .collect()
+    }
+
+    /// The ticks' lengths in frames, in turn: their first frames are 0, 4, 7, 10, 14, 18, ...
+    const TICKS: [usize; 4] = [4, 3, 3, 4];
+
+    /// Mixes `frames` tick by tick (`TICKS`), with the early starts `early` and ARAM writes
+    /// before the frames `writes` names; the samples and the mixer.
+    fn play(frames: &[MixFrame], early: bool, writes: &[u32]) -> (Vec<[i16; 2]>, Mixer) {
+        let mut m = Mixer::new();
+        for n in 0..4 {
+            fill_varied(&mut m, SOUNDS + 0x1000 * n, n + 1);
+        }
+        m.set_early(early);
+        let stream = Music::stream(&stream());
+        let mut out = Vec::new();
+        let (mut at, mut t) = (0, 0);
+        while at < frames.len() {
+            let n = TICKS[t % TICKS.len()].min(frames.len() - at);
+            let w: Vec<AramWrite> = writes
+                .iter()
+                .filter(|&&f| (at..at + n).contains(&(f as usize)))
+                .map(|&f| AramWrite {
+                    frame: f - at as u32,
+                    dest: 0,
+                    size: 0,
+                    from: AramSource::Zero,
+                })
+                .collect();
+            let frames = &frames[at..at + n];
+            m.tick(frames, &w, None, stream.as_ref(), &mut out, &mut |_, _| {});
+            (at, t) = (at + n, t + 1);
+        }
+        (out, m)
+    }
+
+    /// The samples' sum, as the buses add voices.
+    fn sum(a: &[[i16; 2]], b: &[[i16; 2]]) -> Vec<[i16; 2]> {
+        a.iter()
+            .zip(b)
+            .map(|(x, y)| [x[0] + y[0], x[1] + y[1]])
+            .collect()
+    }
+
+    /// With the early starts on, a sound keyed on in a tick's later frame plays its samples one
+    /// frame sooner, every one of them the same; one keyed on in a tick's first frame plays as
+    /// before; and the mix is their sum.
+    #[test]
+    fn early_starts_keep_each_sounds_samples() {
+        const FRAMES: usize = 40;
+        let a = (0, A, Cpu::On(sound(A, 0, 0x1_0000)));
+        // In a tick's second frame, and in its last (resampled, playing on into later ticks).
+        let b = (5, B, Cpu::On(sound(B, 1, 0x1_0000)));
+        let c = (9, C, Cpu::On(sound(C, 2, 0xC123)));
+        let d = (14, D, Cpu::On(sound(D, 3, 0x1_0000)));
+        let alone = |e, early| play(&game(&[e], FRAMES + 1), early, &[]).0;
+        let (on, m) = play(&game(&[a, b, c, d], FRAMES), true, &[]);
+        let stats = m.stats;
+        assert_eq!((stats.starts, stats.early), (4, 2));
+        let n = FRAMES * FRAME_SAMPLES;
+        let sooner = |e| alone(e, false)[FRAME_SAMPLES..][..n].to_vec();
+        let exact = |e| alone(e, false)[..n].to_vec();
+        for e in [a, b, c, d] {
+            assert!(exact(e).iter().any(|s| s[0].abs() > 500), "a sound plays");
+        }
+        let want = sum(&sum(&exact(a), &sooner(b)), &sum(&sooner(c), &exact(d)));
+        assert!(
+            on == want,
+            "the early mix isn't the sounds' sum, two a frame sooner"
+        );
+        // The sum is how the voices mix: without the early starts, the four mix as their sum.
+        let (off, m) = play(&game(&[a, b, c, d], FRAMES), false, &[]);
+        let stats = m.stats;
+        assert_eq!((stats.starts, stats.early), (4, 0));
+        assert!(off == sum(&sum(&exact(a), &exact(b)), &sum(&exact(c), &exact(d))));
+        assert!(on != off);
+    }
+
+    /// An early start's mix is the exact mix of the same game with the sound keyed on a frame
+    /// sooner: what the game changes later (its volume, its key-off with the depop, a drop for
+    /// the DSP's budget, a new sound on its voice) applies at the frame it does, to the voice's
+    /// samples a frame on, the decoder's history, the resampler's state and the depop words
+    /// carried as the microcode carries them.
+    #[test]
+    fn an_early_start_mixes_as_the_sound_keyed_a_frame_sooner() {
+        let events = |b_on: usize, c_on: usize, d_on: usize| {
+            vec![
+                (0, A, Cpu::On(sound(A, 0, 0x1_0000))),
+                (b_on, B, Cpu::On(sound(B, 1, 0x1_0000))),
+                (c_on, C, Cpu::On(sound(C, 2, 0xC123))),
+                (12, B, Cpu::Volume(0x3000)),
+                (16, B, Cpu::Off),
+                (20, C, Cpu::Rekey(sound(C, 3, 0x1_8000))),
+                // In a tick's first frame, set whole.
+                (28, B, Cpu::On(sound(B, 0, 0x1_0000))),
+                (34, C, Cpu::Off),
+                (d_on, D, Cpu::On(sound(D, 3, 0xE000))),
+                (30, D, Cpu::Drop),
+            ]
+        };
+        let (on, m) = play(&game(&events(5, 9, 23), 40), true, &[]);
+        assert_eq!((m.stats.starts, m.stats.early), (6, 3));
+        let (sooner, _) = play(&game(&events(4, 8, 22), 40), false, &[]);
+        assert!(
+            on == sooner,
+            "not the mix of the sounds keyed a frame sooner"
+        );
+        let (exact, _) = play(&game(&events(5, 9, 23), 40), false, &[]);
+        assert!(on != exact);
+        // B's new sound set whole puts it back in step with the simulation; C's, which kept the
+        // resampler's position a frame on from the simulation's, and D, dropped where its
+        // resampler stood, stay ahead.
+        assert_eq!(m.lead, 1 << C | 1 << D);
+    }
+
+    /// What can't start a frame sooner starts as before, and the mix is the exact one: a sound
+    /// keyed on in a tick's first frame, on a voice still playing the frame before, the music
+    /// stream's, one depopped as it starts, or one after an ARAM write in the same tick.
+    #[test]
+    fn what_cant_start_early_starts_as_before() {
+        let b = |at| (at, B, Cpu::On(sound(B, 1, 0x1_0000)));
+        let music = (5, B, Cpu::On(voice(B, BOXES + 0x1_0000, 0x7FFF, 0)));
+        let cases: [(&str, Vec<Event>, &[u32]); 5] = [
+            ("in a tick's first frame", vec![b(4), b(10)], &[]),
+            ("on a playing voice", vec![b(0), b(5)], &[]),
+            ("the music's", vec![music], &[]),
+            ("depopped", vec![b(5), (5, B, Cpu::Depop)], &[]),
+            ("after an ARAM write", vec![b(5)], &[5]),
+        ];
+        for (what, events, writes) in cases {
+            let frames = game(&events, 20);
+            let (on, m) = play(&frames, true, writes);
+            let stats = m.stats;
+            assert_eq!(stats.early, 0, "{what}: moved");
+            assert!(
+                on == play(&frames, false, writes).0,
+                "{what}: not the exact mix"
+            );
+        }
+        // An ARAM write elsewhere in the tick leaves the start early.
+        let stats = play(&game(&[b(5)], 20), true, &[4, 6]).1.stats;
+        assert_eq!(stats.early, 1);
     }
 }

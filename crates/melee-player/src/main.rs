@@ -266,6 +266,8 @@ struct Args {
     record: bool,
     /// Where the replays go: the settings folder's replays folder unless given.
     replays: Option<String>,
+    /// Saves the replays compressed, as `.slpz` (`--compress-replays`; off by default).
+    compress_replays: bool,
     /// The item frequency and switch a command line's match starts with: items off.
     items: GamePrefs,
     /// The Special Melee mode whose rules the match plays by, if any.
@@ -312,7 +314,7 @@ fn usage() -> String {
          frames: [--high-refresh on|off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
-         replays: [--no-record] [--replays DIR] each match under the Slippi ruleset is saved to DIR, else to replays in the settings folder; Vanilla saves none\n\
+         replays: [--no-record] [--replays DIR] [--compress-replays] each match under the Slippi ruleset is saved to DIR, else to replays in the settings folder, as .slp or compressed as .slpz; Vanilla saves none; --replay plays a .slp or a .slpz\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match; [--debug-level off|debug-rom|develop] the developer setting's debug level from power-on\n\
          console: [--power-on] boots Melee from power-on into its menus; [--ruleset vanilla|slippi] the ruleset it runs (Slippi's: no memory card, no debug level); [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
@@ -379,6 +381,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         unfinished_stages: false,
         record: true,
         replays: None,
+        compress_replays: false,
         items: GamePrefs::items_off(),
         special: None,
         power_on: false,
@@ -543,6 +546,10 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.replays = Some(value()?);
                 a.given.replays = true;
             }
+            "--compress-replays" => {
+                a.compress_replays = true;
+                a.given.compress_replays = true;
+            }
             "--unfinished-stages" => a.unfinished_stages = true,
             "--power-on" => {
                 a.power_on = true;
@@ -704,7 +711,7 @@ impl Platform {
                         );
                     }
                     self.slp = Some((
-                        recording::Recording::new(dir.as_deref()),
+                        recording::Recording::new(dir.as_deref(), self.compress_replays),
                         !attract && !single_player && !unrebuilt,
                     ));
                 }
@@ -818,6 +825,8 @@ struct Platform {
     /// Each VS match saved as a Slippi replay: to this folder (none: the settings folder's
     /// replays folder), when on.
     replays: Option<Option<String>>,
+    /// The replays saved compressed, as `.slpz`.
+    compress_replays: bool,
     /// The replay of the match playing, once it started, and whether it's kept (the title's
     /// attract match isn't).
     slp: Option<(recording::Recording, bool)>,
@@ -955,6 +964,7 @@ impl Session {
             replays: (args.record
                 && (args.given.replays || (args.bench.is_none() && args.inputs.is_none())))
             .then(|| args.replays.clone()),
+            compress_replays: args.compress_replays,
             slp: None,
             gates: gates::Gates::default(),
         });
@@ -2358,6 +2368,7 @@ impl App {
             args.debug_level = s.debug_level;
             args.record = s.record;
             args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+            args.compress_replays = s.compress_replays;
             args.ruleset = s.ruleset;
         }
         eprintln!("power on");
@@ -2495,14 +2506,17 @@ impl App {
         self.mode = s.high_refresh;
         self.args.record = s.record;
         self.args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+        self.args.compress_replays = s.compress_replays;
         let replays = s.record.then(|| self.args.replays.clone());
         if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
             p.replays = replays;
+            p.compress_replays = s.compress_replays;
         }
         // The sound's device and volume, taken at once (the device opened again if need be).
         sound::set_output(s.output());
         sound::set_volume(s.volume);
         sound::set_music(s.music);
+        sound::set_early(s.early_sfx);
         if let Some(snd) = self.session.as_ref().and_then(|s| s.sound.as_ref()) {
             snd.configure();
         }
@@ -3700,6 +3714,9 @@ fn settings_of(args: &Args) -> front::Settings {
     if g.replays {
         s.replays = args.replays.clone().unwrap_or_default();
     }
+    if g.compress_replays {
+        s.compress_replays = args.compress_replays;
+    }
     if g.record_sessions {
         s.record_sessions = args.session_record;
     }
@@ -3726,6 +3743,7 @@ fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.jit_margin = Duration::from_secs_f64(f64::from(s.jit_margin) / 1000.0);
     a.record = s.record;
     a.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+    a.compress_replays = s.compress_replays;
     a.session_record = s.record_sessions;
     a.debug_level = s.debug_level;
     a.audio_exclusive = s.audio_exclusive;
@@ -3776,6 +3794,7 @@ fn run(args: Args) -> ExitCode {
         sound::set_output(f.panel.settings.output());
         sound::set_volume(f.panel.settings.volume);
         sound::set_music(f.panel.settings.music);
+        sound::set_early(f.panel.settings.early_sfx);
     }
     let session = if args.front {
         None
@@ -4073,14 +4092,37 @@ fn main() -> ExitCode {
             None => return ExitCode::SUCCESS,
         }
     }
-    // The window must live on the main thread on some systems, so the game gets its stack by
-    // running everything on a thread that is itself the event loop's only user.
-    let child = std::thread::Builder::new()
+    // macOS runs winit's event loop on the process's first thread only, and its dialogs there.
+    #[cfg(target_os = "macos")]
+    let done = run_on_first_thread(args);
+    // Elsewhere the game gets its stack by running everything on a thread that is itself the
+    // event loop's only user.
+    #[cfg(not(target_os = "macos"))]
+    let done = std::thread::Builder::new()
         .stack_size(GAME_STACK)
         .spawn(move || run(args))
-        .expect("the player's thread");
-    child.join().unwrap_or_else(|p| {
+        .expect("the player's thread")
+        .join();
+    done.unwrap_or_else(|p| {
         console::fatal(&format!("melee-hd stopped: {}", panic_text(&p)));
         ExitCode::FAILURE
     })
+}
+
+/// The player on macOS's first thread, where winit's event loop must run (it refuses any other
+/// there, and has no switch for it as on Windows and Linux), on the stack the linker gives that
+/// thread: build.rs asks for [`GAME_STACK`] (`-stack_size`), and `tests/mac_stack.rs` reads it
+/// back from the executable. A panic is caught as the other systems' thread join catches it.
+#[cfg(target_os = "macos")]
+fn run_on_first_thread(args: Args) -> std::thread::Result<ExitCode> {
+    // SAFETY: both only read the calling thread's attributes.
+    let stack = unsafe { libc::pthread_get_stacksize_np(libc::pthread_self()) };
+    if stack < GAME_STACK {
+        eprintln!(
+            "the first thread's stack is {} MiB, less than the game's {} MiB: a deep recursion may overflow it",
+            stack >> 20,
+            GAME_STACK >> 20
+        );
+    }
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(args)))
 }

@@ -1645,6 +1645,8 @@ dependencies = [
  "melee-phob",
  "melee-sim",
  "nusb",
+ "objc2-core-foundation",
+ "objc2-io-kit",
 ]
 
 [[package]]
@@ -1680,6 +1682,7 @@ dependencies = [
  "egui-winit",
  "embed-manifest",
  "flate2",
+ "libc",
  "melee-audio",
  "melee-data",
  "melee-gpu",
@@ -1753,8 +1756,10 @@ dependencies = [
 name = "melee-slippi"
 version = "0.1.1"
 dependencies = [
+ "melee-local-data",
  "melee-sim",
  "thiserror 2.0.21",
+ "zstd",
 ]
 
 [[package]]

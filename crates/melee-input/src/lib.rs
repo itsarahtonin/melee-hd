@@ -201,7 +201,9 @@ impl Inputs {
         let mut g = self.gilrs.take()?;
         let mut newest: Option<SystemTime> = None;
         while let Some(e) = g.next_event() {
-            if !self.pads.iter().any(|p| p.id == e.id) {
+            // A gamepad not yet known takes its identity before its first event is filtered;
+            // the adapter, which gilrs sees on macOS, never becomes one (`connect`).
+            if !self.pads.iter().any(|p| p.id == e.id) && !is_adapter(&g.gamepad(e.id)) {
                 self.connect(&g);
             }
             let ev = if self.exact(e.id) {
@@ -239,6 +241,11 @@ impl Inputs {
     fn connect(&mut self, g: &gilrs::Gilrs) {
         let mut connected = Vec::new();
         for (id, gp) in g.gamepads() {
+            // The adapter, where gilrs sees it (macOS's HID driver), is the adapter's to read,
+            // its controllers `DeviceId::Adapter`: never a gamepad device.
+            if is_adapter(&gp) {
+                continue;
+            }
             connected.push(id);
             if !self.pads.iter().any(|p| p.id == id) {
                 let model = gp
@@ -544,6 +551,13 @@ impl Drop for Inputs {
     fn drop(&mut self) {
         self.close();
     }
+}
+
+/// Whether gilrs's gamepad is the GameCube adapter (as macOS's HID driver shows it to gilrs).
+fn is_adapter(gp: &gilrs::Gamepad<'_>) -> bool {
+    gp.vendor_id()
+        .zip(gp.product_id())
+        .is_some_and(|(v, p)| adapter::is_adapter(v, p))
 }
 
 /// Keeps `d`'s name for while it's away.

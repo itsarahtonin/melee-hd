@@ -98,6 +98,8 @@ pub enum ReplayError {
     NotSlippi,
     #[error("replay is truncated")]
     Truncated,
+    #[error("a .slpz that can't be read: {0}")]
+    Slpz(#[from] crate::slpz::Error),
 }
 
 struct Reader<'a> {
@@ -192,7 +194,9 @@ pub fn parse_events(raw: &[u8]) -> Result<Vec<Event>, ReplayError> {
 }
 
 impl Replay {
+    /// A replay from its file, a `.slp` or a `.slpz` (decompressed first, [`crate::slpz`]).
     pub fn parse(file: &[u8]) -> Result<Self, ReplayError> {
+        let file = &*crate::slpz::slp(file)?;
         let events = parse_events(raw_events(file)?)?;
         let mut replay = Replay {
             header: vec![0; GAME_INFO_HEADER_WORDS],
