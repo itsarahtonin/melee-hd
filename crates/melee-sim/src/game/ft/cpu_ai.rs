@@ -889,7 +889,7 @@ impl Running<'_> {
             let kind = self.game.items[super::super::it::item_of(self.game, item).0].kind;
             // `It_Kind_Box`, `_Taru`, `_Kusudama`, `_TaruCann`.
             if matches!(
-                ItKind::from_id(kind),
+                ItKind::from_id(kind.id()),
                 Some(ItKind::Crate | ItKind::Barrel | ItKind::PartyBall | ItKind::BarrelCannon)
             ) {
                 return (false, r5);

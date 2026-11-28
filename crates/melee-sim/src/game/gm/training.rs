@@ -8,6 +8,7 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::game::ft::CpuKind;
+use crate::game::it::ItKind;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
@@ -793,7 +794,11 @@ impl Running<'_> {
                         };
                         let mut pos = self.game.objs.jobjs[j].translate;
                         pos.y = mem(fp::fadds(reg(pos.y), reg(10.0)));
-                        super::super::it::spawn::drop_at(self, pos, i32::from(kind));
+                        super::super::it::spawn::drop_at(
+                            self,
+                            pos,
+                            ItKind::from_raw(i32::from(kind)),
+                        );
                     }
                 }
                 4 => {

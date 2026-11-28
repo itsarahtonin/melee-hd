@@ -3,6 +3,7 @@
 //! by the copy), his attributes for each, and the copy's own blaster kinds; the blaster item's
 //! queries of its owner for him are here too.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
@@ -227,7 +228,14 @@ impl Running<'_> {
         };
         let fp = &self.game.fighters[f.0];
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
-        let b = foxblaster::spawn(self, facing, Some(gobj), pos, PART_R3RD_NA, gun);
+        let b = foxblaster::spawn(
+            self,
+            facing,
+            Some(gobj),
+            pos,
+            PART_R3RD_NA,
+            ItKind::from_raw(gun),
+        );
         self.game.fighters[f.0].u.set_gobj_at(BLASTER, b);
         if b.is_none() {
             panic!("the original's assertion failed: ftToSpecialNFox::Caution!!!");

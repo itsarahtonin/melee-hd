@@ -44,14 +44,7 @@ pub fn spawn(
     part: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    gamewatch::spawn_held(
-        r,
-        ItKind::GameAndWatchTorch.id(),
-        parent,
-        pos,
-        part,
-        facing_dir,
-    )
+    gamewatch::spawn_held(r, ItKind::GameAndWatchTorch, parent, pos, part, facing_dir)
 }
 
 /// Gone, `itGamewatchFire_Destroyed`: its owner forgets it.

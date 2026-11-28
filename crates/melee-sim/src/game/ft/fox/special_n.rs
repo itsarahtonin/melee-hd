@@ -2,6 +2,7 @@
 //! it away, and the shots fired during Fox's and Falco's throws. The blaster item's own code
 //! is `it::kinds::foxblaster`, which also has the queries it asks of its owner.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::super::code::Val;
@@ -111,7 +112,7 @@ impl Running<'_> {
         let kind = self.fox_attr_i32(f, attr::BLASTER_GUN_ITKIND);
         let fp = &self.game.fighters[f.0];
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
-        let b = foxblaster::spawn(self, facing, Some(gobj), pos, part, kind);
+        let b = foxblaster::spawn(self, facing, Some(gobj), pos, part, ItKind::from_raw(kind));
         self.set_fox_blaster(gobj, b);
         let Some(b) = b else {
             panic!("ftToSpecialNFox::Caution!!! (the blaster wasn't made)");
@@ -364,7 +365,14 @@ impl Running<'_> {
                     let kind = self.fox_attr_i32(f, attr::BLASTER_GUN_ITKIND);
                     let fp = &self.game.fighters[f.0];
                     let (facing, pos) = (fp.facing_dir, fp.cur_pos);
-                    let b = foxblaster::spawn(self, facing, Some(gobj), pos, part, kind);
+                    let b = foxblaster::spawn(
+                        self,
+                        facing,
+                        Some(gobj),
+                        pos,
+                        part,
+                        ItKind::from_raw(kind),
+                    );
                     self.set_fox_blaster(gobj, b);
                     if let Some(b) = b {
                         let fp = &self.game.fighters[f.0];

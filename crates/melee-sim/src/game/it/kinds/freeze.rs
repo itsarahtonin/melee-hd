@@ -114,7 +114,7 @@ pub fn spawn_pushed(
     decel: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::Freezie.id(),
+        kind: ItKind::Freezie,
         ..SpawnItem::default()
     };
     spawn.prev_pos = pos;

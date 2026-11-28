@@ -511,7 +511,12 @@ impl Running<'_> {
                 let fp = &self.game.fighters[f.0];
                 let part = self.bone_index(fp, PART_R_THUMB_NB);
                 let kind = self.fox_attr_i32(f, super::fox::attr::BLASTER_GUN_ITKIND);
-                let item = super::super::it::kinds::foxblaster::spawn_demo(self, gobj, part, kind);
+                let item = super::super::it::kinds::foxblaster::spawn_demo(
+                    self,
+                    gobj,
+                    part,
+                    ItKind::from_raw(kind),
+                );
                 self.game.fighters[f.0].item_gobj = item;
             }
             FighterKind::Ness => {
@@ -612,7 +617,12 @@ impl Running<'_> {
                 let fp = &self.game.fighters[f.0];
                 let part = self.bone_index(fp, PART_R_THUMB_NB);
                 let kind = self.fox_attr_i32(f, super::fox::attr::BLASTER_GUN_ITKIND);
-                let item = super::super::it::kinds::foxblaster::spawn_demo(self, gobj, part, kind);
+                let item = super::super::it::kinds::foxblaster::spawn_demo(
+                    self,
+                    gobj,
+                    part,
+                    ItKind::from_raw(kind),
+                );
                 self.game.fighters[f.0].item_gobj = item;
                 let fp = &self.game.fighters[f.0];
                 let s = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.model_scaling)));

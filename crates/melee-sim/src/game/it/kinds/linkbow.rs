@@ -75,7 +75,7 @@ pub fn spawn(
     owner: GObjId,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind,
@@ -123,7 +123,7 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
 /// owner's queries are his.
 fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
     matches!(
-        ItKind::of(item(r.game, gobj).kind),
+        item(r.game, gobj).kind,
         ItKind::KirbyLinkBow | ItKind::KirbyYoungLinkBow
     )
 }

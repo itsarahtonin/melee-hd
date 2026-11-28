@@ -255,7 +255,7 @@ fn run_zelda(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 gobj_arg(maps, call),
                 fire,
                 pos,
-                ItKind::ZeldaDinsFireExplosion.id(),
+                ItKind::ZeldaDinsFireExplosion,
                 fpr(call, 1),
                 fpr(call, 2),
                 &zeldadinfireexplode::DINS_FIRE_BLAST,

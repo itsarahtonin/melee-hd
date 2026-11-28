@@ -319,7 +319,7 @@ pub fn turn_off_surface(r: &mut Running, gobj: GObjId, coll: i32) {
 pub fn spawn_flame(r: &mut Running, gobj: GObjId, pos: Vec3, attack_id: u32, facing_dir: f32) {
     let owner = item(r.game, gobj).owner;
     let mut spawn = SpawnItem {
-        kind: ItKind::CyndaquilFlame.id(),
+        kind: ItKind::CyndaquilFlame,
         prev_pos: Vec3::new(pos.x, pos.y, 0.0),
         pos: lib26b1::ecb_center(r.game, gobj),
         facing_dir,

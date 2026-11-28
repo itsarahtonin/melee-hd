@@ -456,7 +456,7 @@ impl Running<'_> {
             }
             let fp = self.game.fighter(gobj);
             let ip = it::item(self.game, g);
-            let takes_held = heals(ip.kind) || ip.kind == ItKind::Trophy;
+            let takes_held = heals(ip.kind.id()) || ip.kind == ItKind::Trophy;
             if fp.item_gobj.is_some() && !takes_held {
                 continue;
             }
@@ -517,7 +517,7 @@ impl Running<'_> {
             ItKind::Trophy.id(),
             ItKind::ChanseyEgg.id(),
         ]
-        .contains(&k)
+        .contains(&k.id())
             || k == ItKind::WhispyHealApple;
         if self.game.fighter(gobj).item_gobj.is_some() && !takes_held {
             return false;

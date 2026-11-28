@@ -345,8 +345,8 @@ pub fn article_of(game: &Game, data: &Archives, kind: i32) -> Option<DataRef> {
 #[doc(alias = "Item_80267978")]
 pub fn set_kind_data(game: &mut Game, data: &Archives, gobj: GObjId) {
     let kind = super::item(game, gobj).kind;
-    let article = article_of(game, data, kind);
-    let logic = tables::logic_ref(kind);
+    let article = article_of(game, data, kind.id());
+    let logic = tables::logic_ref(kind.id());
     let ip = item_mut(game, gobj);
     ip.article = article;
     ip.logic_table = Some(logic);
@@ -413,7 +413,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         set_flag(&mut ip.draw_flags, 7, false);
         ip.source_player = 6;
         ip.hit_by_kind = -1;
-        ip.hit_item_kind = -1;
+        ip.hit_item_kind = ItKind::from_raw(-1);
         ip.hit_by_pos = Vec3::new(0.0, 0.0, 0.0);
         ip.hit_item_pos = Vec3::new(0.0, 0.0, 0.0);
         set_flag(&mut ip.status_flags, 1, false);
@@ -676,7 +676,7 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     let gobj = r.game.world.create(CLASS_ITEM, P_LINK_ITEM, 0);
     r.game
         .world
-        .setup_gx_link(gobj, tables::render_func(spawn.kind), 6, 0);
+        .setup_gx_link(gobj, tables::render_func(spawn.kind.id()), 6, 0);
     let id = ItemId(r.game.items.alloc_stale(Item::default()));
     // A block new from the heap holds what the scenes before left there (docs/engine.md, a
     // session's heap leftovers).
@@ -766,7 +766,7 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         let ip = super::item(r.game, gobj);
         (ip.kind, ip.owner)
     };
-    if (ItKind::MarioFireball.id()..ItKind::VsCoin.id()).contains(&kind)
+    if (ItKind::MarioFireball.id()..ItKind::VsCoin.id()).contains(&kind.id())
         && is_fighter(r.game, owner)
     {
         let f = super::owner::fighter_of(r.game, owner.unwrap());
@@ -926,7 +926,7 @@ pub fn logic(game: &Game, gobj: GObjId) -> &'static tables::ItemLogic {
 pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
     spawn.ground_or_air = GroundOrAir::Air;
     spawn.origin = 0;
-    spawn.hold_kind = hold_kind_of(spawn.kind);
+    spawn.hold_kind = hold_kind_of(spawn.kind.id());
     create(r, spawn)
 }
 
@@ -935,14 +935,14 @@ pub fn spawn_air(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
 pub fn spawn_ground(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
     spawn.ground_or_air = GroundOrAir::Ground;
     spawn.origin = 0;
-    spawn.hold_kind = hold_kind_of(spawn.kind);
+    spawn.hold_kind = hold_kind_of(spawn.kind.id());
     create(r, spawn)
 }
 
 /// A drop by kind's spawn of `kind` at `pos`: no parent, facing left, still, with a first
 /// collision (the inline `Item_InitSpawnPosition` and `Item_InitSpawnCommonFields` of the
 /// items' spawns by position), its depth put on the plane when `on_plane`.
-pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
+pub fn drop_spawn(kind: ItKind, pos: Vec3, on_plane: bool) -> SpawnItem {
     let mut spawn = SpawnItem {
         kind,
         ..Default::default()
@@ -967,7 +967,7 @@ pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
 pub fn spawn_ground_marked(r: &mut Running, spawn: &mut SpawnItem) {
     spawn.ground_or_air = GroundOrAir::Ground;
     spawn.origin = 1;
-    spawn.hold_kind = hold_kind_of(spawn.kind);
+    spawn.hold_kind = hold_kind_of(spawn.kind.id());
     create(r, spawn);
 }
 
@@ -1142,7 +1142,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         let desc = descs.at(0x10 * state.anim_id as u32);
         ip.state_desc = Some(desc);
         let kind = super::item(r.game, gobj).kind;
-        let script = super::anim::state_script(r.game, data, kind, state.anim_id, desc);
+        let script = super::anim::state_script(r.game, data, kind.id(), state.anim_id, desc);
         if flags & ANIM_UPDATE != 0 {
             set_state_anims(r, gobj, desc);
             if flags & UNK_UPDATE != 0 {
@@ -1490,7 +1490,7 @@ pub fn clear_hit_record(ip: &mut Item) {
     ip.absorber = None;
     ip.stomper = None;
     ip.hit_by_kind = -1;
-    ip.hit_item_kind = -1;
+    ip.hit_item_kind = ItKind::from_raw(-1);
     ip.hit_by_pos = Vec3::new(0.0, 0.0, 0.0);
     ip.hit_item_pos = Vec3::new(0.0, 0.0, 0.0);
     set_flag(&mut ip.hurt_flags, 5, false);
@@ -2175,8 +2175,8 @@ pub fn init_globals(game: &mut Game, data: &Archives) {
     n.training_items_limit = w(0x148);
     game.it.ft_track.untracked[0] |= 0x80;
     game.it.ft_track.count = 1;
-    game.it.pokemon.last_kind = UNSELECTED;
-    game.it.pokemon.previous_kind = UNSELECTED;
+    game.it.pokemon.last_kind = ItKind::from_raw(UNSELECTED);
+    game.it.pokemon.previous_kind = ItKind::from_raw(UNSELECTED);
     game.it.pokemon.rare_spawned = 0;
     game.it.warp_star_last_anim = -1;
     game.it.next_attack_id = 1;

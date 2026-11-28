@@ -301,7 +301,7 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             }
             while g != 0 {
                 let ip = peek_u32(call, g + 0x2C);
-                poke_u32(call, ip + ITEM_KIND, ItKind::BeamSword as u32);
+                poke_u32(call, ip + ITEM_KIND, ItKind::BeamSword.raw() as u32);
                 let flags = peek_u32(call, ip + ITEM_FLAGS);
                 poke_u32(call, ip + ITEM_FLAGS, flags | GRABBABLE);
                 g = peek_u32(call, g + 0x8);
@@ -376,9 +376,9 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
                 return false;
             }
             let kind = if matches!(change, Change::ThrowBobomb) {
-                ItKind::BobOmb as u32
+                ItKind::BobOmb.raw() as u32
             } else {
-                ItKind::Egg as u32
+                ItKind::Egg.raw() as u32
             };
             poke_u32(call, peek_u32(call, held + 0x2C) + ITEM_KIND, kind);
             poke_u32(call, nana + SCRIPT, 0);

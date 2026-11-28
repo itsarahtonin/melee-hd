@@ -96,7 +96,7 @@ fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itClimbersBlizzard_Spawn")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::IceClimbersBlizzard.id(),
+        kind: ItKind::IceClimbersBlizzard,
         ..Default::default()
     };
     spawn.prev_pos = pos;

@@ -61,7 +61,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
 #[doc(alias = "it_802988E4")]
 pub fn fire(r: &mut Running, owner: GObjId, pos: Vec3, big: i32, facing: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::StarRodStar.id(),
+        kind: ItKind::StarRodStar,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

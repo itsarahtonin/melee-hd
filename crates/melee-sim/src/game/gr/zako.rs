@@ -191,7 +191,7 @@ fn spawn_enemy(r: &mut Running, kind: i32, variant: i32, pos: crate::vec::Vec3) 
     use crate::game::it::{kinds, zako as itzako};
     match ItKind::of(kind) {
         ItKind::Goomba | ItKind::Octorok | ItKind::Topi | ItKind::PolarBear => {
-            itzako::spawn(r, kind, Some(pos), None, None, true)
+            itzako::spawn(r, ItKind::from_raw(kind), Some(pos), None, None, true)
         }
         ItKind::ReDead => kinds::redead::spawn(r, pos, -1),
         ItKind::KoopaTroopa => kinds::koopa_troopa::spawn(r, variant, pos, None, -1),
@@ -283,7 +283,7 @@ pub fn clear_enemies(r: &mut Running) {
     while let Some(c) = cur {
         let next = r.game.world.gobj(c).next;
         let kind = crate::game::it::item(r.game, c).kind;
-        if (0x2B..0x30).contains(&kind) || (0xD0..0xE8).contains(&kind) {
+        if (0x2B..0x30).contains(&kind.id()) || (0xD0..0xE8).contains(&kind.id()) {
             if crate::game::it::lib26b1::free_to_take(r.game, c) {
                 crate::game::it::item::destroy(r, c);
             }

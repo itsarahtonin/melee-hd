@@ -220,7 +220,7 @@ fn play(
                         && sim.game.items.iter().any(|(_, ip)| {
                             ip.entity.is_some()
                                 && if w.0 == CAUGHT {
-                                    (43..=46).contains(&ip.kind) && ip.grab_victim.is_some()
+                                    (43..=46).contains(&ip.kind.id()) && ip.grab_victim.is_some()
                                 } else {
                                     ip.kind == w.0 && w.1.is_none_or(|st| ip.msid == st)
                                 }

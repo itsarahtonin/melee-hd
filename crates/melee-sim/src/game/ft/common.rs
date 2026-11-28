@@ -101,10 +101,10 @@ impl Running<'_> {
     pub fn item_pickup_stat(&mut self, slot: i32, _sub: i32, item: GObjId) {
         let ip = crate::game::it::item(self.game, item);
         let kind = ip.kind;
-        let kind2 = if (0..ItKind::COMMON_END.id()).contains(&kind) {
-            kind
+        let kind2 = if (0..ItKind::COMMON_END.id()).contains(&kind.id()) {
+            kind.id()
         } else {
-            match ItKind::of(kind) {
+            match kind {
                 ItKind::ChanseyEgg => ItKind::RayGunShot.id(),
                 ItKind::WhispyApple => ItKind::StarRodStar.id(),
                 ItKind::WhispyHealApple => ItKind::LipsStickSpore.id(),

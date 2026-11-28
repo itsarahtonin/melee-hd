@@ -140,7 +140,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     let parent = owner.expect("a flame without its shooter");
     let mut spawn = SpawnItem {
-        kind: ItKind::FireFlowerFlame.id(),
+        kind: ItKind::FireFlowerFlame,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

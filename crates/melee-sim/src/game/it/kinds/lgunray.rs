@@ -64,7 +64,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 pub fn spawn(r: &mut Running, owner: Option<GObjId>, pos: Vec3, facing: f32) {
     let parent = owner.expect("a ray without its shooter");
     let mut spawn = SpawnItem {
-        kind: ItKind::RayGunShot.id(),
+        kind: ItKind::RayGunShot,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

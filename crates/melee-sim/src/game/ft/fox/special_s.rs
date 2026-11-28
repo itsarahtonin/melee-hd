@@ -228,8 +228,13 @@ impl Running<'_> {
             ItKind::FalcoPhantasm.id()
         };
         let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-        let ghost =
-            super::super::super::it::kinds::foxillusion::spawn(self, gobj, pos, kind, facing);
+        let ghost = super::super::super::it::kinds::foxillusion::spawn(
+            self,
+            gobj,
+            pos,
+            ItKind::from_raw(kind),
+            facing,
+        );
         if let Some(g) = ghost {
             let fp = &mut self.game.fighters[f.0];
             fp.mv.set_gobj_at(mv::S_GHOST_GOBJ, Some(g));

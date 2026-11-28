@@ -4,6 +4,7 @@
 
 use super::super::item::{article, change_state, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -75,7 +76,7 @@ pub fn spawn(
     r: &mut Running,
     parent: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {

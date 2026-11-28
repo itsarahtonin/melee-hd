@@ -156,7 +156,7 @@ pub(super) fn spawn_common(
 /// in hand and colored as he is (`Item_AttachGameWatchArticle`).
 pub(super) fn spawn_held(
     r: &mut Running,
-    kind: i32,
+    kind: ItKind,
     parent: GObjId,
     pos: Vec3,
     part: i32,
@@ -348,7 +348,7 @@ pub fn held_spawn(
     part: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    spawn_held(r, s.kind.id(), parent, pos, part, facing_dir)
+    spawn_held(r, s.kind, parent, pos, part, facing_dir)
 }
 
 /// Gone: its owner forgets it (`itGameWatchParachute_Logic74_Destroyed`,

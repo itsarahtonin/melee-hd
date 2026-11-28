@@ -17,6 +17,7 @@ use crate::game::handles::*;
 use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
+use crate::game::it::ItKind;
 use crate::game::it::item::HoldKind;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
@@ -1134,7 +1135,7 @@ pub struct SpawnItem {
     #[doc(alias("x4_parent_gobj2"))]
     pub maker: Option<GObjId>,
     /// +0x8
-    pub kind: i32,
+    pub kind: ItKind,
     /// +0xc
     pub hold_kind: HoldKind,
     /// +0x10
@@ -1179,7 +1180,7 @@ impl Default for SpawnItem {
         SpawnItem {
             owner: None,
             maker: None,
-            kind: 0,
+            kind: Default::default(),
             hold_kind: Default::default(),
             origin: 0,
             pos: Default::default(),
@@ -3600,7 +3601,7 @@ pub struct db_ItemAndPokemonMenu_t {
     /// +0x14
     pub CurrentlySelectedPokemon: i32,
     /// +0x18
-    pub LastSelectedItem: i32,
+    pub LastSelectedItem: ItKind,
     /// +0x1c
     pub LastSelectedPokemon: i32,
     /// +0x20 (bits 0..+1)
@@ -3620,7 +3621,7 @@ impl Default for db_ItemAndPokemonMenu_t {
             Player: 0,
             CurrentlySelectedItem: 0,
             CurrentlySelectedPokemon: 0,
-            LastSelectedItem: 0,
+            LastSelectedItem: Default::default(),
             LastSelectedPokemon: 0,
             ShowEnemyStompRange: false,
             ShowItemPickupRange: false,
@@ -5324,9 +5325,9 @@ impl itFFlowerFlame_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct PokemonSelectionState {
     /// +0x0
-    pub last_kind: i32,
+    pub last_kind: ItKind,
     /// +0x4
-    pub previous_kind: i32,
+    pub previous_kind: ItKind,
     /// +0x8
     pub rare_spawned: i32,
 }
@@ -5334,8 +5335,8 @@ pub struct PokemonSelectionState {
 impl Default for PokemonSelectionState {
     fn default() -> Self {
         PokemonSelectionState {
-            last_kind: 0,
-            previous_kind: 0,
+            last_kind: Default::default(),
+            previous_kind: Default::default(),
             rare_spawned: 0,
         }
     }

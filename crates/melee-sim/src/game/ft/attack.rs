@@ -1869,7 +1869,7 @@ impl Running<'_> {
                 }
                 let ip = it::item(self.game, g);
                 let entry = LogEntry {
-                    kind: ip.kind,
+                    kind: ip.kind.id(),
                     gobj: ip.entity,
                     hit: LoggedHit::Item { item: g, index: j },
                     hurt: n,
@@ -1931,7 +1931,7 @@ impl Running<'_> {
                 let ip = it::item(self.game, g);
                 let h = &ip.hitboxes[j].hit;
                 let entry = LogEntry {
-                    kind: ip.kind,
+                    kind: ip.kind.id(),
                     gobj: ip.entity,
                     hit: LoggedHit::Item { item: g, index: j },
                     hurt: n,
@@ -2798,13 +2798,13 @@ impl Running<'_> {
         let (attacker, keep) = if super::super::it::item::is_fighter(self.game, owner) {
             (owner, false)
         } else {
-            (None, crate::game::pl::death::explosive_kind(kind))
+            (None, crate::game::pl::death::explosive_kind(kind.id()))
         };
         self.attack_landed(
             attacker,
             gobj,
             2,
-            kind,
+            kind.id(),
             attack_flags,
             AttackRecord::Item(item),
             instance,

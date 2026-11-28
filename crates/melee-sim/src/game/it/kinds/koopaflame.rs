@@ -127,7 +127,7 @@ pub fn spawn(
     gfx: i32,
     base_speed: i32,
     scale: i32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind,
@@ -159,7 +159,7 @@ pub fn spawn(
     let v = ip.vars.koopa_flame();
     v.pos.set(pos);
     v.base_scale.set(0.0);
-    match ItKind::of(kind) {
+    match kind {
         ItKind::BowserFlame => {
             let full_speed = r.kp_flame_max_speed(owner, &KOOPA);
             let full_size = r.kp_flame_max_size(owner, &KOOPA);
@@ -275,7 +275,7 @@ fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     if v.spawned.get() == 0 {
         v.spawned.set(1);
         let gfx = v.gfx.get();
-        match ItKind::of(kind) {
+        match kind {
             ItKind::BowserFlame => {
                 ef::spawn(r, 0x4DB_i32.wrapping_add(gfx), Some(gobj), &[Arg::JObj(j)]);
             }

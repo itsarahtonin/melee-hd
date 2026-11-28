@@ -417,7 +417,7 @@ impl Running<'_> {
         let dosei = game.ft_holds_item_kind(g, ItKind::MrSaturn.id());
         let item = fp.item_gobj.map(|it| {
             let kind = super::super::it::item(game, it).kind;
-            match_item_kind(kind) != -1
+            match_item_kind(kind.id()) != -1
                 && super::super::it::lib26b1::use_kind(game, self.data, it) != 5
         });
         let changed = game.ft_is_altered(g);

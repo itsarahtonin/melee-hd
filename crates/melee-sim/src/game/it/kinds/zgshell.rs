@@ -1093,7 +1093,7 @@ pub(super) fn settle(r: &mut Running, gobj: GObjId) {
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,
-        ItKind::KoopaGreenShell.id(),
+        ItKind::KoopaGreenShell,
         Some(pos),
         None,
         Some(Vec3::new(0.0, 0.0, 0.0)),

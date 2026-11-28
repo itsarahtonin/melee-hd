@@ -154,7 +154,7 @@ pub fn spawn_floating(r: &mut Running, parent: Option<GObjId>) -> Option<GObjId>
     let pj = parent.and_then(|p| jobj_of(r.game, p))?;
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, Some(pj), None);
     let mut spawn = SpawnItem {
-        kind: ItKind::Crate.id(),
+        kind: ItKind::Crate,
         ..Default::default()
     };
     // `Item_InitSpawnPosition`.

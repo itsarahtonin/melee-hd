@@ -134,7 +134,7 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     with_coll(r, &mut cd, |c, cd| c.init(cd));
     let ip = item_mut(r.game, gobj);
     ip.coll = cd;
-    if let Some(k) = coll_kind(ip.kind) {
+    if let Some(k) = coll_kind(ip.kind.id()) {
         ip.coll.ecb_flags.b1234 = k;
     }
     let s = reg(ip.scl);

@@ -1065,7 +1065,7 @@ pub fn set_box(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802ECA70")]
 pub fn create(r: &mut Running, owner: GObjId) -> Option<GObjId> {
     let pos = Vec3::new(0.0, 200.0, 0.0);
-    let gobj = zako::spawn(r, ItKind::Tingle.id(), Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Tingle, Some(pos), None, None, true)?;
     let s = super::super::super::gr::ground::scale(r.game);
     item_mut(r.game, gobj).scl = s;
     let j = jobj_of(r.game, gobj).expect("Tingle without a model");

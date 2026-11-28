@@ -1248,7 +1248,7 @@ impl Running<'_> {
         let m = &mut self.game.it.db_menu;
         m.DisplayStatus = 0;
         m.CurrentlySelectedItem = ItKind::PokeBall.id();
-        m.LastSelectedItem = m.CurrentlySelectedItem;
+        m.LastSelectedItem = ItKind::from_raw(m.CurrentlySelectedItem);
         m.CurrentlySelectedPokemon = 0;
         m.LastSelectedPokemon = m.CurrentlySelectedPokemon;
         self.game.it.db_bubbles = 1;
@@ -1390,7 +1390,7 @@ impl Running<'_> {
     #[doc(alias = "fn_UpdateItemAndPokemonMenu")]
     fn db_update_item_menu(&mut self, port: i32) {
         let m = &mut self.game.it.db_menu;
-        m.LastSelectedItem = m.CurrentlySelectedItem;
+        m.LastSelectedItem = ItKind::from_raw(m.CurrentlySelectedItem);
         m.LastSelectedPokemon = m.CurrentlySelectedPokemon;
         self.db_item_menu_input(port);
         let m = &mut self.game.it.db_menu;
@@ -1464,7 +1464,7 @@ impl Running<'_> {
         // The fields it doesn't set (`x3E`, `x44_flag`'s other bits, `x45` to `x47`) are
         // stack words no item code reads; `hold_kind`, `x10` and `x48` are the spawn's.
         let mut spawn = crate::game::structs::SpawnItem {
-            kind,
+            kind: ItKind::from_raw(kind),
             pos,
             prev_pos: pos,
             facing_dir: facing,

@@ -104,7 +104,14 @@ impl Running<'_> {
             fp.set_u_i32(var2, last);
             fp.set_u_i32(var1, sausage);
             let facing = fp.facing_dir;
-            chef::spawn(self, gobj, pos, p.sausage_kind, sausage, facing);
+            chef::spawn(
+                self,
+                gobj,
+                pos,
+                ItKind::from_raw(p.sausage_kind),
+                sausage,
+                facing,
+            );
         }
         self.gw_set_accessory(gobj, None);
     }

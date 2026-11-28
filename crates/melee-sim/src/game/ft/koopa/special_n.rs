@@ -178,7 +178,17 @@ impl Running<'_> {
         let (facing, id) = (fp.facing_dir, fp.mv_i32(mv::N_ATTACK_ID) as u32);
         let speed = fp::fctiwz(reg(fp.u_f32(p.u + u::FLAME_SPEED)));
         let size = fp::fctiwz(reg(fp.u_f32(p.u + u::FLAME_SIZE)));
-        koopaflame::spawn(self, gobj, v, facing, id, dir, speed, size, p.flame_kind);
+        koopaflame::spawn(
+            self,
+            gobj,
+            v,
+            facing,
+            id,
+            dir,
+            speed,
+            size,
+            ItKind::from_raw(p.flame_kind),
+        );
         if self.game.fighters[f.0].mv_i32(mv::N_X14) == 0 {
             let id = super::super::super::it::item::next_attack_id(self.game);
             self.game.fighters[f.0].set_mv_i32(mv::N_ATTACK_ID, id as i32);

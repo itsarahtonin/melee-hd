@@ -301,7 +301,7 @@ pub fn position(game: &Game, gobj: GObjId) -> Vec3 {
 /// half round facing right), her damage none, walking in; or none.
 #[doc(alias = "it_802ECD3C")]
 pub fn spawn(r: &mut Running, platform: GObjId, pos: Vec3, facing: f32) -> Option<GObjId> {
-    let gobj = zako::spawn(r, ItKind::Birdo.id(), Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Birdo, Some(pos), None, None, true)?;
     let v = vars(r.game, gobj);
     v.platform.set(Some(platform));
     v.damage.set(0);

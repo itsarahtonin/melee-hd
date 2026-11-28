@@ -46,6 +46,7 @@
 //! render callback ([`link_render`]).
 
 use melee_local_data::ssbm_rs_local;
+use melee_sim::game::it::ItKind;
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
@@ -261,7 +262,13 @@ fn run_sheik(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         // The thrown needles.
         "it_802AFD8C" => {
             let pos = vec_at(call, r(1));
-            seakneedlethrown::spawn(g, gobj_arg(maps, call), pos, r(2) as i32, f1(call));
+            seakneedlethrown::spawn(
+                g,
+                gobj_arg(maps, call),
+                pos,
+                ItKind::from_raw(r(2) as i32),
+                f1(call),
+            );
             Ret::Nothing
         }
         "it_802AFEA8" => {
@@ -294,7 +301,7 @@ fn run_sheik(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 gobj_arg(maps, call),
                 pos,
                 r(2) as i32,
-                r(3) as i32,
+                ItKind::from_raw(r(3) as i32),
                 f1(call),
             );
             Ret::Nothing

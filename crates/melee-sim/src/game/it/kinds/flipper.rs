@@ -137,7 +137,7 @@ pub fn spawn(r: &mut Running, jobj: Option<JObjId>) -> Option<GObjId> {
     let j = jobj?;
     let pos = world_position(&mut r.game.objs, r.data, Some(j), None);
     let mut spawn = SpawnItem {
-        kind: ItKind::Flipper.id(),
+        kind: ItKind::Flipper,
         prev_pos: pos,
         pos,
         ..Default::default()
@@ -591,7 +591,7 @@ pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
             item(r.game, gobj).hit_item_kind,
             item(r.game, gobj).hit_item_pos,
         );
-        hit_spin(r, gobj, spin_from_fighter, kind, pos);
+        hit_spin(r, gobj, spin_from_fighter, kind.id(), pos);
     }
     false
 }

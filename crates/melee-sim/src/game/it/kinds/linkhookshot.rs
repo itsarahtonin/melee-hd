@@ -376,7 +376,7 @@ fn make_links(
         fp::fmuls(count, reg(link_len))
     };
     let n = fp::fctiwz(fp::fdivs(fp::fmuls(total, share), reg(link_len)));
-    let slot = lengths_slot(item(r.game, gobj).kind);
+    let slot = lengths_slot(item(r.game, gobj).kind.id());
     r.game.it.hookshot_lengths[slot] = Lengths {
         attrs: Some(a.0),
         n,

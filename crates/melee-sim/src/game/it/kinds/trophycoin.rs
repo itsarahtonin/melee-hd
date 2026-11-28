@@ -109,7 +109,7 @@ pub fn spawn(
     kind: i32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::Trophy.id(),
+        kind: ItKind::Trophy,
         ..Default::default()
     };
     spawn.prev_pos = pos;

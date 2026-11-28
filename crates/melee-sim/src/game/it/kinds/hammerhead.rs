@@ -73,7 +73,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_80299C48")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, dir: Vec3, facing: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::HammerHead.id(),
+        kind: ItKind::HammerHead,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

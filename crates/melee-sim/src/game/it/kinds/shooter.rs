@@ -366,7 +366,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId, s: &Shot) {
         prev.z = depth(r, gobj, facing, prev.z);
     }
     let mut spawn = SpawnItem {
-        kind: s.kind.id(),
+        kind: s.kind,
         prev_pos: prev,
         pos: lib26b1::ecb_center(r.game, gobj),
         facing_dir: mem(facing),

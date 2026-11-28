@@ -77,7 +77,7 @@ fn item_attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "itNesspkfirepillar_802AA494")]
 pub fn spawn(r: &mut Running, bolt: GObjId, owner: Option<GObjId>, pos: Vec3, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::NessPKFirePillar.id(),
+        kind: ItKind::NessPKFirePillar,
         ..Default::default()
     };
     spawn.prev_pos = pos;

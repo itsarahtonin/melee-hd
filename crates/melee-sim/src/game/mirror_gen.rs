@@ -24,6 +24,7 @@ use crate::game::gr::setup::{GroundX11Flags, StageCameras};
 use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
+use crate::game::it::ItKind;
 use crate::game::it::Var;
 use crate::game::it::item::HoldKind;
 use crate::game::it::link::LinkX20;
@@ -1756,7 +1757,7 @@ impl Mirror for SpawnItem {
         SpawnItem {
             owner: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
             maker: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
-            kind: m.u32(at + 0x8) as i32,
+            kind: ItKind::import(m, at + 0x8, cx),
             hold_kind: HoldKind::import(m, at + 0xc, cx),
             origin: m.u32(at + 0x10) as i32,
             pos: Vec3::import(m, at + 0x14, cx),
@@ -1788,13 +1789,7 @@ impl Mirror for SpawnItem {
             self.maker.map(|h| h.0),
             m.u32(at + 0x4),
         );
-        if self.kind != m.u32(at + 0x8) as i32 {
-            cx.mismatch(
-                &format!("{path}.kind"),
-                format!("{:?}", self.kind),
-                format!("{:?}", m.u32(at + 0x8) as i32),
-            );
-        }
+        self.kind.compare(m, at + 0x8, &format!("{path}.kind"), cx);
         self.hold_kind
             .compare(m, at + 0xc, &format!("{path}.hold_kind"), cx);
         if self.origin != m.u32(at + 0x10) as i32 {
@@ -5879,7 +5874,7 @@ impl Mirror for db_ItemAndPokemonMenu_t {
             Player: m.u32(at + 0xc) as i32,
             CurrentlySelectedItem: m.u32(at + 0x10) as i32,
             CurrentlySelectedPokemon: m.u32(at + 0x14) as i32,
-            LastSelectedItem: m.u32(at + 0x18) as i32,
+            LastSelectedItem: ItKind::import(m, at + 0x18, cx),
             LastSelectedPokemon: m.u32(at + 0x1c) as i32,
             ShowEnemyStompRange: m.bits(at, 256, 1) != 0,
             ShowItemPickupRange: m.bits(at, 257, 1) != 0,
@@ -5931,13 +5926,8 @@ impl Mirror for db_ItemAndPokemonMenu_t {
                 format!("{:?}", m.u32(at + 0x14) as i32),
             );
         }
-        if self.LastSelectedItem != m.u32(at + 0x18) as i32 {
-            cx.mismatch(
-                &format!("{path}.LastSelectedItem"),
-                format!("{:?}", self.LastSelectedItem),
-                format!("{:?}", m.u32(at + 0x18) as i32),
-            );
-        }
+        self.LastSelectedItem
+            .compare(m, at + 0x18, &format!("{path}.LastSelectedItem"), cx);
         if self.LastSelectedPokemon != m.u32(at + 0x1c) as i32 {
             cx.mismatch(
                 &format!("{path}.LastSelectedPokemon"),
@@ -8837,28 +8827,18 @@ impl Mirror for PokemonSelectionState {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         PokemonSelectionState {
-            last_kind: m.u32(at + 0x0) as i32,
-            previous_kind: m.u32(at + 0x4) as i32,
+            last_kind: ItKind::import(m, at + 0x0, cx),
+            previous_kind: ItKind::import(m, at + 0x4, cx),
             rare_spawned: m.u32(at + 0x8) as i32,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.last_kind != m.u32(at + 0x0) as i32 {
-            cx.mismatch(
-                &format!("{path}.last_kind"),
-                format!("{:?}", self.last_kind),
-                format!("{:?}", m.u32(at + 0x0) as i32),
-            );
-        }
-        if self.previous_kind != m.u32(at + 0x4) as i32 {
-            cx.mismatch(
-                &format!("{path}.previous_kind"),
-                format!("{:?}", self.previous_kind),
-                format!("{:?}", m.u32(at + 0x4) as i32),
-            );
-        }
+        self.last_kind
+            .compare(m, at + 0x0, &format!("{path}.last_kind"), cx);
+        self.previous_kind
+            .compare(m, at + 0x4, &format!("{path}.previous_kind"), cx);
         if self.rare_spawned != m.u32(at + 0x8) as i32 {
             cx.mismatch(
                 &format!("{path}.rare_spawned"),

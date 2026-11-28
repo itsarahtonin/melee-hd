@@ -119,7 +119,7 @@ pub fn spawn(
     parent: GObjId,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
@@ -158,7 +158,7 @@ pub fn spawn(
         let ip = item_mut(r.game, gobj);
         let scl = ip.scl;
         // The union's word at 0x14 for a Bob-omb, at 0xC for Mr. Saturn and a turnip.
-        match ItKind::of(ip.kind) {
+        match ip.kind {
             ItKind::BobOmb => ip.vars.bombhei().scale.set(scl),
             ItKind::MrSaturn => ip.vars.dosei().scale.set(scl),
             ItKind::PeachTurnip => ip.vars.peach_turnip().scale.set(scl),

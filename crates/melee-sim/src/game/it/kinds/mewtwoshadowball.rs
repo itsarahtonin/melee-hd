@@ -267,7 +267,7 @@ pub fn spawn_fired(
     angle: f32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    let b = cs::make(r, parent, pos, kind, facing_dir)?;
+    let b = cs::make(r, parent, pos, ItKind::from_raw(kind), facing_dir)?;
     change_state(r, b, 9, change::ANIM_UPDATE);
     cs::clear_cmd_vars(r, b);
     let life = attr_f32(r, b, cs::attr::LIFETIME);

@@ -147,8 +147,8 @@ fn log_damage(game: &mut Game, e: DamageLogEntry) {
 #[doc(alias = "it_8026B6C8")]
 pub(crate) fn is_enemy(game: &Game, gobj: GObjId) -> bool {
     let kind = item(game, gobj).kind;
-    ((ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
-        || (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&kind))
+    ((ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind.id())
+        || (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&kind.id()))
         && kind != ItKind::BirdoEgg
         && kind != ItKind::WhispyApple
 }
@@ -865,7 +865,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
             ip.source_player = src;
             ip.attacker = None;
             ip.attacker_owner = fighter;
-            ip.hit_by_kind = kind;
+            ip.hit_by_kind = kind.id();
             ip.hit_by_pos = pos;
             ip.damage_dir = dir;
             enemy_hit_by_item(r, e.source, gobj);

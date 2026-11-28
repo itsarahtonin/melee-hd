@@ -621,7 +621,7 @@ impl Recorder {
             let it = &g.items[id.0];
             w.u8(command::ITEM);
             w.i32(self.frame);
-            w.u16(it.kind as u16);
+            w.u16(it.kind.raw() as u16);
             w.u8(it.msid as u8);
             w.f32(it.facing_dir);
             w.f32(it.vel.x);

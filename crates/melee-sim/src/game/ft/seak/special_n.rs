@@ -147,7 +147,13 @@ impl Running<'_> {
                 pos.y = mem(fp::fmadds(reg(fp.scale.y), reg(y), reg(pos.y)));
                 pos.z = 0.0;
                 let facing = fp.facing_dir;
-                let item = seakneedlethrown::spawn(self, gobj, pos, p.thrown_kind, facing);
+                let item = seakneedlethrown::spawn(
+                    self,
+                    gobj,
+                    pos,
+                    ItKind::from_raw(p.thrown_kind),
+                    facing,
+                );
                 if item.is_some() {
                     seakneedlethrown::launch(self, item, Some(gobj), 1);
                 }
@@ -231,7 +237,14 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) {
             let fp = self.game.fighter(gobj);
             let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-            let n = seakneedleheld::spawn(self, gobj, pos, p.needle_part, p.held_kind, facing);
+            let n = seakneedleheld::spawn(
+                self,
+                gobj,
+                pos,
+                p.needle_part,
+                ItKind::from_raw(p.held_kind),
+                facing,
+            );
             self.seak_n_set_held(gobj, p, n);
             let loop_msid = p.states + ms::SPECIAL_N_LOOP + if air { AIR } else { 0 };
             self.change_motion_state(gobj, loop_msid, 0, 0.0, 1.0, 0.0, None);
@@ -517,7 +530,8 @@ impl Running<'_> {
         pos.y = mem(fp::fmadds(scale, y, reg(pos.y)));
         pos.z = 0.0;
         let facing = self.game.fighters[f.0].facing_dir;
-        let item = seakneedlethrown::spawn(self, gobj, pos, p.thrown_kind, facing);
+        let item =
+            seakneedlethrown::spawn(self, gobj, pos, ItKind::from_raw(p.thrown_kind), facing);
         if item.is_some() {
             seakneedlethrown::launch(self, item, Some(gobj), 0);
         }

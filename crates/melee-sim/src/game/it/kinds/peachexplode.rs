@@ -40,7 +40,7 @@ pub fn spawn(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::PeachBomberExplosion.id(),
+        kind: ItKind::PeachBomberExplosion,
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, keeping its depth.

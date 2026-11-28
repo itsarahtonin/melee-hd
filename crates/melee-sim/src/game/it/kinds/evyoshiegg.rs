@@ -93,7 +93,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "itEvYoshiEgg_Spawn")]
 pub fn spawn(r: &mut Running, pos: Vec3) {
     let mut spawn = SpawnItem {
-        kind: ItKind::EventYoshiEgg.id(),
+        kind: ItKind::EventYoshiEgg,
         ..Default::default()
     };
     spawn.prev_pos = pos;

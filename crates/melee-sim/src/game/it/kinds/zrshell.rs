@@ -20,7 +20,7 @@ use crate::vec::Vec3;
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,
-        ItKind::KoopaRedShell.id(),
+        ItKind::KoopaRedShell,
         Some(pos),
         None,
         Some(Vec3::new(0.0, 0.0, 0.0)),

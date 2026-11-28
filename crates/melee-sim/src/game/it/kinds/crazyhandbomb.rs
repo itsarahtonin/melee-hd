@@ -2,6 +2,7 @@
 //! fall tumbling (state 0) and burst when they land or hit (state 1), hidden while the blast
 //! plays out.
 
+use crate::game::it::ItKind;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -60,7 +61,7 @@ pub fn spawn(
     owner: GObjId,
     prev_pos: Vec3,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) {
     let mut spawn = SpawnItem {

@@ -43,7 +43,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_8027B5B0")]
 pub fn spawn(
     r: &mut Running,
-    kind: i32,
+    kind: ItKind,
     pos: Option<Vec3>,
     jobj: Option<JObjId>,
     vel: Option<Vec3>,
@@ -194,7 +194,7 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
             })
         }};
     }
-    match ItKind::of(kind) {
+    match kind {
         ItKind::ShyGuy => of!(vars.heiho()),
         ItKind::Tingle => of!(vars.tincle()),
         ItKind::KlapTrap => of!(vars.klap()),
@@ -848,7 +848,7 @@ pub fn ko(r: &mut Running, gobj: GObjId) {
 pub fn ko_bonus(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     let (player, kind) = (ip.source_player, ip.kind);
-    r.zako_ko_bonus(player, kind);
+    r.zako_ko_bonus(player, kind.id());
 }
 
 impl Running<'_> {

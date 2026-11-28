@@ -534,7 +534,7 @@ pub fn spawn(
     vel: Option<Vec3>,
     facing: i32,
 ) -> Option<GObjId> {
-    let gobj = zako::spawn(r, ItKind::KoopaTroopa.id(), Some(pos), None, vel, true)?;
+    let gobj = zako::spawn(r, ItKind::KoopaTroopa, Some(pos), None, vel, true)?;
     let j = jobj_of(r.game, gobj).expect("a Koopa Troopa without a model");
     let f = mem(fp::frsp(f64::from(facing)));
     item_mut(r.game, gobj).facing_dir = f;

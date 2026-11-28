@@ -8,6 +8,7 @@
 //! branches of their own; a [`Bow`] says which, Link's [`LINK`] or Kirby's
 //! (`ft::kirby::special_link::KIRBY`), and each function here carries both originals' names.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::super::it::kinds::{linkarrow, linkbow};
@@ -255,7 +256,7 @@ impl Running<'_> {
         let part = self.link_n_bone(gobj, p, p.bow_bone);
         let kind = self.link_attr_i32(f, self.link_n_attr_off(gobj, p, attr::X10));
         let facing = self.game.fighters[f.0].facing_dir;
-        let bow = linkbow::spawn(self, facing, gobj, pos, part, kind);
+        let bow = linkbow::spawn(self, facing, gobj, pos, part, ItKind::from_raw(kind));
         self.game.fighters[f.0].u.set_gobj_at(p.u + u::BOW, bow);
         if bow.is_none() {
             return true;
@@ -279,7 +280,7 @@ impl Running<'_> {
         let part = self.link_n_bone(gobj, p, p.arrow_bone);
         let kind = self.link_attr_i32(f, self.link_n_attr_off(gobj, p, attr::XC));
         let facing = self.game.fighters[f.0].facing_dir;
-        let arrow = linkarrow::spawn(self, facing, gobj, pos, part, kind);
+        let arrow = linkarrow::spawn(self, facing, gobj, pos, part, ItKind::from_raw(kind));
         self.game.fighters[f.0].u.set_gobj_at(p.u + u::ARROW, arrow);
         if arrow.is_none() {
             return true;

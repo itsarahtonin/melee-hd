@@ -143,7 +143,7 @@ impl Running<'_> {
             }
             TetherKind::Item(k) => k.id(),
         };
-        let hs = tether::spawn(self, gobj, pos, facing, kind, t);
+        let hs = tether::spawn(self, gobj, pos, facing, ItKind::from_raw(kind), t);
         self.game.fighter_mut(gobj).u.set_gobj_at(t.slot, hs);
         hs
     }

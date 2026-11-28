@@ -2,6 +2,7 @@
 //! picks, harder for a smash, and caught when it comes back. Link can't throw a second while
 //! one is out (the empty throw instead).
 
+use crate::game::it::ItKind;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -153,7 +154,7 @@ impl Running<'_> {
             };
             let kind = self.link_attr_i32(f, attr::X2C);
             let facing = self.game.fighters[f.0].facing_dir;
-            let b = linkboomerang::spawn(self, facing, gobj, pos, part, kind);
+            let b = linkboomerang::spawn(self, facing, gobj, pos, part, ItKind::from_raw(kind));
             let fp = &mut self.game.fighters[f.0];
             fp.special_item = b;
             fp.u.set_gobj_at(u::BOOMERANG, b);

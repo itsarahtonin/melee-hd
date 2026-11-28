@@ -1127,7 +1127,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802DC4BC")]
 pub fn spawn(r: &mut Running, ceiling: i32, pos: Vec3) -> Option<GObjId> {
     let zero = Vec3::new(0.0, 0.0, 0.0);
-    let gobj = zako::spawn(r, ItKind::LikeLike.id(), Some(pos), None, Some(zero), true)?;
+    let gobj = zako::spawn(r, ItKind::LikeLike, Some(pos), None, Some(zero), true)?;
     set(r, gobj, off::CEILING, ceiling);
     maplib::enter_air(item_mut(r.game, gobj));
     if ceiling == 0 {

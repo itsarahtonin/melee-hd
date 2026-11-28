@@ -3,6 +3,7 @@
 //! tumbles (state 4); needles let go of loose drop tumbling (state 1). One that hits something,
 //! clanks or meets a shield bounces off one time in three; a reflected one flies back.
 
+use crate::game::it::ItKind;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -177,7 +178,7 @@ pub fn spawn(
     r: &mut Running,
     parent: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {

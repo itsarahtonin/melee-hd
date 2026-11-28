@@ -380,7 +380,7 @@ impl Running<'_> {
     pub(super) fn cpu_item_heals(&self, item: ItemId) -> bool {
         // `It_Kind_Heart`, `_Tomato`, `_Foods`.
         matches!(
-            ItKind::from_id(self.game.items[item.0].kind),
+            ItKind::from_id(self.game.items[item.0].kind.id()),
             Some(ItKind::HeartContainer | ItKind::MaximTomato | ItKind::Food)
         )
     }
@@ -405,7 +405,7 @@ impl Running<'_> {
             if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= ItKind::COMMON_END {
                 continue;
             }
-            let worth = ITEM_WORTH[ip.kind as usize];
+            let worth = ITEM_WORTH[ip.kind.raw() as usize];
             if worth < self.game.fighters[f.0].cpu.item_worth_min {
                 continue;
             }
@@ -413,7 +413,7 @@ impl Running<'_> {
                 None => closest = Some((it, self.cpu_item_distance(f, it))),
                 Some((best, d)) => {
                     let kind = self.game.items[best.0].kind;
-                    if worth < ITEM_WORTH[kind as usize] {
+                    if worth < ITEM_WORTH[kind.raw() as usize] {
                         continue;
                     }
                     let dist = self.cpu_item_distance(f, it);
@@ -446,7 +446,7 @@ impl Running<'_> {
             if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= ItKind::COMMON_END {
                 continue;
             }
-            let worth = ITEM_WORTH[ip.kind as usize];
+            let worth = ITEM_WORTH[ip.kind.raw() as usize];
             if worth < self.game.fighters[f.0].cpu.item_worth_min {
                 continue;
             }
@@ -454,7 +454,7 @@ impl Running<'_> {
                 None => closest = Some((it, self.cpu_item_distance(f, it))),
                 Some((best, d)) => {
                     let kind = self.game.items[best.0].kind;
-                    if worth < ITEM_WORTH[kind as usize] {
+                    if worth < ITEM_WORTH[kind.raw() as usize] {
                         continue;
                     }
                     let dist = self.cpu_item_distance(f, it);
@@ -489,9 +489,9 @@ impl Running<'_> {
             // `ftCo_800A648C_inline1`: `It_Kind_Kuriboh` up to `_Octarock_Stone` (the
             // containers' monsters), `_Nokonoko`, `_Patapata` and the next, `_Whitebea`.
             let kind = ip.kind;
-            let enemy = (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
+            let enemy = (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind.id())
                 || kind == ItKind::KoopaTroopa
-                || (kind.wrapping_sub(ItKind::KoopaParatroopa.id()) as u32) <= 1
+                || (kind.id().wrapping_sub(ItKind::KoopaParatroopa.id()) as u32) <= 1
                 || kind == ItKind::PolarBear;
             if !enemy || self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
                 continue;
@@ -787,7 +787,7 @@ impl Running<'_> {
         }
         let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
         // `It_Kind_Capsule` to `_BombHei`, `_M_Ball`, `_EvYoshiEgg`.
-        if (ItKind::Capsule.id()..=ItKind::BobOmb.id()).contains(&kind)
+        if (ItKind::Capsule.id()..=ItKind::BobOmb.id()).contains(&kind.id())
             || kind == ItKind::PokeBall
             || kind == ItKind::EventYoshiEgg
         {
@@ -795,7 +795,14 @@ impl Running<'_> {
         }
         // `ftCo_800A5980`'s `ftCo_MS_LandingFallSpecial` up to `_Attack100Start`, and
         // `_Furafura`, `_Catch`, `_CatchPull` and `_CatchAttack`.
-        (43..47).contains(&kind) || matches!(kind, 211 | 212 | 213 | 217)
+        (43..47).contains(&kind.id())
+            || matches!(
+                kind,
+                ItKind::KoopaTroopa
+                    | ItKind::KoopaParatroopa
+                    | ItKind::LikeLike
+                    | ItKind::PolarBear
+            )
     }
 
     /// Sets the fighter's destination and how near it must get, unless a destination timer

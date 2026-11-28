@@ -2,6 +2,7 @@
 //! along the stage until its lifetime runs out or a bounce leaves it too slow; in his taunt it
 //! sits on his position instead. Its color combination is its animation's frame.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{
@@ -141,7 +142,13 @@ pub fn set_pose(r: &mut Running, gobj: GObjId, state: i32, frame: f32) {
 
 /// A new pill's spawn fields: from `pos`, its owner's ECB center, facing `facing_dir`, with a
 /// first collision.
-fn spawn_fields(r: &Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: f32) -> SpawnItem {
+fn spawn_fields(
+    r: &Running,
+    parent: GObjId,
+    pos: Vec3,
+    kind: ItKind,
+    facing_dir: f32,
+) -> SpawnItem {
     let mut spawn = SpawnItem {
         kind,
         ..Default::default()
@@ -163,7 +170,7 @@ fn spawn_fields(r: &Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: f
 /// `itDrMarioPill_Spawn`.
 #[doc(alias = "itDrMarioPill_Spawn")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, color: i32, kind: i32, facing_dir: f32) {
-    let mut spawn = spawn_fields(r, parent, pos, kind, facing_dir);
+    let mut spawn = spawn_fields(r, parent, pos, ItKind::from_raw(kind), facing_dir);
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return;
     };
@@ -224,7 +231,7 @@ pub fn appeal_spawn(
     kind: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    let mut spawn = spawn_fields(r, parent, pos, kind, facing_dir);
+    let mut spawn = spawn_fields(r, parent, pos, ItKind::from_raw(kind), facing_dir);
     let gobj = spawn_air(r, &mut spawn)?;
     appeal_setup(r, gobj);
     set_pose(r, gobj, 1, mem(fp::frsp(f64::from(color))));
@@ -266,7 +273,7 @@ pub fn spawn_demo(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let pos = r.game.fighter(parent).cur_pos;
-    let mut spawn = spawn_fields(r, parent, pos, kind, facing_dir);
+    let mut spawn = spawn_fields(r, parent, pos, ItKind::from_raw(kind), facing_dir);
     let gobj = spawn_air(r, &mut spawn)?;
     held_start(r, gobj, msid);
     set_pose(r, gobj, 1, mem(fp::frsp(f64::from(color))));

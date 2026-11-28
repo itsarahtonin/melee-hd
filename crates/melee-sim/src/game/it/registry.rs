@@ -44,11 +44,10 @@ use super::tables::{self, ItemLogic};
 use super::{VarsKind, pokemon, zako};
 use crate::game::handles::CodeRef;
 
-/// An item kind (`ItemKind`, `It_Kind_*`): the game's own numbers, which the state, the
-/// replays and the executable's tables use; the index of [`ITEMS`].
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum ItKind {
+crate::game::ft::registry::kind_enum! {
+    /// An item kind (`ItemKind`, `It_Kind_*`): the game's own numbers, which the state, the
+    /// replays and the executable's tables use; the index of [`ITEMS`].
+    ItKind:
     /// `It_Kind_Capsule`: the Capsule.
     Capsule = 0,
     /// `It_Kind_Box`: the Crate.
@@ -691,250 +690,6 @@ pub enum ItKind {
 }
 
 impl ItKind {
-    /// How many there are.
-    pub const COUNT: usize = 237;
-
-    /// Every item kind, by number.
-    pub const ALL: [ItKind; Self::COUNT] = [
-        ItKind::Capsule,
-        ItKind::Crate,
-        ItKind::Barrel,
-        ItKind::Egg,
-        ItKind::PartyBall,
-        ItKind::BarrelCannon,
-        ItKind::BobOmb,
-        ItKind::MrSaturn,
-        ItKind::HeartContainer,
-        ItKind::MaximTomato,
-        ItKind::Starman,
-        ItKind::HomeRunBat,
-        ItKind::BeamSword,
-        ItKind::Parasol,
-        ItKind::GreenShell,
-        ItKind::RedShell,
-        ItKind::RayGun,
-        ItKind::Freezie,
-        ItKind::Food,
-        ItKind::MotionSensorBomb,
-        ItKind::Flipper,
-        ItKind::SuperScope,
-        ItKind::StarRod,
-        ItKind::LipsStick,
-        ItKind::Fan,
-        ItKind::FireFlower,
-        ItKind::SuperMushroom,
-        ItKind::PoisonMushroom,
-        ItKind::Hammer,
-        ItKind::WarpStar,
-        ItKind::ScrewAttack,
-        ItKind::BunnyHood,
-        ItKind::MetalBox,
-        ItKind::CloakingDevice,
-        ItKind::PokeBall,
-        ItKind::RayGunShot,
-        ItKind::StarRodStar,
-        ItKind::LipsStickSpore,
-        ItKind::SuperScopeShot,
-        ItKind::FireFlowerFlame,
-        ItKind::HammerHead,
-        ItKind::LipsStickFlower,
-        ItKind::EventYoshiEgg,
-        ItKind::Goomba,
-        ItKind::ReDead,
-        ItKind::Octorok,
-        ItKind::Topi,
-        ItKind::OctorokStone,
-        ItKind::MarioFireball,
-        ItKind::DrMarioMegavitamin,
-        ItKind::KirbyFinalCutterWave,
-        ItKind::KirbyHammer,
-        ItKind::KirbyCopyStar,
-        ItKind::KirbySpitStar,
-        ItKind::FoxLaser,
-        ItKind::FalcoLaser,
-        ItKind::FoxIllusion,
-        ItKind::FalcoPhantasm,
-        ItKind::LinkBomb,
-        ItKind::YoungLinkBomb,
-        ItKind::LinkBoomerang,
-        ItKind::YoungLinkBoomerang,
-        ItKind::LinkHookshot,
-        ItKind::YoungLinkHookshot,
-        ItKind::LinkArrow,
-        ItKind::YoungLinkFireArrow,
-        ItKind::NessPKFire,
-        ItKind::NessPKFirePillar,
-        ItKind::NessPKFlash,
-        ItKind::NessPKThunder,
-        ItKind::NessPKThunderTrail1,
-        ItKind::NessPKThunderTrail2,
-        ItKind::NessPKThunderTrail3,
-        ItKind::NessPKThunderTrail4,
-        ItKind::FoxBlaster,
-        ItKind::FalcoBlaster,
-        ItKind::LinkBow,
-        ItKind::YoungLinkBow,
-        ItKind::NessPKFlashExplosion,
-        ItKind::SheikNeedleThrown,
-        ItKind::SheikNeedleHeld,
-        ItKind::PikachuThunder,
-        ItKind::PichuThunder,
-        ItKind::MarioCape,
-        ItKind::DrMarioSuperSheet,
-        ItKind::SheikVanish,
-        ItKind::YoshiEggThrow,
-        ItKind::YoshiEggLay,
-        ItKind::YoshiStar,
-        ItKind::PikachuThunderJoltGround,
-        ItKind::PikachuThunderJoltAir,
-        ItKind::PichuThunderJoltGround,
-        ItKind::PichuThunderJoltAir,
-        ItKind::SamusBomb,
-        ItKind::SamusChargeShot,
-        ItKind::SamusMissile,
-        ItKind::SamusGrappleBeam,
-        ItKind::SheikChain,
-        ItKind::PeachBomberExplosion,
-        ItKind::PeachTurnip,
-        ItKind::BowserFlame,
-        ItKind::NessBat,
-        ItKind::NessYoyo,
-        ItKind::PeachParasol,
-        ItKind::PeachToad,
-        ItKind::LuigiFireball,
-        ItKind::IceClimbersIceShot,
-        ItKind::IceClimbersBlizzard,
-        ItKind::ZeldaDinsFire,
-        ItKind::ZeldaDinsFireExplosion,
-        ItKind::MewtwoDisable,
-        ItKind::PeachToadSpore,
-        ItKind::MewtwoShadowBall,
-        ItKind::IceClimbersBelayRope,
-        ItKind::GameAndWatchSprayer,
-        ItKind::GameAndWatchManhole,
-        ItKind::GameAndWatchTorch,
-        ItKind::GameAndWatchParachute,
-        ItKind::GameAndWatchTurtle,
-        ItKind::GameAndWatchSparky,
-        ItKind::GameAndWatchJudge,
-        ItKind::GameAndWatchOil,
-        ItKind::GameAndWatchSausage,
-        ItKind::YoungLinkMilk,
-        ItKind::GameAndWatchTrampoline,
-        ItKind::MasterHandLaser,
-        ItKind::MasterHandBullet,
-        ItKind::CrazyHandLaser,
-        ItKind::CrazyHandBullet,
-        ItKind::CrazyHandBomb,
-        ItKind::KirbyMarioFireball,
-        ItKind::KirbyDrMarioMegavitamin,
-        ItKind::KirbyLuigiFireball,
-        ItKind::KirbyIceClimbersIceShot,
-        ItKind::KirbyPeachToad,
-        ItKind::KirbyPeachToadSpore,
-        ItKind::KirbyFoxLaser,
-        ItKind::KirbyFalcoLaser,
-        ItKind::KirbyFoxBlaster,
-        ItKind::KirbyFalcoBlaster,
-        ItKind::KirbyLinkArrow,
-        ItKind::KirbyYoungLinkFireArrow,
-        ItKind::KirbyLinkBow,
-        ItKind::KirbyYoungLinkBow,
-        ItKind::KirbyMewtwoShadowBall,
-        ItKind::KirbyNessPKFlash,
-        ItKind::KirbyNessPKFlashExplosion,
-        ItKind::KirbyPikachuThunderJoltGround,
-        ItKind::KirbyPikachuThunderJoltAir,
-        ItKind::KirbyPichuThunderJoltGround,
-        ItKind::KirbyPichuThunderJoltAir,
-        ItKind::KirbySamusChargeShot,
-        ItKind::KirbySheikNeedleThrown,
-        ItKind::KirbySheikNeedleHeld,
-        ItKind::KirbyBowserFlame,
-        ItKind::KirbyGameAndWatchSausage,
-        ItKind::KirbyGameAndWatchPan,
-        ItKind::KirbyYoshiEggLay,
-        ItKind::VsCoin,
-        ItKind::Trophy,
-        ItKind::StageHurtbox,
-        ItKind::Goldeen,
-        ItKind::Chikorita,
-        ItKind::Snorlax,
-        ItKind::Blastoise,
-        ItKind::Weezing,
-        ItKind::Charizard,
-        ItKind::Moltres,
-        ItKind::Zapdos,
-        ItKind::Articuno,
-        ItKind::Wobbuffet,
-        ItKind::Scizor,
-        ItKind::Unown,
-        ItKind::Entei,
-        ItKind::Raikou,
-        ItKind::Suicune,
-        ItKind::Bellossom,
-        ItKind::Electrode,
-        ItKind::Lugia,
-        ItKind::HoOh,
-        ItKind::Ditto,
-        ItKind::Clefairy,
-        ItKind::Togepi,
-        ItKind::Mew,
-        ItKind::Celebi,
-        ItKind::Staryu,
-        ItKind::Chansey,
-        ItKind::Porygon2,
-        ItKind::Cyndaquil,
-        ItKind::Marill,
-        ItKind::Venusaur,
-        ItKind::ChikoritaLeaf,
-        ItKind::BlastoiseHydroPump,
-        ItKind::WeezingGas1,
-        ItKind::WeezingGas2,
-        ItKind::CharizardFlame1,
-        ItKind::CharizardFlame2,
-        ItKind::CharizardFlame3,
-        ItKind::CharizardFlame4,
-        ItKind::UnownSwarm,
-        ItKind::LugiaAeroblast,
-        ItKind::LugiaAeroblast2,
-        ItKind::LugiaAeroblast3,
-        ItKind::HoOhSacredFire,
-        ItKind::StaryuStar,
-        ItKind::ChanseyEgg,
-        ItKind::CyndaquilFlame,
-        ItKind::PokemonUnused,
-        ItKind::OldGoomba,
-        ItKind::Target,
-        ItKind::ShyGuy,
-        ItKind::KoopaTroopa,
-        ItKind::KoopaParatroopa,
-        ItKind::LikeLike,
-        ItKind::OldReDead,
-        ItKind::OldOctorok,
-        ItKind::OldTopi,
-        ItKind::PolarBear,
-        ItKind::KlapTrap,
-        ItKind::KoopaGreenShell,
-        ItKind::KoopaRedShell,
-        ItKind::Tingle,
-        ItKind::Invalid1,
-        ItKind::Invalid2,
-        ItKind::Invalid3,
-        ItKind::WhispyApple,
-        ItKind::WhispyHealApple,
-        ItKind::Invalid4,
-        ItKind::Invalid5,
-        ItKind::Invalid6,
-        ItKind::FlatZoneTool,
-        ItKind::Invalid7,
-        ItKind::Invalid8,
-        ItKind::Birdo,
-        ItKind::ArwingLaser,
-        ItKind::GreatFoxLaser,
-        ItKind::BirdoEgg,
-    ];
-
     /// One past the common items (`It_Common_End`): the random spawner draws the kinds below.
     pub const COMMON_END: ItKind = ItKind::RayGunShot;
 
@@ -947,28 +702,14 @@ impl ItKind {
     /// The kind the item code takes for none chosen (`It_Kind_Unselected`).
     pub const UNSELECTED: i32 = -1;
 
-    /// The item kind numbered `id`, if the game has one.
-    pub const fn from_id(id: i32) -> Option<ItKind> {
-        if id >= 0 && (id as usize) < Self::COUNT {
-            Some(Self::ALL[id as usize])
-        } else {
-            None
-        }
-    }
-
     /// The kind numbered `id`, a number the game holds as an item's kind: stops if it isn't one.
     pub fn of(id: i32) -> ItKind {
         Self::from_id(id).unwrap_or_else(|| panic!("{id} is no item kind"))
     }
 
-    /// Its number, as the state and the game's tables hold it.
-    pub const fn id(self) -> i32 {
-        self as i32
-    }
-
     /// Its registry entry.
     pub fn entry(self) -> &'static ItemKind {
-        &ITEMS[self as usize]
+        &ITEMS[self.index()]
     }
 
     /// Its logic table (`it_803F14C4` and its siblings, by `Item_80267978`'s split).
@@ -988,18 +729,6 @@ impl ItKind {
     }
 }
 
-impl PartialEq<ItKind> for i32 {
-    fn eq(&self, k: &ItKind) -> bool {
-        *self == k.id()
-    }
-}
-
-impl PartialEq<i32> for ItKind {
-    fn eq(&self, id: &i32) -> bool {
-        self.id() == *id
-    }
-}
-
 impl PartialOrd<ItKind> for i32 {
     fn partial_cmp(&self, k: &ItKind) -> Option<std::cmp::Ordering> {
         self.partial_cmp(&k.id())
@@ -1007,9 +736,9 @@ impl PartialOrd<ItKind> for i32 {
 }
 
 impl super::super::structs::Item {
-    /// The item's kind (`kind`), which the game only ever sets to one of its own.
+    /// The item's kind (`kind`).
     pub fn item_kind(&self) -> ItKind {
-        ItKind::of(self.kind)
+        self.kind
     }
 }
 

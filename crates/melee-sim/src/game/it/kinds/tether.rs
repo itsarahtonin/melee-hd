@@ -24,6 +24,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::it::ItKind;
 use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
@@ -304,7 +305,7 @@ pub fn spawn(
     owner: GObjId,
     pos: Vec3,
     facing_dir: f32,
-    kind: i32,
+    kind: ItKind,
     t: &Tether,
 ) -> Option<GObjId> {
     let motion = r.game.fighter(owner).motion_id;

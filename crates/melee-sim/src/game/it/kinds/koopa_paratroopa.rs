@@ -657,7 +657,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,
-        ItKind::KoopaParatroopa.id(),
+        ItKind::KoopaParatroopa,
         Some(pos),
         None,
         Some(Vec3::new(0.0, 0.0, 0.0)),

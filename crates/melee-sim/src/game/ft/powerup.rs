@@ -25,7 +25,7 @@ impl Running<'_> {
         if self.game.fighters[me.0].stamina_dead {
             return;
         }
-        match ItKind::of(it::item(self.game, g).kind) {
+        match it::item(self.game, g).kind {
             ItKind::Starman => {
                 let ip = it::item_mut(self.game, g);
                 ip.hitboxes[j].hit.state = HitCapsuleState::Disabled;

@@ -2,6 +2,7 @@
 //! finger's joint, attached to it, as long as it reaches before the stage cuts it, sparking
 //! where it's cut every few frames, until Master Hand ends it.
 
+use crate::game::it::ItKind;
 use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
@@ -65,7 +66,7 @@ pub fn spawn(
     prev_pos: Vec3,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {

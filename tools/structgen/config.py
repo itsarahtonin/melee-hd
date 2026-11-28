@@ -217,6 +217,7 @@ ENUM_TYPES = {
     "GroundOrAir": "GroundOrAir",
     "HitCapsuleState": "HitCapsuleState",
     "HurtCapsuleState": "HurtCapsuleState",
+    "ItemKind": "ItKind",
 }
 
 # Integer fields that hold a decomp enum the C types as `int`, by `Struct.field`: the field
@@ -370,6 +371,7 @@ EXTRA_USES = [
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
     "use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
     "use crate::game::it::item::HoldKind;",
+    "use crate::game::it::ItKind;",
     "use crate::game::it::link::LinkX20;",
     "use crate::game::held::Kept;",
     "use crate::hsd::lobj::LObjId;",
@@ -591,6 +593,7 @@ use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::handles::*;
 use crate::game::it::item::HoldKind;
+use crate::game::it::ItKind;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::game::it::link::LinkX20;
 use crate::game::held::Kept;

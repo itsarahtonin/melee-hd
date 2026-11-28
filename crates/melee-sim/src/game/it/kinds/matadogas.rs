@@ -157,10 +157,10 @@ pub fn puff_when_told(r: &mut Running, gobj: GObjId) {
     pokemon::vars(r.game, gobj).set_i32(PUFF_FRAMES, fp::fctiwz(reg(frames)));
     if r.game.objs.rng.below(2) == 0 {
         let speed = attr_f32(r, gobj, 8);
-        puff(r, gobj, ItKind::WeezingGas1.id(), speed);
+        puff(r, gobj, ItKind::WeezingGas1, speed);
     } else {
         let speed = attr_f32(r, gobj, 0xC);
-        puff(r, gobj, ItKind::WeezingGas2.id(), speed);
+        puff(r, gobj, ItKind::WeezingGas2, speed);
     }
 }
 
@@ -205,7 +205,7 @@ pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
 /// Puffs gas of `kind`, `it_802CB4F0`: from it, at `speed` a random whole degree round; every
 /// other puff makes one of three sounds.
 #[doc(alias = "it_802CB4F0")]
-pub fn puff(r: &mut Running, gobj: GObjId, kind: i32, speed: f32) {
+pub fn puff(r: &mut Running, gobj: GObjId, kind: ItKind, speed: f32) {
     let deg = fp::frsp(f64::from(r.game.objs.rng.below(360)));
     let ip = item(r.game, gobj);
     let (pos, facing, owner) = (ip.pos, ip.facing_dir, ip.owner);
@@ -289,7 +289,7 @@ pub fn gas_anim(r: &mut Running, gobj: GObjId) -> bool {
 /// second its `x8`).
 #[doc(alias = "it_802CB844")]
 pub fn gas_phys(r: &mut Running, gobj: GObjId) {
-    let scale = match ItKind::of(item(r.game, gobj).kind) {
+    let scale = match item(r.game, gobj).kind {
         ItKind::WeezingGas1 => attr_f32(r, gobj, 4),
         ItKind::WeezingGas2 => attr_f32(r, gobj, 8),
         _ => 0.0,

@@ -68,7 +68,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_802B2FC8")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::YoshiStar.id(),
+        kind: ItKind::YoshiStar,
         ..Default::default()
     };
     spawn.prev_pos = pos;

@@ -157,7 +157,7 @@ impl Running<'_> {
         }
         // `ftCo_800A5A5C`: a container.
         if matches!(
-            ItKind::of(kind),
+            kind,
             ItKind::Crate | ItKind::Barrel | ItKind::PartyBall | ItKind::BarrelCannon
         ) {
             self.game.fighters[f.0].cpu.command = 2;
@@ -165,7 +165,7 @@ impl Running<'_> {
         }
         // `ftCo_800A5A28`: an item thrown at the target.
         if matches!(
-            ItKind::of(kind),
+            kind,
             ItKind::Capsule
                 | ItKind::BobOmb
                 | ItKind::MrSaturn
@@ -207,7 +207,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A59E4")]
     pub(super) fn cpu_item_swung(&self, it: ItemId) -> bool {
         matches!(
-            ItKind::of(self.game.items[it.0].kind),
+            self.game.items[it.0].kind,
             ItKind::Fan
                 | ItKind::StarRod
                 | ItKind::LipsStick
@@ -656,7 +656,9 @@ impl Running<'_> {
                 && self.cpu_item_swung(super::super::it::item_of(self.game, g))
             {
                 let slot = match ItKind::of(
-                    self.game.items[super::super::it::item_of(self.game, g).0].kind,
+                    self.game.items[super::super::it::item_of(self.game, g).0]
+                        .kind
+                        .id(),
                 ) {
                     ItKind::Fan => Some(0),
                     ItKind::LipsStick => Some(1),
@@ -1632,9 +1634,9 @@ impl Running<'_> {
         let kind = self.game.items[it.0].kind;
         if kind == ItKind::Starman
             || kind == ItKind::VsCoin
-            || (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
+            || (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind.id())
             || matches!(
-                ItKind::from_id(kind),
+                ItKind::from_id(kind.id()),
                 Some(
                     ItKind::KoopaTroopa
                         | ItKind::KoopaParatroopa
@@ -1743,7 +1745,7 @@ impl Running<'_> {
                 .expect("an item threat without its item");
             let ip = &self.game.items[item.0];
             let side = fp::fsubs(reg(fpp.cur_pos.x), reg(ip.pos.x)) > 0.0;
-            match ItKind::of(ip.kind) {
+            match ip.kind {
                 // `inline0`: shield by an island's end, else roll away from it.
                 ItKind::Flipper | ItKind::BarrelCannon => {
                     if self.cpu_near_island_end(f, 1.0) {
