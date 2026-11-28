@@ -144,6 +144,23 @@ const TICK_RATE: f64 = 60.0;
 /// The stack the game runs on: the simulation recurses as the original does (joint trees).
 const GAME_STACK: usize = 512 << 20;
 
+/// Read by NVIDIA's Optimus driver from the executable's exports: 1 puts the program on the
+/// discrete GPU of a laptop with two. A binary exports nothing by default, so build.rs has the
+/// linker export it (`/EXPORT:NvOptimusEnablement,DATA`).
+#[cfg(windows)]
+#[used]
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals)]
+pub static NvOptimusEnablement: u32 = 1;
+
+/// AMD's PowerXpress (switchable graphics) counterpart of [`NvOptimusEnablement`], exported
+/// the same way.
+#[cfg(windows)]
+#[used]
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals)]
+pub static AmdPowerXpressRequestHighPerformance: u32 = 1;
+
 /// Runs a test's body on the game's stack ([`GAME_STACK`]), as every test that starts a
 /// [`Session`] does: a test thread's is the standard library's 2 MiB.
 #[cfg(test)]
