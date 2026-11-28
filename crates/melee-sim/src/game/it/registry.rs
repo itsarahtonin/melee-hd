@@ -738,6 +738,7 @@ impl PartialOrd<ItKind> for i32 {
 
 impl super::super::structs::Item {
     /// The item's kind (`kind`).
+    #[inline]
     pub fn item_kind(&self) -> ItKind {
         self.kind
     }

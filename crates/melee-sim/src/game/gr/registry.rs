@@ -212,6 +212,7 @@ impl GrKind {
 
 impl super::super::structs::StageInfo {
     /// The stage's ground kind (`grkind`).
+    #[inline]
     pub fn ground_kind(&self) -> GrKind {
         self.grkind
     }

@@ -63,6 +63,7 @@ macro_rules! kind_enum {
             pub const COUNT: usize = Self::ALL.len();
 
             /// The kind numbered `id`, if the game's list names one.
+            #[inline]
             pub const fn from_id(id: i32) -> Option<$name> {
                 match $name::from_raw(id) {
                     $name::Other(_) => None,
@@ -71,17 +72,20 @@ macro_rules! kind_enum {
             }
 
             /// Its number, as the state and the game's tables hold it.
+            #[inline]
             pub const fn id(self) -> i32 {
                 self.raw()
             }
 
             /// Its number as an index into the game's tables by kind.
+            #[inline]
             pub const fn index(self) -> usize {
                 self.raw() as usize
             }
         }
 
         impl PartialOrd for $name {
+            #[inline]
             fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
                 Some(self.cmp(other))
             }
@@ -89,6 +93,7 @@ macro_rules! kind_enum {
 
         impl Ord for $name {
             /// By number.
+            #[inline]
             fn cmp(&self, other: &Self) -> std::cmp::Ordering {
                 self.id().cmp(&other.id())
             }
@@ -97,6 +102,7 @@ macro_rules! kind_enum {
         impl<R: $crate::game::mirror::NarrowInt> PartialEq<$crate::game::mirror::Narrow<$name, R>>
             for $name
         {
+            #[inline]
             fn eq(&self, k: &$crate::game::mirror::Narrow<$name, R>) -> bool {
                 *self == k.get()
             }
@@ -105,30 +111,35 @@ macro_rules! kind_enum {
         impl<R: $crate::game::mirror::NarrowInt> PartialEq<$name>
             for $crate::game::mirror::Narrow<$name, R>
         {
+            #[inline]
             fn eq(&self, k: &$name) -> bool {
                 self.get() == *k
             }
         }
 
         impl PartialEq<$name> for i32 {
+            #[inline]
             fn eq(&self, k: &$name) -> bool {
                 *self == k.id()
             }
         }
 
         impl PartialEq<i32> for $name {
+            #[inline]
             fn eq(&self, id: &i32) -> bool {
                 self.id() == *id
             }
         }
 
         impl PartialEq<$name> for u8 {
+            #[inline]
             fn eq(&self, k: &$name) -> bool {
                 i32::from(*self) == k.id()
             }
         }
 
         impl PartialEq<$name> for i8 {
+            #[inline]
             fn eq(&self, k: &$name) -> bool {
                 i32::from(*self) == k.id()
             }
@@ -306,6 +317,7 @@ impl CharacterKind {
 
 impl super::super::structs::Fighter {
     /// The fighter's kind (`kind`).
+    #[inline]
     pub fn fighter_kind(&self) -> FighterKind {
         self.kind
     }

@@ -447,6 +447,7 @@ macro_rules! c_enum {
         }
 
         impl $name {
+            #[inline]
             pub const fn from_raw(v: $raw) -> $name {
                 match v {
                     $($value => $name::$variant,)*
@@ -454,6 +455,7 @@ macro_rules! c_enum {
                 }
             }
 
+            #[inline]
             pub const fn raw(self) -> $raw {
                 match self {
                     $($name::$variant => $value,)*
@@ -463,6 +465,7 @@ macro_rules! c_enum {
         }
 
         impl Default for $name {
+            #[inline]
             fn default() -> $name {
                 $name::from_raw(0)
             }
@@ -497,18 +500,22 @@ macro_rules! c_enum {
 
         impl $crate::game::mirror::CEnum for $name {
             type Raw = $raw;
+            #[inline]
             fn from_raw(v: $raw) -> Self {
                 $name::from_raw(v)
             }
+            #[inline]
             fn raw(self) -> $raw {
                 $name::raw(self)
             }
         }
 
         impl $crate::game::mirror::BitField for $name {
+            #[inline]
             fn from_bits(v: u32) -> Self {
                 $name::from_raw(v as $raw)
             }
+            #[inline]
             fn bits(&self) -> u32 {
                 self.raw() as u32
             }
@@ -574,6 +581,7 @@ pub struct Narrow<K, R> {
 
 impl<K: CEnum<Raw = i32>, R: NarrowInt> Narrow<K, R> {
     /// The field holding its integer as memory has it.
+    #[inline]
     pub fn from_raw(raw: R) -> Self {
         Narrow {
             raw,
@@ -582,20 +590,24 @@ impl<K: CEnum<Raw = i32>, R: NarrowInt> Narrow<K, R> {
     }
 
     /// The field holding `k`: its low bits.
+    #[inline]
     pub fn new(k: K) -> Self {
         Self::from_raw(R::narrow(k.raw()))
     }
 
     /// The enum the field holds.
+    #[inline]
     pub fn get(self) -> K {
         K::from_raw(self.raw.widen())
     }
 
+    #[inline]
     pub fn set(&mut self, k: K) {
         *self = Self::new(k);
     }
 
     /// The field's integer.
+    #[inline]
     pub fn raw(self) -> R {
         self.raw
     }
