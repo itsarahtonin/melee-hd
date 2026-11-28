@@ -400,7 +400,10 @@ impl Character {
 pub fn character(kind: FighterKind) -> &'static Character {
     match CHARACTERS.get(kind.index()).and_then(Option::as_ref) {
         Some(c) => c,
-        None => unimplemented!("fighter kind {kind:?} isn't ported"),
+        None => {
+            let kind = kind.id();
+            unimplemented!("fighter kind {kind} isn't ported")
+        }
     }
 }
 

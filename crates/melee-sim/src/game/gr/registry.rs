@@ -443,7 +443,10 @@ impl Stage {
 pub fn stage(grkind: GrKind) -> &'static Stage {
     match STAGES.get(grkind.index()).and_then(Option::as_ref) {
         Some(s) => s,
-        None => unimplemented!("stage kind {grkind:?} isn't ported"),
+        None => {
+            let grkind = grkind.id();
+            unimplemented!("stage kind {grkind} isn't ported")
+        }
     }
 }
 
