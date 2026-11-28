@@ -166,7 +166,7 @@ impl Game {
             }
             let s = i as i32;
             let p = &mut r.player_standings[i];
-            p.ckind = self.player_ckind(s) as i8;
+            p.ckind = Narrow::from_raw(self.player_ckind(s).raw() as i8);
             p.ftkind = self.player_fighter_kind(s) as i8;
             p.stocks = self.player_stocks(s) as i8;
             p.flags[0] = (p.flags[0] & 0x03) | ((self.player_costume(s) as u8 & 0x3F) << 2);

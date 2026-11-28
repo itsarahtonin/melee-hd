@@ -422,7 +422,7 @@ fn choose(rng: &Rng, data: &mut StartMeleeData, chosen: &Rules) -> String {
         } else {
             fighter >= PLAYABLE || rng.chance(50)
         };
-        p.ckind = fighter as i8;
+        p.ckind = Narrow::from_raw(fighter as i8);
         p.slot_type = if cpu {
             PlayerKind::Cpu
         } else {

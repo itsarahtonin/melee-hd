@@ -14,7 +14,7 @@ impl Game {
         if self.player_pkind(slot) == PlayerKind::None {
             return None;
         }
-        let mut ckind = self.player_ckind(slot) as u8;
+        let mut ckind = self.player_ckind(slot).raw() as u8;
         if ckind == CharacterKind::Zelda || ckind == CharacterKind::Seak {
             ckind = if self.player_fighter_kind(slot) == FighterKind::Seak {
                 CharacterKind::Seak.raw() as u8

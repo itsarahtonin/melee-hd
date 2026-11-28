@@ -11,6 +11,7 @@
 //! imported trace tick, [`Session::resume`]) plays on with [`Session::step_tick`].
 
 use crate::game::gr::GrKind;
+use crate::game::mirror::Narrow;
 use melee_data::archive::{Archive, Archives};
 
 use super::gm::scene;
@@ -965,7 +966,7 @@ impl Session {
             let mut joining = start.clone();
             for p in joining.players.iter_mut().take(4).skip(1) {
                 // The 33 character kinds; past them a slot names no one.
-                if (0..0x21).contains(&p.ckind) {
+                if (0..0x21).contains(&p.ckind.raw()) {
                     p.slot_type = PlayerKind::Cpu.into();
                 }
             }
@@ -984,7 +985,7 @@ impl Session {
             let mut kinds: Vec<i32> = Vec::new();
             for &c in &self.game.gm.opponents.kinds {
                 if (0..0x21).contains(&c) {
-                    let m = super::pl::player::mapping(i32::from(c));
+                    let m = super::pl::player::mapping(CharacterKind::from_raw(i32::from(c)));
                     for k in [m.internal_id, m.extra_internal_id] {
                         if k >= 0 && !kinds.contains(&i32::from(k)) {
                             kinds.push(i32::from(k));
@@ -1043,7 +1044,8 @@ impl Session {
                     .iter()
                     .filter(|p| p.slot_type != PlayerKind::None)
                     .map(|p| {
-                        let m = super::pl::player::mapping(i32::from(p.ckind));
+                        let m =
+                            super::pl::player::mapping(CharacterKind::from_raw(p.ckind.get().id()));
                         (i32::from(m.internal_id), i32::from(m.extra_internal_id))
                     })
                     .collect();
@@ -1068,9 +1070,9 @@ impl Session {
                 == Some(GameScene::Vs);
         if multi_man {
             let mut joining = start.clone();
-            for (i, ck) in [(1, 0x1B), (2, 0x1C)] {
+            for (i, ck) in [(1, CharacterKind::Boy), (2, CharacterKind::Girl)] {
                 let p = &mut joining.players[i];
-                p.ckind = ck;
+                p.ckind = ck.into();
                 p.color = 0;
                 p.slot_type = PlayerKind::Cpu.into();
             }
@@ -1118,7 +1120,7 @@ impl Session {
                         ));
                         let p = &mut joining.players[i];
 
-                        p.ckind = ck;
+                        p.ckind = Narrow::from_raw(ck);
                         p.color = if c < t.costume_count { c } else { 0 };
                         p.slot_type = PlayerKind::Cpu.into();
                     }

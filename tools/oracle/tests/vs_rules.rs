@@ -37,7 +37,7 @@ fn vs_start_data_matches_the_recorded() {
             .map(|i| {
                 let p = &rec.players[i];
                 Player {
-                    character: p.ckind as u8,
+                    character: p.ckind.raw() as u8,
                     costume: p.color,
                     port: i as u8,
                     kind: p.slot_type.raw(),

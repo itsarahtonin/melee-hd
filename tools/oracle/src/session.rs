@@ -1925,7 +1925,7 @@ impl Run<'_> {
                     format!(
                         "port {} character {:#x}{}",
                         i + 1,
-                        s.game.player_ckind(i),
+                        s.game.player_ckind(i).id(),
                         if s.game.player_pkind(i) == PlayerKind::Cpu {
                             " (computer)"
                         } else {

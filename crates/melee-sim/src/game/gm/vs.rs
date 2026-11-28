@@ -977,7 +977,7 @@ impl Running<'_> {
         let mode = g.game_mode;
         let stkind = g.vs.start.stkind;
         if mode == GameMode::TargetTest {
-            let ckind = self.game.game_data.vs.event.target_test.ckind as u8;
+            let ckind = self.game.game_data.vs.event.target_test.ckind.raw() as u8;
             self.target_test_score(ckind);
         } else if mode == GameMode::Classic && (0x21..=0x3A).contains(&stkind.raw()) {
             let ckind = self.game.one_player.classic.base.player.ckind as u8;
@@ -1278,7 +1278,7 @@ impl Running<'_> {
             .iter()
             .position(|f| f.platform_timer == 0)
             .unwrap_or(0);
-        let chr = self.game.player_ckind(slot) as i8;
+        let chr = self.game.player_ckind(slot).raw() as i8;
         let own = self.game.stage_info.bits().own_entry_points;
         let point = if own { slot } else { 0 };
         let pos = super::super::gr::stage::entry_point(self.game, self.data, point)
@@ -1322,7 +1322,7 @@ impl Running<'_> {
             && self.game.player_stocks(slot) == 0
         {
             let (ckind, costume) = (self.game.player_ckind(slot), self.game.player_costume(slot));
-            self.out_of_stocks(ckind as i8, costume as i8);
+            self.out_of_stocks(ckind.raw() as i8, costume as i8);
             return;
         }
         self.respawn(slot, i32::from(sub));
@@ -1639,8 +1639,8 @@ impl Running<'_> {
             self.sfx_play(0x41F4E, 0x7F, 0x40);
         }
         let (ckind, costume) = (self.game.player_ckind(0), self.game.player_costume(0));
-        self.joiner_kirby_copies(ckind as i8, costume as i8);
-        self.joiner_kirby_costumes(ckind as i8, costume as i8);
+        self.joiner_kirby_copies(ckind.raw() as i8, costume as i8);
+        self.joiner_kirby_costumes(ckind.raw() as i8, costume as i8);
     }
 
     /// The copies of the joiners' and the human's characters for the Kirbys among them,
@@ -1806,9 +1806,9 @@ impl Game {
     #[doc(alias = "fn_8016D8AC")]
     pub fn init_vs_player(&mut self, slot: i32, d: &PlayerInitData) {
         self.set_player_pkind(slot, d.slot_type.get());
-        self.set_player_ckind(slot, i32::from(d.ckind));
+        self.set_player_ckind(slot, CharacterKind::from_raw(d.ckind.get().id()));
         let f = &mut self.vs.state.fighters[slot as usize];
-        f.ckind = d.ckind as u8;
+        f.ckind = Narrow::from_raw(d.ckind.raw() as u8);
         self.set_player_stocks(slot, i32::from(d.stocks));
         self.set_player_costume(slot, i32::from(d.color));
         self.set_player_sub_color(slot, d.sub_color as i8);
@@ -1829,9 +1829,9 @@ impl Game {
             self.set_player_ckind(
                 slot,
                 if ck == CharacterKind::Zelda {
-                    CharacterKind::Seak.id()
+                    CharacterKind::Seak
                 } else {
-                    CharacterKind::Zelda.id()
+                    CharacterKind::Zelda
                 },
             );
             self.vs.state.fighters[slot as usize].flags[0] |= 0x08;

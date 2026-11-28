@@ -1849,7 +1849,7 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
         // The first player's character's songs, one drawn.
         let ckind = game.player_ckind(0);
         let which = game.objs.rng.below(2);
-        bgm = crate::lb::audio::character_song(ckind, which);
+        bgm = crate::lb::audio::character_song(ckind.id(), which);
     }
     (bgm, alternate)
 }

@@ -397,7 +397,7 @@ impl Dvd {
     #[doc(alias = "Player_80031CB0")]
     #[doc(alias = "Player_80031D2C")]
     fn want_character(&mut self, ckind: i32, color: u8, copy: bool) {
-        let m = crate::game::pl::player::mapping(ckind);
+        let m = crate::game::pl::player::mapping(CharacterKind::from_raw(ckind));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 {
                 continue;

@@ -583,7 +583,7 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         .take(4)
         .filter(|(_, p)| p.slot_type != PlayerKind::None)
         .map(|(i, p)| Player {
-            character: p.ckind as u8,
+            character: p.ckind.raw() as u8,
             costume: p.color,
             port: i as u8,
             kind: p.slot_type.raw(),
@@ -761,7 +761,7 @@ fn probe_line(tick: u64, next: usize, game: &Game) {
             line += &format!(
                 " | p{} ck{} lv{} hc{} tm{}",
                 i + 1,
-                p.ckind,
+                p.ckind.raw(),
                 p.cpu_level,
                 p.handicap,
                 p.team

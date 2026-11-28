@@ -2,7 +2,9 @@
 //! hand-written as [`super::super::types`] are): the event, its fighter and color, the round's
 //! score and counters, and the target test's choice beside it (`TargetTestChoice`).
 
+use crate::game::ft::CharacterKind;
 use crate::game::gr::StKind;
+use crate::game::mirror::Narrow;
 
 /// The decomp's `gmm_x0_584_t`.
 #[doc(alias("gmm_x0_584_t"))]
@@ -13,7 +15,7 @@ use crate::game::gr::StKind;
 pub struct TargetTestChoice {
     #[at(0x0)]
     #[doc(alias("unk_584"))]
-    pub ckind: i8,
+    pub ckind: Narrow<CharacterKind, i8>,
     #[at(0x1)]
     #[doc(alias("unk_585"))]
     pub color: u8,
@@ -34,7 +36,7 @@ pub struct EventData {
     /// The first player's character and costume, as played.
     #[at(0x0)]
     #[doc(alias("x0"))]
-    pub char_kind: u8,
+    pub char_kind: Narrow<CharacterKind, u8>,
     #[at(0x1)]
     #[doc(alias("x1"))]
     pub char_color: u8,

@@ -78,7 +78,7 @@ impl super::super::state::Game {
         for (k, f) in s.fighters.iter().enumerate() {
             let o = 0x38 + k * 0xE;
             st[o..o + 6].copy_from_slice(&[
-                f.ckind,
+                f.ckind.raw(),
                 f.entry_timer,
                 f.slot_type.raw(),
                 f.spawn_point as u8,
@@ -330,7 +330,7 @@ impl Running<'_> {
             let team = start.players[0].team;
             let p = &mut start.players[idx];
             *p = player_defaults();
-            p.ckind = a.ckind;
+            p.ckind = Narrow::from_raw(a.ckind);
             p.slot_type = PlayerKind::Cpu.into();
             p.stocks = 1;
             p.team = team;
@@ -438,7 +438,7 @@ impl Running<'_> {
                 let p = &mut start.players[player_idx];
                 *p = player_defaults();
                 p.slot_type = PlayerKind::Cpu.into();
-                p.ckind = kind;
+                p.ckind = Narrow::from_raw(kind);
                 p.stocks = 1;
                 p.cpu_level = enemy_level;
                 p.cpu_kind = Narrow::from_raw(enemy_cpu_type);
@@ -563,7 +563,7 @@ impl Running<'_> {
                 1,
                 0,
                 0,
-                p0_ckind as u8,
+                p0_ckind.raw() as u8,
                 p0_color,
                 i32::from(n),
                 0x19,

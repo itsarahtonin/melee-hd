@@ -387,8 +387,9 @@ impl Running<'_> {
         self.results_fighters_setup(costumes);
         self.results_fighters_light();
         if !canceled(me.outcome) {
-            let theme =
-                super::results_stats::victory_theme(me.player_standings[team_best].ckind as i32);
+            let theme = super::results_stats::victory_theme(
+                me.player_standings[team_best].ckind.raw() as i32,
+            );
             self.lb_play_music(theme);
         }
         for i in 0..4 {
@@ -397,7 +398,11 @@ impl Running<'_> {
                 continue;
             }
             self.results_images(i);
-            let f = self.results_fighter(i32::from(p.ckind), i32::from(p.flags[0] >> 2), i as i32);
+            let f = self.results_fighter(
+                i32::from(p.ckind.raw()),
+                i32::from(p.flags[0] >> 2),
+                i as i32,
+            );
             self.game.results.data.players[i].fighter_gobj = f;
             let c = self.results_fighter_camera(i as i32);
             self.game.results.data.players[i].camera = c;
@@ -520,7 +525,7 @@ impl Running<'_> {
         g.world.setup_gx_link(gobj, CodeRef(PANEL_RENDER), 0xB, 0);
         crate::lb::anim::add_model_anim(&mut g.objs, data, root, 0, m0);
         jobj::req_anim_all(&mut g.objs, root, 0.0);
-        let ckind = me.player_standings[usize::from(team_best)].ckind as u8;
+        let ckind = me.player_standings[usize::from(team_best)].ckind.raw() as u8;
         let emblem = self.results_emblem(root, ckind, canceled(me.outcome));
         self.game.results.data.emblem = emblem;
         // A winner with no emblem (Master Hand, Crazy Hand and the other bosses a debug VS

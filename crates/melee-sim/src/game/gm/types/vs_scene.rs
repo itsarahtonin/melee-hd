@@ -3,6 +3,7 @@
 //! match's end, and a copy of the start's rules.
 
 use super::{MatchEnd, StartMeleeRules};
+use crate::game::ft::CharacterKind;
 use crate::game::handles::RawPtr;
 use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
@@ -15,7 +16,7 @@ use crate::game::pl::player::PlayerKind;
 pub struct VsSceneFighter {
     #[at(0x0)]
     #[doc(alias("x0"))]
-    pub ckind: u8,
+    pub ckind: Narrow<CharacterKind, u8>,
     /// The entry's countdown (0x82 at entry): the announcer's line at 0x50.
     #[at(0x1)]
     #[doc(alias("x1"))]

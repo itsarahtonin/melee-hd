@@ -2,6 +2,7 @@
 //! digit joints and a percent sign (texture-animated to their digits, coloured by damage,
 //! shaken by hits, blown apart when the player is KO'd) with a character mark beside it.
 
+use crate::game::ft::CharacterKind;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -540,10 +541,10 @@ impl Running<'_> {
         );
         anim::add_anim_index(&mut g.objs, data, Some(root), 0, an, mat, shape);
         // Master Hand, Giga Bowser and Crazy Hand show the male wireframe's icon.
-        if chara == 0x1A || (chara.wrapping_sub(0x1D) as u32) <= 1 {
-            chara = 0x1B;
+        if chara == CharacterKind::MasterHand || (chara.id().wrapping_sub(0x1D) as u32) <= 1 {
+            chara = CharacterKind::Boy;
         }
-        let frame = fp::fadds(0.5, stock_icon_frame(chara, 0, 0));
+        let frame = fp::fadds(0.5, stock_icon_frame(chara.id(), 0, 0));
         let objs = &mut g.objs;
         tobj::req_anim_all(objs, t, mem(frame));
         let a = t.and_then(|t| objs.tobjs[t].aobj);

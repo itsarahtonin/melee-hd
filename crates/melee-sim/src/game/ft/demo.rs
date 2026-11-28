@@ -6,6 +6,7 @@
 //! and Ness's yo-yo in hand, and the losers' clapping).
 
 use crate::game::camera::CmSubjectState;
+use crate::game::ft::CharacterKind;
 use melee_data::archive::ArchiveId;
 
 use super::super::handles::{CodeRef, FighterId};
@@ -212,7 +213,7 @@ impl Running<'_> {
         file: u32,
         idx: i32,
     ) {
-        let m = mapping(ckind);
+        let m = mapping(CharacterKind::from_raw(ckind));
         self.demo_set_archive(i32::from(m.internal_id), archive, file, idx);
         if m.extra_internal_id != -1 && m.has_transformation == 0 {
             self.demo_set_archive(i32::from(m.extra_internal_id), archive, file, idx);

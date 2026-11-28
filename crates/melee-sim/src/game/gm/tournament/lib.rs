@@ -1204,7 +1204,8 @@ impl Running<'_> {
             let (slot_type, color) = (m.slot_type, s.color);
             m.color = color;
             m.level = s.level;
-            self.game.set_player_ckind(p as i32, ckind);
+            self.game
+                .set_player_ckind(p as i32, CharacterKind::from_raw(ckind));
             self.game
                 .set_player_pkind(p as i32, PlayerKind::from_raw(i32::from(slot_type)));
             self.game.set_player_costume(p as i32, i32::from(color));
@@ -1491,12 +1492,12 @@ impl Running<'_> {
                 if m.random != 0 {
                     let icon = self.tou_random_icon();
                     let ckind = ckind_of(icon) as u8;
-                    d.players[i].ckind = ckind as i8;
+                    d.players[i].ckind = Narrow::from_raw(ckind as i8);
                     let n = super::super::super::playback::costume_count(ckind);
                     d.players[i].color = self.game.objs.rng.below(i32::from(n)) as u8;
                 } else {
                     let p = &mut d.players[i];
-                    p.ckind = ckind_of(i32::from(m.icon)) as i8;
+                    p.ckind = Narrow::from_raw(ckind_of(i32::from(m.icon)) as i8);
                     p.color = m.color;
                 }
                 let tag = d.players[i].nametag;
@@ -1529,7 +1530,7 @@ impl Running<'_> {
         let players: Vec<(u8, i32, u8)> = (0..4)
             .map(|i| {
                 let p = &d.players[i];
-                (p.slot_type.raw(), i32::from(p.ckind), p.color)
+                (p.slot_type.raw(), i32::from(p.ckind.raw()), p.color)
             })
             .collect();
         *self.game.tou.start = d;

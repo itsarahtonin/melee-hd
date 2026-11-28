@@ -297,7 +297,7 @@ impl Running<'_> {
         super::setup_players::css_one_player(
             &mut self.game.multi_man.css,
             0x11 + (mode.id() - GameMode::TenMan.id()),
-            p.ckind,
+            p.ckind.raw(),
             1,
             p.color as i8,
             p.nametag,
@@ -334,7 +334,7 @@ impl Running<'_> {
         let vs = &mut self.game.game_data.modes.table[VS_MODE];
         super::vs_mode::all_player_defaults(&mut vs.start.players);
         let p = &mut vs.start.players[0];
-        p.ckind = ckind;
+        p.ckind = Narrow::from_raw(ckind);
         p.color = color;
         p.nametag = nametag;
     }
@@ -384,7 +384,7 @@ impl Running<'_> {
         }
         super::setup_players::setup_human(
             &mut s.players[0],
-            vs[0].ckind as u8,
+            vs[0].ckind.raw() as u8,
             vs[0].color,
             1,
             slot,
@@ -453,10 +453,10 @@ impl Running<'_> {
             _ => {}
         }
         self.multi_man_players(mode == GameMode::Cruel, mode != GameMode::TenMan);
-        let ckind = i32::from(self.game.multi_man.start.players[0].ckind);
+        let ckind = i32::from(self.game.multi_man.start.players[0].ckind.raw());
         let mm = &mut self.game.multi_man;
         mm.start_record(ckind, i32::from(mode.id()));
-        let own = i32::from(self.multi_man_data().start.players[0].ckind);
+        let own = i32::from(self.multi_man_data().start.players[0].ckind.raw());
         let rec = self.mm_record_1p(own as i8).clone();
         let mm = &mut self.game.multi_man;
         let m = i32::from(mode.id());
@@ -536,8 +536,8 @@ impl Running<'_> {
         self.multi_man_store_result();
         let own = self.multi_man_data().start.players[0].ckind;
         let m = i32::from(mode.id());
-        let r = self.game.multi_man.record_of(i32::from(own), m);
-        let rec = self.mm_record_1p(own);
+        let r = self.game.multi_man.record_of(i32::from(own.raw()), m);
+        let rec = self.mm_record_1p(own.raw());
         match mode {
             GameMode::TenMan | GameMode::HundredMan => {
                 let v = if r.won() { r.score } else { i32::from(r.kos) };
@@ -610,7 +610,7 @@ impl Running<'_> {
         {
             let slot = self.game.multi_man.slot;
             self.init_challenger(
-                p.ckind as u8,
+                p.ckind.raw() as u8,
                 p.color,
                 slot,
                 p.nametag,
@@ -774,7 +774,7 @@ impl Running<'_> {
         mm.kos_early = 0;
         mm.start_frames = 0;
         let mut p = super::vs_mode::player_defaults();
-        p.ckind = CharacterKind::Boy.raw() as i8;
+        p.ckind = Narrow::from_raw(CharacterKind::Boy.raw() as i8);
         p.slot_type = PlayerKind::Cpu.into();
         p.stocks = 1;
         p.dies_up = true;
@@ -851,7 +851,7 @@ impl Running<'_> {
         let e = mm.table[i];
         let mut p = mm.joiner.clone();
         p.team = team;
-        p.ckind = e.ckind as i8;
+        p.ckind = Narrow::from_raw(e.ckind as i8);
         p.cpu_level = e.level;
         p.cpu_kind = Narrow::from_raw(e.cpu_kind);
         p.attack_ratio = e.attack_ratio;

@@ -2,6 +2,9 @@
 //! Classic's, Adventure's and All-Star's fighter, stocks, color, level and name tag, and how
 //! far its run got. Hand-written as [`super::super::types`] are.
 
+use crate::game::ft::CharacterKind;
+use crate::game::mirror::Narrow;
+
 /// The decomp's `gmm_x0_528_t`.
 #[doc(alias("gmm_x0_528_t"))]
 #[derive(
@@ -10,7 +13,7 @@
 #[mirror(c = "gmm_x0_528_t", size = 0x6)]
 pub struct OnePlayerChoice {
     #[at(0x0)]
-    pub c_kind: i8,
+    pub c_kind: Narrow<CharacterKind, i8>,
     #[at(0x1)]
     pub stocks: u8,
     #[at(0x2)]

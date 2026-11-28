@@ -1294,7 +1294,7 @@ impl Running<'_> {
                 &mut colors,
             );
             let s = &mut self.game.one_player.match_start.players[1];
-            s.ckind = CharacterKind::Falco.raw() as _;
+            s.ckind = CharacterKind::Falco.into();
             s.color = colors[0];
         }
     }
@@ -1321,7 +1321,7 @@ impl Running<'_> {
             .ckind_unlocked(CharacterKind::Luigi.raw() as u8)
         {
             for p in &mut self.game.one_player.match_start.players[1..4] {
-                if p.ckind == CharacterKind::Luigi.raw() as i8 {
+                if p.ckind == CharacterKind::Luigi {
                     p.slot_type = PlayerKind::None.into();
                 }
             }
@@ -1417,7 +1417,7 @@ impl Running<'_> {
         if self.previous_scene_index() == LUIGI_CUTSCENE {
             let color = self.game.one_player.adventure_cutscene[3];
             let p = &mut self.game.one_player.match_start.players[1];
-            p.ckind = CharacterKind::Luigi.raw() as _;
+            p.ckind = CharacterKind::Luigi.into();
             p.color = color;
             self.game.one_player.adventure.feats[0] = 1;
         }

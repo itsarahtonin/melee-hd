@@ -208,12 +208,12 @@ impl Settings {
         // (`CharacterKind::PLAYABLE`), and every port's computer level is at least 1 (docs/oracle.md,
         // the shortcut's check against the menus' match).
         for d in &mut vs.players[..4] {
-            d.ckind = 0x1A;
+            d.ckind = CharacterKind::MasterHand.into();
             d.cpu_level = d.cpu_level.max(1);
         }
         for p in players {
             let d = &mut vs.players[usize::from(p.port)];
-            d.ckind = p.character as i8;
+            d.ckind = Narrow::from_raw(p.character as i8);
             d.slot_type = Narrow::from_raw(p.kind);
             d.color = p.costume;
             d.team = p.team;
@@ -403,7 +403,7 @@ impl Settings {
 /// Recordings tab marks such a replay unplayable by the same rule, from its game start.
 pub fn retail_kinds(start: &StartMeleeData) -> Result<(), CodeError> {
     for (slot, p) in start.players.iter().enumerate() {
-        let kind = p.ckind as u8;
+        let kind = p.ckind.raw() as u8;
         if kind > CharacterKind::NONE
             || (kind == CharacterKind::NONE && p.slot_type != PlayerKind::None)
         {
@@ -983,7 +983,7 @@ pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, 
         if p.slot_type == PlayerKind::None {
             continue;
         }
-        let m = super::pl::player::mapping(i32::from(p.ckind));
+        let m = super::pl::player::mapping(CharacterKind::from_raw(p.ckind.get().id()));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 {
                 continue;
@@ -1046,7 +1046,7 @@ pub fn load_fighter_files(
         if p.slot_type == PlayerKind::None {
             continue;
         }
-        let m = super::pl::player::mapping(i32::from(p.ckind));
+        let m = super::pl::player::mapping(CharacterKind::from_raw(p.ckind.get().id()));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 {
                 continue;
@@ -1080,7 +1080,9 @@ pub fn load_fighter_files(
     let kirby_costumes: Vec<usize> = start
         .players
         .iter()
-        .filter(|p| p.slot_type != PlayerKind::None && i32::from(p.ckind) == CharacterKind::Kirby)
+        .filter(|p| {
+            p.slot_type != PlayerKind::None && i32::from(p.ckind.raw()) == CharacterKind::Kirby
+        })
         .map(|p| usize::from(p.color))
         .collect();
     if !kirby_costumes.is_empty() {
@@ -1089,7 +1091,7 @@ pub fn load_fighter_files(
             if p.slot_type == PlayerKind::None {
                 continue;
             }
-            let m = super::pl::player::mapping(i32::from(p.ckind));
+            let m = super::pl::player::mapping(CharacterKind::from_raw(p.ckind.get().id()));
             for kind in [m.internal_id, m.extra_internal_id] {
                 if kind < 0 || i32::from(kind) == FighterKind::Kirby {
                     continue;
@@ -1193,7 +1195,7 @@ pub fn load_joiner_files(
         if !(0..NONE).contains(&ckind) {
             continue;
         }
-        let m = super::pl::player::mapping(i32::from(ckind));
+        let m = super::pl::player::mapping(CharacterKind::from_raw(i32::from(ckind)));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 {
                 continue;
@@ -1398,7 +1400,7 @@ pub fn load_results_files(
         if p.slot_type == PlayerKind::None {
             continue;
         }
-        let ck = i32::from(p.ckind);
+        let ck = i32::from(p.ckind.raw());
         let cks: &[i32] = if ck == CharacterKind::Zelda || ck == CharacterKind::Seak {
             &[0x12, 0x13]
         } else {
@@ -1409,7 +1411,7 @@ pub fn load_results_files(
                 continue;
             };
             let results = add(files, data, name);
-            let m = super::pl::player::mapping(ck);
+            let m = super::pl::player::mapping(CharacterKind::from_raw(ck));
             for kind in [m.internal_id, m.extra_internal_id] {
                 if kind < 0 {
                     continue;

@@ -318,7 +318,7 @@ impl Running<'_> {
         self.vs_table(TABLE).clone_from(&vs);
         let mut mask = 0u64;
         for p in &vs.start.players[..6] {
-            mask |= crate::lb::audio::character_banks(i32::from(p.ckind));
+            mask |= crate::lb::audio::character_banks(i32::from(p.ckind.raw()));
         }
         self.game.audio.lb.unwant_banks(20);
         self.game.audio.lb.want_banks(4, mask);

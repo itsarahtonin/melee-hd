@@ -4,6 +4,7 @@
 //! runs on the choices the character and stage select screens would have left.
 
 use crate::game::ft::CpuKind;
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 
 use crate::fpu::{mem, reg};
@@ -182,7 +183,7 @@ pub(crate) const HANDICAP_RATIOS: [(f32, f32); 9] = [
 #[doc(alias = "gm_SetupPlayerDefaults")]
 pub fn player_defaults() -> PlayerInitData {
     PlayerInitData {
-        ckind: CharacterKind::NONE as i8,
+        ckind: Narrow::from_raw(CharacterKind::NONE as i8),
         slot_type: PlayerKind::None.into(),
         spawn_pos: -1,
         handicap: 9,

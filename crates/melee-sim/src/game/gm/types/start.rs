@@ -2,7 +2,7 @@
 //! players' setup (`PlayerInitData`), which a mode fills before the match scene starts and the
 //! match reads as it sets up.
 
-use crate::game::ft::CpuKind;
+use crate::game::ft::{CharacterKind, CpuKind};
 use crate::game::gr::StKind;
 use crate::game::handles::{CodeRef, RawPtr};
 use crate::game::mirror::Narrow;
@@ -243,7 +243,7 @@ pub struct StartMeleeRules {
 #[mirror(c = "PlayerInitData", size = 0x24, pad(0x16, 2))]
 pub struct PlayerInitData {
     #[at(0x0)]
-    pub ckind: i8,
+    pub ckind: Narrow<CharacterKind, i8>,
     #[at(0x1)]
     pub slot_type: Narrow<PlayerKind, u8>,
     #[at(0x2)]

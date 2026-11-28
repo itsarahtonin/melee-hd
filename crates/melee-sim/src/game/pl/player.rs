@@ -183,12 +183,12 @@ impl Game {
     }
 
     #[doc(alias = "Player_GetPlayerCharacter")]
-    pub fn player_ckind(&self, slot: i32) -> i32 {
+    pub fn player_ckind(&self, slot: i32) -> CharacterKind {
         self.player(slot).ckind
     }
 
     #[doc(alias = "Player_SetPlayerCharacter")]
-    pub fn set_player_ckind(&mut self, slot: i32, ckind: i32) {
+    pub fn set_player_ckind(&mut self, slot: i32, ckind: CharacterKind) {
         self.player_mut(slot).ckind = ckind;
     }
 
@@ -909,7 +909,7 @@ impl Game {
     pub fn reset_player(&mut self, slot: i32) {
         let p = self.player_mut(slot);
         p.player_state = 0;
-        p.ckind = CharacterKind::Mario.id();
+        p.ckind = CharacterKind::Mario;
         let (t0, t1) = (p.entity_index(0), p.entity_index(1));
         for i in [t0, t1, 2, 3] {
             p.set_pose(i, Vec3::new(0.0, 0.0, 0.0));
@@ -970,11 +970,11 @@ impl Game {
 
 /// A character's fighters, `ftMapping_list[ckind]`; a kind past the executable's bytes this
 /// models stops the simulation.
-pub fn mapping(ckind: i32) -> FtMapping {
-    let i = 3 * usize::try_from(ckind).expect("a negative character kind");
+pub fn mapping(ckind: CharacterKind) -> FtMapping {
+    let i = 3 * usize::try_from(ckind.id()).expect("a negative character kind");
     assert!(
         i + 3 <= FT_MAPPING.len(),
-        "ftMapping_list[{ckind}] isn't modeled"
+        "ftMapping_list[{ckind:?}] isn't modeled"
     );
     FtMapping {
         internal_id: FT_MAPPING[i] as i8,
@@ -986,7 +986,7 @@ pub fn mapping(ckind: i32) -> FtMapping {
 /// The fighter kind of a character's fighter (0) or second fighter (1), `Player_800325C8`.
 #[doc(alias = "Player_800325C8")]
 pub fn ckind_ftkind(ckind: i32, sub: i32) -> i32 {
-    let m = mapping(ckind);
+    let m = mapping(CharacterKind::from_raw(ckind));
     match sub {
         0 => i32::from(m.internal_id),
         1 => i32::from(m.extra_internal_id),
@@ -1098,7 +1098,7 @@ impl Running<'_> {
     }
 
     fn for_each_ftkind(&mut self, ckind: i32, f: u32, color: u8) {
-        let m = mapping(ckind);
+        let m = mapping(CharacterKind::from_raw(ckind));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind != -1 {
                 code::call(

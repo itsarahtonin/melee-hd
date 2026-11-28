@@ -70,7 +70,7 @@ impl Game {
         }
         (0..6)
             .filter(|&i| self.player_pkind(i) == PlayerKind::Human)
-            .map(|i| selkind(self.player_ckind(i) as u8))
+            .map(|i| selkind(self.player_ckind(i).raw() as u8))
             .collect()
     }
 
@@ -426,7 +426,7 @@ mod tests {
             (0x1E, PlayerKind::Human, 0),
         ] {
             let mut game = Game::default();
-            game.players[1].ckind = ckind;
+            game.players[1].ckind = CharacterKind::from_raw(ckind);
             game.players[1].pkind = pkind.into();
             let mut r = MatchEnd::default();
             Running {

@@ -86,7 +86,7 @@ impl Game {
     #[doc(alias = "gm_80168BF8")]
     pub fn player_stock_icon(&self, slot: i32) -> f64 {
         stock_icon_frame(
-            self.player_ckind(slot),
+            self.player_ckind(slot).id(),
             self.player_fighter_kind(slot),
             self.player_costume(slot) as i32,
         )

@@ -9,7 +9,7 @@
 //! structs' did. The stale-move table's last-KO hit (`ft_800898B4_t`), which a fighter's damage
 //! holds too, stays generated in `game::structs`.
 
-use crate::game::ft::CpuKind;
+use crate::game::ft::{CharacterKind, CpuKind};
 use crate::game::handles::CodeRef;
 use crate::game::mirror::{Export, MemMut, Narrow};
 use crate::game::pl::player::PlayerKind;
@@ -630,7 +630,7 @@ pub struct StaticPlayer {
     #[at(0x0)]
     pub player_state: i32,
     #[at(0x4)]
-    pub ckind: i32,
+    pub ckind: CharacterKind,
     #[at(0x8)]
     pub pkind: PlayerKind,
     #[at(0xC)]
@@ -736,7 +736,7 @@ impl Default for StaticPlayer {
     fn default() -> Self {
         StaticPlayer {
             player_state: 0,
-            ckind: 0,
+            ckind: CharacterKind::Captain,
             pkind: PlayerKind::Human,
             transformed: [0; 2],
             unused_0e: 0,

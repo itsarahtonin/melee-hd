@@ -19,6 +19,7 @@ mod cursor;
 mod one_door;
 mod procs;
 
+use crate::game::mirror::Narrow;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::gm::title::ModelDesc;
@@ -1359,7 +1360,9 @@ impl Running<'_> {
         self.css_stop(Some(j), ALL_MASK);
         let port1 = self.game.charsel.port1 as usize;
         let ck = self.css().vs.start.players[port1].ckind;
-        if ck >= (CharacterKind::PLAYABLE as i8) || !self.game.gm.unlocks.ckind_unlocked(ck as u8) {
+        if ck.raw() >= (CharacterKind::PLAYABLE as i8)
+            || !self.game.gm.unlocks.ckind_unlocked(ck.raw() as u8)
+        {
             let i = loop {
                 let i = self.game.objs.rng.below(0x19) as usize;
                 if self.game.charsel.icons[i].state != 0 {
@@ -1370,7 +1373,7 @@ impl Running<'_> {
             let n = crate::game::playback::costume_count(ckind);
             let color = self.game.objs.rng.below(i32::from(n)) as u8;
             let p = &mut self.css_start().players[port1];
-            p.ckind = ckind as i8;
+            p.ckind = Narrow::from_raw(ckind as i8);
             p.color = color;
         }
     }
@@ -1440,8 +1443,8 @@ impl Running<'_> {
             let ckind = self.css().vs.start.players[player].ckind;
             let mut found = 0;
             while found < 25 {
-                if i32::from(ckind) == i32::from(ICONS[found].ckind)
-                    && self.game.gm.unlocks.ckind_unlocked(ckind as u8)
+                if i32::from(ckind.raw()) == i32::from(ICONS[found].ckind)
+                    && self.game.gm.unlocks.ckind_unlocked(ckind.raw() as u8)
                 {
                     break;
                 }
@@ -1449,7 +1452,7 @@ impl Running<'_> {
             }
             if found >= 25 {
                 let p = &mut self.css_start().players[player];
-                p.ckind = CharacterKind::PLAYABLE as i8;
+                p.ckind = Narrow::from_raw(CharacterKind::PLAYABLE as i8);
                 if p.slot_type == PlayerKind::Cpu {
                     p.slot_type = PlayerKind::None.into();
                 }

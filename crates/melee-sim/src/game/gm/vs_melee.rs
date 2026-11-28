@@ -163,7 +163,7 @@ impl Running<'_> {
         let vs = self.game.vs_melee.css.vs.clone();
         let mut mask = 0u64;
         for p in &vs.start.players[..4] {
-            mask |= crate::lb::audio::character_banks(i32::from(p.ckind));
+            mask |= crate::lb::audio::character_banks(i32::from(p.ckind.raw()));
         }
         self.vs_table(table).clone_from(&vs);
         self.game.audio.lb.unwant_banks(20);
@@ -271,7 +271,8 @@ impl Running<'_> {
         let end = self.game.vs_melee.exit.match_end.clone();
         for p in &end.player_standings {
             if p.pkind == PlayerKind::Human {
-                self.game.count_character_play(p.ckind as u8, end.outcome);
+                self.game
+                    .count_character_play(p.ckind.raw() as u8, end.outcome);
             }
         }
         if super::records::any_human(&end) {

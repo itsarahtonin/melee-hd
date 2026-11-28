@@ -434,7 +434,8 @@ impl Running<'_> {
         );
         self.game.reinit_player(0);
         let costume = self.game.endings.gover.color();
-        self.game.set_player_ckind(0, i32::from(ckind));
+        self.game
+            .set_player_ckind(0, CharacterKind::from_raw(i32::from(ckind)));
         self.game.set_player_costume(0, i32::from(costume));
         self.game.set_player_port(0, 0);
         self.game.set_player_pkind(0, PlayerKind::Demo);

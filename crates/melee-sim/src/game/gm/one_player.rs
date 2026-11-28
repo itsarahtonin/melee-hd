@@ -711,7 +711,7 @@ impl Running<'_> {
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
             REG_CLASSIC,
-            s.c_kind,
+            s.c_kind.raw(),
             s.stocks as i8,
             s.color as i8,
             s.nametag,
@@ -748,7 +748,7 @@ impl Running<'_> {
             GameMode::Adventure => &mut d.adventure,
             _ => &mut d.all_star,
         };
-        s.c_kind = ckind;
+        s.c_kind = Narrow::from_raw(ckind);
         s.stocks = stocks;
         s.color = color;
         s.nametag = nametag;
@@ -761,7 +761,7 @@ impl Running<'_> {
             _ => &mut o.allstar.base,
         }
         .player;
-        p.ckind = s.c_kind;
+        p.ckind = s.c_kind.raw();
         p.color = s.color;
         p.cpu_level = s.cpu_level;
         p.stocks = s.stocks;
@@ -824,7 +824,7 @@ impl Running<'_> {
     #[doc(alias = "gmClassic_801B2BA4")]
     fn classic_pick(&self, table: usize) -> Option<MatchupRef> {
         let (off, t, at) = CLASSIC_TABLES[table];
-        let me = i32::from(self.game.game_data.vs.classic.c_kind);
+        let me = i32::from(self.game.game_data.vs.classic.c_kind.raw());
         let picks: Vec<Matchup> = self
             .game
             .one_player
@@ -889,7 +889,7 @@ impl Running<'_> {
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
             REG_ADVENTURE,
-            s.c_kind,
+            s.c_kind.raw(),
             s.stocks as i8,
             s.color as i8,
             s.nametag,
@@ -951,7 +951,7 @@ impl Running<'_> {
         super::setup_players::css_one_player(
             &mut self.game.one_player.css,
             REG_ALLSTAR,
-            s.c_kind,
+            s.c_kind.raw(),
             s.stocks as i8,
             s.color as i8,
             s.nametag,
@@ -1066,7 +1066,7 @@ impl Running<'_> {
         super::setup_players::css_one_player(
             css,
             STADIUM_TARGET,
-            t.ckind,
+            t.ckind.raw(),
             1,
             t.color as i8,
             t.nametag,
@@ -1089,7 +1089,7 @@ impl Running<'_> {
         }
         let (ckind, _, color, nametag, _) = super::setup_players::css_one_player_choice(css);
         let t = &mut self.game.game_data.vs.event.target_test;
-        t.ckind = ckind;
+        t.ckind = Narrow::from_raw(ckind);
         t.color = color;
         t.nametag = nametag;
         self.load_announcer_bank();
@@ -1132,11 +1132,15 @@ impl Running<'_> {
         r.item_freq = -1;
         r.on_pause_override = Some(CodeRef(0x8016_5290));
         super::vs_mode::all_player_defaults(&mut s.players);
-        let ckind = if t.ckind == 14 { 0x20 } else { t.ckind as u8 };
+        let ckind = if t.ckind == CharacterKind::IceClimbers {
+            0x20
+        } else {
+            t.ckind.raw() as u8
+        };
         super::setup_players::setup_human(&mut s.players[0], ckind, t.color, 1, slot);
         s.players[0].nametag = t.nametag;
         s.players[0].enters = false;
-        let stkind = target_stage(s.players[0].ckind as u8);
+        let stkind = target_stage(s.players[0].ckind.raw() as u8);
         s.rules.stkind = Narrow::from_raw(stkind);
         self.dvd_mut().cache.scene.game_cache.stkind = i32::from(stkind);
         self.preload_refresh();
@@ -1163,7 +1167,7 @@ impl Running<'_> {
             self.set_next_game_mode_state_id(1);
             return;
         }
-        let sel = super::match_exit::selkind(t.ckind as u8);
+        let sel = super::match_exit::selkind(t.ckind.raw() as u8);
         let (left, total) = (
             i32::from(self.game.stage_info.targets_left()),
             i32::from(self.game.stage_info.target_count()),
@@ -1199,7 +1203,7 @@ impl Running<'_> {
             self.special_unlocks(0x80);
             if challenger != CharacterKind::NONE {
                 self.init_challenger(
-                    t.ckind as u8,
+                    t.ckind.raw() as u8,
                     t.color,
                     slot,
                     t.nametag,
@@ -1312,7 +1316,7 @@ impl Running<'_> {
         super::setup_players::css_one_player(
             &mut self.game.vs_melee.css,
             STADIUM_HOMERUN,
-            p.ckind,
+            p.ckind.raw(),
             1,
             p.color as i8,
             p.nametag,
@@ -1342,11 +1346,11 @@ impl Running<'_> {
         let vs = &mut self.game.modes.homerun;
         super::vs_mode::all_player_defaults(&mut vs.start.players);
         let p = &mut vs.start.players[0];
-        p.ckind = ckind;
+        p.ckind = Narrow::from_raw(ckind);
         p.color = color;
         p.nametag = nametag;
         let s = &mut vs.start.players[1];
-        s.ckind = CharacterKind::Sandbag.raw() as i8;
+        s.ckind = Narrow::from_raw(CharacterKind::Sandbag.raw() as i8);
         s.cpu_kind = CpuKind::NoAct.into();
         s.defense_ratio = 1.0;
         s.slot_type = PlayerKind::Cpu.into();
@@ -1380,7 +1384,7 @@ impl Running<'_> {
         super::setup_players::css_one_player(
             css,
             TRAINING_MODE,
-            p0.ckind,
+            p0.ckind.raw(),
             1,
             p0.color as i8,
             p0.nametag,
@@ -1389,7 +1393,7 @@ impl Running<'_> {
         );
         super::setup_players::css_set_partner(
             css,
-            p1.ckind,
+            p1.ckind.raw(),
             1,
             p1.color as i8,
             p1.nametag,
@@ -1418,16 +1422,16 @@ impl Running<'_> {
         let vs = self.training_table();
         let ps = &mut vs.start.players;
         super::vs_mode::all_player_defaults(ps);
-        ps[0].ckind = ckind;
+        ps[0].ckind = Narrow::from_raw(ckind);
         ps[0].color = color;
         ps[0].nametag = nametag;
-        ps[1].ckind = pk;
+        ps[1].ckind = Narrow::from_raw(pk);
         ps[1].color = pc as u8;
         ps[1].nametag = pn as u8;
         ps[1].cpu_kind = CpuKind::Stay.into();
         for i in 2..4 {
             ps[i] = ps[1].clone();
-            let n = crate::game::playback::costume_count(ps[i].ckind as u8);
+            let n = crate::game::playback::costume_count(ps[i].ckind.raw() as u8);
             ps[i].color = (ps[i - 1].color + 1) % n;
             if ps[i].color == ps[0].color {
                 ps[i].color = (ps[i].color + 1) % n;
@@ -1450,13 +1454,13 @@ impl Running<'_> {
         let players = ps.clone();
         let gc = &mut self.dvd_mut().cache.scene.game_cache;
         for i in 2..4 {
-            gc.entries[i].char_id = i32::from(players[i].ckind);
+            gc.entries[i].char_id = i32::from(players[i].ckind.raw());
             gc.entries[i].color = players[i].color;
         }
         self.preload_refresh();
         let mut mask = 0u64;
         for p in &players[..4] {
-            mask |= crate::lb::audio::character_banks(i32::from(p.ckind));
+            mask |= crate::lb::audio::character_banks(i32::from(p.ckind.raw()));
         }
         self.game.audio.lb.unwant_banks(20);
         self.game.audio.lb.want_banks(4, mask);

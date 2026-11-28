@@ -4,6 +4,7 @@
 //! the fighter into an image the panel shows (`lbl_8046E1B0`, `lbl_8046E3AC`), and the
 //! winners' second camera that draws them big.
 
+use crate::game::ft::CharacterKind;
 use gekko_fp as fp;
 
 use super::super::handles::CodeRef;
@@ -515,7 +516,7 @@ impl Running<'_> {
         let (a, block, _) = self.load_archive_blocks(file);
         self.player_set_demo_archive(kind, a, block);
         let g = &mut *self.game;
-        g.set_player_ckind(slot, kind);
+        g.set_player_ckind(slot, CharacterKind::from_raw(kind));
         g.set_player_costume(slot, costume);
         g.set_player_port(slot, slot);
         g.set_player_pkind(slot, PlayerKind::Demo);

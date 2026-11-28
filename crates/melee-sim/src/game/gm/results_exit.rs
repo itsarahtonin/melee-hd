@@ -467,7 +467,7 @@ impl Running<'_> {
                 let mut challenger = false;
                 let idx = smallest_loser(&me);
                 let p = &me.player_standings[idx];
-                let (ck, color, tag) = (p.ckind as u8, p.flags[0] >> 2, p.nametag);
+                let (ck, color, tag) = (p.ckind.raw() as u8, p.flags[0] >> 2, p.nametag);
                 let played = self
                     .game
                     .game_data

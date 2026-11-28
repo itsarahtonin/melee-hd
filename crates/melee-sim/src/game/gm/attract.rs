@@ -95,7 +95,7 @@ impl Running<'_> {
         super::vs_mode::all_player_defaults(&mut start.players);
         for i in 0..4 {
             let p = &mut start.players[i];
-            p.ckind = d.ckinds[i] as i8;
+            p.ckind = Narrow::from_raw(d.ckinds[i] as i8);
             p.color = d.colors[i];
             p.slot_type = PlayerKind::Cpu.into();
             p.cpu_level = 9;

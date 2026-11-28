@@ -8,6 +8,7 @@ use crate::game::ft::CharacterKind;
 use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::game::gm::GameMode;
+use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
 
 /// `fn_8017C1A4`, the controller's process.
@@ -73,7 +74,7 @@ impl Running<'_> {
         p.attack_ratio = self.game.player_attack_ratio(SLOT_MASTER);
         p.defense_ratio = self.game.player_unset_ratio(SLOT_MASTER);
         p.color = 0;
-        p.ckind = CharacterKind::CrazyHand.raw() as i8;
+        p.ckind = Narrow::from_raw(CharacterKind::CrazyHand.raw() as i8);
         p.team = 4;
         p.stamina = true;
         p.hp = self.game.one_player.boss.hp as u16;

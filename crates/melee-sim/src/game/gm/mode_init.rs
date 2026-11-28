@@ -5,6 +5,7 @@
 use super::super::state::Running;
 use super::super::structs::{PlayerInitData, VsModeData};
 use super::vs_mode::{player_defaults, start_defaults};
+use crate::game::ft::CharacterKind;
 use crate::game::ft::CpuKind;
 use crate::game::gr::StKind;
 
@@ -89,7 +90,7 @@ impl Running<'_> {
             (&mut d.vs.adventure, 3),
             (&mut d.vs.all_star, 1),
         ] {
-            s.c_kind = 0x21;
+            s.c_kind = CharacterKind::from_raw(0x21).into();
             s.color = 0;
             s.stocks = stocks;
             s.cpu_level = 0;
@@ -103,7 +104,7 @@ impl Running<'_> {
         let d = &mut self.game.game_data;
         // Target Test: no character, no name tag.
         let t = &mut d.vs.event.target_test;
-        t.ckind = 0x21;
+        t.ckind = CharacterKind::from_raw(0x21).into();
         t.color = 0;
         t.nametag = 0x78;
         for m in [VS_SUPER_SUDDEN_DEATH, VS_INVISIBLE, VS_SLOMO, VS_LIGHTNING] {
@@ -116,7 +117,7 @@ impl Running<'_> {
             tr[i].color = i as u8;
             tr[i].cpu_kind = CpuKind::Stay.into();
             if i != 0 {
-                tr[1].ckind = 0x21;
+                tr[1].ckind = CharacterKind::from_raw(0x21).into();
             }
             self.game.modes.training_players[i] = tr[i].clone();
         }
@@ -131,7 +132,7 @@ impl Running<'_> {
         init_vs_mode(&mut d.modes.table[VS_FIXED_CAMERA]);
         // Events: none chosen, no name tag.
         let e = &mut d.vs.event;
-        e.char_kind = 0;
+        e.char_kind = CharacterKind::Captain.into();
         e.char_color = 0;
         e.chosen_char = 0x21;
         e.chosen_color = 0;

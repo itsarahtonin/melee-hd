@@ -18,7 +18,9 @@ pub mod v1201v1;
 pub mod v1201v2;
 pub mod v1202;
 
+use crate::game::ft::CharacterKind;
 use crate::game::gr::GrKind;
+use crate::game::mirror::Narrow;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::gr::StKind;
@@ -527,7 +529,8 @@ impl Running<'_> {
             archive.file,
             idx,
         );
-        self.game.set_player_ckind(slot, ckind);
+        self.game
+            .set_player_ckind(slot, CharacterKind::from_raw(ckind));
         self.game.set_player_costume(slot, costume);
         self.game.set_player_port(slot, 0);
         self.game.set_player_pkind(slot, PlayerKind::Demo);
@@ -808,7 +811,7 @@ pub struct SceneFiles {
 impl SceneFiles {
     pub(crate) fn player(&mut self, slot: usize, ckind: i32, costume: u8) {
         let p = &mut self.players.players[slot];
-        p.ckind = ckind as i8;
+        p.ckind = Narrow::from_raw(ckind as i8);
         p.color = costume;
         p.slot_type = PlayerKind::Demo.into();
     }
@@ -816,7 +819,7 @@ impl SceneFiles {
     /// A player's demo animations from `file` (`Player_80036E20`'s `idx`) for `pose`: its
     /// character's kinds' (both Ice Climbers).
     pub(crate) fn anims(&mut self, file: &str, ckind: i32, idx: i32, pose: i32) {
-        let m = super::pl::player::mapping(ckind);
+        let m = super::pl::player::mapping(CharacterKind::from_raw(ckind));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 || (kind == m.extra_internal_id && m.has_transformation != 0) {
                 continue;

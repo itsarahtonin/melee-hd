@@ -134,7 +134,7 @@ impl Running<'_> {
         let p0 = &vs.players[0];
         super::setup_players::setup_human(
             &mut start.players[0],
-            p0.ckind as u8,
+            p0.ckind.raw() as u8,
             p0.color,
             1,
             self.game.one_player.homerun_slot,
@@ -144,7 +144,7 @@ impl Running<'_> {
         let tags = self.nametag_rumbles();
         super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
         let h = &mut self.game.home_run;
-        h.ckind = i32::from(start.players[0].ckind);
+        h.ckind = i32::from(start.players[0].ckind.raw());
         h.nametag = i32::from(start.players[0].nametag);
         self.game.vs_melee.start.clone_from(&start);
         self.homerun_load_records();
@@ -169,7 +169,7 @@ impl Running<'_> {
             self.set_next_game_mode_state_id(1);
             return;
         }
-        let sel = selkind(me.player_standings[0].ckind as u8);
+        let sel = selkind(me.player_standings[0].ckind.raw() as u8);
         let dist = self.game.home_run.dist[0].wrapping_mul(10) as u32;
         let stage = if dist >= 0x9C40 && !self.stage_unlocked(StKind::OldYoshi.id() as u16) {
             StKind::OldYoshi.id() as u16

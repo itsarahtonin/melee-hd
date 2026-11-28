@@ -328,7 +328,8 @@ impl Running<'_> {
                         self.token_mut(d).held_by = 0;
                         self.game.charsel.doors[d].sel_icon = NO_ICON;
                         let player = self.door_player(door);
-                        self.css_start().players[player].ckind = CharacterKind::NONE as i8;
+                        self.css_start().players[player].ckind =
+                            Narrow::from_raw(CharacterKind::NONE as i8);
                     }
                     self.charsel_door(door);
                     self.cursor_mut(me).state = 2;
@@ -376,7 +377,8 @@ impl Running<'_> {
                     if trigger & PAD_A != 0 {
                         let player = self.door_player(door);
                         let sel = usize::from(self.game.charsel.doors[d].sel_icon);
-                        self.css_start().players[player].ckind = ICONS[sel].ckind as i8;
+                        self.css_start().players[player].ckind =
+                            Narrow::from_raw(ICONS[sel].ckind as i8);
                         let joint = ICONS[i].joint_vs;
                         let n = self.menu_node(joint);
                         self.css_req(n, TOBJ_MASK, 10.0);

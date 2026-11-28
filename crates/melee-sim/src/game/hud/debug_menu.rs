@@ -208,7 +208,7 @@ impl DebugVars {
         all_player_defaults(&mut d.players);
         for (i, p) in d.players[..4].iter_mut().enumerate() {
             let i = 4 * i as u32;
-            p.ckind = w(0x10 + i) as i8;
+            p.ckind = Narrow::from_raw(w(0x10 + i) as i8);
             p.slot_type = Narrow::from_raw(w(0x24 + i) as u8);
             p.color = w(0x38 + i) as u8;
             p.sub_color = w(0x48 + i) as u8;
@@ -1488,7 +1488,7 @@ impl Running<'_> {
         me.is_teams = 0;
         for i in 0..4 {
             let p = &mut me.player_standings[i];
-            p.ckind = ckinds[i];
+            p.ckind = Narrow::from_raw(ckinds[i]);
             p.flags[0] = (p.flags[0] & 3) | (color & 0x3F) << 2;
             let score = 10i32.wrapping_sub(i32::from(ranks[i]));
             p.score = score;
@@ -1498,7 +1498,7 @@ impl Running<'_> {
             let err = self.game.pads.master[i].err;
             let p = &mut me.player_standings[i];
             p.sub_rank = p.sub_rank.wrapping_add(6 - i as u32);
-            p.pkind = if p.ckind == CharacterKind::NONE as i8 {
+            p.pkind = if p.ckind.raw() == CharacterKind::NONE as i8 {
                 PlayerKind::None.into()
             } else if err == 0 {
                 PlayerKind::Human.into()
@@ -1506,7 +1506,7 @@ impl Running<'_> {
                 PlayerKind::Cpu.into()
             };
             if p.ckind == CharacterKind::Seak {
-                p.ckind = 0x12;
+                p.ckind = CharacterKind::Zelda.into();
                 p.ftkind = 7;
             }
         }
@@ -1516,7 +1516,7 @@ impl Running<'_> {
         let mut sfx = 0u64;
         for p in &me.player_standings[..4] {
             if p.pkind != PlayerKind::None && p.is_big_loser == 0 {
-                sfx |= crate::lb::audio::character_banks(i32::from(p.ckind));
+                sfx |= crate::lb::audio::character_banks(i32::from(p.ckind.raw()));
             }
         }
         self.game.debug_mode.results1 = e;
@@ -1566,8 +1566,13 @@ impl Running<'_> {
             p.stocks = 0;
             p.cpu_kind = CpuKind::Normal.into();
         }
-        for (p, ckind) in start.players.iter_mut().zip([6, 8, 6, 6]) {
-            p.ckind = ckind;
+        for (p, ckind) in start.players.iter_mut().zip([
+            CharacterKind::Link,
+            CharacterKind::Mario,
+            CharacterKind::Link,
+            CharacterKind::Link,
+        ]) {
+            p.ckind = ckind.into();
         }
         for (p, kind) in start.players.iter_mut().zip([
             PlayerKind::Human,

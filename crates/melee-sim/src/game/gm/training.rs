@@ -180,12 +180,18 @@ impl Running<'_> {
             data.players[i].no_offscreen_damage = true;
         }
         let p0 = &vs.players[0];
-        super::setup_players::setup_human(&mut data.players[0], p0.ckind as u8, p0.color, 1, slot);
+        super::setup_players::setup_human(
+            &mut data.players[0],
+            p0.ckind.raw() as u8,
+            p0.color,
+            1,
+            slot,
+        );
         for i in 1..4 {
             let p = &vs.players[i];
             super::setup_players::setup_cpu(
                 &mut data.players[i],
-                p.ckind as u8,
+                p.ckind.raw() as u8,
                 p.color,
                 1,
                 p.slot.wrapping_sub(1),
@@ -229,9 +235,9 @@ impl Running<'_> {
         let p = &end.player_standings[0];
         self.add_1p_time(end.frame_count / 60);
         self.results_add_coins(i32::from(p.coins));
-        let best = self.training_best(i32::from(p.ckind));
-        self.training_record_combo(p.ckind, best as u16);
-        self.training_combo_trophies(p.ckind);
+        let best = self.training_best(i32::from(p.ckind.raw()));
+        self.training_record_combo(p.ckind.raw(), best as u16);
+        self.training_combo_trophies(p.ckind.raw());
         self.trophy_unlocks();
         let slot = self.game.one_player.training_slot;
         if !self.challenger_check(GameMode::Training, slot) {
@@ -484,7 +490,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8018846C")]
     fn training_combo_count(&mut self) -> i32 {
         let result = self.combo_count_on(0);
-        let ck = self.game.player_ckind(0) as usize;
+        let ck = self.game.player_ckind(0).raw() as usize;
         let t = &mut self.game.training;
         if t.char_data[ck] < result {
             t.char_data[ck] = result;

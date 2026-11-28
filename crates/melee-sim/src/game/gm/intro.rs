@@ -6,6 +6,7 @@
 //! flies a camera over the stage's map until Start.
 
 use crate::game::gr::GrKind;
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -688,7 +689,8 @@ impl Running<'_> {
     /// facing 0, size 1, metal or not, its fighters in pose `pose` and their process.
     fn intro_easy_player(&mut self, slot: i32, ckind: u8, costume: u8, metal: u8, pose: i32) {
         self.game.reinit_player(slot);
-        self.game.set_player_ckind(slot, i32::from(ckind));
+        self.game
+            .set_player_ckind(slot, CharacterKind::from_raw(i32::from(ckind)));
         self.game.set_player_costume(slot, i32::from(costume));
         self.game.set_player_port(slot, 0);
         self.game.set_player_pkind(slot, PlayerKind::Demo);
@@ -1149,7 +1151,7 @@ impl Running<'_> {
         };
         let song = NORMAL_SONGS[si];
         let ckind = self.game.player(0).ckind;
-        let mask = crate::lb::audio::character_banks(ckind) | NORMAL_BANKS[si];
+        let mask = crate::lb::audio::character_banks(ckind.id()) | NORMAL_BANKS[si];
         self.game.audio.lb.unwant_banks(song as u32);
         self.game.audio.lb.want_banks(song as u32, mask);
         self.game.audio.lb_start_bank_loads(self.data);
@@ -1520,11 +1522,11 @@ impl Running<'_> {
         let mut slot = 0;
         let mut add = |f: &mut super::super::vi::SceneFiles, ckind: u8, costume: u8| {
             let p = &mut f.players.players[slot];
-            p.ckind = ckind as i8;
+            p.ckind = Narrow::from_raw(ckind as i8);
             p.color = costume;
             p.slot_type = PlayerKind::Demo.into();
             slot += 1;
-            let m = super::super::pl::player::mapping(i32::from(ckind));
+            let m = super::super::pl::player::mapping(CharacterKind::from_raw(i32::from(ckind)));
             for kind in [m.internal_id, m.extra_internal_id] {
                 if kind < 0 || (kind == m.extra_internal_id && m.has_transformation != 0) {
                     continue;

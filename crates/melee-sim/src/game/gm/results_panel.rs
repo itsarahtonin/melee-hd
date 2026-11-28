@@ -268,7 +268,7 @@ impl Running<'_> {
                 self.rp_hide(js[7]);
                 continue;
             }
-            let (ckind, cid) = (i32::from(p.ckind), i32::from(p.ftkind));
+            let (ckind, cid) = (i32::from(p.ckind.raw()), i32::from(p.ftkind));
             if !canceled(me.outcome) && me.is_teams == 0 && p.is_big_loser == 0 {
                 let t = fp::fctiwz(super::vs::stock_icon_frame(ckind, cid, 0));
                 self.rp_title_texture(t);
@@ -676,7 +676,7 @@ impl Running<'_> {
             }
             let js = self.game.results.data.players[i].jobjs;
             self.rp_show(js[0]);
-            let f = super::vs::stock_icon_frame(i32::from(p.ckind), 0, 0);
+            let f = super::vs::stock_icon_frame(i32::from(p.ckind.raw()), 0, 0);
             self.rp_freeze_at(js[0], mem(f));
             self.rp_show(js[4]);
             if canceled(me.outcome) {
