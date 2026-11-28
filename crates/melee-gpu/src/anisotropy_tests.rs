@@ -83,16 +83,16 @@ fn level_state(min_linear: bool) -> State {
     s
 }
 
-/// A quad over the middle of the EFB whose texture coordinates change by `per_x` texels a
-/// pixel across and `per_y` down.
-fn level_quad(per_x: f32, per_y: f32) -> [GpuVertex; 6] {
+/// A quad over the middle of the EFB whose texture coordinates (all eight) change by `per_x`
+/// texels a pixel across and `per_y` down.
+pub(crate) fn level_quad(per_x: f32, per_y: f32) -> [GpuVertex; 6] {
     let (w, h) = (320.0, 264.0);
     let corner = |x: f32, y: f32, s: f32, t: f32| {
         let mut v = GpuVertex::zeroed();
         v.pos = [x, y, 0.5, 1.0];
         v.c0 = [255; 4];
         v.c1 = [255; 4];
-        v.tex[0] = [s, t, 1.0];
+        v.tex = [[s, t, 1.0]; 8];
         v
     };
     let a = corner(-0.5, 0.5, 0.0, 0.0);

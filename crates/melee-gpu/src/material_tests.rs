@@ -195,6 +195,39 @@ fn draws_from_records_draw_as_from_their_registers() {
     assert!(drawn > 10, "only {drawn} of 40 drew");
 }
 
+/// With texture filtering on (`Anisotropy`), draws from records filter as draws from their
+/// registers do, and some draw differs from it off: the records' uniforms carry the setting.
+/// Random configurations whose maps repeat and are filtered linearly, on a footprint 8 texels
+/// long and 1 wide.
+#[test]
+fn draws_from_records_filter_textures_as_from_their_registers() {
+    let Some(mut r) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    let mut rng = Rng(0x3C6E_F372_FE94_F82B);
+    let mem = memory(&mut rng);
+    let mut changed = 0;
+    for i in 0..24 {
+        let mut s = material_state(&mut rng);
+        for map in 0..8 {
+            let at = (map & 3) + if map >= 4 { 0x20 } else { 0 };
+            s.bp[0x80 + at] = 1 | 1 << 2 | 1 << 4 | 1 << 7;
+        }
+        let draws = [(s, crate::anisotropy_tests::level_quad(1.0, 8.0))];
+        r.set_anisotropy(crate::Anisotropy::new(16));
+        let from_registers = draw(&mut r, &draws, &mem, false, TevMode::Off);
+        let from_records = draw(&mut r, &draws, &mem, true, TevMode::Off);
+        same(&from_registers, &from_records, &format!("config {i}"));
+        r.set_anisotropy(crate::Anisotropy::OFF);
+        let off = draw(&mut r, &draws, &mem, true, TevMode::Off);
+        if off != from_records {
+            changed += 1;
+        }
+    }
+    assert!(changed > 0, "texture filtering changed no draw");
+}
+
 trait CloneState {
     fn clone_state(&self) -> State;
 }
