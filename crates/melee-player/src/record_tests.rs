@@ -22,7 +22,7 @@ use melee_sim::game::gm::GameScene;
 
 /// Fox against Marth on Final Destination, a one-minute timed match: the recording ends with
 /// the time's game end.
-fn settings() -> Settings {
+pub(crate) fn settings() -> Settings {
     settings_on("fd")
 }
 
@@ -44,7 +44,7 @@ fn settings_on(key: &str) -> Settings {
 
 /// Each port's stick and buttons change every few ticks: running, turning, jabs, jumps,
 /// shields and smashes; with `pause`, port 1 pauses for a second.
-fn pads(tick: u32, pause: bool) -> [PadStatus; 4] {
+pub(crate) fn pads(tick: u32, pause: bool) -> [PadStatus; 4] {
     let mut p = [PadStatus::default(); 4];
     for (port, pad) in p.iter_mut().enumerate().take(2) {
         let phase = tick / (11 + 4 * port as u32);
@@ -138,6 +138,16 @@ fn play(session: &mut Session, limit: u32, pads: impl Fn(u32) -> [PadStatus; 4])
 /// settings it played back with. `out` names a variable that keeps a copy of the first, for
 /// Slippi's tools to read.
 fn record_and_play_back(disc: &Disc, s: &Settings, out: &str) -> (Replay, Replay, Settings) {
+    record_and_play_back_with(disc, s, out, &|t| pads(t, false))
+}
+
+/// [`record_and_play_back`] with the controllers `pads` gives each tick.
+pub(crate) fn record_and_play_back_with(
+    disc: &Disc,
+    s: &Settings,
+    out: &str,
+    pads: &dyn Fn(u32) -> [PadStatus; 4],
+) -> (Replay, Replay, Settings) {
     // Without a pause: playback doesn't pause, so the frame starts' scene frame counts, which
     // count paused frames, would differ after one. The recording goes to a folder of its own.
     let dir =
@@ -145,7 +155,7 @@ fn record_and_play_back(disc: &Disc, s: &Settings, out: &str) -> (Replay, Replay
     let _ = std::fs::remove_dir_all(&dir);
     let to = crate::recording::Recording::new(dir.to_str());
     let mut session = start(disc, s, None);
-    let made = play(&mut session, 6000, |t| pads(t, false));
+    let made = play(&mut session, 6000, pads);
     to.save(session.game().recorder.as_ref().expect("the recorder"))
         .expect("the replay saved");
     drop(session);

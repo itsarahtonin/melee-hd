@@ -99,6 +99,8 @@ pub struct Settings {
     /// The sound's volume in percent, the output device by name (empty: the system's default,
     /// followed as it changes) and whether it's taken exclusively (Windows).
     pub volume: u32,
+    /// The music's volume within it, in percent (the mix scales the stream's voices).
+    pub music: u32,
     pub audio_device: String,
     pub audio_exclusive: bool,
     /// The folder the Recordings tab lists (empty: the replays folder).
@@ -106,6 +108,9 @@ pub struct Settings {
     /// The ruleset Melee's next power-on runs (the Game section's Ruleset): Vanilla, or Slippi's
     /// with no memory card ([`DEFAULT_RULESET`] until picked).
     pub ruleset: Ruleset,
+    /// The Controllers tab's: the ports chosen and the bindings changed (`port` and `bindings`
+    /// lines, [`melee_input::Config::save`]).
+    pub controllers: melee_input::Config,
 }
 
 /// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
@@ -181,7 +186,9 @@ pub const RULESET_HELP: &str =
 pub const SAVE_SLIPPI: &str = "The Slippi ruleset runs with no memory card: this save is Vanilla's, and stays as it is until Melee runs under Vanilla again.";
 /// The developer setting under the Slippi ruleset (proposed 2026-11-17, awaiting Sarah's word).
 pub const DEBUG_SLIPPI: &str = "Vanilla only: under the Slippi ruleset Melee runs as sold, since Slippi Dolphin can't play back a raised debug level.";
-/// The Audio section's help lines (proposed 2026-11-14, awaiting Sarah's word).
+/// The Music line's help (proposed 2026-11-27, awaiting Sarah's word).
+pub const MUSIC_HELP: &str = "The music's volume within Volume. Melee's own sound balance (Options) sets the announcer against the effects.";
+/// The Audio section's other help lines (proposed 2026-11-14, awaiting Sarah's word).
 pub const AUDIO_DEVICE_HELP: &str =
     "The default follows the system's. An unplugged device falls back to it until it's back.";
 pub const EXCLUSIVE_HELP: &str =
@@ -260,10 +267,12 @@ impl Default for Settings {
             record_sessions: true,
             debug_level: 0,
             volume: 100,
+            music: 100,
             audio_device: String::new(),
             audio_exclusive: false,
             recordings: String::new(),
             ruleset: DEFAULT_RULESET,
+            controllers: melee_input::Config::default(),
         }
     }
 }
@@ -287,7 +296,7 @@ impl Settings {
         };
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
-            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\nvolume = {}\naudio-device = {}\naudio-exclusive = {}\n",
+            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\nvolume = {}\nmusic = {}\naudio-device = {}\naudio-exclusive = {}\n",
             self.fullscreen,
             if self.msaa { "4" } else { "off" },
             self.high_refresh.setting(),
@@ -303,6 +312,7 @@ impl Settings {
                 _ => "off",
             },
             self.volume,
+            self.music,
             self.audio_device,
             on(self.audio_exclusive),
         ) + &format!(
@@ -310,7 +320,7 @@ impl Settings {
             self.recordings,
             ruleset_key(self.ruleset),
             if self.fast_renderer { "fast" } else { "exact" }
-        )
+        ) + &self.controllers.save()
     }
 
     /// How the sound's output device is opened.
@@ -326,6 +336,9 @@ impl Settings {
     pub fn restore(&mut self, text: &str, given: &Given) {
         let mut versioned = false;
         let (mut old_timer, mut old_off) = (false, false);
+        // The controllers' lines replace what's set, all together.
+        let mut controllers = melee_input::Config::default();
+        let mut any_controllers = false;
         let on = |v: &str| match v {
             "on" => Some(true),
             "off" => Some(false),
@@ -414,6 +427,11 @@ impl Settings {
                         self.volume = n;
                     }
                 }
+                "music" => {
+                    if let Some(n) = v.parse().ok().filter(|n| *n <= 100) {
+                        self.music = n;
+                    }
+                }
                 "audio-device" => self.audio_device = v.to_owned(),
                 "audio-exclusive" if !given.audio_exclusive => {
                     if let Some(b) = on(v) {
@@ -426,8 +444,11 @@ impl Settings {
                         self.ruleset = r;
                     }
                 }
-                _ => {}
+                key => any_controllers |= controllers.restore_line(key, v),
             }
+        }
+        if any_controllers {
+            self.controllers = controllers;
         }
         // Settings kept before 2026-11-14 (no version) hold the old defaults in every key, as
         // every save writes them all: the fixed timer and high refresh off move to the new
@@ -491,14 +512,16 @@ pub enum Action {
 pub enum Tab {
     #[default]
     Settings,
+    Controllers,
     QuickMatch,
     Recordings,
 }
 
 impl Tab {
     /// The tabs in order, with their names.
-    pub const ALL: [(Tab, &'static str); 3] = [
+    pub const ALL: [(Tab, &'static str); 4] = [
         (Tab::Settings, "Settings"),
+        (Tab::Controllers, crate::controllers::TAB),
         (Tab::QuickMatch, "Quick match"),
         (Tab::Recordings, "Recordings"),
     ];
@@ -507,10 +530,11 @@ impl Tab {
     pub fn parse(v: &str) -> Result<Tab, String> {
         match v {
             "settings" => Ok(Tab::Settings),
+            "controllers" => Ok(Tab::Controllers),
             "quick-match" => Ok(Tab::QuickMatch),
             "recordings" => Ok(Tab::Recordings),
             _ => Err(format!(
-                "unknown tab {v} (settings, quick-match or recordings)"
+                "unknown tab {v} (settings, controllers, quick-match or recordings)"
             )),
         }
     }
@@ -548,6 +572,10 @@ pub struct Panel {
     /// The ruleset Melee runs now (the setting's takes effect at the next start): what the Save
     /// and Recording sections say.
     pub running: Ruleset,
+    /// The Controllers tab's state.
+    pub controllers: crate::controllers::Controllers,
+    /// The adapter ports' PhobGCC sections.
+    pub phob: crate::phob_ui::PhobPanel,
 }
 
 impl Panel {
@@ -570,6 +598,8 @@ impl Panel {
             save_line: String::new(),
             unlocked: None,
             disc,
+            controllers: Default::default(),
+            phob: Default::default(),
         };
         p.look_at_save();
         p
@@ -610,7 +640,7 @@ impl Panel {
         ui.vertical_centered(|ui| {
             ui.add_space(24.0);
             ui.horizontal(|ui| {
-                ui.add_space(((ui.available_width() - 380.0) / 2.0).max(0.0));
+                ui.add_space(((ui.available_width() - 500.0) / 2.0).max(0.0));
                 for (tab, name) in Tab::ALL {
                     ui.selectable_value(&mut self.tab, tab, egui::RichText::new(name).heading());
                     ui.add_space(8.0);
@@ -619,6 +649,7 @@ impl Panel {
             ui.add_space(12.0);
             let width = match self.tab {
                 Tab::Settings => 440.0,
+                Tab::Controllers => 520.0,
                 Tab::QuickMatch | Tab::Recordings => 640.0,
             };
             ui.horizontal(|ui| {
@@ -631,6 +662,16 @@ impl Panel {
                     }
                     let tab = match self.tab {
                         Tab::Settings => self.show_sections(ui),
+                        Tab::Controllers => {
+                            // Under each adapter port's controller, its PhobGCC section.
+                            let phob = &mut self.phob;
+                            self.controllers.show(
+                                ui,
+                                &mut self.settings.controllers,
+                                &mut |ui, port, adapter| phob.show(ui, usize::from(port), adapter),
+                            );
+                            None
+                        }
                         Tab::QuickMatch => {
                             self.quick.show(ui);
                             None
@@ -721,7 +762,8 @@ impl Panel {
         action
     }
 
-    /// The sound: its volume, its output device and whether it takes the device for itself.
+    /// The sound: its volume and the music's, its output device and whether it takes the
+    /// device for itself.
     fn show_audio(&mut self, ui: &mut egui::Ui) {
         let s = &mut self.settings;
         section(ui, "Audio");
@@ -737,6 +779,10 @@ impl Panel {
                         .suffix("%"),
                 );
                 ui.end_row();
+                ui.label("Music");
+                ui.add(egui::Slider::new(&mut s.music, 0..=100).suffix("%"));
+                ui.end_row();
+                help(ui, MUSIC_HELP);
                 ui.label("Output device");
                 let device = &mut s.audio_device;
                 let name = |d: &str| match d {
@@ -1193,11 +1239,83 @@ mod tests {
             record_sessions: false,
             debug_level: 4,
             volume: 35,
+            music: 60,
             audio_device: "Speakers (USB Audio)".to_owned(),
             audio_exclusive: true,
             recordings: "D:/Slippi".to_owned(),
             ruleset: Ruleset::Slippi,
+            controllers: picked_controllers(),
         }
+    }
+
+    /// Ports placed (one gamepad away, one device on no port) and two devices rebound.
+    fn picked_controllers() -> melee_input::Config {
+        use melee_input::{Bindings, Chosen, DeviceId, Source, Target};
+        let pad = DeviceId::Gamepad {
+            uuid: [0x5e; 16],
+            nth: 1,
+        };
+        let mut c = melee_input::Config {
+            ports: vec![
+                Chosen {
+                    device: DeviceId::Adapter(1),
+                    port: Some(0),
+                    name: melee_input::ports::adapter_name(1),
+                },
+                Chosen {
+                    device: pad.clone(),
+                    port: Some(3),
+                    name: "Xbox Wireless Controller (2)".into(),
+                },
+                Chosen {
+                    device: DeviceId::Keyboard,
+                    port: None,
+                    name: "Keyboard".into(),
+                },
+            ],
+            bindings: Vec::new(),
+        };
+        let mut b = Bindings::keyboard();
+        b.set(Target::A, Some(Source::Key("Space".into())));
+        b.set(Target::Modifier, None);
+        c.set_bindings(&DeviceId::Keyboard, b);
+        let mut b = Bindings::gamepad();
+        b.set(
+            Target::Z,
+            Some(Source::Button(melee_input::gilrs::Button::LeftTrigger)),
+        );
+        b.set(
+            Target::CUp,
+            Some(Source::Axis(melee_input::gilrs::Axis::RightStickY, false)),
+        );
+        c.set_bindings(&pad, b);
+        c
+    }
+
+    /// The controllers' settings replace what was set, all together; a file without them
+    /// leaves them as they were.
+    #[test]
+    fn the_controllers_come_back() {
+        let mut s = Settings::default();
+        s.restore(&picked().save(), &Given::default());
+        assert_eq!(s.controllers, picked_controllers());
+        // Over other ports set, the file's replace them.
+        let mut other = Settings::default();
+        other.controllers.ports.push(melee_input::Chosen {
+            device: melee_input::DeviceId::Adapter(3),
+            port: Some(2),
+            name: String::new(),
+        });
+        other.restore(&picked().save(), &Given::default());
+        assert_eq!(other.controllers, picked_controllers());
+        let mut s = Settings {
+            controllers: picked_controllers(),
+            ..Settings::default()
+        };
+        s.restore("volume = 20\n", &Given::default());
+        assert_eq!(s.controllers, picked_controllers());
+        // Nothing set saves no controllers' lines.
+        assert!(!Settings::default().save().contains("port ="));
     }
 
     #[test]
@@ -1323,7 +1441,7 @@ mod tests {
     fn an_unreadable_file_changes_nothing() {
         let mut s = Settings::default();
         s.restore(
-            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\naudio-exclusive = sometimes\n\u{0}garbage\n",
+            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\nmusic = 101\naudio-exclusive = sometimes\n\u{0}garbage\n",
             &Given::default(),
         );
         assert_eq!(s, Settings::default());
@@ -1433,11 +1551,11 @@ mod tests {
     fn the_audio_settings_are_kept() {
         let mut s = Settings::default();
         assert_eq!(
-            (s.volume, s.output()),
-            (100, melee_audio::OutputOptions::default())
+            (s.volume, s.music, s.output()),
+            (100, 100, melee_audio::OutputOptions::default())
         );
         s.restore(&picked().save(), &Given::default());
-        assert_eq!((s.volume, s.audio_exclusive), (35, true));
+        assert_eq!((s.volume, s.music, s.audio_exclusive), (35, 60, true));
         assert_eq!(s.output().device.as_deref(), Some("Speakers (USB Audio)"));
         let mut s = Settings::default();
         let given = Given {

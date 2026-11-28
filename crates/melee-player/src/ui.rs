@@ -525,12 +525,34 @@ mod tests {
             ctx.set_zoom_factor(ZOOM);
             ctx.enable_accesskit();
             let mut settings = Settings::default();
-            // An empty folder for the Recordings tab, rather than the player's own.
-            let dir = std::env::temp_dir().join(format!("melee-hd-pad-ui-{}", std::process::id()));
+            // Empty folders of its own for the Recordings tab and the PhobGCC profiles, rather
+            // than the player's.
+            static N: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+            let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let dir =
+                std::env::temp_dir().join(format!("melee-hd-pad-ui-{}-{n}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
             std::fs::create_dir_all(&dir).unwrap();
             settings.recordings = dir.display().to_string();
             let mut panel = Panel::new(settings, "Melee.iso".into());
             panel.tab = tab;
+            panel.phob = crate::phob_ui::PhobPanel::load(dir.join("phob"));
+            // The Controllers tab's devices: the keyboard and a controller on the adapter's
+            // first port (its PhobGCC section), as `Inputs::look` gives them.
+            panel.controllers.devices = vec![
+                melee_input::DeviceInfo {
+                    id: melee_input::DeviceId::Keyboard,
+                    name: "Keyboard".into(),
+                    connected: true,
+                    port: Some(1),
+                },
+                melee_input::DeviceInfo {
+                    id: melee_input::DeviceId::Adapter(0),
+                    name: "GameCube adapter, port 1".into(),
+                    connected: true,
+                    port: Some(0),
+                },
+            ];
             let mut h = Harness {
                 ctx,
                 panel,
@@ -641,10 +663,33 @@ mod tests {
         for (tab, name) in Tab::ALL {
             let mut h = Harness::new(tab);
             h.press(&[Nav::Down]);
+            if tab == Tab::Controllers {
+                // The adapter port's PhobGCC section shows its settings once it's on: turned
+                // on from the controller, then the walk starts again from the first widget.
+                h.down_to(accesskit::Role::CheckBox, "Process this port with PhobGCC");
+                h.press(&[Nav::Activate]);
+                assert!(
+                    h.nodes
+                        .values()
+                        .any(|n| n.role() == accesskit::Role::Slider),
+                    "the PhobGCC section's settings show"
+                );
+                let on = h.focused().expect("the checkbox focused");
+                h.ctx.memory_mut(|m| m.surrender_focus(on));
+                h.frame();
+                h.press(&[Nav::Down]);
+            }
             let first = h.focused().expect("a direction focuses the first widget");
             let mut seen = HashSet::from([first]);
             let mut queue = VecDeque::from([first]);
             while let Some(id) = queue.pop_front() {
+                assert!(
+                    seen.len() <= 4 * h.focusable().len() + 50,
+                    "{name}: the walk keeps finding new widgets: {:?}",
+                    (seen.iter())
+                        .map(|id| h.describe(id.accesskit_id().0))
+                        .collect::<Vec<_>>()
+                );
                 for d in [Nav::Up, Nav::Down, Nav::Left, Nav::Right] {
                     h.focus(id);
                     h.press(&[d]);
@@ -782,6 +827,6 @@ mod tests {
         assert!(h.focused().is_some());
         h.press(&[Nav::Right]);
         h.press(&[Nav::Activate]);
-        assert_eq!(h.panel.tab, Tab::QuickMatch, "A on a tab's name shows it");
+        assert_eq!(h.panel.tab, Tab::Controllers, "A on a tab's name shows it");
     }
 }

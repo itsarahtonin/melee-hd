@@ -29,6 +29,10 @@ Floating-point behavior, the DSP's AX mixing and the GPU's formats and rendering
 - [slippi-ssbm-asm](https://github.com/project-slippi/slippi-ssbm-asm) (GPL-3.0): the Slippi ruleset's codes, UCF 0.84 and the determinism fixes (`crates/melee-sim/src/game/ucf.rs`, `game/slippi.rs`), and the playback codes (`game/playback.rs`), are ported from these codes' machine code. `tools/bench` embeds its Boot to Playback Scene, Init Player Data, Init Stage Data and ExtendPlayerBlock codes (`src/matches.rs`, `src/gecko_words.rs`).
 - [project-slippi/dolphin](https://github.com/project-slippi/dolphin) (GPL-2.0-or-later): the replay format follows its `SlippiGame`, and the playback denylist is generated from its injection lists at `41a7a3a1` (`crates/melee-slippi`); the playback codes are the set it ships.
 
+## PhobGCC
+
+[PhobGCC-SW](https://github.com/PhobGCC/PhobGCC-SW) (GPL version 3, no "or later"; its contributors are listed in its `CONTRIBUTORS.md`): `crates/melee-phob` is ported from its `PhobGCC/common` (`stick.h`, `filter.h`, `curveFitting.h`, and the stick pipeline, calibration steps and trigger output of `phobGCC.h`) and the RP2040 board's trigger reads, at `b4f175ea` (v0.31). That crate is GPL-3.0-only, as each of its files says, and the rest of melee-hd only calls into it; builds that include it are distributed under GPL-3.0. `curveFitting.h` is itself by Rowan Easter-Robinson, released into the public domain. `tools/phob-check` builds PhobGCC-SW's own source from a checkout at that commit into its tests only, as the oracle melee-phob is compared with; nothing of it is in the repository or the player.
+
 ## Aurora
 
 [Aurora](https://github.com/encounter/aurora) (MIT) is a design reference for the renderer's pipeline cache (`crates/melee-player/src/pipelines.rs`). No code is taken from it.

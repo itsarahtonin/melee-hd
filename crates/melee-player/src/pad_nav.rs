@@ -77,18 +77,52 @@ pub struct PadNav {
     ports: [Port; 4],
     /// The ports that moved anything since the panel opened.
     pub drove: [bool; 4],
+    /// Rebind… waited for an input: the next read starts again from what's held.
+    resync_next: bool,
 }
 
 impl PadNav {
     /// The panel opened with the controllers at `pads`: what they hold already does nothing
     /// until it's let go.
     pub fn reset(&mut self, pads: &PadData) {
-        for (port, p) in self.ports.iter_mut().zip(pads) {
+        self.drove = [false; 4];
+        self.resync(pads);
+    }
+
+    /// The controllers read again after Rebind… took their presses: what they hold does
+    /// nothing until it's let go, and a port holding something counts as one that worked the
+    /// panel (what it holds stays out of the game as the panel closes).
+    pub fn resync(&mut self, pads: &PadData) {
+        for (i, (port, p)) in self.ports.iter_mut().zip(pads).enumerate() {
             let p = present(p);
             port.buttons = p.button;
             port.held = direction(&p).map(|d| (d, None));
+            if p.button != 0 || port.held.is_some() {
+                self.drove[i] = true;
+            }
         }
-        self.drove = [false; 4];
+    }
+
+    /// The panel's moves now, the controllers read by `read`. While Rebind… waits for an input
+    /// (`capturing`) a controller's press is its binding, not a move: nothing is read (a read
+    /// would drop the gamepads' quick presses Rebind… looks for) and nothing moves; afterwards
+    /// what the controllers hold does nothing until it's let go.
+    pub fn poll(
+        &mut self,
+        capturing: bool,
+        read: impl FnOnce() -> PadData,
+        now: Instant,
+    ) -> Vec<Nav> {
+        if capturing {
+            self.resync_next = true;
+            return Vec::new();
+        }
+        let pads = read();
+        if std::mem::take(&mut self.resync_next) {
+            self.resync(&pads);
+            return Vec::new();
+        }
+        self.read(&pads, now)
     }
 
     /// The moves since the last read, every port's in port order.
@@ -185,6 +219,24 @@ mod tests {
         );
         assert_eq!(n.read(&pads(1, TRIGGER_Z, (0, 0)), t), []);
         assert_eq!(n.drove, [false, true, false, false]);
+    }
+
+    /// While Rebind… waits, the controllers aren't read and nothing moves (B binds, it doesn't
+    /// close the panel); after it, the press it took, still held, moves nothing, and that port
+    /// counts as one that worked the panel; a new press moves again.
+    #[test]
+    fn rebind_takes_the_presses_not_the_panel() {
+        let t = Instant::now();
+        let mut n = PadNav::default();
+        n.reset(&pads(3, 0, (0, 0)));
+        let unread = || -> PadData { panic!("read while Rebind… waits") };
+        assert_eq!(n.poll(true, unread, t), []);
+        assert_eq!(n.poll(true, unread, t), []);
+        assert_eq!(n.poll(false, || pads(3, BUTTON_B, (0, 90)), t), []);
+        assert_eq!(n.poll(false, || pads(3, BUTTON_B, (0, 90)), t), []);
+        assert_eq!(n.drove, [false, false, false, true]);
+        n.poll(false, || pads(3, 0, (0, 0)), t);
+        assert_eq!(n.poll(false, || pads(3, BUTTON_B, (0, 0)), t), [Nav::Back]);
     }
 
     /// What's held as the panel opens (the Z that opened it, a direction) does nothing until

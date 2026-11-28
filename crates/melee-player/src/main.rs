@@ -69,6 +69,7 @@ mod bench_frames;
 mod capture;
 mod channel;
 mod console;
+mod controllers;
 #[cfg(test)]
 mod cosmetic_tests;
 mod dialogs;
@@ -91,6 +92,7 @@ mod paced_tests;
 mod pacing;
 mod pad_nav;
 mod perf;
+mod phob_ui;
 mod pipelines;
 mod power;
 #[cfg(test)]
@@ -101,6 +103,8 @@ mod predict_tests;
 mod prepare_tests;
 mod present;
 mod quick;
+#[cfg(test)]
+mod rebind_tests;
 #[cfg(test)]
 mod record_tests;
 mod recording;
@@ -122,7 +126,7 @@ use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
 use melee_data::disc::Disc;
-use melee_input::{Inputs, Key};
+use melee_input::Inputs;
 use melee_render::blend::{Blend, Capture};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
@@ -147,6 +151,23 @@ const TICK_RATE: f64 = 60.0;
 
 /// The stack the game runs on: the simulation recurses as the original does (joint trees).
 const GAME_STACK: usize = 512 << 20;
+
+/// Read by NVIDIA's Optimus driver from the executable's exports: 1 puts the program on the
+/// discrete GPU of a laptop with two. A binary exports nothing by default, so build.rs has the
+/// linker export it (`/EXPORT:NvOptimusEnablement,DATA`).
+#[cfg(windows)]
+#[used]
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals)]
+pub static NvOptimusEnablement: u32 = 1;
+
+/// AMD's PowerXpress (switchable graphics) counterpart of [`NvOptimusEnablement`], exported
+/// the same way.
+#[cfg(windows)]
+#[used]
+#[unsafe(no_mangle)]
+#[allow(non_upper_case_globals)]
+pub static AmdPowerXpressRequestHighPerformance: u32 = 1;
 
 /// Runs a test's body on the game's stack ([`GAME_STACK`]), as every test that starts a
 /// [`Session`] does: a test thread's is the standard library's 2 MiB.
@@ -288,7 +309,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|controllers|quick-match|recordings]]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
@@ -1220,32 +1241,10 @@ fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
         .unwrap_or_else(|| "a panic".into())
 }
 
-/// The keyboard controller's keys.
-fn key(code: KeyCode) -> Option<Key> {
-    Some(match code {
-        KeyCode::ArrowLeft => Key::Left,
-        KeyCode::ArrowRight => Key::Right,
-        KeyCode::ArrowUp => Key::Up,
-        KeyCode::ArrowDown => Key::Down,
-        KeyCode::KeyJ => Key::CLeft,
-        KeyCode::KeyL => Key::CRight,
-        KeyCode::KeyI => Key::CUp,
-        KeyCode::KeyK => Key::CDown,
-        KeyCode::KeyX => Key::A,
-        KeyCode::KeyZ => Key::B,
-        KeyCode::KeyC => Key::X,
-        KeyCode::KeyS => Key::Y,
-        KeyCode::KeyD => Key::Z,
-        KeyCode::KeyQ => Key::L,
-        KeyCode::KeyW => Key::R,
-        KeyCode::Enter => Key::Start,
-        KeyCode::KeyT => Key::DUp,
-        KeyCode::KeyG => Key::DDown,
-        KeyCode::KeyF => Key::DLeft,
-        KeyCode::KeyH => Key::DRight,
-        KeyCode::ShiftLeft => Key::Modifier,
-        _ => return None,
-    })
+/// A key's name as the keyboard controller's bindings name it: winit's for its key code (`KeyX`,
+/// `ArrowLeft`), which the default bindings use (`melee_input::Bindings::keyboard`).
+fn key_name(code: KeyCode) -> String {
+    format!("{code:?}")
 }
 
 /// The frame time statistics the loop logs.
@@ -2471,14 +2470,16 @@ impl App {
         let Some(f) = &mut self.front else { return };
         f.panel.open = false;
         f.panel.message = None;
+        f.panel.controllers.stop();
         let s = f.panel.settings.clone();
-        // A controller that worked the panel hands the game nothing it still holds.
+        s.keep();
+        self.apply(&s);
+        // A controller that worked the panel hands the game nothing it still holds (read on
+        // the ports the settings just applied give it).
         let pads = self.inputs.read();
         if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
             p.hooks.after_panel(&pads, self.pad_nav.drove);
         }
-        s.keep();
-        self.apply(&s);
         self.start_clock();
         self.start_pacing(s.high_refresh);
         if self.hold.holds(Instant::now()) {
@@ -2498,7 +2499,13 @@ impl App {
 
     /// The controllers read while the panel shows: their moves to it, and what it then does.
     fn poll_pads(&mut self, event_loop: &ActiveEventLoop) {
-        let navs = self.pad_nav.read(&self.inputs.read(), Instant::now());
+        // While Rebind… waits for an input, a controller's press is its binding, not a move.
+        let capturing =
+            (self.front.as_ref()).is_some_and(|f| f.panel.controllers.capturing().is_some());
+        let inputs = &mut self.inputs;
+        let navs = self
+            .pad_nav
+            .poll(capturing, || inputs.read(), Instant::now());
         let (Some(f), Some(shown)) = (&mut self.front, &self.shown) else {
             return;
         };
@@ -2511,6 +2518,7 @@ impl App {
 
     /// The settings to the frames, the latency and the recordings.
     fn apply(&mut self, s: &front::Settings) {
+        self.inputs.set_config(s.controllers.clone());
         let msaa = if s.msaa { 4 } else { 1 };
         let fast = s.fast_renderer;
         self.args.scale = s.scale;
@@ -2552,6 +2560,7 @@ impl App {
         // The sound's device and volume, taken at once (the device opened again if need be).
         sound::set_output(s.output());
         sound::set_volume(s.volume);
+        sound::set_music(s.music);
         if let Some(snd) = self.session.as_ref().and_then(|s| s.sound.as_ref()) {
             snd.configure();
         }
@@ -2628,6 +2637,19 @@ impl App {
         f.panel.running = melee
             .and_then(Session::ruleset)
             .unwrap_or(f.panel.settings.ruleset);
+        // The Controllers tab: the devices there are now, and what the one being rebound holds.
+        if f.panel.tab == front::Tab::Controllers {
+            let c = &mut f.panel.controllers;
+            c.devices = self.inputs.look(&f.panel.settings.controllers);
+            c.adapter.clone_from(&self.inputs.adapter);
+            if let Some(d) = c
+                .capturing()
+                .filter(|d| **d != melee_input::DeviceId::Keyboard)
+            {
+                let held = self.inputs.active(&d.clone());
+                c.offer(held);
+            }
+        }
         let action = w.redraw(&self.gpu, shown, &mut f.panel, self.last_image.as_ref());
         if f.panel.settings.fullscreen != shown.fullscreen() {
             shown.set_fullscreen(f.panel.settings.fullscreen);
@@ -2972,7 +2994,12 @@ impl ApplicationHandler for App {
             return;
         }
         let paneled = self.front.as_ref().is_some_and(|f| f.panel.open);
+        // While Rebind… runs, the keys are its, not the panel's (Enter doesn't press a button).
+        let rebinding = (self.front.as_ref())
+            .is_some_and(|f| f.panel.controllers.capturing().is_some())
+            && matches!(event, WindowEvent::KeyboardInput { .. });
         if paneled
+            && !rebinding
             && let (
                 Some(Front {
                     window: Some(w), ..
@@ -3024,7 +3051,11 @@ impl ApplicationHandler for App {
                 if code == KeyCode::Escape && state == ElementState::Pressed {
                     // Escape opens the settings panel over the console, and closes it again (a
                     // drop-down open in it closes first); without the panel, it quits.
-                    match &self.front {
+                    match &mut self.front {
+                        // While Rebind… runs, it skips the input asked for.
+                        Some(f) if f.panel.open && f.panel.controllers.capturing().is_some() => {
+                            f.panel.controllers.skip();
+                        }
                         Some(f) if f.panel.open => {
                             let popup = f.window.as_ref().is_some_and(ui::Window::popup_open);
                             if !popup && !f.panel.halted {
@@ -3039,13 +3070,16 @@ impl ApplicationHandler for App {
                     }
                     return;
                 }
-                // The panel's key presses aren't the keyboard controller's; releases always
-                // are, so no key stays held.
+                // The panel's key presses aren't the keyboard controller's (while Rebind… reads
+                // the keyboard, they're its); releases always are, so no key stays held.
                 let pressed = state == ElementState::Pressed;
-                if let Some(k) = key(code)
-                    && !(paneled && pressed)
-                {
-                    self.inputs.keyboard.set(k, pressed);
+                let name = key_name(code);
+                if paneled && pressed {
+                    if let Some(f) = &mut self.front {
+                        f.panel.controllers.key(&name);
+                    }
+                } else {
+                    self.inputs.key(&name, pressed);
                 }
             }
             _ => {}
@@ -3780,6 +3814,9 @@ fn run(args: Args) -> ExitCode {
         let mut panel = front::Panel::new(settings_of(&args), args.disc.clone());
         panel.open = true;
         panel.tab = args.settings_tab;
+        if panel.tab == front::Tab::Controllers {
+            panel.controllers.devices = Inputs::new(args.adapter).look(&panel.settings.controllers);
+        }
         return match ui::shot(&gpu, &mut panel, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -3813,6 +3850,7 @@ fn run(args: Args) -> ExitCode {
     if let Some(f) = &front {
         sound::set_output(f.panel.settings.output());
         sound::set_volume(f.panel.settings.volume);
+        sound::set_music(f.panel.settings.music);
     }
     let session = if args.front {
         None
@@ -3921,6 +3959,15 @@ fn run(args: Args) -> ExitCode {
         handoff: handoff::Handoff::default(),
         args,
     };
+    // The player's ports and bindings (the Controllers tab's).
+    if let Some(f) = &app.front {
+        app.inputs.set_config(f.panel.settings.controllers.clone());
+    }
+    // PhobGCC's processing on the adapter ports it's on for, whether or not the panel shows.
+    match &app.front {
+        Some(f) => f.panel.phob.apply(app.inputs.adapter.as_deref()),
+        None => phob_ui::PhobPanel::default().apply(app.inputs.adapter.as_deref()),
+    }
     if let Some(path) = &app.args.latency_log {
         match latency::Log::create(path) {
             Ok(log) => app.latency = Some(log),
