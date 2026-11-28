@@ -95,4 +95,6 @@ melee-hd aims to be the base other projects build on: `melee-sim` as a documente
 
 melee-hd's code is offered under GPL-3.0-or-later; see [LICENSE](LICENSE). Parts are ported from or follow Dolphin (GPL-2.0-or-later), as their file headers say.
 
+Builds that include PhobGCC's processing (`crates/melee-phob`, ported from PhobGCC-SW, GPL-3.0-only) are distributed under GPL-3.0.
+
 melee-hd is ported from ssbm-rs and the Melee decompilation. The decompilation has no stated license for the original game code, and porting it does not establish ownership of that code. Super Smash Bros. Melee and its assets belong to Nintendo and HAL Laboratory. This is an unofficial project, not affiliated with or endorsed by them. The repository contains no disc image, extracted assets or captured memory, and no replays beyond the benchmark matches' CPU-played inputs; you need your own copy of the game. The project's license grants no rights to the game's assets and does not resolve the original code's licensing.
