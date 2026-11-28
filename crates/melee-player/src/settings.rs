@@ -4,9 +4,9 @@
 //! captures (`captures/`, [`crate::capture`]) and the log when there's no console
 //! (`logs/melee-hd.log`, [`crate::console`]). Nothing is written beside the executable, which
 //! may be somewhere read-only.
-//! It's `%APPDATA%\melee-hd` on Windows and `$XDG_CONFIG_HOME/melee-hd` or `~/.config/melee-hd`
-//! elsewhere (`melee-hd-dev` for a dev build, [`crate::channel`]), or the folder
-//! `MELEE_HD_SETTINGS` names.
+//! It's `%APPDATA%\melee-hd` on Windows, `~/Library/Application Support/melee-hd` on macOS and
+//! `$XDG_CONFIG_HOME/melee-hd` or `~/.config/melee-hd` elsewhere (`melee-hd-dev` for a dev build,
+//! [`crate::channel`]), or the folder `MELEE_HD_SETTINGS` names.
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -20,14 +20,27 @@ const DISC: &str = "disc.txt";
 
 /// The settings folder.
 pub fn folder() -> PathBuf {
-    folder_of(crate::channel::channel(), |name| std::env::var_os(name))
+    folder_of(crate::channel::channel(), MAC, |name| {
+        std::env::var_os(name)
+    })
 }
 
-/// The settings folder of a build of `channel`, with `var` the environment: the dev build's is
-/// `melee-hd-dev` (`channel`).
-fn folder_of(channel: Channel, var: impl Fn(&str) -> Option<OsString>) -> PathBuf {
+/// Whether this is macOS, whose programs keep their files under `~/Library` (Apple's file
+/// system guide), not where XDG's variables point.
+pub const MAC: bool = cfg!(target_os = "macos");
+
+/// The settings folder of a build of `channel`, on macOS if `mac`, with `var` the environment:
+/// the dev build's is `melee-hd-dev` (`channel`).
+fn folder_of(channel: Channel, mac: bool, var: impl Fn(&str) -> Option<OsString>) -> PathBuf {
     if let Some(dir) = var("MELEE_HD_SETTINGS") {
         return dir.into();
+    }
+    if mac {
+        let home = var("HOME").map_or_else(|| PathBuf::from("."), PathBuf::from);
+        return home
+            .join("Library")
+            .join("Application Support")
+            .join(channel.folder());
     }
     let base = var("APPDATA")
         .or_else(|| var("XDG_CONFIG_HOME"))
@@ -229,25 +242,50 @@ mod tests {
         let elsewhere = env(&[("HOME", "H")]);
         let xdg = env(&[("XDG_CONFIG_HOME", "X")]);
         let base = |b: &str, f: &str| Path::new(b).join(f);
-        assert_eq!(folder_of(Channel::Stable, &windows), base("AD", "melee-hd"));
-        assert_eq!(folder_of(Channel::Local, &windows), base("AD", "melee-hd"));
         assert_eq!(
-            folder_of(Channel::Dev, &windows),
+            folder_of(Channel::Stable, false, &windows),
+            base("AD", "melee-hd")
+        );
+        assert_eq!(
+            folder_of(Channel::Local, false, &windows),
+            base("AD", "melee-hd")
+        );
+        assert_eq!(
+            folder_of(Channel::Dev, false, &windows),
             base("AD", "melee-hd-dev")
         );
-        assert_eq!(folder_of(Channel::Dev, &xdg), base("X", "melee-hd-dev"));
         assert_eq!(
-            folder_of(Channel::Dev, &elsewhere),
+            folder_of(Channel::Dev, false, &xdg),
+            base("X", "melee-hd-dev")
+        );
+        assert_eq!(
+            folder_of(Channel::Dev, false, &elsewhere),
             Path::new("H").join(".config").join("melee-hd-dev")
         );
         assert_eq!(
-            folder_of(Channel::Local, &elsewhere),
+            folder_of(Channel::Local, false, &elsewhere),
             Path::new("H").join(".config").join("melee-hd")
         );
         // MELEE_HD_SETTINGS wins in every channel.
         let named = env(&[("MELEE_HD_SETTINGS", "S"), ("APPDATA", "AD")]);
         for c in [Channel::Stable, Channel::Dev, Channel::Local] {
-            assert_eq!(folder_of(c, &named), PathBuf::from("S"));
+            assert_eq!(folder_of(c, false, &named), PathBuf::from("S"));
+            assert_eq!(folder_of(c, true, &named), PathBuf::from("S"));
         }
+    }
+
+    /// macOS keeps them in `~/Library/Application Support`, whatever XDG's variables say.
+    #[test]
+    fn macos_keeps_settings_in_application_support() {
+        let support = |f: &str| {
+            Path::new("H")
+                .join("Library")
+                .join("Application Support")
+                .join(f)
+        };
+        let xdg = env(&[("HOME", "H"), ("XDG_CONFIG_HOME", "X")]);
+        assert_eq!(folder_of(Channel::Stable, true, &xdg), support("melee-hd"));
+        assert_eq!(folder_of(Channel::Dev, true, &xdg), support("melee-hd-dev"));
+        assert_eq!(folder_of(Channel::Local, true, &xdg), support("melee-hd"));
     }
 }

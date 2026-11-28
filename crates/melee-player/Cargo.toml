@@ -16,6 +16,8 @@ path = "src/main.rs"
 melee-audio = { path = "../melee-audio" }
 melee-data.workspace = true
 melee-input = { path = "../melee-input" }
+# PhobGCC's processing (GPL-3.0-only): its profiles and settings for the panel's section.
+melee-phob = { path = "../melee-phob" }
 melee-render = { path = "../melee-render" }
 melee-save = { path = "../melee-save" }
 melee-slippi = { path = "../melee-slippi" }
@@ -38,6 +40,10 @@ rfd = { version = "0.17", features = ["common-controls-v6"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Performance", "Win32_System_SystemInformation", "Win32_System_Threading"] }
+
+# The first thread's stack (main.rs's `run_on_first_thread`) and the log's file (console.rs).
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
 
 [dev-dependencies]
 # A check that skips without its data fails under MELEE_CHECKS_REQUIRE_DATA (`melee_local_data::skip!`).

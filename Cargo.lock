@@ -1642,8 +1642,11 @@ name = "melee-input"
 version = "0.1.1"
 dependencies = [
  "gilrs",
+ "melee-phob",
  "melee-sim",
  "nusb",
+ "objc2-core-foundation",
+ "objc2-io-kit",
 ]
 
 [[package]]
@@ -1666,6 +1669,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-phob"
+version = "0.1.1"
+
+[[package]]
 name = "melee-player"
 version = "0.1.1"
 dependencies = [
@@ -1675,12 +1682,14 @@ dependencies = [
  "egui-winit",
  "embed-manifest",
  "flate2",
+ "libc",
  "melee-audio",
  "melee-data",
  "melee-gpu",
  "melee-gx",
  "melee-input",
  "melee-local-data",
+ "melee-phob",
  "melee-render",
  "melee-save",
  "melee-sim",
@@ -2477,6 +2486,15 @@ name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
+
+[[package]]
+name = "phob-check"
+version = "0.1.1"
+dependencies = [
+ "cc",
+ "melee-local-data",
+ "melee-phob",
+]
 
 [[package]]
 name = "pin-project"

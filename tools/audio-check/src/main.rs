@@ -1,5 +1,5 @@
 //! `melee-audio-check TRACE REPLAY.slp AUDIO.wav [--fp hardware|slippi] [--ticks N]
-//! [--window SECONDS] [--disc-speed fast|fast-flat|drive] [--out MIX.wav]`: plays a replay natively from
+//! [--window SECONDS] [--disc-speed fast|fast-flat|drive] [--out MIX.wav] [--early] [--music PERCENT]`: plays a replay natively from
 //! the boot state in ssbm-rs's state trace (version 5, with memory over the boot tick), mixes
 //! its audio with melee-audio, and compares the samples with ssbm-rs's recording of the same
 //! run's audio interface (`AUDIO_OUT=AUDIO.wav ssbm-run ...`), which starts at power-on: the
@@ -19,7 +19,10 @@
 //! With `--session INPUTS` (and no trace or replay) a recorded session plays from power-on
 //! instead (`session.rs`).
 //!
-//! The disc comes from `SSBM_DISC`. `--out` writes the native mix as a WAV file.
+//! The disc comes from `SSBM_DISC`. `--out` writes the native mix as a WAV file. `--early` mixes
+//! with the player's early sound effects (`Mixer::set_early`) and counts the starts moved; the
+//! mix is then not the recording's. `--music` mixes the music stream's voices at that volume,
+//! on the player's curve, as the session mode's does (0 leaves the effects alone to compare).
 
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
@@ -173,6 +176,7 @@ fn run(args: &[String]) -> Result<bool, String> {
     }
     let mut pos = Vec::new();
     let (mut ticks, mut window, mut out, mut port) = (2000u32, 1.0f64, None, false);
+    let (mut early, mut music) = (false, 100u32);
     let mut fp_mode = FpMode::Slippi;
     let mut disc_speed = DiscSpeed::Fast;
     let mut it = args.iter();
@@ -183,6 +187,14 @@ fn run(args: &[String]) -> Result<bool, String> {
             "--window" => window = value()?.parse().map_err(|_| "--window SECONDS")?,
             "--out" => out = Some(value()?.clone()),
             "--port" => port = true,
+            "--early" => early = true,
+            "--music" => {
+                music = value()?
+                    .parse()
+                    .ok()
+                    .filter(|p| *p <= 100)
+                    .ok_or("--music PERCENT")?
+            }
             "--disc-speed" => {
                 disc_speed =
                     DiscSpeed::parse(value()?).ok_or("--disc-speed fast|fast-flat|drive")?
@@ -199,7 +211,7 @@ fn run(args: &[String]) -> Result<bool, String> {
     }
     let [trace_path, replay_path, wav_path] = pos[..] else {
         return Err(
-            "usage: melee-audio-check TRACE|- REPLAY.slp AUDIO.wav [--port] [--fp hardware|slippi] [--ticks N] [--window SECONDS] [--disc-speed fast|fast-flat|drive] [--out MIX.wav]"
+            "usage: melee-audio-check TRACE|- REPLAY.slp AUDIO.wav [--port] [--fp hardware|slippi] [--ticks N] [--window SECONDS] [--disc-speed fast|fast-flat|drive] [--out MIX.wav] [--early] [--music PERCENT]"
                 .into(),
         );
     };
@@ -239,6 +251,8 @@ fn run(args: &[String]) -> Result<bool, String> {
             .unwrap_or_else(|e| panic!("{name}: {e}")),
     };
     let mut mixer = Mixer::new();
+    mixer.set_early(early);
+    mixer.set_music((music as f32 / 100.0).powi(2));
     let mut m = Match::start_from(&settings, &mut load, &mut |g, data| match &boot {
         Some(boot) => {
             boot.seed(g, data, disc_speed);
@@ -309,6 +323,16 @@ fn run(args: &[String]) -> Result<bool, String> {
             .map(|&e| disc.path_of(e).unwrap_or_else(|_| format!("entry {e}")))
             .collect::<Vec<_>>()
     );
+    if early {
+        println!(
+            "early sound effects: {} of {} starts moved a frame sooner",
+            s.early, s.starts
+        );
+        println!(
+            "voice frames played a frame ahead: {}, the CPU writing to {} of them",
+            s.ahead, s.ahead_writes
+        );
+    }
     let loud = |x: &[Sample]| {
         let e: f64 = x
             .iter()

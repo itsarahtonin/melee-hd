@@ -33,6 +33,10 @@ Floating-point behavior, the DSP's AX mixing and the GPU's formats and rendering
 
 [slpz](https://github.com/AlexanderHarrison/slpz) (MIT OR Apache-2.0, Copyright (c) 2018 Alex Harrison) defines the `.slpz` format Slippi's community tools write. `crates/melee-slippi/src/slpz.rs` is ported from its library at 1.3.0 (used under MIT; its header carries the notice), so melee-hd's `.slpz` files equal the slpz tool's byte for byte. It links zstd through the `zstd` crate, as the rest of melee-hd does, rather than depending on `slpz`, whose `thin` zstd feature Cargo would unify into every build's zstd.
 
+## PhobGCC
+
+[PhobGCC-SW](https://github.com/PhobGCC/PhobGCC-SW) (GPL version 3, no "or later"; its contributors are listed in its `CONTRIBUTORS.md`): `crates/melee-phob` is ported from its `PhobGCC/common` (`stick.h`, `filter.h`, `curveFitting.h`, and the stick pipeline, calibration steps and trigger output of `phobGCC.h`) and the RP2040 board's trigger reads, at `b4f175ea` (v0.31). That crate is GPL-3.0-only, as each of its files says, and the rest of melee-hd only calls into it; builds that include it are distributed under GPL-3.0. `curveFitting.h` is itself by Rowan Easter-Robinson, released into the public domain. `tools/phob-check` builds PhobGCC-SW's own source from a checkout at that commit into its tests only, as the oracle melee-phob is compared with; nothing of it is in the repository or the player.
+
 ## Aurora
 
 [Aurora](https://github.com/encounter/aurora) (MIT) is a design reference for the renderer's pipeline cache (`crates/melee-player/src/pipelines.rs`). No code is taken from it.
