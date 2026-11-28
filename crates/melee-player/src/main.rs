@@ -73,6 +73,7 @@ mod controllers;
 #[cfg(test)]
 mod cosmetic_tests;
 mod dialogs;
+mod feedback;
 mod flicker;
 mod front;
 mod gates;
@@ -1345,11 +1346,15 @@ struct InFlight {
     target: Option<Instant>,
     /// Drawn on the frames' own schedule (Interpolate, Extrapolate).
     paced: bool,
+    /// The window's number for its present, which the presentation feedback names it by.
+    number: u64,
 }
 
-/// A latency log row, waiting for its frame's GPU time.
+/// A latency log row, waiting for its frame's GPU time and, where the system says, the time it
+/// reached the screen.
 struct Row {
     id: Option<u64>,
+    number: Option<u64>,
     tick: latency::Tick,
     done: bool,
     queued: Instant,
@@ -1357,6 +1362,9 @@ struct Row {
 
 /// How long a row waits for its frame's GPU time before it's written without it.
 const ROW_WAIT: Duration = Duration::from_millis(500);
+/// How long a row whose GPU time is in waits for the time its frame reached the screen: a frame
+/// replaced before it showed, or one the feedback missed, keeps its estimate.
+const SHOWN_WAIT: Duration = Duration::from_millis(100);
 
 /// Melee set aside while a replay from the Recordings tab plays: the console's session and
 /// what draws it (its frame builder and renderer, whose state carries from frame to frame),
@@ -1434,6 +1442,10 @@ struct App {
     monitor_hz: Option<u32>,
     /// How early the event loop's wait ends for the precise wait.
     guard: timing::Guard,
+    /// Whether the display is variable-refresh, from when frames reached the screen, and the
+    /// answer last said in the log.
+    vrr: feedback::Vrr,
+    vrr_said: Option<bool>,
     /// When the GPU finishes frames, and the frames it hasn't yet.
     gpu_done: Option<present::GpuDone>,
     inflight: VecDeque<InFlight>,
@@ -1564,13 +1576,24 @@ impl App {
     /// it changes.
     fn sync(&mut self) -> (jit::Policy, Option<jit::Grid>) {
         let expected = self.monitor_hz.map(|m| pacing::refresh_period(Some(m)));
-        let grid = timing::refresh_grid(expected);
+        let window = self.shown.as_ref().and_then(|s| s.feedback().grid());
+        let grid = timing::refresh_grid(expected, window);
         let immediate = self
             .shown
             .as_ref()
             .is_some_and(|s| s.present_mode() == wgpu::PresentMode::Immediate);
         let tick = self.jit.tick();
-        let mut policy = self.timing.policy(grid, immediate, tick);
+        // Whether the display is variable-refresh, measured from when frames reached the
+        // screen against its refreshes' period (its nominal one where the times aren't known).
+        self.vrr.set_period(grid.map(|g| g.period).or(expected));
+        let vrr = self.vrr.answer();
+        if let Some(s) = &mut self.shown {
+            s.set_fixed_period(grid.filter(|_| vrr == Some(false)).map(|g| g.period));
+        }
+        if let Some(p) = &mut self.pacer {
+            p.set_display(vrr);
+        }
+        let mut policy = self.timing.policy(grid, immediate, tick, vrr);
         // The automatic choice aligns only where it pays: when the lead is shorter than the
         // median cost and the half refresh a frame waits on average.
         let lead = if self.mode.paced() {
@@ -1584,16 +1607,9 @@ impl App {
             policy = jit::Policy::Cadence;
         }
         // Frames wait for a refresh unless they're presented at once or the display waits for
-        // them (variable refresh, which the automatic choice takes a display to be when its rate
-        // isn't a multiple of the ticks').
-        self.waits = grid.is_some_and(|g| {
-            !immediate
-                && match self.timing {
-                    jit::Timing::Vrr => false,
-                    jit::Timing::Auto => jit::multiple(g.period, tick),
-                    jit::Timing::Refresh | jit::Timing::Timer => true,
-                }
-        });
+        // them (variable refresh: measured so, or, unmeasured, what the automatic choice takes a
+        // display to be when its rate isn't a multiple of the ticks').
+        self.waits = self.timing.waits(grid, immediate, tick, vrr);
         self.grid = grid;
         if self.policy != Some(policy) {
             let at = grid.map_or(String::new(), |g| {
@@ -1782,7 +1798,7 @@ impl App {
             if !f.draws.is_empty() && plan.render {
                 if let Some((mut times, shown)) = self.draw_frame(&f.draws, start, None) {
                     times.target = plan.target.map(|t| t.saturating_duration_since(start));
-                    id = Some(self.watch(shown.submission, start, plan.target, false));
+                    id = Some(self.watch(&shown, start, plan.target, false));
                     frame = Some(times);
                 }
                 self.stats.frame(start.elapsed());
@@ -1815,11 +1831,11 @@ impl App {
         true
     }
 
-    /// Has the GPU's timing thread note when the frame presented with `submission` is done: a
-    /// frame started at `start` (its tick's start with Off) and meant for `target`.
+    /// Has the GPU's timing thread note when the frame `shown` presented is done: a frame
+    /// started at `start` (its tick's start with Off) and meant for `target`.
     fn watch(
         &mut self,
-        submission: wgpu::SubmissionIndex,
+        shown: &present::Presented,
         start: Instant,
         target: Option<Instant>,
         paced: bool,
@@ -1828,7 +1844,7 @@ impl App {
         let g = self
             .gpu_done
             .get_or_insert_with(|| present::GpuDone::new(device));
-        let id = g.watch(submission);
+        let id = g.watch(shown.submission.clone());
         if self.inflight.len() >= 64 {
             self.inflight.pop_front();
         }
@@ -1837,6 +1853,7 @@ impl App {
             start,
             target,
             paced,
+            number: shown.number,
         });
         id
     }
@@ -1881,15 +1898,45 @@ impl App {
                 let from = r.tick.at.unwrap_or(f.start);
                 if let Some(t) = &mut r.tick.frame {
                     t.ready = Some(at.saturating_duration_since(from));
-                    t.shown = Some(shown.saturating_duration_since(from));
+                    if !t.measured {
+                        t.shown = Some(shown.saturating_duration_since(from));
+                    }
                     t.missed = missed;
                 }
                 r.done = true;
+                r.queued = Instant::now();
             }
+        }
+        // When frames reached the screen, where the system says: the rows' shown times, and
+        // the display's kind from the refreshes read as they came.
+        let (measures, displayed) = match &mut self.shown {
+            Some(s) => (s.feedback().measures_frames(), s.displayed()),
+            None => (false, Vec::new()),
+        };
+        for d in displayed {
+            if d.exact {
+                self.vrr.add(d.at);
+                if let Some(p) = &mut self.pacer {
+                    p.displayed(d.at);
+                }
+            }
+            if let Some(r) = self.rows.iter_mut().find(|r| r.number == Some(d.number))
+                && let Some(t) = &mut r.tick.frame
+            {
+                let from = r.tick.at.unwrap_or(d.at);
+                t.shown = Some(d.at.saturating_duration_since(from));
+                t.measured = true;
+            }
+        }
+        if self.vrr.answer() != self.vrr_said {
+            self.vrr_said = self.vrr.answer();
+            eprintln!("display: {}", self.vrr.describe());
         }
         let now = Instant::now();
         while let Some(r) = self.rows.front() {
-            if !(r.id.is_none() || r.done || now - r.queued > ROW_WAIT) {
+            let measured = r.tick.frame.is_some_and(|f| f.measured);
+            let complete = r.done && (measured || !measures || now - r.queued > SHOWN_WAIT);
+            if !(r.id.is_none() || complete || now - r.queued > ROW_WAIT) {
                 break;
             }
             let r = self.rows.pop_front().expect("a row");
@@ -1899,8 +1946,12 @@ impl App {
 
     /// Queues a tick's row, to be written once its frame's GPU time is in.
     fn queue_row(&mut self, id: Option<u64>, tick: latency::Tick) {
+        let number = id
+            .and_then(|i| self.inflight.iter().find(|f| f.id == i))
+            .map(|f| f.number);
         self.rows.push_back(Row {
             id,
+            number,
             tick,
             done: false,
             queued: Instant::now(),
@@ -2006,7 +2057,7 @@ impl App {
                 p.presented(now, times.acquire, shown.acquired, shown.presented);
             }
             times.target = target.map(|t| t.saturating_duration_since(now));
-            let id = self.watch(shown.submission, now, target, true);
+            let id = self.watch(&shown, now, target, true);
             if let Some(mut p) = self.pending.take() {
                 // Timed from the tick's start, so the row measures from its controller read.
                 let since =
@@ -2207,8 +2258,11 @@ impl App {
         let built = Instant::now();
         let (shown, frame) = (self.shown.as_mut()?, images.into_iter().last()?);
         let text = self.overlay.is_some().then(|| {
-            self.live
-                .text(&format!("{:?}", shown.present_mode()), self.delay.frames())
+            self.live.text(
+                &format!("{:?}", shown.present_mode()),
+                self.delay.frames(),
+                &display_text(self.grid, self.monitor_hz, &self.vrr),
+            )
         });
         // The menus' gate note, for three seconds after a refusal.
         let note = (m.console.as_ref())
@@ -3336,6 +3390,16 @@ fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool, fast: bool) -> Gpu {
     }
 }
 
+/// What the overlay says of the display: its rate (the refreshes' period where they're known,
+/// else the monitor's) and whether it's variable-refresh as measured.
+fn display_text(grid: Option<jit::Grid>, monitor_hz: Option<u32>, vrr: &feedback::Vrr) -> String {
+    let hz = grid.map_or_else(
+        || monitor_hz.map_or(60.0, |m| f64::from(m) / 1000.0),
+        |g| 1.0 / g.period.as_secs_f64(),
+    );
+    format!("display {hz:.2} Hz, {}", vrr.describe())
+}
+
 /// The internal resolution's scale: as asked, or the smallest whose 480 lines cover the
 /// window's height, at most what the aspect's EFB width allows.
 fn scale_for(asked: u32, size: (u32, u32), aspect: present::Aspect) -> u32 {
@@ -4104,6 +4168,8 @@ fn run(args: Args) -> ExitCode {
         grid: None,
         monitor_hz: None,
         guard: timing::Guard::default(),
+        vrr: feedback::Vrr::default(),
+        vrr_said: None,
         gpu_done: None,
         inflight: VecDeque::new(),
         frame_lead: jit::Lead::new(args.jit_margin, Duration::from_secs_f64(0.5 / TICK_RATE)),
@@ -4208,7 +4274,13 @@ fn run(args: Args) -> ExitCode {
     if let Some(mut log) = app.latency.take() {
         if let Some(s) = &app.shown {
             log.present_mode = format!("{:?}", s.present_mode());
+            log.feedback = s
+                .feedback()
+                .measures_frames()
+                .then(|| s.feedback().name())
+                .flatten();
         }
+        log.display = display_text(app.grid, app.monitor_hz, &app.vrr);
         log.added_delay = app.delay.frames();
         log.timing = format!(
             "tick timing {}: {}{}, margin {:.2} ms at the end",

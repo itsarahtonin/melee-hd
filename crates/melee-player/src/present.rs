@@ -472,6 +472,14 @@ pub struct Shown {
     modes: Vec<wgpu::PresentMode>,
     /// The flicker scan can copy its images (else it draws the frame again).
     copyable: bool,
+    /// When presented frames reached the screen, where the system says
+    /// ([`crate::feedback`]), the presents numbered from 1, the frames shown that a present
+    /// polled before the caller asked, and the refresh period when the display is known to be
+    /// fixed.
+    feedback: crate::feedback::Feedback,
+    presents: u64,
+    displayed: Vec<crate::feedback::Displayed>,
+    fixed_period: Option<Duration>,
 }
 
 /// The window's icon (icon/window.rgba, 64 by 64 RGBA pixels, which icon/make.py draws).
@@ -529,6 +537,7 @@ impl Shown {
             config.height,
             describe(&gpu.adapter)
         );
+        let feedback = crate::feedback::Feedback::new(&gpu.adapter, &surface, &window);
         Shown {
             window,
             surface,
@@ -537,7 +546,43 @@ impl Shown {
             fullscreen,
             modes: caps.present_modes,
             copyable,
+            feedback,
+            presents: 0,
+            displayed: Vec::new(),
+            fixed_period: None,
         }
+    }
+
+    /// The window's presentation feedback.
+    pub fn feedback(&self) -> &crate::feedback::Feedback {
+        &self.feedback
+    }
+
+    /// The display's refresh period while it's known to be fixed, else None: a frame's time can
+    /// then be worked back from a later refresh's.
+    pub fn set_fixed_period(&mut self, period: Option<Duration>) {
+        self.fixed_period = period;
+    }
+
+    /// The presents that reached the screen since the last call, with when.
+    pub fn displayed(&mut self) -> Vec<crate::feedback::Displayed> {
+        self.poll_displayed();
+        std::mem::take(&mut self.displayed)
+    }
+
+    fn poll_displayed(&mut self) {
+        let got = self.feedback.poll(&self.surface, self.fixed_period);
+        self.displayed.extend(got);
+    }
+
+    /// Presents `out`, telling the feedback: the present's number.
+    fn queue_present(&mut self, gpu: &Gpu, out: wgpu::SurfaceTexture) -> u64 {
+        self.presents += 1;
+        self.feedback.presenting(self.presents);
+        self.window.pre_present_notify();
+        gpu.queue.present(out);
+        self.feedback.presented(&self.surface, self.presents);
+        self.presents
     }
 
     /// Presents as `present` asks from the next frame on.
@@ -592,8 +637,7 @@ impl Shown {
         };
         let view = out.texture.create_view(&Default::default());
         draw(&view, self.config.width, self.config.height);
-        self.window.pre_present_notify();
-        gpu.queue.present(out);
+        self.queue_present(gpu, out);
     }
 
     /// The swap chain's present mode.
@@ -611,6 +655,8 @@ impl Shown {
         over: impl FnOnce(&wgpu::TextureView, u32, u32),
     ) -> Option<Presented> {
         let texture = frame.texture.as_ref()?;
+        // The statistics name only the latest frame shown: read them each frame.
+        self.poll_displayed();
         let asked = Instant::now();
         let out = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(t)
@@ -637,24 +683,26 @@ impl Shown {
         gpu.end_frame();
         // Done when the GPU has finished everything the frame submitted.
         let submission = gpu.queue.submit(std::iter::empty());
-        self.window.pre_present_notify();
-        gpu.queue.present(out);
+        let number = self.queue_present(gpu, out);
         Some(Presented {
             acquire,
             acquired,
             presented: Instant::now(),
             submission,
+            number,
         })
     }
 }
 
 /// A frame shown: how long the swap chain's next image took to come, when it came, when the
-/// present call returned, and the submission the GPU finishes the frame with.
+/// present call returned, the submission the GPU finishes the frame with, and the window's
+/// number for the present, which the feedback names it by ([`Shown::displayed`]).
 pub struct Presented {
     pub acquire: Duration,
     pub acquired: Instant,
     pub presented: Instant,
     pub submission: wgpu::SubmissionIndex,
+    pub number: u64,
 }
 
 /// When the GPU finishes frames: a thread waits for each frame's last submission and notes the

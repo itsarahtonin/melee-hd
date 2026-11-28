@@ -48,11 +48,13 @@ use std::time::{Duration, Instant};
 /// How ticks are timed (`--tick-timing`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Timing {
-    /// Just in time, aligned to the refreshes when the display's rate is a multiple of the
-    /// ticks' (60, 120, 240 Hz: even at that rate whether or not the display waits for frames),
-    /// else at the ticks' cadence (a faster display that isn't a multiple is taken to be
-    /// variable-refresh). The settings' default since 2026-11-14 (Sarah: "that's not
-    /// experimental anymore, and it can be the default now").
+    /// Just in time: aligned to the refreshes of a display measured to be fixed-refresh, at the
+    /// ticks' cadence on one measured to be variable-refresh ([`crate::feedback::Vrr`]); until
+    /// it's measured, or where nothing measures it, aligned when the display's rate is a
+    /// multiple of the ticks' (60, 120, 240 Hz: even at that rate whether or not the display
+    /// waits for frames), else at the ticks' cadence (a faster display that isn't a multiple is
+    /// taken to be variable-refresh). The settings' default since 2026-11-14 (Sarah: "that's
+    /// not experimental anymore, and it can be the default now").
     #[default]
     Auto,
     /// Just in time, aligned to the refreshes: a fixed-refresh display.
@@ -103,16 +105,43 @@ impl Timing {
     }
 
     /// How ticks are placed for a display refreshing at `grid` (when its refresh times are
-    /// known), presenting immediately (tearing) when `immediate`, with ticks of `tick`.
-    pub fn policy(self, grid: Option<Grid>, immediate: bool, tick: Duration) -> Policy {
+    /// known), presenting immediately (tearing) when `immediate`, with ticks of `tick`, and
+    /// measured to be variable-refresh (`Some(true)`), fixed (`Some(false)`) or not measured.
+    pub fn policy(
+        self,
+        grid: Option<Grid>,
+        immediate: bool,
+        tick: Duration,
+        vrr: Option<bool>,
+    ) -> Policy {
         match (self, grid) {
             (Timing::Timer, _) => Policy::Timer,
             (_, None) | (Timing::Vrr, _) => Policy::Cadence,
             _ if immediate => Policy::Cadence,
             (Timing::Refresh, Some(_)) => Policy::Aligned,
-            (Timing::Auto, Some(g)) if multiple(g.period, tick) => Policy::Aligned,
+            (Timing::Auto, Some(_)) if self.waits(grid, immediate, tick, vrr) => Policy::Aligned,
             (Timing::Auto, Some(_)) => Policy::Cadence,
         }
+    }
+
+    /// Whether frames wait for a refresh to show: unless they're presented at once or the
+    /// display waits for them (variable refresh: measured so, chosen, or under `auto` unmeasured
+    /// a rate that isn't a multiple of the ticks').
+    pub fn waits(
+        self,
+        grid: Option<Grid>,
+        immediate: bool,
+        tick: Duration,
+        vrr: Option<bool>,
+    ) -> bool {
+        grid.is_some_and(|g| {
+            !immediate
+                && match self {
+                    Timing::Vrr => false,
+                    Timing::Auto => vrr.map_or_else(|| multiple(g.period, tick), |v| !v),
+                    Timing::Refresh | Timing::Timer => true,
+                }
+        })
     }
 }
 
@@ -709,12 +738,19 @@ mod tests {
     /// Runs `seconds` of ticks against a display refreshing every `refresh` (phase `phase` ms),
     /// under `policy`, each tick's frame costing what `costs` gives; mailbox: a frame shows at
     /// the first refresh after it's ready, unless a newer frame is ready for that refresh.
-    fn simulate(
+    fn simulate(policy: Policy, refresh: Duration, phase: f64, seconds: f64, costs: Costs) -> Run {
+        simulate_on(policy, refresh, phase, seconds, costs, false)
+    }
+
+    /// [`simulate`] on a variable-refresh display when `vrr`: a frame shows as soon as it's
+    /// ready (its flip latched), at most `refresh` often.
+    fn simulate_on(
         policy: Policy,
         refresh: Duration,
         phase: f64,
         seconds: f64,
         mut costs: Costs,
+        vrr: bool,
     ) -> Run {
         let t0 = Instant::now();
         let grid = Grid {
@@ -735,7 +771,11 @@ mod tests {
             let ready = start + costs.next();
             if p.render {
                 s.ready(start, p.target, ready, Some(grid));
-                let at = grid.at_or_after(ready + LATCH);
+                let at = if vrr {
+                    (ready + LATCH).max(shown.last().map_or(t0, |l| l.1 + refresh))
+                } else {
+                    grid.at_or_after(ready + LATCH)
+                };
                 if shown.last().is_some_and(|l| l.1 == at) {
                     shown.pop();
                     replaced += 1;
@@ -782,23 +822,67 @@ mod tests {
         // A multiple of the ticks' rate aligns even when the display might wait for frames.
         for hz in [60.0, 59.94, 60.05, 120.0, 119.88, 240.0] {
             assert_eq!(
-                Timing::Auto.policy(g(hz), false, TICK),
+                Timing::Auto.policy(g(hz), false, TICK, None),
                 Policy::Aligned,
                 "{hz}"
             );
         }
         for hz in [144.0, 143.998, 165.0, 75.0, 50.0] {
             assert_eq!(
-                Timing::Auto.policy(g(hz), false, TICK),
+                Timing::Auto.policy(g(hz), false, TICK, None),
                 Policy::Cadence,
                 "{hz}"
             );
-            assert_eq!(Timing::Refresh.policy(g(hz), false, TICK), Policy::Aligned);
+            assert_eq!(
+                Timing::Refresh.policy(g(hz), false, TICK, None),
+                Policy::Aligned
+            );
         }
-        assert_eq!(Timing::Refresh.policy(None, false, TICK), Policy::Cadence);
-        assert_eq!(Timing::Refresh.policy(g(60.0), true, TICK), Policy::Cadence);
-        assert_eq!(Timing::Vrr.policy(g(60.0), false, TICK), Policy::Cadence);
-        assert_eq!(Timing::Timer.policy(g(60.0), false, TICK), Policy::Timer);
+        assert_eq!(
+            Timing::Refresh.policy(None, false, TICK, None),
+            Policy::Cadence
+        );
+        assert_eq!(
+            Timing::Refresh.policy(g(60.0), true, TICK, None),
+            Policy::Cadence
+        );
+        assert_eq!(
+            Timing::Vrr.policy(g(60.0), false, TICK, None),
+            Policy::Cadence
+        );
+        assert_eq!(
+            Timing::Timer.policy(g(60.0), false, TICK, None),
+            Policy::Timer
+        );
+        // A measured answer decides `auto` whatever the rate; the explicit choices keep theirs.
+        for hz in [60.0, 144.0, 165.0, 240.0] {
+            assert_eq!(
+                Timing::Auto.policy(g(hz), false, TICK, Some(false)),
+                Policy::Aligned,
+                "{hz} Hz measured fixed"
+            );
+            assert_eq!(
+                Timing::Auto.policy(g(hz), false, TICK, Some(true)),
+                Policy::Cadence,
+                "{hz} Hz measured variable"
+            );
+            assert!(Timing::Auto.waits(g(hz), false, TICK, Some(false)));
+            assert!(!Timing::Auto.waits(g(hz), false, TICK, Some(true)));
+            assert_eq!(
+                Timing::Refresh.policy(g(hz), false, TICK, Some(true)),
+                Policy::Aligned
+            );
+            assert_eq!(
+                Timing::Vrr.policy(g(hz), false, TICK, Some(false)),
+                Policy::Cadence
+            );
+        }
+        assert_eq!(
+            Timing::Auto.policy(g(144.0), true, TICK, Some(false)),
+            Policy::Cadence,
+            "presenting at once never aligns"
+        );
+        assert!(!Timing::Auto.waits(None, false, TICK, Some(false)));
     }
 
     #[test]
@@ -987,6 +1071,60 @@ mod tests {
                 assert!(
                     jm < tm,
                     "{hz} Hz {name}: aligned {jm:.2} ms, timer {tm:.2} ms"
+                );
+            }
+        }
+    }
+
+    /// The presentation feedback's times from simulated displays decide `auto`: frames shown on
+    /// a fixed display's refreshes measure fixed, and `auto` then aligns even at 144 Hz, which
+    /// isn't a multiple of the ticks' rate, cutting input to refresh against the ticks' cadence;
+    /// frames shown as they come measure variable, and `auto` runs at the cadence even at 60 Hz,
+    /// where unmeasured it would align.
+    #[test]
+    fn measured_displays_choose_auto_s_policy() {
+        let quiet = || Costs::new(4.0, 1.5, 0, 0.0);
+        let busy = || Costs::new(7.5, 4.0, 50, 6.0);
+        for (hz, vrr, name, costs) in [
+            (60.0, false, "quiet", &quiet as &dyn Fn() -> Costs),
+            (120.0, false, "quiet", &quiet),
+            (144.0, false, "quiet", &quiet),
+            (144.0, false, "busy", &busy),
+            (144.0, true, "quiet", &quiet),
+            (60.0, true, "busy", &busy),
+            (120.0, true, "busy", &busy),
+        ] {
+            let refresh = Duration::from_secs_f64(1.0 / hz);
+            // Measured under the policy `auto` starts with before an answer.
+            let grid = Some(Grid {
+                phase: Instant::now(),
+                period: refresh,
+            });
+            let start = Timing::Auto.policy(grid, false, TICK, None);
+            let r = simulate_on(start, refresh, 2.3, 10.0, costs(), vrr);
+            let mut v = crate::feedback::Vrr::default();
+            v.set_period(Some(refresh));
+            for (_, at) in &r.shown {
+                v.add(*at);
+            }
+            let what = format!("{hz} Hz, vrr {vrr}, {name}: spread {:?}", v.spread());
+            assert_eq!(v.answer(), Some(vrr), "{what}");
+            let chosen = Timing::Auto.policy(grid, false, TICK, v.answer());
+            assert_eq!(
+                chosen,
+                if vrr {
+                    Policy::Cadence
+                } else {
+                    Policy::Aligned
+                },
+                "{what}"
+            );
+            if !vrr && name == "quiet" {
+                let aligned = mean_latency(&simulate(Policy::Aligned, refresh, 2.3, 20.0, costs()));
+                let cadence = mean_latency(&simulate(Policy::Cadence, refresh, 2.3, 20.0, costs()));
+                assert!(
+                    aligned < cadence,
+                    "{what}: aligned {aligned:.2} ms, cadence {cadence:.2} ms"
                 );
             }
         }
