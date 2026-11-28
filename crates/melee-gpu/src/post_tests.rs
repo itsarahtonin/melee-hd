@@ -95,7 +95,7 @@ fn supersampling_averages_the_texels_under_each_pixel() {
             .map(|p| (i32::from(p[0]) - expected).abs())
             .max()
             .unwrap();
-        assert!(worst <= 1, "{factor}x: a pixel {worst} from {expected}");
+        assert!(worst <= 1, "{factor}x: a pixel {worst} off {expected}");
     }
 }
 
