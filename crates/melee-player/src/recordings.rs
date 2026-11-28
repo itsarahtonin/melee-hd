@@ -270,9 +270,11 @@ fn date_of_name(name: &str) -> Option<String> {
 /// Windows' file attributes that say a file's data is in the cloud, not on this machine:
 /// `FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS` (OneDrive's files on demand), `..._RECALL_ON_OPEN`
 /// and `..._OFFLINE`. Reading such a file downloads it.
+#[cfg_attr(not(windows), allow(dead_code))]
 const CLOUD_ATTRIBUTES: u32 = 0x0040_0000 | 0x0004_0000 | 0x0000_1000;
 
 /// Whether a file with these attributes is a cloud placeholder.
+#[cfg_attr(not(windows), allow(dead_code))]
 fn is_cloud(attributes: u32) -> bool {
     attributes & CLOUD_ATTRIBUTES != 0
 }
