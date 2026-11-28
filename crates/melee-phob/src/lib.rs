@@ -31,6 +31,13 @@
 //! extras (ESS), and the raw-output mode, which an uncalibrated stick here replaces with the
 //! controller's own values ([`Processor`]).
 
+// The port keeps upstream's loops and tests as they're written, to be read beside it.
+#![allow(
+    clippy::needless_range_loop,
+    clippy::manual_range_contains,
+    clippy::manual_is_multiple_of
+)]
+
 mod c;
 pub mod calibrate;
 pub mod curve_fit;

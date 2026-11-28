@@ -87,6 +87,7 @@ mod paced;
 mod paced_tests;
 mod pacing;
 mod perf;
+mod phob_ui;
 mod pipelines;
 mod power;
 #[cfg(test)]
@@ -3852,6 +3853,14 @@ fn run(args: Args) -> ExitCode {
         handoff: handoff::Handoff::default(),
         args,
     };
+    // PhobGCC's processing on the adapter ports it's on for, whether or not the panel shows.
+    match &mut app.front {
+        Some(f) => {
+            f.panel.phob.apply(app.inputs.adapter.as_deref());
+            f.panel.phob.adapter = app.inputs.adapter.clone();
+        }
+        None => phob_ui::PhobPanel::default().apply(app.inputs.adapter.as_deref()),
+    }
     if let Some(path) = &app.args.latency_log {
         match latency::Log::create(path) {
             Ok(log) => app.latency = Some(log),

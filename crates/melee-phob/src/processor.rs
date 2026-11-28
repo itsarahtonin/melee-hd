@@ -250,7 +250,7 @@ impl Processor {
         let pressed = hw & !self.held;
         self.held = hw;
 
-        let out = if let Some(stick) = self.cal.as_ref().map(|c| c.stick) {
+        if let Some(stick) = self.cal.as_ref().map(|c| c.stick) {
             let (cal, p) = self.cal_and_params();
             let step = cal.as_ref().map_or(-1, |c| c.step);
             if let Some(cal) = cal {
@@ -312,8 +312,7 @@ impl Processor {
                 sticks,
                 triggers,
             }
-        };
-        out
+        }
     }
 }
 

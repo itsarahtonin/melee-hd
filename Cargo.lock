@@ -1642,6 +1642,7 @@ name = "melee-input"
 version = "0.1.1"
 dependencies = [
  "gilrs",
+ "melee-phob",
  "melee-sim",
  "nusb",
 ]
@@ -1685,6 +1686,7 @@ dependencies = [
  "melee-gx",
  "melee-input",
  "melee-local-data",
+ "melee-phob",
  "melee-render",
  "melee-save",
  "melee-sim",

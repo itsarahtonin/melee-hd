@@ -544,7 +544,7 @@ mod oracle {
     fn matches_upstream() {
         // Upstream keeps its state in globals and statics, so one test runs every part, the
         // pipeline first while the sticks are still uncalibrated as at power-on.
-        let mut r = Rng(0x5eed_0f_9c0b);
+        let mut r = Rng(0x5eed_f09c_0b00);
         pipeline(&mut r);
         pure_functions(&mut r);
         gains(&mut r);

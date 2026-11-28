@@ -646,11 +646,11 @@ pub(crate) mod tests {
     #[test]
     fn cardinal_snapping_truncates_as_the_rp2040_build() {
         // An identity calibration: one region covering everything.
-        let mut p = StickParams::default();
-        for a in &mut p.affine_coeffs {
-            *a = [1.0, 0.0, 0.0, 1.0];
-        }
-        p.boundary_angles = [-4.0; NOTCHES];
+        let p = StickParams {
+            affine_coeffs: [[1.0, 0.0, 0.0, 1.0]; NOTCHES],
+            boundary_angles: [-4.0; NOTCHES],
+            ..StickParams::default()
+        };
         let s = Settings::default();
         let r = |x, y| notch_remap(x, y, &p, -1, &s, WhichStick::A);
         assert_eq!(r(6.9, 85.0), (0.0, 85.0));

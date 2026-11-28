@@ -543,6 +543,8 @@ pub struct Panel {
     /// The ruleset Melee runs now (the setting's takes effect at the next start): what the Save
     /// and Recording sections say.
     pub running: Ruleset,
+    /// The adapter ports' PhobGCC sections.
+    pub phob: crate::phob_ui::PhobPanel,
 }
 
 impl Panel {
@@ -565,6 +567,7 @@ impl Panel {
             save_line: String::new(),
             unlocked: None,
             disc,
+            phob: Default::default(),
         };
         p.look_at_save();
         p
@@ -872,6 +875,16 @@ impl Panel {
                 ui.end_row();
             });
         self.show_audio(ui);
+        // m7-phob: moves to the Controllers tab (task 1), which calls `phob.show` under each
+        // adapter port.
+        section(ui, "Controllers");
+        let adapter = self.phob.adapter.clone();
+        for n in 0..4 {
+            egui::CollapsingHeader::new(format!("GameCube adapter, port {}", n + 1))
+                .id_salt(format!("phob-port-{n}"))
+                .default_open(n == 0)
+                .show(ui, |ui| self.phob.show(ui, n, adapter.as_deref()));
+        }
         let s = &mut self.settings;
         section(ui, "Game");
         egui::Grid::new("game")
