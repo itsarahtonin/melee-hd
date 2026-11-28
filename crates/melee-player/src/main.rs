@@ -1740,11 +1740,16 @@ impl App {
             {
                 session.recycle(old);
             }
-            // The prediction is the first frame's to make, beside it at t = 0 ([`paced`]): the
-            // controllers the next tick will see if they're known (an added delay has read
-            // them), else these held.
+            // The next tick predicted with the controllers it will see if they're known (an
+            // added delay has read them), else these held: now, in the tick's time, unless the
+            // last tick's first frame was at t = 0, beside which it runs ([`paced`]).
             if self.mode == pacing::Mode::Extrapolate {
                 self.paced.will_predict(self.delay.next().unwrap_or(pads));
+                if !self.paced.first_at_zero() {
+                    let mut paced = std::mem::take(&mut self.paced);
+                    self.predict(&mut paced);
+                    self.paced = paced;
+                }
             }
             self.jit.tick_done(start, Instant::now(), plan.target);
         } else if long && !f.draws.is_empty() {
@@ -1880,8 +1885,8 @@ impl App {
         });
     }
 
-    /// With Extrapolate, a frame at t > 0 that finds the latest tick's prediction still to
-    /// make: makes it now, before the frame ([`paced`]).
+    /// With Extrapolate, the latest tick's prediction, if it's still to make: after the tick, or
+    /// before a frame at t > 0 ([`paced`]).
     fn predict(&mut self, paced: &mut paced::Paced) {
         let session = self.session.as_ref().expect("a match");
         let made = paced.predict(|p, next| session.predict(p, next));
@@ -1967,6 +1972,9 @@ impl App {
                 .frame(self.mode, t)
                 .map(|(draws, blend)| self.draw_frame(draws, now, Some(blend)))
         };
+        if drawn.is_some() {
+            paced.drew(t);
+        }
         self.paced = paced;
         if drawn.is_some() {
             self.stats.frame(now.elapsed());
