@@ -1,0 +1,13 @@
+[package]
+name = "melee-phob"
+description = "PhobGCC's stick and trigger processing for stock GameCube controllers, ported from PhobGCC-SW"
+version.workspace = true
+edition.workspace = true
+# Ported from PhobGCC-SW, whose license is GPL version 3 with no "or later": this crate alone is
+# GPL-3.0-only, and the rest of melee-hd (GPL-3.0-or-later) only calls into it.
+license = "GPL-3.0-only"
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
