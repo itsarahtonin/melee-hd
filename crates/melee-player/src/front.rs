@@ -113,6 +113,9 @@ pub struct Settings {
     /// The Controllers tab's: the ports chosen and the bindings changed (`port` and `bindings`
     /// lines, [`melee_input::Config::save`]).
     pub controllers: melee_input::Config,
+    /// Asks GitHub once a day whether a newer release exists, in release builds
+    /// ([`crate::update`]; design call 11 of milestone 7: on by default).
+    pub update_check: bool,
 }
 
 /// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
@@ -274,6 +277,7 @@ impl Default for Settings {
             recordings: String::new(),
             ruleset: DEFAULT_RULESET,
             controllers: melee_input::Config::default(),
+            update_check: true,
         }
     }
 }
@@ -322,7 +326,8 @@ impl Settings {
             self.recordings,
             ruleset_key(self.ruleset),
             if self.fast_renderer { "fast" } else { "exact" }
-        ) + &self.controllers.save()
+        ) + &format!("update-check = {}\n", on(self.update_check))
+            + &self.controllers.save()
     }
 
     /// How the sound's output device is opened.
@@ -446,6 +451,11 @@ impl Settings {
                     }
                 }
                 "recordings" => self.recordings = v.to_owned(),
+                "update-check" => {
+                    if let Some(b) = on(v) {
+                        self.update_check = b;
+                    }
+                }
                 "ruleset" if !given.ruleset => {
                     if let Some(r) = parse_ruleset(v) {
                         self.ruleset = r;
@@ -583,6 +593,8 @@ pub struct Panel {
     pub controllers: crate::controllers::Controllers,
     /// The adapter ports' PhobGCC sections.
     pub phob: crate::phob_ui::PhobPanel,
+    /// A newer release, once the update check found one ([`crate::update::start`]).
+    pub update: crate::update::Notice,
 }
 
 impl Panel {
@@ -607,6 +619,7 @@ impl Panel {
             disc,
             controllers: Default::default(),
             phob: Default::default(),
+            update: Default::default(),
         };
         p.look_at_save();
         p
@@ -660,6 +673,7 @@ impl Panel {
                 ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
                 ui.vertical(|ui| {
                     ui.set_max_width(width);
+                    self.show_update(ui);
                     // A stop shows whichever tab is open.
                     if let Some(a) = self.show_stop(ui) {
                         action = Some(a);
@@ -738,6 +752,20 @@ impl Panel {
             ui.add_space(16.0);
         });
         action
+    }
+
+    /// A newer release's line, over whichever tab is open, while the setting is on.
+    fn show_update(&self, ui: &mut egui::Ui) {
+        let Some(release) = self.update.get().filter(|_| self.settings.update_check) else {
+            return;
+        };
+        ui.horizontal_wrapped(|ui| {
+            ui.label(release.notice());
+            if ui.link(crate::update::OPEN_RELEASE).clicked() {
+                crate::update::open(&release.page());
+            }
+        });
+        ui.add_space(8.0);
     }
 
     /// When Melee stopped: what happened in plain words, what stopped it, and Report a bug.
@@ -1063,6 +1091,9 @@ impl Panel {
         if ui.button("Change disc\u{2026}").clicked() {
             action = Some(Action::ChangeDisc);
         }
+        section(ui, "Updates");
+        ui.checkbox(&mut self.settings.update_check, crate::update::CHECK_LABEL);
+        ui.weak(crate::update::CHECK_HELP);
         action
     }
 }
@@ -1193,6 +1224,7 @@ mod tests {
             recordings: "D:/Slippi".to_owned(),
             ruleset: Ruleset::Slippi,
             controllers: picked_controllers(),
+            update_check: false,
         }
     }
 
@@ -1310,6 +1342,24 @@ mod tests {
         let mut s = Settings::default();
         s.restore("msaa = 4\n", &Given::default());
         assert!(s.fast_renderer);
+    }
+
+    /// The update check is on by default (design call 11), and a file kept before it existed
+    /// leaves it on; the file keeps it off.
+    #[test]
+    fn the_update_check_is_on_by_default() {
+        assert!(Settings::default().update_check);
+        let mut s = Settings::default();
+        s.restore(
+            "renderer = exact\nsettings-version = 2\n",
+            &Given::default(),
+        );
+        assert!(s.update_check);
+        s.restore("update-check = off\n", &Given::default());
+        assert!(!s.update_check);
+        assert!(s.save().contains("update-check = off\n"));
+        s.restore("update-check = on\n", &Given::default());
+        assert!(s.update_check);
     }
 
     /// High refresh and just-in-time ticks are on by default; an older file's Interpolate reads

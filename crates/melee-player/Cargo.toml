@@ -37,6 +37,8 @@ flate2 = "1"
 # The disc picker and the error boxes; Common Controls 6 for their own button labels, which
 # build.rs's manifest asks for.
 rfd = { version = "0.17", features = ["common-controls-v6"] }
+# The update notice's one HTTPS request (update.rs): rustls with Mozilla's roots, no gzip.
+ureq = { version = "3.5.2", default-features = false, features = ["rustls"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Performance", "Win32_System_SystemInformation", "Win32_System_Threading"] }
