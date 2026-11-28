@@ -323,6 +323,33 @@ fn xinput_reports_decode_to_their_bytes() {
     }
 }
 
+/// HayBox's Select and Home, which its GameCube backend sends as D-pad left and right, from
+/// XInput's Back and guide buttons (its Melee mode presses neither; other modes do).
+#[test]
+fn xinput_select_and_home() {
+    let rest = xinput(&Output::default(), 32767.0);
+    for (x, bit) in [
+        (XInput { back: true, ..rest }, LEFT),
+        (
+            XInput {
+                guide: true,
+                ..rest
+            },
+            RIGHT,
+        ),
+        (
+            XInput {
+                dpad: [true, false, false, false],
+                ..rest
+            },
+            UP,
+        ),
+    ] {
+        assert_eq!(x.haybox_status().button, bit);
+    }
+    assert_eq!(rest.haybox_status().button, 0);
+}
+
 /// Every byte each of the report's values can hold reads back as itself, not only the Melee
 /// mode's: the sticks, the triggers, both systems.
 #[test]

@@ -133,7 +133,7 @@ impl Controllers {
                 .filter(|s| !before.contains(s))
                 .cloned()
                 .collect();
-            if c.pressed.is_none() && !c.boxed {
+            if c.pressed.is_none() {
                 c.pressed = bindings::pick(Target::ALL[c.at], &new);
             }
         }

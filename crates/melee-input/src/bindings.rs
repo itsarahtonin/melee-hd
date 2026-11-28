@@ -862,13 +862,19 @@ mod tests {
     fn exact_gamepads_play_their_bytes() {
         use gilrs::{Axis, Button};
         let value = |v: u8| (f32::from(v) * 257.0 + 1.0) / 65536.0 * 2.0 - 1.0;
+        // A trigger's byte as Windows Gaming Input and gilrs scale it (`t / 255` times
+        // `i32::MAX`, then over 0 to `i32::MAX`), which lands just short of `t / 255`.
+        let travel = |t: u8| {
+            let val = (f64::from(t) / 255.0 * f64::from(i32::MAX)) as i32;
+            (val as f32 / i32::MAX as f32).clamp(0.0, 1.0)
+        };
         let b = Bindings::gamepad();
         let mut moved = 0;
         for v in 0..=255u8 {
             let gp = Fake {
                 values: vec![
-                    (Button::LeftTrigger2, f32::from(v) / 255.0),
-                    (Button::RightTrigger2, f32::from(255 - v) / 255.0),
+                    (Button::LeftTrigger2, travel(v)),
+                    (Button::RightTrigger2, travel(255 - v)),
                 ],
                 axes: vec![
                     (Axis::LeftStickX, value(v)),
