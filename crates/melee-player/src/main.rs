@@ -120,6 +120,7 @@ mod sound;
 mod state_only_tests;
 mod timing;
 mod ui;
+mod update;
 
 use std::collections::VecDeque;
 use std::process::ExitCode;
@@ -3856,8 +3857,11 @@ fn run(args: Args) -> ExitCode {
     // and its power-on in the background once the window is up.
     let front = args.front.then(|| {
         let settings = settings_of(&args);
+        let mut panel = front::Panel::new(settings, args.disc.clone());
+        // Once a day, in release builds, on a thread of its own (`update`).
+        panel.update = update::start(panel.settings.update_check);
         Front {
-            panel: front::Panel::new(settings, args.disc.clone()),
+            panel,
             window: None,
         }
     });
