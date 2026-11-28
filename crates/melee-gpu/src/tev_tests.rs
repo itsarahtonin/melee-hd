@@ -54,7 +54,7 @@ const SIZES: [(u32, u32); 8] = [
 ];
 
 /// Random textures, the larger with mip levels.
-fn textures(r: &mut Renderer, rng: &mut Rng) -> ([u32; 8], [u32; 8]) {
+pub(crate) fn textures(r: &mut Renderer, rng: &mut Rng) -> ([u32; 8], [u32; 8]) {
     let mut ids = [0; 8];
     let mut levels = [1; 8];
     for (map, &(w, h)) in SIZES.iter().enumerate() {
@@ -214,7 +214,7 @@ pub(crate) fn read_depth(r: &Renderer) -> Vec<u8> {
 
 /// Draws the quad with the state in `mode` (uber or specialized) on a cleared EFB, and reads
 /// back its color and depth.
-fn draw(
+pub(crate) fn draw(
     r: &mut Renderer,
     s: &State,
     vs: &[GpuVertex],

@@ -9,6 +9,8 @@
 //! XFB's YUV encoding as Dolphin's software renderer makes it.
 
 #[cfg(test)]
+mod anisotropy_tests;
+#[cfg(test)]
 mod clear_tests;
 mod copy;
 #[cfg(test)]
@@ -29,6 +31,9 @@ mod material_tests;
 pub mod mesh;
 #[cfg(test)]
 mod mesh_tests;
+pub mod post;
+#[cfg(test)]
+mod post_tests;
 #[cfg(test)]
 mod scaled_copy_tests;
 mod submit;
@@ -53,6 +58,7 @@ pub use thread::Threaded;
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -136,6 +142,55 @@ struct Uniforms {
     fog: [f32; 4],
     levels: [[u32; 4]; 2],
     mode: [u32; 4],
+    /// The player's texture filtering: x, [`Anisotropy`]'s most samples (0 or 1 for none).
+    filtering: [u32; 4],
+}
+
+/// Anisotropic filtering, the player's Texture filtering (off by default: it changes the
+/// frames from the console's). Where a texture GX filters linearly as it shrinks is seen at an
+/// angle, its footprint on the texture is long and thin; GX takes its level of detail from the
+/// footprint's longest side, which blurs it across the short one. With this, gx.wgsl takes up to
+/// this many of GX's own samples along the long side at the level of detail of the footprint
+/// over their count, and averages them. A footprint as wide as it's long, and every texture GX
+/// samples nearest, is sampled as GX does.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct Anisotropy(u32);
+
+impl Anisotropy {
+    /// GX's own sampling.
+    pub const OFF: Anisotropy = Anisotropy(1);
+    /// The choices: off, then 2, 4, 8 and 16 samples.
+    pub const CHOICES: [Anisotropy; 5] = [
+        Anisotropy(1),
+        Anisotropy(2),
+        Anisotropy(4),
+        Anisotropy(8),
+        Anisotropy(16),
+    ];
+
+    /// At most `samples` samples along a footprint: the largest choice not above it (off
+    /// below 2).
+    pub fn new(samples: u32) -> Anisotropy {
+        Anisotropy::CHOICES
+            .into_iter()
+            .rev()
+            .find(|a| a.0 <= samples)
+            .unwrap_or(Anisotropy::OFF)
+    }
+
+    /// The most samples taken along a footprint (1: GX's one).
+    pub fn samples(self) -> u32 {
+        self.0.max(1)
+    }
+
+    pub fn is_off(self) -> bool {
+        self.samples() < 2
+    }
+
+    /// What the shader's `filtering.x` holds: 0 when off, which every draw had before.
+    fn word(self) -> u32 {
+        if self.is_off() { 0 } else { self.0 }
+    }
 }
 
 /// Uniforms are bound at offsets aligned to 256 bytes.
@@ -711,6 +766,10 @@ pub struct Renderer {
     /// renderer's, and F2's and F3's, whose draws build their state from the registers.
     pub material_records: bool,
     materials: material::Materials,
+    /// Anisotropic filtering's most samples ([`Anisotropy::samples`]), which the draws' uniforms
+    /// take as they're pushed: shared, so the player sets it for a renderer on another thread
+    /// ([`Renderer::share_anisotropy`]).
+    anisotropy: Arc<AtomicU32>,
 }
 
 /// The EFB's targets at a scale and width: what a resize makes again.
@@ -1257,6 +1316,7 @@ impl Renderer {
             material_records: false,
             materials: material::Materials::default(),
             unsupported: HashMap::new(),
+            anisotropy: Arc::new(AtomicU32::new(Anisotropy::OFF.samples())),
         };
         // Texture 0: a 1x1 black texture for maps nothing samples.
         r.add_texture(1, 1, &[vec![0; 4]]);
@@ -1412,6 +1472,22 @@ impl Renderer {
     /// device). Set it before [`Renderer::warm_specialized`], which then takes what's there.
     pub fn share_specialized(&mut self, shared: Option<SharedSpecialized>) {
         self.tev.shared = shared;
+    }
+
+    /// Filters textures seen at an angle with `a` from the next draw on.
+    pub fn set_anisotropy(&mut self, a: Anisotropy) {
+        self.anisotropy.store(a.samples(), Ordering::Relaxed);
+    }
+
+    /// Takes anisotropic filtering's setting from `shared` (an [`Anisotropy::samples`]) as each
+    /// draw is pushed: the player's, which it changes for every renderer it made.
+    pub fn share_anisotropy(&mut self, shared: Arc<AtomicU32>) {
+        self.anisotropy = shared;
+    }
+
+    /// The anisotropic filtering draws take now.
+    pub fn anisotropy(&self) -> Anisotropy {
+        Anisotropy::new(self.anisotropy.load(Ordering::Relaxed))
     }
 
     /// Waits for every specialized pipeline asked for to be made, and counts the draw calls
@@ -1894,6 +1970,7 @@ impl Renderer {
         // The shader's pixel coordinates are in scaled pixels: the vertical scale, and the
         // EFB's width for the console's 640.
         u.mode[3] = self.scale | (self.width << 4);
+        u.filtering[0] = self.anisotropy().word();
         let bytes = bytemuck::bytes_of(&u);
         // The same state as the last draw's shares its uniforms, and so does the same state
         // as any draw's since the last flush.
