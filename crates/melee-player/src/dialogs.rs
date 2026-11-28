@@ -150,12 +150,16 @@ pub fn change_disc() -> Option<String> {
         .add_filter("All files", &["*"])
         .pick_file()?;
     let file = name(&path);
-    if let Err(e) = melee_data::disc::Disc::open(&path) {
-        crate::settings::error_box(&format!(
-            "melee-hd can't play {file}:\n{}",
-            crate::settings::capitalized(&crate::settings::why(&e))
-        ));
-        return None;
+    match crate::settings::playable(&path, &file) {
+        Ok(()) => {}
+        Err(None) => return None,
+        Err(Some(reason)) => {
+            crate::settings::error_box(&format!(
+                "melee-hd can't play {file}:\n{}",
+                crate::settings::capitalized(&reason)
+            ));
+            return None;
+        }
     }
     if !confirm(
         &format!(

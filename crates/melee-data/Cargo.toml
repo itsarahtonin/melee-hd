@@ -11,6 +11,8 @@ publish.workspace = true
 [dependencies]
 nod = "=2.0.0-alpha.9"
 thiserror = "2"
+# The restored NKit image's check (nod's own dependency).
+crc32fast = "1.5.2"
 # Not used here: features other crates turn on in nod's dependencies (naga's `half` turns on
 # num-traits' `libm`, egui's `ahash` zerocopy's `simd`, the checks' `zstd` zstd-sys's three),
 # on in every build, so the checks, the bench and the player all link one build of melee-data
@@ -19,6 +21,10 @@ thiserror = "2"
 num-traits = { version = "0.2.19", default-features = false, features = ["libm"] }
 zerocopy = { version = "0.8.60", default-features = false, features = ["simd"] }
 zstd-sys = { version = "2.1.0", default-features = false, features = ["legacy", "std", "zdict_builder"] }
+
+[dev-dependencies]
+# A check that skips without its data fails under MELEE_CHECKS_REQUIRE_DATA (`melee_local_data::skip!`).
+melee-local-data = { path = "../../tools/local-data" }
 
 # The same on Linux and macOS: winit's `nix` turns on libc's `extra_traits`.
 [target.'cfg(unix)'.dependencies]

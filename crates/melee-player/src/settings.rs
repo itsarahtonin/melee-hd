@@ -82,7 +82,22 @@ pub fn why(e: &DiscError) -> String {
             _ => format!("it isn't Super Smash Bros. Melee (its game ID is {game_id})."),
         },
         DiscError::Nod(_) => format!("it isn't a disc image melee-hd can read ({e})."),
+        DiscError::NKit => "it's an NKit image, which melee-hd plays once it's restored to a disc \
+                            image: choose it with Change disc\u{2026} to restore it."
+            .to_owned(),
         e => format!("{e}."),
+    }
+}
+
+/// Whether melee-hd can play the disc image at `path` (`file` its name): [`Disc::open`]'s check,
+/// and for an NKit image of Melee its restored disc, restored now if need be, asked first
+/// ([`crate::restore`]). Why not, in words for whoever picked it; none when the player said no to
+/// restoring it.
+pub fn playable(path: &Path, file: &str) -> Result<(), Option<String>> {
+    match Disc::open(path) {
+        Ok(_) => Ok(()),
+        Err(DiscError::NKit) => crate::restore::prepare(path, file),
+        Err(e) => Err(Some(why(&e))),
     }
 }
 
@@ -143,11 +158,12 @@ pub fn disc() -> Option<String> {
         .filter(|p| !p.as_os_str().is_empty());
     let mut note = String::new();
     if let Some(p) = &saved {
-        match Disc::open(p) {
-            Ok(_) => return Some(p.to_string_lossy().into_owned()),
-            Err(e) => {
+        match playable(p, &file_name(p)) {
+            Ok(()) => return Some(p.to_string_lossy().into_owned()),
+            Err(None) => {}
+            Err(Some(reason)) => {
                 let reason = if p.exists() {
-                    why(&e)
+                    reason
                 } else {
                     "the file isn't there anymore.".to_owned()
                 };
@@ -183,16 +199,17 @@ pub fn disc() -> Option<String> {
             }
             continue;
         };
-        match Disc::open(&path) {
-            Ok(_) => {
+        match playable(&path, &file_name(&path)) {
+            Ok(()) => {
                 write(DISC, &path.to_string_lossy());
                 return Some(path.to_string_lossy().into_owned());
             }
-            Err(e) => {
+            Err(None) => note.clear(),
+            Err(Some(reason)) => {
                 note = format!(
                     "melee-hd can't play {}:\n{}\n\n",
                     file_name(&path),
-                    capitalized(&why(&e))
+                    capitalized(&reason)
                 )
             }
         }

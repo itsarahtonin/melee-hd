@@ -1,9 +1,12 @@
-//! The player's Melee NTSC 1.02 disc, through nod (ISO, RVZ, CISO, GCZ and the rest).
+//! The player's Melee NTSC 1.02 disc, through nod (ISO, RVZ, CISO, GCZ and the rest), or restored
+//! from an NKit image ([`crate::nkit`]).
 
 use std::io::Read;
 use std::path::Path;
 
 use nod::common::PartitionKind;
+
+use crate::nkit::NKitError;
 use nod::read::{DiscOptions, DiscReader, PartitionOptions};
 
 /// Game ID and revision of the supported disc.
@@ -22,6 +25,10 @@ pub enum DiscError {
     InvalidFst(&'static str),
     #[error("no file at {0} on the disc")]
     FileNotFound(String),
+    /// An NKit image: its files aren't where the retail disc has them, so it's played only
+    /// restored ([`crate::nkit`]).
+    #[error("it's an NKit image")]
+    NKit,
 }
 
 /// An opened disc.
@@ -30,9 +37,30 @@ pub struct Disc {
 }
 
 impl Disc {
-    /// Opens a disc image and checks that it is Melee NTSC 1.02.
+    /// Opens a disc image and checks that it is Melee NTSC 1.02, refusing an NKit image of it
+    /// ([`DiscError::NKit`]), which nod would open as a disc of another layout.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, DiscError> {
-        let reader = DiscReader::new(path, &DiscOptions::default())?;
+        let disc = Disc::from_reader(DiscReader::new(path, &DiscOptions::default())?)?;
+        match crate::nkit::Header::read(&disc.reader) {
+            Ok(None) => Ok(disc),
+            Ok(Some(_)) | Err(NKitError::Version(_)) => Err(DiscError::NKit),
+            Err(NKitError::Io(e)) => Err(e.into()),
+            Err(e) => Err(DiscError::Io(std::io::Error::other(e))),
+        }
+    }
+
+    /// The retail disc restored from an NKit image ([`crate::nkit::Restored`]), checked as
+    /// [`Disc::open`] checks a disc. It isn't checked against the CRC32 NKit recorded:
+    /// [`crate::nkit::Restored::verify`] does that.
+    pub fn restored(nkit: crate::nkit::Restored) -> Result<Self, DiscError> {
+        let reader = nkit.into_disc().map_err(|e| match e {
+            NKitError::Nod(e) => DiscError::Nod(e),
+            e => DiscError::Io(std::io::Error::other(e)),
+        })?;
+        Disc::from_reader(reader)
+    }
+
+    fn from_reader(reader: DiscReader) -> Result<Self, DiscError> {
         let header = reader.header();
         if header.game_id_str() != GAME_ID || header.disc_version != REVISION {
             return Err(DiscError::WrongGame {

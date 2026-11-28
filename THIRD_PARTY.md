@@ -41,6 +41,10 @@ Floating-point behavior, the DSP's AX mixing and the GPU's formats and rendering
 
 [HayBox](https://github.com/JonnyHaystack/HayBox) (GPL version 3, no "or later"; by Jonathan Haylett, with the contributors its history lists): `crates/melee-phob/src/haybox.rs` is ported from its Melee mode (`src/modes/Melee20Button.cpp` and its header), the SOCD resolution of `src/core/socd.cpp` and `src/core/InputMode.cpp`, `ControllerMode::UpdateDirections`, the input and output state of `include/core/state.hpp` and the Melee mode's defaults in `HAL/pico/include/config_defaults.hpp`, at `2cffcd23` (firmware 3.1.0). It plays the keyboard's box layout. It's GPL-3.0-only, as its header says, inside the same GPL-3.0-only crate as PhobGCC's port. `crates/melee-input/src/boxes.rs` is melee-hd's own: it recognizes HayBox's USB ids and reads its DInput and XInput reports, whose formats come from HayBox's backends (`HAL/pico/src/comms/DInputBackend.cpp`, `XInputBackend.cpp`) and the MIT-licensed `TUGamepad` report it builds on; no code is taken from those.
 
+## NKit
+
+[NKit](https://github.com/Nanook/NKit) (MIT, Copyright (c) 2018 Nanook) defines the GameCube NKit image format. `crates/melee-data/src/nkit.rs` follows its reader (`NKit/Containers/NKitAsIso.cs`) at v3.2.2 (`35208957`): the header's fields, the gaps' encodings and NKit's rules for the zeros a gap starts with, so the disc restored is the one NKit's own reader restores (used under MIT; its header carries the notice). The junk between files is nod's GameCube junk generator (`nod::util::lfg`, a dependency). NKit's tool itself is in no build: its release made the test image from the disc, outside the repository.
+
 ## Aurora
 
 [Aurora](https://github.com/encounter/aurora) (MIT) is a design reference for the renderer's pipeline cache (`crates/melee-player/src/pipelines.rs`). No code is taken from it.

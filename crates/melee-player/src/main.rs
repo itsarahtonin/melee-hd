@@ -112,6 +112,7 @@ mod record_tests;
 mod recording;
 mod recordings;
 mod report;
+mod restore;
 #[cfg(test)]
 mod roster_tests;
 mod saves;
@@ -909,8 +910,8 @@ impl Session {
         feed: Option<melee_sim::game::inputs::Recording>,
         rec: Option<&std::path::Path>,
     ) -> Result<Session, String> {
-        let disc =
-            Disc::open(&args.disc).map_err(|e| format!("{}: {}", args.disc, settings::why(&e)))?;
+        let disc = Disc::open(restore::playable(&args.disc))
+            .map_err(|e| format!("{}: {}", args.disc, settings::why(&e)))?;
         let (setup, kept, feed) = match feed {
             Some(r) => {
                 let card = match &r.card {
@@ -1058,7 +1059,8 @@ impl Session {
     }
 
     fn start(a: &Args) -> Result<Session, String> {
-        let disc = Disc::open(&a.disc).map_err(|e| format!("{}: {}", a.disc, settings::why(&e)))?;
+        let disc = Disc::open(restore::playable(&a.disc))
+            .map_err(|e| format!("{}: {}", a.disc, settings::why(&e)))?;
         let (settings, replay) = match &a.replay {
             Some(path) => {
                 let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
@@ -4451,6 +4453,22 @@ fn main() -> ExitCode {
         match settings::disc() {
             Some(disc) => args.disc = disc,
             None => return ExitCode::SUCCESS,
+        }
+    } else if args.settings_shot.is_none() {
+        // An NKit image named by --disc or SSBM_DISC, restored first as a picked one is.
+        let path = std::path::Path::new(&args.disc);
+        if matches!(Disc::open(path), Err(melee_data::disc::DiscError::NKit)) {
+            let file = path
+                .file_name()
+                .map_or_else(|| args.disc.clone(), |n| n.to_string_lossy().into_owned());
+            match restore::prepare(path, &file) {
+                Ok(()) => {}
+                Err(None) => return ExitCode::SUCCESS,
+                Err(Some(why)) => {
+                    console::fatal(&format!("melee-hd can't play {}: {why}", args.disc));
+                    return ExitCode::FAILURE;
+                }
+            }
         }
     }
     // macOS runs winit's event loop on the process's first thread only, and its dialogs there.
