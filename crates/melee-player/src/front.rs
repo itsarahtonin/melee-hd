@@ -103,6 +103,8 @@ pub struct Settings {
     pub music: u32,
     pub audio_device: String,
     pub audio_exclusive: bool,
+    /// Whether a sound effect starts a mix frame (5 ms) sooner where it can (`Mixer::set_early`).
+    pub early_sfx: bool,
     /// The folder the Recordings tab lists (empty: the replays folder).
     pub recordings: String,
     /// The ruleset Melee's next power-on runs (the Game section's Ruleset): Vanilla, or Slippi's
@@ -193,6 +195,9 @@ pub const AUDIO_DEVICE_HELP: &str =
     "The default follows the system's. An unplugged device falls back to it until it's back.";
 pub const EXCLUSIVE_HELP: &str =
     "The lowest latency, but no other program's sound plays while melee-hd runs.";
+/// The Early sound effects line's help (proposed 2026-11-27, awaiting Sarah's word).
+pub const EARLY_SFX_HELP: &str =
+    "Starts each sound effect 5 ms sooner where it can. The music is unchanged.";
 /// What the panel says when Melee stops (proposed 2026-11-14, awaiting Sarah's word): where
 /// the simulation stops by name, at a place the original would crash or melee-hd can't follow.
 pub const STOP_TITLE: &str = "Melee stopped";
@@ -265,6 +270,7 @@ impl Default for Settings {
             music: 100,
             audio_device: String::new(),
             audio_exclusive: false,
+            early_sfx: true,
             recordings: String::new(),
             ruleset: DEFAULT_RULESET,
             controllers: melee_input::Config::default(),
@@ -311,7 +317,8 @@ impl Settings {
             self.audio_device,
             on(self.audio_exclusive),
         ) + &format!(
-            "recordings = {}\nruleset = {}\nrenderer = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            "early-sfx = {}\nrecordings = {}\nruleset = {}\nrenderer = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            on(self.early_sfx),
             self.recordings,
             ruleset_key(self.ruleset),
             if self.fast_renderer { "fast" } else { "exact" }
@@ -431,6 +438,11 @@ impl Settings {
                 "audio-exclusive" if !given.audio_exclusive => {
                     if let Some(b) = on(v) {
                         self.audio_exclusive = b;
+                    }
+                }
+                "early-sfx" => {
+                    if let Some(b) = on(v) {
+                        self.early_sfx = b;
                     }
                 }
                 "recordings" => self.recordings = v.to_owned(),
@@ -792,6 +804,10 @@ impl Panel {
                     ui.end_row();
                     help(ui, EXCLUSIVE_HELP);
                 }
+                ui.label("");
+                ui.checkbox(&mut s.early_sfx, "Early sound effects");
+                ui.end_row();
+                help(ui, EARLY_SFX_HELP);
             });
     }
 
@@ -1173,6 +1189,7 @@ mod tests {
             music: 60,
             audio_device: "Speakers (USB Audio)".to_owned(),
             audio_exclusive: true,
+            early_sfx: false,
             recordings: "D:/Slippi".to_owned(),
             ruleset: Ruleset::Slippi,
             controllers: picked_controllers(),
@@ -1372,7 +1389,7 @@ mod tests {
     fn an_unreadable_file_changes_nothing() {
         let mut s = Settings::default();
         s.restore(
-            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\nmusic = 101\naudio-exclusive = sometimes\n\u{0}garbage\n",
+            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\nmusic = 101\naudio-exclusive = sometimes\nearly-sfx = soon\n\u{0}garbage\n",
             &Given::default(),
         );
         assert_eq!(s, Settings::default());
@@ -1482,11 +1499,14 @@ mod tests {
     fn the_audio_settings_are_kept() {
         let mut s = Settings::default();
         assert_eq!(
-            (s.volume, s.music, s.output()),
-            (100, 100, melee_audio::OutputOptions::default())
+            (s.volume, s.music, s.early_sfx, s.output()),
+            (100, 100, true, melee_audio::OutputOptions::default())
         );
         s.restore(&picked().save(), &Given::default());
-        assert_eq!((s.volume, s.music, s.audio_exclusive), (35, 60, true));
+        assert_eq!(
+            (s.volume, s.music, s.audio_exclusive, s.early_sfx),
+            (35, 60, true, false)
+        );
         assert_eq!(s.output().device.as_deref(), Some("Speakers (USB Audio)"));
         let mut s = Settings::default();
         let given = Given {

@@ -2503,6 +2503,7 @@ impl App {
         sound::set_output(s.output());
         sound::set_volume(s.volume);
         sound::set_music(s.music);
+        sound::set_early(s.early_sfx);
         if let Some(snd) = self.session.as_ref().and_then(|s| s.sound.as_ref()) {
             snd.configure();
         }
@@ -3776,6 +3777,7 @@ fn run(args: Args) -> ExitCode {
         sound::set_output(f.panel.settings.output());
         sound::set_volume(f.panel.settings.volume);
         sound::set_music(f.panel.settings.music);
+        sound::set_early(f.panel.settings.early_sfx);
     }
     let session = if args.front {
         None
