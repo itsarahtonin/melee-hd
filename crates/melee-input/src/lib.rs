@@ -179,6 +179,15 @@ impl Inputs {
         }
         let mut connected = Vec::new();
         for (id, gp) in g.gamepads() {
+            // The adapter, where gilrs sees it (macOS's HID driver), is the adapter's to read,
+            // its controllers `DeviceId::Adapter`: never a gamepad device.
+            if gp
+                .vendor_id()
+                .zip(gp.product_id())
+                .is_some_and(|(v, p)| adapter::is_adapter(v, p))
+            {
+                continue;
+            }
             connected.push(id);
             if !self.pads.iter().any(|p| p.id == id) {
                 let uuid = gp.uuid();

@@ -3,17 +3,29 @@
 //! it attaches to the terminal's console and prints there as a console program does; with its
 //! output piped or redirected (a test reading it), it writes there. Started with neither (a
 //! double-click), its output goes to `logs/melee-hd.log` in the settings folder and fatal errors
-//! show in a message box.
+//! show in a message box. On macOS the same holds for a start from the Finder or the Dock, which
+//! give a program the null device for its output: that output goes to the log instead.
 
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 
-/// No console and no redirected output: a double-click on the release build on Windows.
+/// No console and no redirected output: a double-click on the release build on Windows, or a
+/// start from the Finder on macOS.
 static QUIET: AtomicBool = AtomicBool::new(false);
 
 /// Points the output at the parent's console, or at the log, as the start calls for.
 pub fn attach() {
     #[cfg(all(windows, not(debug_assertions)))]
     windows::attach();
+    #[cfg(target_os = "macos")]
+    mac::attach();
+}
+
+/// The log's file, its folder made: `logs/melee-hd.log` in the settings folder.
+#[cfg(any(target_os = "macos", all(windows, not(debug_assertions))))]
+fn log_file() -> std::io::Result<std::fs::File> {
+    let folder = crate::settings::folder().join("logs");
+    std::fs::create_dir_all(&folder)?;
+    std::fs::File::create(folder.join("melee-hd.log"))
 }
 
 /// Whether this run's output goes to `melee-hd.log` (no console and nothing redirected).
@@ -88,10 +100,39 @@ mod windows {
             return;
         }
         super::QUIET.store(true, super::Relaxed);
-        fill(&ids, || {
-            let folder = crate::settings::folder().join("logs");
-            std::fs::create_dir_all(&folder)?;
-            std::fs::File::create(folder.join("melee-hd.log"))
-        });
+        fill(&ids, super::log_file);
+    }
+}
+
+#[cfg(target_os = "macos")]
+mod mac {
+    use std::fs::File;
+    use std::mem::ManuallyDrop;
+    use std::os::fd::{AsRawFd, FromRawFd};
+    use std::os::unix::fs::{FileTypeExt, MetadataExt};
+
+    /// Whether descriptor `fd` is the null device, as launchd hands a program started from
+    /// the Finder or the Dock for its output.
+    fn null(fd: i32, device: u64) -> bool {
+        // SAFETY: borrowed, never closed (ManuallyDrop); a closed descriptor's metadata fails.
+        let f = ManuallyDrop::new(unsafe { File::from_raw_fd(fd) });
+        f.metadata()
+            .is_ok_and(|m| m.file_type().is_char_device() && m.rdev() == device)
+    }
+
+    pub fn attach() {
+        let Ok(device) = std::fs::metadata("/dev/null").map(|m| m.rdev()) else {
+            return;
+        };
+        let fds = [libc::STDOUT_FILENO, libc::STDERR_FILENO];
+        if !fds.iter().all(|&fd| null(fd, device)) {
+            return;
+        }
+        let Ok(log) = super::log_file() else { return };
+        super::QUIET.store(true, super::Relaxed);
+        for fd in fds {
+            // SAFETY: points the descriptor at the log's file, which stays open through it.
+            unsafe { libc::dup2(log.as_raw_fd(), fd) };
+        }
     }
 }

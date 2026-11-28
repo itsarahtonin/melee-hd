@@ -4075,14 +4075,37 @@ fn main() -> ExitCode {
             None => return ExitCode::SUCCESS,
         }
     }
-    // The window must live on the main thread on some systems, so the game gets its stack by
-    // running everything on a thread that is itself the event loop's only user.
-    let child = std::thread::Builder::new()
+    // macOS runs winit's event loop on the process's first thread only, and its dialogs there.
+    #[cfg(target_os = "macos")]
+    let done = run_on_first_thread(args);
+    // Elsewhere the game gets its stack by running everything on a thread that is itself the
+    // event loop's only user.
+    #[cfg(not(target_os = "macos"))]
+    let done = std::thread::Builder::new()
         .stack_size(GAME_STACK)
         .spawn(move || run(args))
-        .expect("the player's thread");
-    child.join().unwrap_or_else(|p| {
+        .expect("the player's thread")
+        .join();
+    done.unwrap_or_else(|p| {
         console::fatal(&format!("melee-hd stopped: {}", panic_text(&p)));
         ExitCode::FAILURE
     })
+}
+
+/// The player on macOS's first thread, where winit's event loop must run (it refuses any other
+/// there, and has no switch for it as on Windows and Linux), on the stack the linker gives that
+/// thread: build.rs asks for [`GAME_STACK`] (`-stack_size`), and `tests/mac_stack.rs` reads it
+/// back from the executable. A panic is caught as the other systems' thread join catches it.
+#[cfg(target_os = "macos")]
+fn run_on_first_thread(args: Args) -> std::thread::Result<ExitCode> {
+    // SAFETY: both only read the calling thread's attributes.
+    let stack = unsafe { libc::pthread_get_stacksize_np(libc::pthread_self()) };
+    if stack < GAME_STACK {
+        eprintln!(
+            "the first thread's stack is {} MiB, less than the game's {} MiB: a deep recursion may overflow it",
+            stack >> 20,
+            GAME_STACK >> 20
+        );
+    }
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(args)))
 }

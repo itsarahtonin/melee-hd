@@ -4,6 +4,7 @@
 //! ```text
 //! cargo run -p dist [-- [-j N] [--channel stable|dev] [--out DIR] [--shortcut] [--shortcut-dir DIR]]
 //! cargo run -p dist -- --pgo | --pgo-profile DIR | --pgo-use DIR [...]   a release's builds only
+//! cargo run -p dist -- --app | --universal [...]                          macOS: melee-hd.app
 //! ```
 //!
 //! The channel and the commit are stamped into the player (`MELEE_HD_CHANNEL` and
@@ -21,10 +22,15 @@
 //! rustc embeds (`--remap-path-prefix`, added to the rustflags in effect), so the copy carries no
 //! user name or local path.
 //!
+//! On macOS, `--app` makes the app bundle, `melee-hd.app` ([`app`]), around the build instead of
+//! copying the bare executable, and `--universal` builds it for both Apple Silicon and Intel and
+//! joins the two into one executable (`lipo`); the release workflow's macOS job uses that.
+//!
 //! A GitHub release's builds are profile-guided ([`pgo`]): `--pgo` for Windows, and for Linux
 //! `--pgo-profile` on a machine with the disc, `--pgo-use` in the release workflow. Every other
 //! build, this tool's plain one among them, is not.
 
+mod app;
 mod pgo;
 mod train;
 
@@ -43,10 +49,14 @@ struct Args {
     pgo: Option<pgo::Mode>,
     /// Plays the training set on this player, for developers changing it.
     train_with: Option<PathBuf>,
+    /// macOS: the app bundle, and whether for both architectures.
+    app: bool,
+    universal: bool,
 }
 
 fn usage() -> &'static str {
-    "usage: cargo run -p dist [-- [-j N] [--channel stable|dev] [--out DIR] [--shortcut] [--shortcut-dir DIR] [--pgo | --pgo-profile DIR | --pgo-use DIR]]
+    "usage: cargo run -p dist [-- [-j N] [--channel stable|dev] [--out DIR] [--shortcut] [--shortcut-dir DIR] [--pgo | --pgo-profile DIR | --pgo-use DIR] [--app | --universal]]
+  --app (macOS): melee-hd.app around the build, signed ad hoc; --universal: the same, for Apple Silicon and Intel in one
   --pgo: a release's build, profile-guided: it plays a training set on the disc (SSBM_DISC) and needs llvm-profdata (rustup component add llvm-tools)
   --pgo-profile DIR: only the profile, into DIR; --pgo-use DIR: the build with DIR's profile, made from this commit
   --train-with EXE: plays the training set on EXE (any build), its output in target/pgo/train-with"
@@ -98,6 +108,8 @@ fn parse_args() -> Result<Args, String> {
         shortcut: None,
         pgo: None,
         train_with: None,
+        app: false,
+        universal: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -119,6 +131,8 @@ fn parse_args() -> Result<Args, String> {
                 });
             }
             "--train-with" => a.train_with = Some(absolute(value()?.into())?),
+            "--app" => a.app = true,
+            "--universal" => (a.app, a.universal) = (true, true),
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
@@ -129,6 +143,15 @@ fn parse_args() -> Result<Args, String> {
         return Err(
             "--pgo-profile makes a profile, not a player: --out and --shortcut don't apply".into(),
         );
+    }
+    if a.app && !cfg!(target_os = "macos") {
+        return Err("--app and --universal make a macOS app bundle: run them on a Mac".into());
+    }
+    if a.app && a.shortcut.is_some() {
+        return Err("--shortcut makes a Windows shortcut, not a macOS one".into());
+    }
+    if a.universal && a.pgo.is_some() {
+        return Err("a profile is one architecture's: --universal doesn't go with --pgo".into());
     }
     if a.out.as_os_str().is_empty() {
         a.out = root().join(a.channel.out());
@@ -331,7 +354,8 @@ struct Pgo<'a> {
 }
 
 /// Builds the player (`dist` profile) with the channel and `commit` stamped and the paths
-/// remapped, into `target`; or for a PGO build into its own folder, for its `--target`, with its
+/// remapped, into `target` (for `triple` if one is named, in its folder there); for an app
+/// bundle, for its oldest macOS ([`app::MACOS_MIN`]); or for a PGO build into its own folder, for its `--target`, with its
 /// profile flag and `-v`: then the player crate's `-C metadata` is read from cargo's output, and
 /// LLVM's warning for a function whose code differs from the profile's (a hash mismatch) fails
 /// the build.
@@ -340,6 +364,7 @@ fn build(
     commit: &str,
     target: &Path,
     pgo: Option<&Pgo>,
+    triple: Option<&str>,
 ) -> Result<Option<String>, String> {
     let mut build = vec![
         "build",
@@ -356,6 +381,8 @@ fn build(
     if let Some(p) = pgo {
         dir = p.dir.display().to_string();
         build.extend(["--target", p.host, "--target-dir", &dir, "-v"]);
+    } else if let Some(t) = triple {
+        build.extend(["--target", t]);
     }
     println!(
         "cargo {} (channel {}, commit {commit}{})",
@@ -373,6 +400,9 @@ fn build(
         .env("MELEE_HD_COMMIT", commit)
         .env("CARGO_ENCODED_RUSTFLAGS", encoded_rustflags(&flags))
         .env_remove("RUSTFLAGS");
+    if a.app {
+        cmd.env("MACOSX_DEPLOYMENT_TARGET", app::MACOS_MIN);
+    }
     if pgo.is_none() {
         let status = cmd.status().map_err(|e| format!("{cargo}: {e}"))?;
         return if status.success() {
@@ -428,12 +458,29 @@ fn run(a: &Args) -> Result<(), String> {
     if let Some(mode) = &a.pgo {
         return run_pgo(a, mode, &target);
     }
-    build(a, &commit(), &target, None)?;
+    let commit = commit();
+    if a.universal {
+        let mut parts = Vec::new();
+        for t in app::UNIVERSAL {
+            build(a, &commit, &target, None, Some(t))?;
+            parts.push(target.join(t).join("dist").join("melee-hd"));
+        }
+        let joined = target.join("dist").join("melee-hd-universal");
+        app::lipo(&parts, &joined)?;
+        return finish(a, &joined);
+    }
+    build(a, &commit, &target, None, None)?;
     finish(a, &target.join("dist").join(format!("melee-hd{EXE}")))
 }
 
-/// Copies the build to `--out`, with the shortcut if asked.
+/// Copies the build to `--out`, with the shortcut if asked; or puts the app bundle there.
 fn finish(a: &Args, built: &Path) -> Result<(), String> {
+    if a.app {
+        let bundle = app::bundle(built, &a.out, env!("CARGO_PKG_VERSION"))?;
+        app::seal(&bundle)?;
+        println!("{}", bundle.display());
+        return Ok(());
+    }
     let exe = install(built, &a.out)?;
     println!("{}", exe.display());
     if let Some(dir) = &a.shortcut {
@@ -474,7 +521,7 @@ fn run_pgo(a: &Args, mode: &pgo::Mode, target: &Path) -> Result<(), String> {
                 host: &tc.host,
                 flag: format!("-Cprofile-generate={}", raw.display()),
             };
-            let metadata = build(a, &commit, target, Some(&generate))?.unwrap_or_default();
+            let metadata = build(a, &commit, target, Some(&generate), None)?.unwrap_or_default();
             let disc = disc.as_deref().expect("a mode that trains has the disc");
             let runs = train::runs(root(), &work);
             train::train(&exe_in(&gen_dir), &runs, &raw, &work, disc, true)?;
@@ -534,7 +581,7 @@ fn run_pgo(a: &Args, mode: &pgo::Mode, target: &Path) -> Result<(), String> {
         host: &tc.host,
         flag: format!("-Cprofile-use={}", profile.display()),
     };
-    let metadata = build(a, &commit, target, Some(&with))?.unwrap_or_default();
+    let metadata = build(a, &commit, target, Some(&with), None)?.unwrap_or_default();
     let this = pgo::Record {
         commit: head,
         rustc: tc.rustc,
