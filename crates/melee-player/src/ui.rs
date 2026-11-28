@@ -673,6 +673,25 @@ mod tests {
                 missed.len(),
                 focusable.len()
             );
+            // Down alone walks them all, in order, back round to the first.
+            h.focus(first);
+            let mut walked = BTreeSet::from([first.accesskit_id().0]);
+            for _ in 0..2 * focusable.len() {
+                h.press(&[Nav::Down]);
+                match h.focused() {
+                    Some(id) if id == first => break,
+                    Some(id) => walked.insert(id.accesskit_id().0),
+                    None => panic!("{name}: down lost the focus"),
+                };
+            }
+            assert_eq!(h.focused(), Some(first), "{name}: down comes back round");
+            assert!(
+                focusable.is_subset(&walked),
+                "{name}: down alone missed {:?}",
+                (focusable.difference(&walked))
+                    .map(|&id| h.describe(id))
+                    .collect::<Vec<_>>()
+            );
             eprintln!("{name}: all {} widgets reached", focusable.len());
         }
     }

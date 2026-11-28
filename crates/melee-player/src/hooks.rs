@@ -381,6 +381,16 @@ mod tests {
         assert_eq!(place(&Game::default()), Place::Elsewhere);
     }
 
+    /// The held route works below the debug ROM's level only.
+    #[test]
+    fn holding_works_below_the_debug_roms_level() {
+        let mut g = Game::default();
+        for (level, works) in [(0, true), (2, true), (3, false), (4, false)] {
+            g.gm.db_level = level;
+            assert_eq!(holding_works(&g), works, "level {level}");
+        }
+    }
+
     /// Z held through the panel isn't a new press when it closes.
     #[test]
     fn z_held_through_the_panel_asks_nothing_again() {
