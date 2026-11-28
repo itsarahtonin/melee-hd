@@ -22,7 +22,7 @@ pub const NONE: &str = "None";
 pub const REBIND: &str = "Rebind\u{2026}";
 pub const RESET: &str = "Reset to default";
 pub const PORTS: &str = "Ports";
-pub const DEVICES: &str = "Controllers";
+pub const DEVICES: &str = "Devices";
 pub const BINDINGS: &str = "Bindings";
 
 /// How long Rebind… waits for each input before skipping it.
