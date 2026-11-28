@@ -65,6 +65,8 @@ pub struct Given {
     pub debug_level: bool,
     pub audio_exclusive: bool,
     pub ruleset: bool,
+    pub no_screen_shake: bool,
+    pub pal_stock_icons: bool,
 }
 
 /// The player's settings.
@@ -72,6 +74,10 @@ pub struct Given {
 pub struct Settings {
     /// The aspect ratio frames are shown at.
     pub aspect: Aspect,
+    /// Slippi's cosmetic codes, done in the presentation (`melee_render::cosmetic`): the
+    /// camera drawn without the quakes' shake, and the PAL version's stock icons.
+    pub no_screen_shake: bool,
+    pub pal_stock_icons: bool,
     pub fullscreen: bool,
     /// The internal resolution's scale: 0 follows the window, else that many times the
     /// console's.
@@ -328,6 +334,14 @@ pub const PAD_KEYS: &str =
 pub const PAD_OPEN: &str = "Press Z on Melee's Options list, or hold Z for a second in its main menu, to open these settings with a controller.";
 pub const REPORT_HELP: &str = "Saves a zip in the settings folder with this session's recording, the log, your latest captures and your settings, and opens the folder. Nothing is sent anywhere: attach the zip to your report yourself.";
 
+/// The Display section's cosmetic toggles and their help lines (milestone 7's task 23,
+/// proposed 2026-11-28, awaiting Sarah's word).
+pub const NO_SCREEN_SHAKE: &str = "No screen shake";
+pub const NO_SCREEN_SHAKE_HELP: &str =
+    "Keeps the camera still when hits and KOs shake the screen. Gameplay is unchanged.";
+pub const PAL_STOCK_ICONS: &str = "PAL stock icons";
+pub const PAL_STOCK_ICONS_HELP: &str = "The stock icons as the PAL version draws them.";
+
 /// The Renderer setting's choices and help lines (Sarah, 2026-11-20: signed off, Fast's line
 /// with "giving high performance" for "for low-end PCs").
 fn renderer_name(fast: bool) -> &'static str {
@@ -373,6 +387,8 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             aspect: Aspect::GAME,
+            no_screen_shake: false,
+            pal_stock_icons: false,
             fullscreen: false,
             scale: 0,
             msaa: false,
@@ -449,6 +465,11 @@ impl Settings {
             ruleset_key(self.ruleset),
             if self.fast_renderer { "fast" } else { "exact" }
         ) + &format!("update-check = {}\n", on(self.update_check))
+            + &format!(
+                "no-screen-shake = {}\npal-stock-icons = {}\n",
+                on(self.no_screen_shake),
+                on(self.pal_stock_icons),
+            )
             + &self.low_spec_lines()
             + &self.controllers.save()
     }
@@ -529,6 +550,16 @@ impl Settings {
                 "aspect" if !given.aspect => {
                     if let Ok(a) = Aspect::parse(v) {
                         self.aspect = a;
+                    }
+                }
+                "no-screen-shake" if !given.no_screen_shake => {
+                    if let Some(b) = on(v) {
+                        self.no_screen_shake = b;
+                    }
+                }
+                "pal-stock-icons" if !given.pal_stock_icons => {
+                    if let Some(b) = on(v) {
+                        self.pal_stock_icons = b;
                     }
                 }
                 "fullscreen" if !given.fullscreen => {
@@ -1110,6 +1141,14 @@ impl Panel {
                     "Wider ratios show more of the stage at the sides; gameplay is unchanged.",
                 );
                 ui.label("");
+                ui.checkbox(&mut s.no_screen_shake, NO_SCREEN_SHAKE);
+                ui.end_row();
+                help(ui, NO_SCREEN_SHAKE_HELP);
+                ui.label("");
+                ui.checkbox(&mut s.pal_stock_icons, PAL_STOCK_ICONS);
+                ui.end_row();
+                help(ui, PAL_STOCK_ICONS_HELP);
+                ui.label("");
                 ui.checkbox(&mut s.fullscreen, "Fullscreen");
                 ui.end_row();
                 ui.label("");
@@ -1475,6 +1514,8 @@ mod tests {
     fn picked() -> Settings {
         Settings {
             aspect: Aspect::wide(16.0 / 9.0),
+            no_screen_shake: true,
+            pal_stock_icons: true,
             fullscreen: true,
             scale: 3,
             msaa: true,

@@ -307,10 +307,16 @@ struct Drawer {
 }
 
 impl Drawer {
-    fn new(renderer: melee_gpu::Renderer, widescreen: Option<f32>) -> Drawer {
+    fn new(
+        renderer: melee_gpu::Renderer,
+        widescreen: Option<f32>,
+        (no_screen_shake, pal_stock_icons): (bool, bool),
+    ) -> Drawer {
         let snapshots = renderer.copies_to_memory.contains(&4);
         let mut frames = Frames::new();
         frames.hsd.widescreen = widescreen;
+        frames.hsd.no_screen_shake = no_screen_shake;
+        frames.hsd.pal_stock_icons = pal_stock_icons;
         // `CHECK_THREADED=1` draws on the renderer's own threads, as the player does.
         let gpu = if std::env::var_os("CHECK_THREADED").is_some() {
             Gpu::threaded(renderer)
@@ -398,7 +404,7 @@ pub fn play(
     more: u32,
     mut each: impl FnMut(u32, Drawn) -> bool,
 ) {
-    let mut drawer = Drawer::new(renderer(), None);
+    let mut drawer = Drawer::new(renderer(), None, (false, false));
     drive(disc_path, replay_path, to, Cosmetic::default(), |t| {
         if t.n < from {
             drawer.frame(t, drawn_for(t.n, from, WARM_UP + more), None);
@@ -423,7 +429,7 @@ pub fn record(disc_path: &str, replay_path: &str, at: u32, view: View) -> (Drawn
     let mut r = renderer();
     r.resize_efb(view.scale, view.width);
     (r.xfb_on_gpu, r.xfb_readback) = (view.gpu_xfb, view.gpu_xfb);
-    let mut drawer = Drawer::new(r, view.widescreen);
+    let mut drawer = Drawer::new(r, view.widescreen, view.cosmetic);
     let cosmetic = Cosmetic {
         draw_offscreen_fighters: view.widescreen.is_some(),
     };
@@ -463,6 +469,9 @@ pub struct View {
     pub width: u32,
     pub widescreen: Option<f32>,
     pub gpu_xfb: bool,
+    /// Slippi's cosmetic codes as the player's settings turn them on: no screen shake and PAL
+    /// stock icons (`melee_render::cosmetic`).
+    pub cosmetic: (bool, bool),
 }
 
 impl View {
@@ -472,6 +481,7 @@ impl View {
         width: 640,
         widescreen: None,
         gpu_xfb: false,
+        cosmetic: (false, false),
     };
 
     /// The console's 640 by 480 times `scale`, copied to the XFB on the GPU.
@@ -481,6 +491,7 @@ impl View {
             width: 640 * scale,
             widescreen: None,
             gpu_xfb: true,
+            cosmetic: (false, false),
         }
     }
 
@@ -494,6 +505,7 @@ impl View {
             width,
             widescreen,
             gpu_xfb: true,
+            cosmetic: (false, false),
         }
     }
 }
@@ -514,7 +526,7 @@ pub fn draw_views(
             let mut r = renderer();
             r.resize_efb(v.scale, v.width);
             (r.xfb_on_gpu, r.xfb_readback) = (v.gpu_xfb, v.gpu_xfb);
-            Drawer::new(r, v.widescreen)
+            Drawer::new(r, v.widescreen, v.cosmetic)
         })
         .collect();
     let last = at.iter().copied().max().unwrap_or(0);

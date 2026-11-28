@@ -18788,7 +18788,7 @@ address,name,unit,status,where,check
 0x8035f6b4,HSD_TObjSetupVolatileTev,sysdolphin/baselib/tobj,ported,"crates/melee-render/src/hsd/texp_make.rs:117","melee-render-check: runs in the checked frames of the Fox-Fox, Fox-Marth and Fox-Sheik references, whose GX streams (registers, vertices, textures) and images are compared with ssbm-rs's draw by draw"
 0x8035f7d0,MakeColorGenTExp,sysdolphin/baselib/tobj,ported,"crates/melee-sim/src/hsd/texp/make.rs:84","melee-render-check: runs in the checked frames of the Fox-Fox, Fox-Marth and Fox-Sheik references, whose GX streams (registers, vertices, textures) and images are compared with ssbm-rs's draw by draw"
 0x803600a0,TObjMakeTExp,sysdolphin/baselib/tobj,ported,"crates/melee-sim/src/hsd/texp/make.rs:200","melee-render-check: runs in the checked frames of the Fox-Fox, Fox-Marth and Fox-Sheik references, whose GX streams (registers, vertices, textures) and images are compared with ssbm-rs's draw by draw"
-0x803606f0,HSD_TObjAssignResources,sysdolphin/baselib/tobj,ported,"crates/melee-render/src/hsd/mod.rs:269","leaf-check mobj"
+0x803606f0,HSD_TObjAssignResources,sysdolphin/baselib/tobj,ported,"crates/melee-render/src/hsd/mod.rs:301","leaf-check mobj"
 0x80360950,HSD_TObjSetup,sysdolphin/baselib/tobj,ported,"crates/melee-sim/src/hsd/tobj.rs:774","leaf-check mobj"
 0x80360c38,HSD_TGTex2Index,sysdolphin/baselib/tobj,ported,"crates/melee-sim/src/hsd/tobj.rs:798","leaf-check tobj"
 0x80360ccc,HSD_TexCoordID2TexGenSrc,sysdolphin/baselib/tobj,ported,"crates/melee-sim/src/hsd/tobj.rs:809","leaf-check tobj"

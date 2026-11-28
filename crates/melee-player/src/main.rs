@@ -3,7 +3,7 @@
 //! ```text
 //! melee-hd [--saves DIR] [--no-session-record]     boots Melee from power-on with the native save
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
-//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread]
+//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--no-screen-shake] [--pal-stock-icons] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread]
 //!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
@@ -38,7 +38,8 @@
 //!
 //! Frames are shown at the game's 73:60, pillarboxed; `--widescreen` (16:9) or `--aspect W:H`
 //! widens the drawn cameras to a wider aspect, and `--aspect 4:3` stretches the picture to 4:3
-//! ([`present::Aspect`]).
+//! ([`present::Aspect`]). `--no-screen-shake` and `--pal-stock-icons` turn on Slippi's two
+//! cosmetic codes, which the frames do (`melee_render::cosmetic`).
 //!
 //! The loop keeps latency as short as it can: each tick reads the controllers just before it
 //! runs, and the frame it renders is drawn and presented at once, on a swap chain one frame deep
@@ -236,6 +237,10 @@ struct Args {
     /// The aspect ratio frames are shown at: the game's 73:60, wider (seeing more at the
     /// sides), or 4:3 stretched.
     aspect: present::Aspect,
+    /// Slippi's cosmetic codes: the camera drawn without the quakes' shake, and the PAL
+    /// version's stock icons (`melee_render::cosmetic`).
+    no_screen_shake: bool,
+    pal_stock_icons: bool,
     /// Keeps the renderer on the game's thread instead of threads of its own.
     one_thread: bool,
     /// Samples a pixel: 4 for MSAA, 1 as the console draws.
@@ -312,7 +317,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|controllers|quick-match|recordings]]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--no-screen-shake] [--pal-stock-icons] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed fast|fast-flat|drive] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|controllers|quick-match|recordings]]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
@@ -369,6 +374,8 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         shot: None,
         resize_at: Vec::new(),
         aspect: present::Aspect::GAME,
+        no_screen_shake: false,
+        pal_stock_icons: false,
         one_thread: false,
         msaa: 1,
         // The fast renderer by default (Sarah, 2026-11-20); `--renderer exact` for the other.
@@ -530,6 +537,14 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
             "--aspect" => {
                 a.aspect = present::Aspect::parse(&value()?)?;
                 a.given.aspect = true;
+            }
+            "--no-screen-shake" => {
+                a.no_screen_shake = true;
+                a.given.no_screen_shake = true;
+            }
+            "--pal-stock-icons" => {
+                a.pal_stock_icons = true;
+                a.given.pal_stock_icons = true;
             }
             "--flicker-scan" => a.flicker_scan = true,
             "--perf-report" => a.perf_report = Some(value()?),
@@ -2178,6 +2193,10 @@ impl App {
                 msaa: self.msaa,
                 aspect: self.aspect,
                 widescreen: self.frames.hsd.widescreen,
+                cosmetic: (
+                    self.frames.hsd.no_screen_shake,
+                    self.frames.hsd.pal_stock_icons,
+                ),
                 notes: format!("{:?}", self.frames.hsd.notes),
             };
             let live = capture::Live {
@@ -2295,12 +2314,14 @@ impl App {
             fast: self.fast,
         };
         let (gpu, aspect, one_thread, dol) = (&self.gpu, self.aspect, self.one_thread, &s.dol);
+        let args = &self.args;
         let moved = self
             .handoff
             .follow(live, &mut self.frames, &mut self.renderer, shape, || {
                 let mut frames = Frames::new();
                 frames.space.load_dol(dol);
                 frames.hsd.widescreen = aspect.widescreen();
+                cosmetic_frames(&mut frames, args);
                 let r = pipelines::renderer(gpu, shape.scale, shape.msaa, aspect);
                 (frames, Some(gpu_for(r, one_thread, shape.fast)))
             });
@@ -2626,6 +2647,9 @@ impl App {
         let fast = s.fast_renderer;
         self.args.scale = s.scale;
         self.set_aspect(s.aspect);
+        self.args.no_screen_shake = s.no_screen_shake;
+        self.args.pal_stock_icons = s.pal_stock_icons;
+        cosmetic_frames(&mut self.frames, &self.args);
         self.scale = scale_for(s.scale, self.window_size, s.aspect);
         let width = s.aspect.efb_width(self.scale);
         if (msaa, fast) != (self.msaa, self.fast) {
@@ -3378,6 +3402,7 @@ fn bench_follow(
         let mut f = Frames::new();
         f.space.load_dol(&session.dol);
         f.hsd.widescreen = args.aspect.widescreen();
+        cosmetic_frames(&mut f, args);
         let mut r = pipelines::renderer(gpu, shape.scale, shape.msaa, args.aspect);
         r.xfb_readback = args.shot.is_some();
         (f, gpu_for(r, args.one_thread, shape.fast))
@@ -3426,6 +3451,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
     frames.hsd.widescreen = args.aspect.widescreen();
+    cosmetic_frames(&mut frames, args);
     present::set_aspect(args.aspect.shown);
     let rest = [melee_sim::input::pad::PadStatus::default(); 4];
     let (mut sim, mut draw, mut n) = (Duration::ZERO, Duration::ZERO, 0u32);
@@ -3617,6 +3643,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
     frames.hsd.widescreen = args.aspect.widescreen();
+    cosmetic_frames(&mut frames, args);
     present::set_aspect(args.aspect.shown);
     let rest = [melee_sim::input::pad::PadStatus::default(); 4];
     let per_tick = args.frames_per_tick;
@@ -3903,6 +3930,12 @@ fn settings_of(args: &Args) -> front::Settings {
     if g.aspect {
         s.aspect = args.aspect;
     }
+    if g.no_screen_shake {
+        s.no_screen_shake = args.no_screen_shake;
+    }
+    if g.pal_stock_icons {
+        s.pal_stock_icons = args.pal_stock_icons;
+    }
     if g.fullscreen {
         s.fullscreen = args.fullscreen;
     }
@@ -3951,9 +3984,18 @@ fn settings_of(args: &Args) -> front::Settings {
     s
 }
 
+/// Slippi's cosmetic codes the command line or the settings turned on, to the frames, which
+/// do them (`melee_render::cosmetic`).
+fn cosmetic_frames(frames: &mut Frames, args: &Args) {
+    frames.hsd.no_screen_shake = args.no_screen_shake;
+    frames.hsd.pal_stock_icons = args.pal_stock_icons;
+}
+
 /// The command line with the settings in it.
 fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.aspect = s.aspect;
+    a.no_screen_shake = s.no_screen_shake;
+    a.pal_stock_icons = s.pal_stock_icons;
     a.fullscreen = s.fullscreen;
     a.scale = s.scale;
     a.msaa = if s.msaa { 4 } else { 1 };
@@ -4075,6 +4117,7 @@ fn run(args: Args) -> ExitCode {
         frames.space.load_dol(&s.dol);
     }
     frames.hsd.widescreen = args.aspect.widescreen();
+    cosmetic_frames(&mut frames, &args);
     present::set_aspect(args.aspect.shown);
     let mut app = App {
         session,

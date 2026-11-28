@@ -30,6 +30,7 @@
 //! Every blend returns A exactly at t = 0 and B exactly at t = 1, so a frame at t = 1 is the
 //! frame Off draws, command for command.
 
+use crate::cosmetic::Unshake;
 use melee_data::archive::DataRef;
 use melee_sim::game::state::{Game, Obj};
 use melee_sim::hsd::Objects;
@@ -65,7 +66,12 @@ pub type ShapeKey = (JObjId, DObjId, PObjId);
 struct ShapeView {
     named: bool,
     view: Mtx34,
+    /// The current camera's place in [`Capture::cameras`] ([`NO_CAMERA`] before the first).
+    camera: u16,
 }
+
+/// No camera drew yet.
+const NO_CAMERA: u16 = u16::MAX;
 
 /// A joint's world matrix as A had it.
 #[derive(Clone, Copy, Default)]
@@ -122,10 +128,12 @@ pub struct Capture {
     shapes: FxHashMap<(ShapeKey, u16), ShapeView>,
     /// How many times each shape was drawn, while filling.
     drawn: FxHashMap<ShapeKey, u16>,
-    /// Each camera's views in the order the pass drew them.
-    cameras: Vec<(CObjId, CameraView)>,
-    /// Each app-SRT view named, in order, with its app-SRT's ID number.
-    app_srts: Vec<(AppSrtId, u16, Mtx34, [f32; 2])>,
+    /// Each camera's views in the order the pass drew them, with the shake no screen shake
+    /// leaves out of them (`crate::cosmetic`), kept whether or not it's on.
+    cameras: Vec<(CObjId, CameraView, Option<Unshake>)>,
+    /// Each app-SRT view named, in order, with its app-SRT's ID number and the current
+    /// camera's place in `cameras`.
+    app_srts: Vec<(AppSrtId, u16, Mtx34, [f32; 2], u16)>,
     /// The shadow textures' matrices (each shadow camera's projection onto the stage).
     shadow_tobjs: Vec<(TObjId, Mtx34)>,
     /// Whether it holds a tick.
@@ -149,12 +157,15 @@ impl Capture {
         self.shadow_tobjs.clear();
         let objs = &game.objs;
         let mut current = Mtx34::IDENTITY;
+        let mut camera = NO_CAMERA;
         for d in draws {
             match d {
                 Draw::Camera(c, i) => {
                     let v = objs.display.cameras[usize::from(*i)];
                     current = v.view_mtx;
-                    self.cameras.push((*c, v));
+                    camera = u16::try_from(self.cameras.len()).unwrap_or(NO_CAMERA);
+                    self.cameras
+                        .push((*c, v, Unshake::of(game, *c, &v.view_mtx)));
                 }
                 Draw::Shape {
                     jobj,
@@ -168,6 +179,7 @@ impl Capture {
                     let view = ShapeView {
                         named: vmtx.is_some(),
                         view: vmtx.unwrap_or(current),
+                        camera,
                     };
                     self.shapes.insert((key, *n), view);
                     *n += 1;
@@ -201,7 +213,7 @@ impl Capture {
                 }
                 Draw::AppSrt { srt, view, scale } => {
                     self.app_srts
-                        .push((*srt, objs.app_srts[*srt].idnum, *view, *scale));
+                        .push((*srt, objs.app_srts[*srt].idnum, *view, *scale, camera));
                 }
                 Draw::Particles { first, .. } => {
                     let mut cur = *first;
@@ -326,8 +338,9 @@ impl Blend<'_> {
     }
 
     /// The view the `n`th drawing of a shape draws in at t, given the view the pass named for
-    /// it in B (inside an instance joint), the current camera's as blended and as B has it.
-    /// Where both ticks drew it in the current camera, the blended camera's.
+    /// it in B (inside an instance joint), the current camera's as blended and as B has it
+    /// (as drawn: B's without its shake when `unshake`, as A's then is). Where both ticks drew
+    /// it in the current camera, the blended camera's.
     pub fn shape_view(
         &self,
         key: ShapeKey,
@@ -335,29 +348,49 @@ impl Blend<'_> {
         named: Option<Mtx34>,
         current: &Mtx34,
         current_b: &Mtx34,
+        unshake: bool,
     ) -> Mtx34 {
         match (self.from.shapes.get(&(key, n)), named) {
             (Some(a), _) if a.named || named.is_some() => {
-                moving_mtx(&a.view, &named.unwrap_or(*current_b), self.t)
+                let from = self.unshaken(a.view, a.camera, unshake);
+                moving_mtx(&from, &named.unwrap_or(*current_b), self.t)
             }
             (_, Some(b)) => b,
             _ => *current,
         }
     }
 
-    /// The `n`th view camera `c` draws in this frame (from 0), at t: none on a cut or where A
-    /// drew the camera fewer times.
-    pub fn camera(&self, c: CObjId, n: u16, b: &CameraView) -> Option<CameraView> {
-        let a = self
+    /// A view A derived from its camera at `camera` (its place in the capture's cameras), or
+    /// the camera's own, without that camera's shake when `unshake`.
+    fn unshaken(&self, view: Mtx34, camera: u16, unshake: bool) -> Mtx34 {
+        let shake = unshake
+            .then(|| self.from.cameras.get(usize::from(camera)).and_then(|c| c.2))
+            .flatten();
+        match shake {
+            Some(u) => u.derived(&view),
+            None => view,
+        }
+    }
+
+    /// The `n`th view camera `c` draws in this frame (from 0), at t, from `b` as B draws it
+    /// (without its shake when `unshake`, as A's then is): none on a cut or where A drew the
+    /// camera fewer times.
+    pub fn camera(&self, c: CObjId, n: u16, b: &CameraView, unshake: bool) -> Option<CameraView> {
+        let (_, a, shake) = self
             .from
             .cameras
             .iter()
-            .filter(|(x, _)| *x == c)
+            .filter(|(x, ..)| *x == c)
             .nth(usize::from(n))?;
-        blend_camera(&a.1, b, self.t)
+        let mut a = *a;
+        if unshake && let Some(u) = shake {
+            a.view_mtx = u.camera(&a.view_mtx);
+        }
+        blend_camera(&a, b, self.t)
     }
 
-    /// The `n`th view named for app-SRT `srt` this frame, at t.
+    /// The `n`th view named for app-SRT `srt` this frame, at t (`view` as B draws it, without
+    /// its camera's shake when `unshake`, as A's then is).
     pub fn app_srt(
         &self,
         srt: AppSrtId,
@@ -365,6 +398,7 @@ impl Blend<'_> {
         n: u16,
         view: &Mtx34,
         scale: [f32; 2],
+        unshake: bool,
     ) -> (Mtx34, [f32; 2]) {
         let a = self
             .from
@@ -373,8 +407,8 @@ impl Blend<'_> {
             .filter(|x| x.0 == srt)
             .nth(usize::from(n));
         match a {
-            Some(&(_, id, ref av, asc)) if id == idnum => (
-                moving_mtx(av, view, self.t),
+            Some(&(_, id, av, asc, camera)) if id == idnum => (
+                moving_mtx(&self.unshaken(av, camera, unshake), view, self.t),
                 [
                     lerp(asc[0], scale[0], self.t),
                     lerp(asc[1], scale[1], self.t),
@@ -1013,5 +1047,55 @@ mod tests {
         let main = game_camera(&game).expect("the game camera");
         assert!(camera_blends(&game, main, &v));
         assert!(!camera_blends(&game, hud, &v));
+    }
+
+    /// No screen shake leaves A's shake out as it leaves B's: a game camera A kept shaking
+    /// blends from its still view, and so does a view A derived from it; with the toggle off,
+    /// from A as kept.
+    #[test]
+    fn a_kept_shake_is_left_out_too() {
+        std::thread::Builder::new()
+            .stack_size(64 << 20)
+            .spawn(|| {
+                let mut game: Box<Game> = Box::default();
+                melee_sim::game::camera::create(&mut game);
+                let c = game_camera(&game).expect("the game camera");
+                let (pos, int) = (Vec3::new(0.0, 20.0, 150.0), Vec3::new(0.0, 15.0, 0.0));
+                let tr = Vec3::new(2.0, -1.5, 0.0);
+                {
+                    let parts = game.camera.raw_parts_mut();
+                    parts.cam.mode = melee_sim::game::camera::STANDARD;
+                    parts.cam.transform.position = pos;
+                    parts.cam.transform.interest = int;
+                }
+                let (eye_s, int_s) = (pos.sdk_add(tr), int.sdk_add(tr));
+                cobj::set_eye_position(&mut game.objs, c, eye_s);
+                cobj::set_interest(&mut game.objs, c, int_s);
+                let mut shaken = camera(Vec3::default(), 0.0, 30.0);
+                shaken.view_mtx = Mtx34::look_at(eye_s, cobj::NO_UP_VECTOR, int_s);
+                game.objs.display.cameras.clear();
+                game.objs.display.cameras.push(shaken);
+                let mut capture = Capture::default();
+                capture.fill(&game, &[Draw::Camera(c, 0)]);
+                let at_a = Blend {
+                    from: &capture,
+                    t: 0.0,
+                };
+                let still = Mtx34::look_at(pos, cobj::NO_UP_VECTOR, int);
+                let b = CameraView {
+                    view_mtx: still,
+                    ..shaken
+                };
+                let v = at_a.camera(c, 0, &b, true).expect("no cut");
+                assert!(close(&v.view_mtx, &still, 1e-4), "{v:?}");
+                let kept = at_a.camera(c, 0, &b, false).expect("no cut");
+                assert_eq!(kept.view_mtx, shaken.view_mtx);
+                let model = Mtx34::translation(1.0, 2.0, 3.0);
+                let derived = at_a.unshaken(shaken.view_mtx.concat(&model), 0, true);
+                assert!(close(&derived, &still.concat(&model), 1e-4));
+            })
+            .expect("the test's thread")
+            .join()
+            .unwrap();
     }
 }

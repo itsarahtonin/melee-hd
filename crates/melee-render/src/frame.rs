@@ -192,6 +192,9 @@ impl Frames {
         if blend.is_some() {
             self.hsd.motion.start();
         }
+        self.hsd.unshake = None;
+        self.hsd.camera_recorded = None;
+        self.hsd.model_fix = None;
         let Frames {
             gx,
             hsd,
@@ -347,10 +350,11 @@ impl Ctx<'_> {
     /// ([`Draw::Lights`]).
     pub fn load_lights(&mut self, n: u16) {
         let mut set = self.game.objs.display.light_sets[usize::from(n)];
-        // Lights set up in the current camera's view take its blended view.
-        if self.blend.is_some()
-            && let (Some(b), Some(v)) = (self.hsd.motion.camera_b, self.hsd.camera)
-            && set.view_mtx == b.view_mtx
+        // Lights set up in the current camera's view take its view as drawn: blended, or
+        // without the shake.
+        if (self.blend.is_some() || self.hsd.unshake.is_some())
+            && let (Some(recorded), Some(v)) = (self.hsd.camera_recorded, self.hsd.camera)
+            && set.view_mtx == recorded
         {
             set.view_mtx = v.view_mtx;
         }
@@ -381,13 +385,23 @@ impl Ctx<'_> {
         match &draws[i] {
             Draw::Camera(c, view) => {
                 let mut v = self.game.objs.display.cameras[usize::from(*view)];
+                self.hsd.camera_recorded = Some(v.view_mtx);
+                // No screen shake: the game camera without the quake's displacement.
+                self.hsd.unshake = if self.hsd.no_screen_shake {
+                    crate::cosmetic::Unshake::of(self.game, *c, &v.view_mtx)
+                } else {
+                    None
+                };
+                if let Some(u) = self.hsd.unshake {
+                    v.view_mtx = u.camera(&v.view_mtx);
+                }
                 if let Some(b) = self.blend {
                     let m = &mut self.hsd.motion;
                     let n = m.next_camera(*c);
                     m.camera_b = Some(v);
                     m.camera_blends = crate::blend::camera_blends(self.game, *c, &v);
                     if m.camera_blends
-                        && let Some(x) = b.camera(*c, n, &v)
+                        && let Some(x) = b.camera(*c, n, &v, self.hsd.no_screen_shake)
                     {
                         v = x;
                     }
@@ -437,6 +451,13 @@ impl Ctx<'_> {
                     self.particles_rendering(g);
                 }
                 self.hsd.rendering = *g;
+                // PAL stock icons: a stock row drawn as the PAL root places it.
+                self.hsd.model_fix = match *g {
+                    Some(g) if self.hsd.pal_stock_icons => {
+                        crate::cosmetic::pal_stock_row(self.game, g)
+                    }
+                    _ => None,
+                };
                 // The GObj's own fighter: the fighters' pool keeps a scene's fighters past its
                 // end (the next scene's setup makes the original's pool anew), whose GObjs the
                 // next scene's take again, so a search by GObj can find an earlier scene's.
@@ -455,12 +476,13 @@ impl Ctx<'_> {
                 1
             }
             Draw::AppSrt { srt, view, scale } => {
-                let (mut view, mut scale) = (*view, *scale);
+                let (mut view, mut scale) = (self.hsd.unshaken(view), *scale);
                 if let Some(b) = self.blend {
                     let n = self.hsd.motion.next_app_srt(*srt);
                     if self.hsd.motion.camera_blends {
                         let idnum = self.game.objs.app_srts[*srt].idnum;
-                        (view, scale) = b.app_srt(*srt, idnum, n, &view, scale);
+                        let unshake = self.hsd.no_screen_shake;
+                        (view, scale) = b.app_srt(*srt, idnum, n, &view, scale, unshake);
                     }
                 }
                 self.hsd.app_srts.insert(*srt, (view, scale));
