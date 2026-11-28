@@ -106,7 +106,7 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3) -> Option<GObjI
         return None;
     }
     let mut spawn = SpawnItem {
-        kind: ItKind::Food.id(),
+        kind: ItKind::Food,
         prev_pos: pos,
         ..Default::default()
     };

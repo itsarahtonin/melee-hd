@@ -2,6 +2,7 @@
 //! had grown, for its animation's length, with a rumble and, for the bigger ones, a quake. Din's
 //! Fire's blast's code ([`super::steeredshot`]) with its own damage, end and rumbles.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::item::article;
@@ -12,7 +13,6 @@ use crate::fpu::reg;
 use crate::game::camera::request_quake;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 use crate::vec::Vec3;
 
 pub const SPAWN: u32 = 0x802A_F940;
@@ -120,7 +120,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     );
     let s = steeredshot::blast_scale(r, gobj, &PK_FLASH_BLAST);
     let ip = item(r.game, gobj);
-    if ip.cmd_var2 == 0 && ip.hitboxes[0].hit.state != hitcapsule::DISABLED {
+    if ip.cmd_var2 == 0 && ip.hitboxes[0].hit.state != HitCapsuleState::Disabled {
         let charge = reg(steeredshot::blast_vars(r, gobj, &PK_FLASH_BLAST)
             .charge
             .get());

@@ -14,6 +14,7 @@ use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::registry::{ModeState, states};
 use crate::game::gm::{GameMode, GameScene};
+use crate::game::mirror::Narrow;
 
 /// `lbCardGame_DecideGameMode`, the override the boot mode leaves.
 pub const DECIDE_GAME_MODE: CodeRef = CodeRef(0x8001_CE78);
@@ -283,7 +284,7 @@ impl Running<'_> {
             let e = &self.game.debug_mode.results1;
             let mut d = crate::game::structs::StartMeleeData::default();
             for (p, s) in d.players.iter_mut().zip(&e.match_end.player_standings) {
-                p.ckind = s.ckind;
+                p.ckind = Narrow::from_raw(s.ckind.raw());
                 p.slot_type = s.pkind;
                 // The costume the screen's fighters take (`x3_u`'s top six bits).
                 p.color = s.flags[0] >> 2;

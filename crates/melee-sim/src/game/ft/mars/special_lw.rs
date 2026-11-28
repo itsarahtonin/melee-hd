@@ -5,6 +5,8 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
@@ -12,11 +14,10 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::co::guard::set_shield_hit;
 use super::super::motion::flags::*;
-use super::{GA_GROUND, PART_R_SHOULDER_N, addr, attr, ms, mv};
+use super::{PART_R_SHOULDER_N, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 use crate::vec::Vec3;
 
 /// What the stance keeps between the ground and the air (`ftMs_MF_SpecialLw_Coll`).
@@ -180,7 +181,7 @@ impl Running<'_> {
         let n = self.game.fighters[f.0].mv_i32(mv::LW_X0);
         if n > 0 && self.game.ft_kind(gobj) == FighterKind::Emblem {
             for i in 0..4 {
-                if self.game.fighters[f.0].hitboxes[i].state == hitcapsule::ENABLED {
+                if self.game.fighters[f.0].hitboxes[i].state == HitCapsuleState::Enabled {
                     let n = self.game.fighters[f.0].mv_i32(mv::LW_X0);
                     self.hitbox_damage(f, i, false, n as u32);
                 }
@@ -251,16 +252,16 @@ impl Running<'_> {
         }
         let third = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0)));
         self.mars_hip_wind(gobj, 120, 0.9, 0.02, third);
-        let msid = if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        let msid = if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             ms::SPECIAL_LW_HIT
         } else {
             ms::SPECIAL_AIR_LW_HIT
         };
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         if !self.game.fighters[f.0].effect_once {
-            let id = match FighterKind::from_id(self.game.ft_kind(gobj)) {
-                Some(FighterKind::Mars) => Some(1265),
-                Some(FighterKind::Emblem) => Some(1296),
+            let id = match self.game.ft_kind(gobj) {
+                FighterKind::Mars => Some(1265),
+                FighterKind::Emblem => Some(1296),
                 _ => None,
             };
             if let Some(id) = id {

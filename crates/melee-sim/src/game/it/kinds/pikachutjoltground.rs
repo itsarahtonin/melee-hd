@@ -6,6 +6,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
@@ -126,7 +127,7 @@ pub fn spawn(
     owner: GObjId,
     pos: Vec3,
     facing_dir: f32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind,
@@ -189,8 +190,8 @@ fn setup(r: &mut Running, gobj: GObjId, owner: GObjId) {
         .angle
         .set(mem(angle));
     let id = match item(r.game, gobj).kind {
-        89 | 91 => Some(0x4BD),
-        147 | 149 => Some(0x4AD),
+        ItKind::PikachuThunderJoltGround | ItKind::PichuThunderJoltGround => Some(0x4BD),
+        ItKind::KirbyPikachuThunderJoltGround | ItKind::KirbyPichuThunderJoltGround => Some(0x4AD),
         _ => None,
     };
     if let Some(id) = id {
@@ -311,7 +312,7 @@ fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     };
     let ip = item(r.game, gobj);
     let (owner, pos, kind) = (ip.owner, ip.pos, ip.kind);
-    let air = pikachutjoltair::spawn(r, owner, gobj, pos, kind + 1, facing);
+    let air = pikachutjoltair::spawn(r, owner, gobj, pos, ItKind::from_raw(kind.id() + 1), facing);
     item_mut(r.game, gobj)
         .vars
         .pikachu_jolt_ground()

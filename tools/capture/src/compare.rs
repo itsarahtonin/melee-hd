@@ -777,7 +777,7 @@ impl<'a> Comparer<'a> {
             self.compare_data(&format!("ft data {kind}"), ft.data.data_list[k], d);
             let list = self.u32(COSTUME_LISTS + 8 * kind);
             let n = if list != 0 {
-                kind_tables(kind as i32).costume_count
+                kind_tables(FighterKind::from_raw(kind as i32)).costume_count
             } else {
                 0
             };
@@ -897,7 +897,7 @@ impl<'a> Comparer<'a> {
         {
             // Past the character's bones only the last entry is written, by Samus's grapple
             // beam or Link's and Young Link's hookshots, for their tip.
-            let table = self.u32(self.u32(sym("ftPartsTable")) + 4 * fighter.kind as u32);
+            let table = self.u32(self.u32(sym("ftPartsTable")) + 4 * fighter.kind.raw() as u32);
             let n = self.u32(table + 8) as usize;
             for (i, bone) in self.game.fighter_parts[p.0].iter().enumerate() {
                 if i >= n && i != 139 {

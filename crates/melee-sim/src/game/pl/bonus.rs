@@ -3,6 +3,7 @@
 //! the distances the results screen's bonuses are scored from. Each record is a field of
 //! the stats tail ([`StatsExt`], the rest of `pl_StaleMoveTableExt_t`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::state::{Game, Running};
@@ -408,7 +409,7 @@ impl Running<'_> {
         let heavy = self.ft_holds_heavy(g);
         let game = &*self.game;
         let fp = game.fighter(g);
-        let airborne = fp.ground_or_air == super::super::ft::common::GA_AIR;
+        let airborne = fp.ground_or_air == GroundOrAir::Air;
         let (streak_bit, attack_kind) = (fp.attack_flags[2] & 0x40 != 0, fp.attack_flags[3]);
         let slope = (!airborne).then(|| reg(game.ft_ground_slope_angle(g)));
         let nudged = game.ft_is_being_nudged(g);
@@ -416,7 +417,7 @@ impl Running<'_> {
         let dosei = game.ft_holds_item_kind(g, ItKind::MrSaturn.id());
         let item = fp.item_gobj.map(|it| {
             let kind = super::super::it::item(game, it).kind;
-            match_item_kind(kind) != -1
+            match_item_kind(kind.id()) != -1
                 && super::super::it::lib26b1::use_kind(game, self.data, it) != 5
         });
         let changed = game.ft_is_altered(g);
@@ -659,8 +660,7 @@ impl Running<'_> {
                 }
             }
             0 => {
-                let grounded =
-                    self.game.fighter(g).ground_or_air == super::super::ft::common::GA_GROUND;
+                let grounded = self.game.fighter(g).ground_or_air == GroundOrAir::Ground;
                 let p = self.game.player_mut(slot);
                 if grounded {
                     add_f32(&mut p.ext.walked, abs(fp::fsubs(x, px)));

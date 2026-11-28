@@ -2,6 +2,10 @@
 //! player's position, with its attributes, collision, camera box, color and hurt capsules set
 //! up and its computer player's state; and the entry state a match's fighters start in.
 
+use crate::game::camera::CmSubjectState;
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
@@ -60,7 +64,7 @@ impl Running<'_> {
         self.init_clear(gobj);
         self.init_alt_metal(gobj);
         self.clear_hitboxes(f);
-        self.set_hurtbox_state(f, 0);
+        self.set_hurtbox_state(f, HurtCapsuleState::Enabled);
         self.on_death(gobj);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
         let (kind, level) = (
@@ -306,7 +310,7 @@ impl Running<'_> {
         fp.stamina_dead = false;
         fp.stamina_out = false;
         // `ftCo_800DEEA8`: no smash attack charging.
-        fp.smash_attrs.state = 0;
+        fp.smash_attrs.state = SmashState::None;
         fp.voice_muted = fp.rules_voice_muted;
         fp.smash_attrs.smash_since_hitbox = -1.0;
     }
@@ -443,19 +447,13 @@ impl Running<'_> {
     /// The fighter's burial timers for the stage, `ftCo_800C09B4`.
     #[doc(alias = "ftCo_800C09B4")]
     fn init_bury(&mut self, f: FighterId) {
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         let fp = &mut self.game.fighters[f.0];
         fp.bury_grkind = grkind;
         fp.bury_timer_1 = 0;
         if matches!(
-            GrKind::from_id(grkind),
-            Some(
-                GrKind::OldKongo
-                    | GrKind::Kongo
-                    | GrKind::ShrineRoute
-                    | GrKind::Pushon
-                    | GrKind::Zebes
-            )
+            grkind,
+            GrKind::OldKongo | GrKind::Kongo | GrKind::ShrineRoute | GrKind::Pushon | GrKind::Zebes
         ) {
             fp.bury_timer_2 = 0;
         }
@@ -656,7 +654,7 @@ impl Running<'_> {
         let zoom = reg(self.game.stage_info.camera_settings().cam_fixed_zoom);
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
         let cb = self.game.camera.subject_mut(b);
-        cb.state = 0;
+        cb.state = CmSubjectState::Active;
         if facing == 1.0 {
             cb.target_ext.h.x = z0;
             cb.target_ext.h.y = mem(fp::fmuls(reg(y0), zoom));
@@ -746,7 +744,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.thrown_hitbox;
         h.group = 0;
-        h.state = 1;
+        h.state = HitCapsuleState::Enabled;
         // `lbColl_80008440`.
         for v in &mut h.victims_1 {
             v.victim = Default::default();

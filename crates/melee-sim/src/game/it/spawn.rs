@@ -175,7 +175,7 @@ pub fn proc_spawn(r: &mut Running, _gobj: GObjId) {
     {
         let facing_dir = super::owner::facing_for(r.game, r.data, pos);
         let mut spawn = SpawnItem {
-            kind,
+            kind: ItKind::from_raw(kind),
             prev_pos: pos,
             pos,
             facing_dir,
@@ -364,7 +364,7 @@ pub const PROC_SPAWN: u32 = 0x8026_C88C;
 
 /// Drops an item of `kind` at `pos`, if fewer are out than allowed, `it_8026D258`.
 #[doc(alias = "it_8026D258")]
-pub fn drop_at(r: &mut Running, pos: Vec3, kind: i32) -> bool {
+pub fn drop_at(r: &mut Running, pos: Vec3, kind: ItKind) -> bool {
     if r.game.it.counts.training_items >= r.game.it.counts.training_items_limit {
         return false;
     }

@@ -326,7 +326,7 @@ pub fn spawn_straight(
         _ => {}
     }
     let mut spawn = SpawnItem {
-        kind: ItKind::ArwingLaser.id(),
+        kind: ItKind::ArwingLaser,
         pos: at,
         prev_pos: at,
         facing_dir: facing,
@@ -429,7 +429,7 @@ pub fn spawn_aimed(
         Vec3::new(f32::from_bits(1), 0.0, f32::from_bits(0x804E_E9F0))
     };
     let mut spawn = SpawnItem {
-        kind: ItKind::ArwingLaser.id(),
+        kind: ItKind::ArwingLaser,
         pos,
         prev_pos: at,
         facing_dir: 0.0,

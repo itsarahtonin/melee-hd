@@ -2,6 +2,7 @@
 //! sped by the fuel left, flying at a random angle within its attributes' range and turning
 //! along the surfaces it meets, its hitbox gone after `x4` frames and itself after `x0`.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
@@ -15,7 +16,6 @@ use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::hitcapsule;
 use crate::mp::coll::EcbShape;
 use crate::vec::Vec3;
 
@@ -127,7 +127,7 @@ pub fn spawn(
     gfx: i32,
     base_speed: i32,
     scale: i32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind,
@@ -159,7 +159,7 @@ pub fn spawn(
     let v = ip.vars.koopa_flame();
     v.pos.set(pos);
     v.base_scale.set(0.0);
-    match ItKind::of(kind) {
+    match kind {
         ItKind::BowserFlame => {
             let full_speed = r.kp_flame_max_speed(owner, &KOOPA);
             let full_size = r.kp_flame_max_size(owner, &KOOPA);
@@ -249,7 +249,7 @@ fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     let hitbox_life = attr_f32(r, gobj, attr::HITBOX_LIFETIME);
     let j = jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    if ip.hitboxes[0].hit.state != hitcapsule::DISABLED {
+    if ip.hitboxes[0].hit.state != HitCapsuleState::Disabled {
         let first = ip.hitboxes[0].hit.scale;
         let v = ip.vars.koopa_flame();
         if v.base_scale.get() == 0.0 {
@@ -275,7 +275,7 @@ fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     if v.spawned.get() == 0 {
         v.spawned.set(1);
         let gfx = v.gfx.get();
-        match ItKind::of(kind) {
+        match kind {
             ItKind::BowserFlame => {
                 ef::spawn(r, 0x4DB_i32.wrapping_add(gfx), Some(gobj), &[Arg::JObj(j)]);
             }

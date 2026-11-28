@@ -19,6 +19,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::article;
@@ -290,7 +291,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 fn on_spawn(r: &mut Running, beam: GObjId, owner: GObjId) {
     let fp = r.game.fighter(owner);
     let hanging = if fp.u[0x14] >= 4 {
-        if fp.ground_or_air == crate::game::ft::common::GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             1
         } else {
             2
@@ -689,7 +690,7 @@ fn ground_swing(r: &mut Running, f: GObjId, slot: SwingSlot) {
         .gobj_at(0x10)
         .expect("a grapple beam's fighter without it");
     let fp = r.game.fighter(f);
-    if fp.ground_or_air != crate::game::ft::common::GA_GROUND
+    if fp.ground_or_air != GroundOrAir::Ground
         || item_mut(r.game, beam).vars.samus_grapple().hanging.get() != 1
     {
         return;

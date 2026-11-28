@@ -92,7 +92,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMewtwoDisable_Logic67_SpawnMewtwoDisable")]
 pub fn spawn(r: &mut Running, fighter: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::MewtwoDisable.id(),
+        kind: ItKind::MewtwoDisable,
         ..Default::default()
     };
     spawn.prev_pos = pos;

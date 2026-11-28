@@ -1,6 +1,7 @@
 //! The hammer's head once it flies off, `melee/it/kinds/ithammerhead.c`: an item that falls,
 //! hurting what it hits, lies a while and vanishes.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{fall, ground_or_fall};
@@ -72,7 +73,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_80299C48")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, dir: Vec3, facing: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::HammerHead.id(),
+        kind: ItKind::HammerHead,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.
@@ -111,7 +112,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80299D7C")]
 pub fn fly(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air != 1 {
+    if ip.ground_or_air != GroundOrAir::Air {
         maplib::enter_air(ip);
     }
     lib26b1::enable_pickup(r.game, gobj);
@@ -147,7 +148,7 @@ pub fn idle(_: &mut Running, _: GObjId) {}
 #[doc(alias = "itHammerHead_Logic40_Dropped")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air != 1 {
+    if ip.ground_or_air != GroundOrAir::Air {
         maplib::enter_air(ip);
     }
     lib26b1::enable_pickup(r.game, gobj);

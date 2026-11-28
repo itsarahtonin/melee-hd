@@ -157,12 +157,12 @@ fn main() {
                                             .map(|(_, f)| {
                                                 format!(
                                                     "k{} ms{} ga{} ({:.1},{:.1}) x18={}",
-                                                    f.kind,
+                                                    f.kind.id(),
                                                     f.motion_id,
-                                                    f.ground_or_air,
+                                                    f.ground_or_air.raw(),
                                                     f.cur_pos.x,
                                                     f.cur_pos.y,
-                                                    f.cpu.behavior
+                                                    f.cpu.behavior.raw()
                                                 )
                                             })
                                             .collect();

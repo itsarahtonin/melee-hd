@@ -2,6 +2,7 @@
 //! straight until its life runs out or it hits a wall or ceiling, skidding along gentle
 //! slopes and glancing off steeper ones at a random angle.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::ground::{air_stay, air_touches};
@@ -13,7 +14,6 @@ use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::hitcapsule;
 use crate::math;
 use crate::vec::Vec3;
 
@@ -75,7 +75,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_80298DEC")]
 pub fn fire(r: &mut Running, owner: GObjId, pos: Vec3, charge: i32, facing: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::SuperScopeShot.id(),
+        kind: ItKind::SuperScopeShot,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.
@@ -124,7 +124,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     if ip.life_timer == life {
         let hit = &mut ip.hitboxes[0].hit;
-        if hit.state >= hitcapsule::ENABLED {
+        if hit.state.raw() >= HitCapsuleState::Enabled.raw() {
             hit.scale = mem(fp::fmuls(reg(hit.scale), reg(scale)));
         }
     }

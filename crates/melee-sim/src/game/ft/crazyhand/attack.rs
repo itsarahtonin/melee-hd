@@ -153,7 +153,7 @@ impl Running<'_> {
             to.x = mem(fp::fadds(reg(to.x), reg(super::HAND.f32(self, f, ox))));
             to.y = mem(fp::fadds(reg(to.y), reg(super::HAND.f32(self, f, oy))));
             let facing = self.game.fighters[f.0].facing_dir;
-            crazyhandbomb::spawn(self, gobj, to, from, ItKind::CrazyHandBomb.id(), facing);
+            crazyhandbomb::spawn(self, gobj, to, from, ItKind::CrazyHandBomb, facing);
             self.game.fighters[f.0].cmd_vars[i] = 0;
             self.fighter_play_sfx(f, SFX_BOMB, 0x7F, 0x40);
         }

@@ -2,6 +2,7 @@
 //! the floor and sits, sparking, while a fuse runs; it can be picked up and thrown; it explodes
 //! when its animation ends, when thrown into something, or when its collision bursts it.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{air, fall, fall_until_touch_unstick, ground_or_fall};
@@ -298,7 +299,7 @@ pub fn fuse(r: &mut Running, gobj: GObjId) {
 /// `itMarumine_UnkMotion5_Phys`: falling by its gravity in the air.
 #[doc(alias = "itMarumine_UnkMotion5_Phys")]
 pub fn phys5(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         super::gravity(r, gobj);
     }
 }
@@ -307,7 +308,7 @@ pub fn phys5(r: &mut Running, gobj: GObjId) {
 /// either way.
 #[doc(alias = "itMarumine_UnkMotion5_Coll")]
 pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         fall(r, gobj, landed_nothing);
     } else {
         ground_or_fall(r, gobj, landed_nothing);

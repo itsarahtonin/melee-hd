@@ -4,6 +4,7 @@
 //! the fighter into an image the panel shows (`lbl_8046E1B0`, `lbl_8046E3AC`), and the
 //! winners' second camera that draws them big.
 
+use crate::game::ft::CharacterKind;
 use gekko_fp as fp;
 
 use super::super::handles::CodeRef;
@@ -234,7 +235,7 @@ impl Running<'_> {
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
         super::super::gr::setup::select(self, 0, None);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::gr::setup::setup(self, grkind);
         let kept = self.take_cached_named("ItCo.usd");
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
@@ -356,7 +357,7 @@ impl Running<'_> {
             slot as u8,
             p.team,
             u8::from(me.is_teams == 1),
-            p.pkind,
+            p.pkind.raw(),
         ));
         self.game
             .objs
@@ -515,7 +516,7 @@ impl Running<'_> {
         let (a, block, _) = self.load_archive_blocks(file);
         self.player_set_demo_archive(kind, a, block);
         let g = &mut *self.game;
-        g.set_player_ckind(slot, kind);
+        g.set_player_ckind(slot, CharacterKind::from_raw(kind));
         g.set_player_costume(slot, costume);
         g.set_player_port(slot, slot);
         g.set_player_pkind(slot, PlayerKind::Demo);

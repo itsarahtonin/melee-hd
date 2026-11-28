@@ -578,7 +578,7 @@ impl Running<'_> {
         // `gm_801693BC`: a joiner's slot of a setup that has several, or a wireframe.
         let wireframe = (self.game.player_flags_bit1(slot) && self.game.gm.opponents.total > 1)
             || (CharacterKind::Boy.id()..=CharacterKind::Girl.id())
-                .contains(&self.game.player_ckind(slot));
+                .contains(&self.game.player_ckind(slot).id());
         let kind = if wireframe { 0x42C } else { 0x42B };
         let scale = self.common().f32(0x4F4);
         super::super::super::ef::spawn(

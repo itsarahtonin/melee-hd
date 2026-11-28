@@ -339,13 +339,15 @@ impl Running<'_> {
             }
             return hat;
         }
-        if (kind.wrapping_sub(FighterKind::Boy.id()) as u32) <= 1 || kind == FighterKind::Sandbag {
+        if (kind.id().wrapping_sub(FighterKind::Boy.id()) as u32) <= 1
+            || kind == FighterKind::Sandbag
+        {
             return self.game.fighter(gobj).u_i32(0xC);
         }
         if kind == FighterKind::Nana {
             return FighterKind::Popo.id();
         }
-        kind
+        kind.id()
     }
 
     /// The normal of the surface the star meets, `ftCo_800BDA74`: the floor its box lands on,
@@ -623,7 +625,7 @@ impl Running<'_> {
     /// common data's `x9C` and `xA0`).
     #[doc(alias = "ftKb_SpecialN_800F5874")]
     pub fn kb_thrown_vel(&self) -> Vec2 {
-        let d = self.game.ft.data.data_list[FighterKind::Kirby as usize]
+        let d = self.game.ft.data.data_list[FighterKind::Kirby.raw() as usize]
             .expect("Kirby's data without Kirby");
         let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
         Vec2 {

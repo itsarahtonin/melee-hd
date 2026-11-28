@@ -6,6 +6,7 @@
 //! The unit also holds the leaf's code (`It_Kind_Chicorita_Leaf`): it flies straight until its
 //! life runs out or it touches the stage.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{attr_of, change, change_state, play_sfx};
@@ -152,7 +153,7 @@ fn bone_motion(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itChicorita_UnkMotion1_Phys")]
 pub fn phys(r: &mut Running, gobj: GObjId) {
     pokemon::move_by_bone(r.game, gobj);
-    if item(r.game, gobj).ground_or_air != 1 {
+    if item(r.game, gobj).ground_or_air != GroundOrAir::Air {
         pokemon::vars(r.game, gobj).set_f32(FALL_SPEED, 0.0);
         return;
     }

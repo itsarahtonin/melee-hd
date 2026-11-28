@@ -126,7 +126,7 @@ fn grandchild(r: &Running, gobj: GObjId) -> JObjId {
 #[doc(alias = "it_802B62D0")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, smash: bool, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::SamusMissile.id(),
+        kind: ItKind::SamusMissile,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

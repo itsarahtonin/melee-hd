@@ -1,6 +1,7 @@
 //! Edges, walls and ledges (`ftCo_Ottotto.c`, `ftCo_MissFoot.c`, `ftCo_StopWall.c`,
 //! `ftCo_StopCeil.c`, `ftcliffcommon.c`, `ftCo_CliffWait.c`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef;
@@ -134,7 +135,7 @@ impl Running<'_> {
         self.game.fighters[f.0].kb_vel.y = 0.0;
         self.change_motion_state(gobj, ms::MISS_FOOT, 0, 0.0, 1.0, 0.0, None);
         self.clamp_air_drift(f);
-        if self.game.fighters[f.0].ground_or_air == super::super::common::GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             self.go_airborne(f);
         }
     }

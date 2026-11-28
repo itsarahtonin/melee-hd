@@ -291,8 +291,8 @@ impl Running<'_> {
         let mut cur = self.game.world.first_in(8);
         while let Some(g) = cur {
             let k = self.game.fighter(g).kind;
-            if k < FighterKind::MasterHand.id() {
-                mask |= 1 << k;
+            if k < FighterKind::MasterHand {
+                mask |= 1 << k.id();
             }
             cur = self.game.world.gobjs[g.0].next;
         }

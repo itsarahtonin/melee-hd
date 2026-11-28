@@ -7,9 +7,11 @@ use melee_data::archive::DataRef;
 
 use super::*;
 use crate::game::ef::QueuedId;
+use crate::game::ft::FighterKind;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets};
 use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
+use crate::game::gr::GrKind;
 use crate::game::handles::*;
 use crate::game::structs::*;
 use crate::hsd::gobj::GObjId;
@@ -17,7 +19,7 @@ use crate::hsd::jobj::JObjId;
 use crate::hsd::lobj::LObjId;
 use crate::lb::colanim::ColorOverlay;
 use crate::lb::shadow::LbShadow;
-use crate::mp::coll::CollData;
+use crate::mp::coll::{CollData, GroundOrAir};
 use crate::vec::Vec3;
 
 /// The decomp's `Fighter`.
@@ -39,7 +41,7 @@ pub struct Fighter {
     #[at(0x0)]
     pub gobj: Option<GObjId>,
     #[at(0x4)]
-    pub kind: i32,
+    pub kind: FighterKind,
     #[at(0x8)]
     #[doc(alias("x8_spawnNum"))]
     pub spawn_num: i32,
@@ -104,7 +106,7 @@ pub struct Fighter {
     #[doc(alias("xD4_unk_vel"))]
     pub frame_vel: Vec3,
     #[at(0xE0)]
-    pub ground_or_air: i32,
+    pub ground_or_air: GroundOrAir,
     #[at(0xE4)]
     #[doc(alias("xE4_ground_accel_1"))]
     pub ground_accel_1: f32,
@@ -1208,7 +1210,7 @@ pub struct Fighter {
     #[at(0x222C)]
     pub u: FighterVars,
     #[at(0x2324)]
-    pub bury_grkind: i32,
+    pub bury_grkind: GrKind,
     #[at(0x2328)]
     pub bury_timer_1: u32,
     #[at(0x232C)]
@@ -1227,7 +1229,7 @@ impl Default for Fighter {
     fn default() -> Self {
         Fighter {
             gobj: None,
-            kind: 0,
+            kind: FighterKind::Mario,
             spawn_num: 0,
             player_idx: 0,
             motion_id: 0,
@@ -1251,7 +1253,7 @@ impl Default for Fighter {
             prev_pos: Default::default(),
             pos_delta: Default::default(),
             frame_vel: Default::default(),
-            ground_or_air: 0,
+            ground_or_air: GroundOrAir::Ground,
             ground_accel_1: 0.0,
             ground_accel_2: 0.0,
             gr_vel: 0.0,
@@ -1645,7 +1647,7 @@ impl Default for Fighter {
             unused_222a_b6: false,
             unused_222a_b7: false,
             u: Default::default(),
-            bury_grkind: 0,
+            bury_grkind: GrKind::Dummy,
             bury_timer_1: 0,
             bury_timer_2: 0,
             hammer_frames: Default::default(),

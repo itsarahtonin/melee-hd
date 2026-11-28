@@ -208,6 +208,25 @@ FIELD_POINTERS = {
     "Fighter.x1A64": "Option<GObjId>",
 }
 
+# The decomp's enums a generated field holds as its `c_enum!` type rather than an integer, by
+# the enum's C name: every bit pattern still round-trips (`Other`), and the field reads,
+# compares, lays out and hashes as its integer, the comparer showing the variant's name.
+ENUM_TYPES = {
+    "CameraType": "CameraMode",
+    "CmSubjectState": "CmSubjectState",
+    "GroundOrAir": "GroundOrAir",
+    "HitCapsuleState": "HitCapsuleState",
+    "HurtCapsuleState": "HurtCapsuleState",
+    "ItemKind": "ItKind",
+}
+
+# Integer fields that hold a decomp enum the C types as `int`, by `Struct.field`: the field
+# becomes that `c_enum!` type, as `ENUM_TYPES` makes an enum's.
+FIELD_ENUMS = {
+    # `Item_HoldKinds`, which `Item::hold_kind` holds too.
+    "SpawnItem.hold_kind": "HoldKind",
+}
+
 # Arrays of words that hold pointers the C types as integers, by `Struct.field`: each word
 # becomes the handle given.
 FIELD_HANDLE_ARRAYS = {
@@ -351,13 +370,16 @@ EXTRA_USES = [
     "use crate::game::ft::second::{ActionTree, SecondTree};",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
     "use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
+    "use crate::game::it::item::HoldKind;",
+    "use crate::game::it::ItKind;",
     "use crate::game::it::link::LinkX20;",
     "use crate::game::held::Kept;",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
     "use crate::hsd::sis::TextId;",
-    "use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};",
+    "use crate::lb::hitcapsule::{HitCapsuleState, HitJObj, HitOwner, HurtCapsuleState, Victim};",
+    "use crate::game::camera::{CameraMode, CmSubjectState};",
     "use crate::game::hud::magnify::{MagnifyImage, TexBuffer};",
     "use crate::game::hud::stock::StockJObj;",
 ]
@@ -566,9 +588,12 @@ use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::{GroundUnion, GroundVars};
 use crate::game::gr::setup::{GroundX11Flags, StageCameras};
+use crate::game::camera::{CameraMode, CmSubjectState};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::handles::*;
+use crate::game::it::item::HoldKind;
+use crate::game::it::ItKind;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::game::it::link::LinkX20;
 use crate::game::held::Kept;
@@ -580,7 +605,7 @@ use crate::hsd::lobj::LObjId;
 use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
-use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
+use crate::lb::hitcapsule::{HitCapsuleState, HitJObj, HitOwner, HurtCapsuleState, Victim};
+use crate::mp::coll::{EcbSource, GroundOrAir, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;"""

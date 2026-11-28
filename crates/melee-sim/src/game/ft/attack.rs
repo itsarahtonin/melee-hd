@@ -10,13 +10,16 @@
 // NaN takes the original's branches, which the negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::ft::types::HurtHeight;
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::lb::hitcapsule::HurtCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
 use super::super::handles::FighterId;
 use super::super::pl::trick::AttackRecord;
 use super::super::state::Running;
-use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
@@ -35,9 +38,6 @@ const ELEMENT_SLASH: u32 = 3;
 const ELEMENT_CATCH: u32 = 8;
 const ELEMENT_INERT: u32 = 11;
 const ELEMENT_LIPSTICK: u32 = 15;
-
-/// `HurtCapsule_Enabled`: a hurtbox that takes hits.
-const HURT_ENABLED: i32 = 0;
 
 /// `ftCo_MS_DamageIce`.
 const MS_DAMAGE_ICE: i32 = 325;
@@ -271,14 +271,14 @@ impl Running<'_> {
             let other_ga = self.game.fighters[v.0].ground_or_air;
             for i in 0..4 {
                 let h = &self.game.fighters[me.0].hitboxes[i];
-                let can = h.state != hitcapsule::DISABLED
+                let can = h.state != HitCapsuleState::Disabled
                     && !h.phantom
                     && h.element != ELEMENT_CATCH
                     && h.element != ELEMENT_INERT
                     && h.clanks
                     && h.hits_fighters
-                    && ((h.hits_air && other_ga == GA_AIR)
-                        || (h.hits_ground && other_ga == GA_GROUND))
+                    && ((h.hits_air && other_ga == GroundOrAir::Air)
+                        || (h.hits_ground && other_ga == GroundOrAir::Ground))
                     && !hitcapsule::has_victim(h, victim(v));
                 self.game.ft.hit_logs.clank[i] = can;
                 if can {
@@ -305,11 +305,12 @@ impl Running<'_> {
     ) {
         let (mf, vf) = (&self.game.fighters[me.0], &self.game.fighters[v.0]);
         let h0 = &vf.hitboxes[j];
-        if h0.state == hitcapsule::DISABLED || h0.element == ELEMENT_CATCH || !h0.hits_fighters {
+        if h0.state == HitCapsuleState::Disabled || h0.element == ELEMENT_CATCH || !h0.hits_fighters
+        {
             return;
         }
-        if !((h0.hits_air && mf.ground_or_air == GA_AIR)
-            || (h0.hits_ground && mf.ground_or_air == GA_GROUND))
+        if !((h0.hits_air && mf.ground_or_air == GroundOrAir::Air)
+            || (h0.hits_ground && mf.ground_or_air == GroundOrAir::Ground))
         {
             return;
         }
@@ -329,8 +330,8 @@ impl Running<'_> {
         if passed
             && !phantom
             && vf.victim_gobj != Some(gobj)
-            && mf.ground_or_air == GA_GROUND
-            && vf.ground_or_air == GA_GROUND
+            && mf.ground_or_air == GroundOrAir::Ground
+            && vf.ground_or_air == GroundOrAir::Ground
             && !mf.state_flags.holds_grab
             && element != ELEMENT_INERT
             && h0.clanks
@@ -472,7 +473,7 @@ impl Running<'_> {
         let group = self.game.fighters[f.0].hitboxes[i].group;
         for k in 0..4 {
             let cur = &mut self.game.fighters[f.0].hitboxes[k];
-            if cur.state != hitcapsule::DISABLED
+            if cur.state != HitCapsuleState::Disabled
                 && cur.group == group
                 && hitcapsule::add_victim(cur, kind, v)
                 && clear
@@ -487,7 +488,7 @@ impl Running<'_> {
         let group = self.game.fighters[f.0].hitboxes[i].group;
         for k in 0..4 {
             let cur = &mut self.game.fighters[f.0].hitboxes[k];
-            if cur.state != hitcapsule::DISABLED && cur.group == group {
+            if cur.state != HitCapsuleState::Disabled && cur.group == group {
                 hitcapsule::add_victim2(cur, kind, v);
             }
         }
@@ -501,7 +502,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         if dmg > fp.dmg.int_value {
             fp.dmg.int_value = dmg;
-            if fp.hitboxes[i].rebounds && fp.ground_or_air == GA_GROUND {
+            if fp.hitboxes[i].rebounds && fp.ground_or_air == GroundOrAir::Ground {
                 fp.dmg.clank_damage = mem(fp::fmadds(fp::frsp(f64::from(dmg)), reg(mul), reg(add)));
                 // Toward the other (the original compares either way round, which agrees
                 // for NaN too).
@@ -740,7 +741,7 @@ impl Running<'_> {
         let vf = &mut self.game.fighters[v.0];
         if dmg > vf.dmg.max_shield_damage {
             vf.dmg.max_shield_damage = dmg;
-            if vf.ground_or_air == GA_GROUND {
+            if vf.ground_or_air == GroundOrAir::Ground {
                 vf.dmg.shield_push = mem(fp::fmuls(reg(light), fp::frsp(f64::from(dmg))));
                 vf.dmg.shield_push_dir = if reg(my_x) > reg(vf.cur_pos.x) {
                     1.0
@@ -837,7 +838,7 @@ impl Running<'_> {
             if mf.hit_status == 0
                 && mf.timed_hit_status == 0
                 && !mf.starman
-                && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
+                && mf.hurt_capsules[n].capsule.state == HurtCapsuleState::Enabled
             {
                 let h0 = &self.game.fighters[v.0].hitboxes[j];
                 let count = h0.whole_damage;
@@ -854,7 +855,7 @@ impl Running<'_> {
                 let a = self.attacker(v);
                 let af = &self.game.fighters[a.0];
                 let entry = LogEntry {
-                    kind: af.kind,
+                    kind: af.kind.id(),
                     gobj: af.gobj,
                     hit: LoggedHit::Fighter {
                         fighter: v,
@@ -878,7 +879,7 @@ impl Running<'_> {
         let group = self.game.fighters[v.0].hitboxes[j].group;
         for k in 0..4 {
             let cur = &mut self.game.fighters[v.0].hitboxes[k];
-            if cur.state != hitcapsule::DISABLED && cur.group == group {
+            if cur.state != HitCapsuleState::Disabled && cur.group == group {
                 hitcapsule::add_victim(cur, 0, victim(me));
             }
         }
@@ -890,7 +891,7 @@ impl Running<'_> {
         if mf.hit_status == 0
             && mf.timed_hit_status == 0
             && !mf.starman
-            && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
+            && mf.hurt_capsules[n].capsule.state == HurtCapsuleState::Enabled
         {
             let count = whole_damage(dmg);
             let mf = &mut self.game.fighters[me.0];
@@ -911,7 +912,7 @@ impl Running<'_> {
                 let af = &self.game.fighters[a.0];
                 let h0 = &self.game.fighters[v.0].hitboxes[j];
                 let entry = LogEntry {
-                    kind: af.kind,
+                    kind: af.kind.id(),
                     gobj: af.gobj,
                     hit: LoggedHit::Fighter {
                         fighter: v,
@@ -959,7 +960,7 @@ impl Running<'_> {
         if mf.hit_status != 0
             || mf.timed_hit_status != 0
             || mf.starman
-            || mf.hurt_capsules[n].capsule.state != HURT_ENABLED
+            || mf.hurt_capsules[n].capsule.state != HurtCapsuleState::Enabled
         {
             self.fighter_play_sfx(me, HIT_SFX[severity as usize], 0x7F, 0x40);
             return;
@@ -1254,12 +1255,12 @@ impl Running<'_> {
                 let item_ga = it::item(self.game, g).ground_or_air;
                 for i in 0..4 {
                     let h = &self.game.fighters[me.0].hitboxes[i];
-                    let can = h.state != hitcapsule::DISABLED
+                    let can = h.state != HitCapsuleState::Disabled
                         && !h.phantom
                         && h.element != ELEMENT_CATCH
                         && h.hits_fighters
-                        && ((h.hits_air && item_ga == GA_AIR)
-                            || (h.hits_ground && item_ga == GA_GROUND))
+                        && ((h.hits_air && item_ga == GroundOrAir::Air)
+                            || (h.hits_ground && item_ga == GroundOrAir::Ground))
                         && !hitcapsule::has_victim(h, Victim::Item(it::item_of(self.game, g)));
                     self.game.ft.hit_logs.clank[i] = can;
                     clanks += i32::from(can);
@@ -1278,11 +1279,11 @@ impl Running<'_> {
         let ib = &ip.hitboxes[j];
         let h = &ib.hit;
         let mf = &self.game.fighters[me.0];
-        if h.state == hitcapsule::DISABLED || !h.hits_fighters {
+        if h.state == HitCapsuleState::Disabled || !h.hits_fighters {
             return;
         }
-        if !((h.hits_air && mf.ground_or_air == GA_AIR)
-            || (h.hits_ground && mf.ground_or_air == GA_GROUND))
+        if !((h.hits_air && mf.ground_or_air == GroundOrAir::Air)
+            || (h.hits_ground && mf.ground_or_air == GroundOrAir::Ground))
         {
             return;
         }
@@ -1747,7 +1748,7 @@ impl Running<'_> {
         let add = |game: &mut super::super::state::Game, item: GObjId| {
             for k in 0..4 {
                 let cur = &mut it::item_mut(game, item).hitboxes[k].hit;
-                if cur.state != hitcapsule::DISABLED
+                if cur.state != HitCapsuleState::Disabled
                     && cur.group == group
                     && hitcapsule::add_victim(cur, kind, v)
                     && clear
@@ -1779,7 +1780,7 @@ impl Running<'_> {
         let add = |game: &mut super::super::state::Game, item: GObjId| {
             for k in 0..4 {
                 let cur = &mut it::item_mut(game, item).hitboxes[k].hit;
-                if cur.state != hitcapsule::DISABLED && cur.group == group {
+                if cur.state != HitCapsuleState::Disabled && cur.group == group {
                     hitcapsule::add_victim2(cur, kind, v);
                 }
             }
@@ -1845,7 +1846,7 @@ impl Running<'_> {
             if mf.hit_status == 0
                 && mf.timed_hit_status == 0
                 && !mf.starman
-                && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
+                && mf.hurt_capsules[n].capsule.state == HurtCapsuleState::Enabled
             {
                 // Half the damage, from the damage taken whole (at least 1), and half the raw
                 // damage's knockback count.
@@ -1868,7 +1869,7 @@ impl Running<'_> {
                 }
                 let ip = it::item(self.game, g);
                 let entry = LogEntry {
-                    kind: ip.kind,
+                    kind: ip.kind.id(),
                     gobj: ip.entity,
                     hit: LoggedHit::Item { item: g, index: j },
                     hurt: n,
@@ -1910,7 +1911,7 @@ impl Running<'_> {
         if mf.hit_status == 0
             && mf.timed_hit_status == 0
             && !mf.starman
-            && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
+            && mf.hurt_capsules[n].capsule.state == HurtCapsuleState::Enabled
         {
             let count = whole_damage(dmg);
             let mf = &mut self.game.fighters[me.0];
@@ -1930,7 +1931,7 @@ impl Running<'_> {
                 let ip = it::item(self.game, g);
                 let h = &ip.hitboxes[j].hit;
                 let entry = LogEntry {
-                    kind: ip.kind,
+                    kind: ip.kind.id(),
                     gobj: ip.entity,
                     hit: LoggedHit::Item { item: g, index: j },
                     hurt: n,
@@ -2188,13 +2189,12 @@ impl Running<'_> {
     /// The hit the stage gives a line ([`Self::line_hazard`]'s `DynamicsDesc`).
     pub(crate) fn line_hazard_desc(&mut self, line: i32) -> Option<melee_data::archive::DataRef> {
         let f = self.game.stage_info.touch_line_callback()?;
-        let touch = super::super::gr::registry::by_address(
-            self.game.stage_info.ground_kind_id(),
-            f.0,
-            |d| d.on_touch_line,
-        )
-        .and_then(|s| s.touch_line)
-        .unwrap_or_else(|| unported_call(&format!("a stage's on_touch_line {:#x}", f.0)));
+        let touch =
+            super::super::gr::registry::by_address(self.game.stage_info.ground_kind(), f.0, |d| {
+                d.on_touch_line
+            })
+            .and_then(|s| s.touch_line)
+            .unwrap_or_else(|| unported_call(&format!("a stage's on_touch_line {:#x}", f.0)));
         touch(self, line)
     }
 
@@ -2237,7 +2237,7 @@ impl Running<'_> {
             {
                 continue;
             }
-            if of.thrown_hitbox.state == hitcapsule::DISABLED || !seen {
+            if of.thrown_hitbox.state == HitCapsuleState::Disabled || !seen {
                 continue;
             }
             let mut a = hitcapsule::shape(&self.game.fighters[o.0].thrown_hitbox);
@@ -2281,7 +2281,7 @@ impl Running<'_> {
                 r.game.fighters[to.0].pos_delta,
             );
             let t = &mut r.game.fighters[to.0];
-            if t.ground_or_air != GA_AIR {
+            if t.ground_or_air != GroundOrAir::Air {
                 return;
             }
             let mut w = fp::fdivs(reg(wf), reg(wt));
@@ -2551,7 +2551,7 @@ impl Running<'_> {
             // The tip result's direction: a float where the layout has a pointer.
             d.unread_1870 = super::super::handles::RawPtr(dir.to_bits());
             d.unread_1874 = angle;
-            d.unread_1878 = height;
+            d.unread_1878 = height.raw();
             d.tip_kb = mem(best);
             d.tip_pos = e.pos;
             d.tip_element = element as i32;
@@ -2561,7 +2561,7 @@ impl Running<'_> {
         } else {
             d.facing_dir_1 = dir;
             d.kb_angle = angle;
-            d.damaged_hurtbox = height;
+            d.damaged_hurtbox = height.raw();
             d.kb_applied = mem(best);
             d.coll_pos = e.pos;
             d.element = element;
@@ -2570,7 +2570,7 @@ impl Running<'_> {
             // The hit result's damage: a float where the layout has an integer.
             d.unread_186c = e.damage.to_bits() as i32;
         }
-        let grounded = height == 0;
+        let grounded = height == HurtHeight::Low;
         match e.hit {
             LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
             LoggedHit::Fighter { .. } => {
@@ -2588,7 +2588,7 @@ impl Running<'_> {
                     Some(a_gobj),
                     gobj,
                     1,
-                    kind,
+                    kind.id(),
                     attack_flags,
                     AttackRecord::Fighter(a_gobj),
                     instance,
@@ -2798,13 +2798,13 @@ impl Running<'_> {
         let (attacker, keep) = if super::super::it::item::is_fighter(self.game, owner) {
             (owner, false)
         } else {
-            (None, crate::game::pl::death::explosive_kind(kind))
+            (None, crate::game::pl::death::explosive_kind(kind.id()))
         };
         self.attack_landed(
             attacker,
             gobj,
             2,
-            kind,
+            kind.id(),
             attack_flags,
             AttackRecord::Item(item),
             instance,
@@ -2859,7 +2859,7 @@ pub(crate) fn device_capsule(
 ) -> super::super::structs::HitCapsule {
     let w = |o: u32| data.u32(desc.at(o));
     super::super::structs::HitCapsule {
-        state: w(0) as i32,
+        state: HitCapsuleState::from_raw(w(0) as i32),
         damage: mem(fp::frsp(f64::from(w(4)))),
         kb_angle: w(8) as i32,
         kb_growth: w(0xC),

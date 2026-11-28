@@ -3,11 +3,11 @@
 //! away (365, falling helpless at its end) and lands (362). Her hand's point is the string's
 //! far end, which she writes into Popo's variables each frame (her accessory hook).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::addr;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -137,7 +137,7 @@ impl Running<'_> {
         if let Some(popo) = self.nana_popo(gobj) {
             self.game.fighters[f.0].facing_dir = self.game.fighter(popo).facing_dir;
         }
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             self.go_airborne_jumped(f);
         } else {
             let fp = &mut self.game.fighters[f.0];

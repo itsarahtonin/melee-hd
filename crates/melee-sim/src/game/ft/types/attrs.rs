@@ -216,6 +216,28 @@ pub struct EggAttrs {
     pub hurt_scale: f32,
 }
 
+crate::c_enum! {
+    /// `SmashState`: where a smash attack's charge is (`SmashAttrs::state`).
+    pub enum SmashState: i32 {
+        /// `SmashState_None`: no smash attack charging.
+        #[doc(alias("SmashState_None"))]
+        None = 0,
+        /// `SmashState_PreCharge`: before the charge starts.
+        #[doc(alias("SmashState_PreCharge"))]
+        PreCharge = 1,
+        /// `SmashState_Charging`.
+        #[doc(alias("SmashState_Charging", "SMASH_CHARGING"))]
+        Charging = 2,
+        /// `SmashState_Release`: let go.
+        #[doc(alias("SmashState_Release", "SMASH_RELEASE"))]
+        Release = 3,
+        /// 4: a state the charge's tick (`ftCo_800DEF38`) and the camera's shake
+        /// (`Fighter_procCamera`) test for, as charging; the decomp names none, and no code the
+        /// port has writes it.
+        Held = 4,
+    }
+}
+
 /// The decomp's `_SmashAttr`.
 #[doc(alias("_SmashAttr"))]
 #[derive(
@@ -224,7 +246,7 @@ pub struct EggAttrs {
 #[mirror(c = "_SmashAttr", size = 0x28, lay)]
 pub struct SmashAttrs {
     #[at(0x0)]
-    pub state: i32,
+    pub state: SmashState,
     #[at(0x4)]
     #[doc(alias("x2118_frames"))]
     pub frames: f32,

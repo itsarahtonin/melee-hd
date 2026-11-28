@@ -2,6 +2,7 @@
 //! straight (state 0, or state 1 when he's hurt enough to shoot faster), sparking each frame,
 //! until their lifetime runs out or they hit.
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{
@@ -54,7 +55,7 @@ pub fn spawn(
     owner: GObjId,
     prev_pos: Vec3,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     fast: bool,
     facing_dir: f32,
     speed_x: f32,

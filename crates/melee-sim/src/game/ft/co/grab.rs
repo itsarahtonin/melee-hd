@@ -5,6 +5,9 @@
 //! breaks out on the ground or jumps away. Link's and Samus's tethers, Yoshi's egg and
 //! Kirby's swallow stop at their seams, as do the throws.
 
+use crate::game::ft::types::HurtHeight;
+use crate::lb::hitcapsule::HurtCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::code::{run_fighter_cb, unported_call};
@@ -12,7 +15,6 @@ use super::super::super::ef;
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{linkhookshot, samusgrapple, tether};
 use super::super::super::state::Running;
-use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::UPDATE_CMD;
 
 use super::ids::ms;
@@ -79,9 +81,9 @@ impl Running<'_> {
             ms::CATCH_DASH_PULL
         };
         let kind = self.game.fighter(gobj).kind;
-        let j = match FighterKind::from_id(kind) {
+        let j = match kind {
             // The hookshot winds in, and he holds at its tip.
-            Some(FighterKind::Link | FighterKind::Clink) => {
+            FighterKind::Link | FighterKind::Clink => {
                 let hs = self
                     .game
                     .fighter(gobj)
@@ -96,7 +98,7 @@ impl Running<'_> {
                     .get()
             }
             // The beam winds in fast, and she holds at its tip.
-            Some(FighterKind::Samus) => {
+            FighterKind::Samus => {
                 let beam = self
                     .game
                     .fighter(gobj)
@@ -219,8 +221,8 @@ impl Running<'_> {
         let kind = self.game.fighter(gobj).kind;
         if self.game.fighter(gobj).accessory1_cb == Some(CodeRef(PULL_FOLLOW))
             && matches!(
-                FighterKind::from_id(kind),
-                Some(FighterKind::Link | FighterKind::Samus | FighterKind::Clink)
+                kind,
+                FighterKind::Link | FighterKind::Samus | FighterKind::Clink
             )
         {
             return;
@@ -300,12 +302,7 @@ impl Running<'_> {
         } else {
             self.throw_check(gobj)
         };
-        if acted
-            && matches!(
-                FighterKind::from_id(kind),
-                Some(FighterKind::Link | FighterKind::Clink)
-            )
-        {
+        if acted && matches!(kind, FighterKind::Link | FighterKind::Clink) {
             tether::ft_death(self, gobj, &linkhookshot::HOOKSHOT);
         }
         if acted && kind == FighterKind::Samus {
@@ -391,7 +388,7 @@ impl Running<'_> {
         let (gr, air_x, air_y) = (c.f32(0x370), c.f32(0x374), c.f32(0x378));
         let fp = self.game.fighter_mut(gobj);
         let back = fp::fneg(reg(fp.facing_dir));
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             fp.self_vel.x = mem(fp::fmuls(back, reg(air_x)));
             fp.self_vel.y = air_y;
         } else {
@@ -421,7 +418,7 @@ impl Running<'_> {
     /// `ftCo_CatchCut_Phys`: the hold's friction on the ground, else falling and drifting.
     #[doc(alias = "ftCo_CatchCut_Phys")]
     pub fn co_catch_cut_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.co_catch_hold_phys(gobj);
         } else {
             self.air_physics(gobj);
@@ -431,7 +428,7 @@ impl Running<'_> {
     /// `ftCo_CatchCut_Coll`: on the ground, standing or falling; in the air, landing.
     #[doc(alias = "ftCo_CatchCut_Coll")]
     pub fn co_catch_cut_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.ground_coll(gobj);
         } else {
             self.air_coll_ledges_then(gobj, |g, gobj| g.land_normally(gobj));
@@ -545,7 +542,7 @@ impl Running<'_> {
         );
         let root = self.root_jobj(held);
         jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
-        let grounded = self.game.fighters[h.0].ground_or_air == GA_GROUND;
+        let grounded = self.game.fighters[h.0].ground_or_air == GroundOrAir::Ground;
         if !grounded {
             super::super::fighter::unlock_ecb(&mut self.game.fighters[h.0]);
         }
@@ -561,13 +558,13 @@ impl Running<'_> {
         });
         self.game.fighters[h.0].cur_pos = before;
         if hit {
-            if self.game.fighters[h.0].ground_or_air != GA_GROUND {
+            if self.game.fighters[h.0].ground_or_air != GroundOrAir::Ground {
                 self.land(held);
             }
             let fp = &mut self.game.fighters[h.0];
             fp.cur_pos = fp.coll_data.cur_pos;
         } else {
-            if self.game.fighters[h.0].ground_or_air != GA_AIR {
+            if self.game.fighters[h.0].ground_or_air != GroundOrAir::Air {
                 self.go_airborne(h);
             }
             self.game.fighters[h.0].cur_pos = pos;
@@ -597,7 +594,7 @@ impl Running<'_> {
     fn follow_hold(&mut self, gobj: GObjId, grabber: GObjId) {
         let (dx, dy, dz) = self.hold_offset(gobj);
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             let y = reg(fp.cur_pos.y);
             let g = self.game.fighter_mut(grabber);
             g.hold_dy = mem(fp::fsubs(fp::fadds(dy, y), reg(g.cur_pos.y)));
@@ -651,7 +648,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800DAADC")]
     #[doc(alias = "fn_800DA8E4")]
     pub fn enter_capture_pulled(&mut self, victim: GObjId, grabber: GObjId) {
-        let msid = if self.game.fighter(victim).ground_or_air == GA_GROUND {
+        let msid = if self.game.fighter(victim).ground_or_air == GroundOrAir::Ground {
             ms::CAPTURE_PULLED_LW
         } else {
             ms::CAPTURE_PULLED_HI
@@ -984,7 +981,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.invisible = true;
         fp.accessory1_cb = Some(CodeRef(HELD_FOLLOW));
-        self.set_hurtbox_state(f, crate::lb::hitcapsule::HURT_INTANGIBLE);
+        self.set_hurtbox_state(f, HurtCapsuleState::Intangible);
         let fp = &self.game.fighters[f.0];
         let bone_idx = self.bone_index(fp, X_ROT_N);
         let bone = self.bone(f, bone_idx).joint;
@@ -994,9 +991,9 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.hurt_capsules[0];
         h.capsule.bone_idx = bone_idx;
-        h.height = 1;
+        h.height = HurtHeight::Mid;
         h.is_grabbable = 0;
-        h.capsule.state = crate::lb::hitcapsule::HURT_ENABLED;
+        h.capsule.state = HurtCapsuleState::Enabled;
         h.capsule.bone = bone;
         h.capsule.a_offset = crate::vec::Vec3::default();
         h.capsule.b_offset = crate::vec::Vec3::default();
@@ -1132,7 +1129,7 @@ impl Running<'_> {
         let push = reg(self.common().f32(0x370));
         let fp = self.game.fighter_mut(gobj);
         let v = mem(fp::fmuls(fp::fneg(reg(fp.facing_dir)), push));
-        if fp.ground_or_air == GA_GROUND {
+        if fp.ground_or_air == GroundOrAir::Ground {
             fp.gr_vel = v;
         } else {
             fp.self_vel.x = v;
@@ -1144,7 +1141,7 @@ impl Running<'_> {
     /// ground, else falling and drifting.
     #[doc(alias = "ftCo_CaptureCut_Phys")]
     pub fn co_capture_cut_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             let mul = reg(self.common().f32(0x36C));
             let fp = self.game.fighter_mut(gobj);
             let friction = fp::fmuls(mul, reg(fp.co_attrs.ground_friction));
@@ -1161,7 +1158,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800DC8D8")]
     #[doc(alias = "fn_800DC8FC")]
     pub fn co_capture_cut_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.ground_coll_then(gobj, |g, gobj| {
                 let f = g.game.fighter_id(gobj);
                 g.go_airborne(f);

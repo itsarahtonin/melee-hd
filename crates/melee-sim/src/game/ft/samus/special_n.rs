@@ -7,6 +7,7 @@
 //! own; a [`ChargeShot`] says which, Samus's [`SAMUS`] or Kirby's
 //! (`ft::kirby::special_samus::KIRBY`), and each function here carries both originals' names.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
@@ -214,7 +215,7 @@ impl Running<'_> {
             max,
         );
         let fp = &self.game.fighters[f.0];
-        if fp.motion_id == p.ms.special_air_n || fp.ground_or_air == super::super::common::GA_AIR {
+        if fp.motion_id == p.ms.special_air_n || fp.ground_or_air == GroundOrAir::Air {
             let recoil = reg(self.samus_attr_f32(f, p.attrs + attr::CHARGE_RECOIL));
             let fp = &mut self.game.fighters[f.0];
             let c = fp::frsp(f64::from(fp.u_i32(p.u + u::CHARGE)));

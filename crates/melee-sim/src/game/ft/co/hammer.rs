@@ -4,6 +4,7 @@
 //! animation, can walk, turn, jump and drop through platforms but do nothing else, and lets it
 //! go when its time runs out; a hammer that loses its head swings headless.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::it::{self, item_mut, kinds, lib2725};
@@ -357,7 +358,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C52F4")]
     pub fn take_hammer(&mut self, gobj: GObjId) {
         self.start_hammer_timers(gobj);
-        if self.game.fighter(gobj).ground_or_air == 0 {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.enter_hammer_wait(gobj);
         } else {
             self.enter_hammer_fall(gobj);
@@ -538,7 +539,7 @@ impl Running<'_> {
     pub fn enter_hammer_fall(&mut self, gobj: GObjId) {
         self.change_hammer_state(gobj, ms::HAMMER_FALL);
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].ground_or_air == 0 {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             self.go_airborne(f);
         }
         self.hammer_state_entered(gobj);

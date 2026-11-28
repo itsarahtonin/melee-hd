@@ -159,7 +159,7 @@ fn args(call: &mut Call, target: &str, k: usize) {
     if SEARCHES.contains(&target) {
         let ip = peek_u32(call, gobj + 0x2C);
         let firing = in_mem(ip)
-            && peek_u32(call, ip + 0x10) == ItKind::Lugia as u32
+            && peek_u32(call, ip + 0x10) == ItKind::Lugia.raw() as u32
             && peek_u32(call, ip + 0x24) == 5;
         if !firing {
             call.regs.gpr[3] = 0;
@@ -581,7 +581,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802D43B0" => hitodeman::forget(g, gobj, maybe(4)),
         "it_802D4F58" => hitodeman::star_forget(g, gobj, maybe(4)),
         "it_802D1E8C" => {
-            lugia::shoot(g, gobj, r(4) as i32, f(1));
+            lugia::shoot(g, gobj, ItKind::from_raw(r(4) as i32), f(1));
         }
         "it_802D61C8" => hinoarashi::touch_normal(g, gobj, r(4) as i32),
         "it_802D6310" => hinoarashi::turn_off_surface(g, gobj, r(4) as i32),
@@ -594,7 +594,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             let pos = Vec3::new(f32_at(r(4)), f32_at(r(4) + 4), f32_at(r(4) + 8));
             hinoarashi::spawn_flame(g, gobj, pos, r(5), f(1));
         }
-        "it_802CB4F0" => matadogas::puff(g, gobj, r(4) as i32, f(1)),
+        "it_802CB4F0" => matadogas::puff(g, gobj, ItKind::from_raw(r(4) as i32), f(1)),
         "it_802D5124" => return b(lucky::next(g, gobj)),
         _ => return run_item(g, gobj, a, &name),
     }

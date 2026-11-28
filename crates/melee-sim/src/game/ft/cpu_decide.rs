@@ -3,12 +3,13 @@
 //! (`ftCo_800ADE48`) from what it and its target are doing, kept in `CpuFighter::x18`, which
 //! [`super::cpu_ai`]'s script writer acts on.
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::gr::{GrKind, ground, stage};
 use super::super::handles::{FighterId, ItemId};
 use super::super::state::Running;
-use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
@@ -379,7 +380,7 @@ impl Running<'_> {
     pub(super) fn cpu_item_heals(&self, item: ItemId) -> bool {
         // `It_Kind_Heart`, `_Tomato`, `_Foods`.
         matches!(
-            ItKind::from_id(self.game.items[item.0].kind),
+            ItKind::from_id(self.game.items[item.0].kind.id()),
             Some(ItKind::HeartContainer | ItKind::MaximTomato | ItKind::Food)
         )
     }
@@ -404,7 +405,7 @@ impl Running<'_> {
             if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= ItKind::COMMON_END {
                 continue;
             }
-            let worth = ITEM_WORTH[ip.kind as usize];
+            let worth = ITEM_WORTH[ip.kind.raw() as usize];
             if worth < self.game.fighters[f.0].cpu.item_worth_min {
                 continue;
             }
@@ -412,7 +413,7 @@ impl Running<'_> {
                 None => closest = Some((it, self.cpu_item_distance(f, it))),
                 Some((best, d)) => {
                     let kind = self.game.items[best.0].kind;
-                    if worth < ITEM_WORTH[kind as usize] {
+                    if worth < ITEM_WORTH[kind.raw() as usize] {
                         continue;
                     }
                     let dist = self.cpu_item_distance(f, it);
@@ -445,7 +446,7 @@ impl Running<'_> {
             if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= ItKind::COMMON_END {
                 continue;
             }
-            let worth = ITEM_WORTH[ip.kind as usize];
+            let worth = ITEM_WORTH[ip.kind.raw() as usize];
             if worth < self.game.fighters[f.0].cpu.item_worth_min {
                 continue;
             }
@@ -453,7 +454,7 @@ impl Running<'_> {
                 None => closest = Some((it, self.cpu_item_distance(f, it))),
                 Some((best, d)) => {
                     let kind = self.game.items[best.0].kind;
-                    if worth < ITEM_WORTH[kind as usize] {
+                    if worth < ITEM_WORTH[kind.raw() as usize] {
                         continue;
                     }
                     let dist = self.cpu_item_distance(f, it);
@@ -488,9 +489,9 @@ impl Running<'_> {
             // `ftCo_800A648C_inline1`: `It_Kind_Kuriboh` up to `_Octarock_Stone` (the
             // containers' monsters), `_Nokonoko`, `_Patapata` and the next, `_Whitebea`.
             let kind = ip.kind;
-            let enemy = (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
+            let enemy = (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind.id())
                 || kind == ItKind::KoopaTroopa
-                || (kind.wrapping_sub(ItKind::KoopaParatroopa.id()) as u32) <= 1
+                || (kind.id().wrapping_sub(ItKind::KoopaParatroopa.id()) as u32) <= 1
                 || kind == ItKind::PolarBear;
             if !enemy || self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
                 continue;
@@ -577,7 +578,7 @@ impl Running<'_> {
             let fpp = &mut self.game.fighters[f.0];
             fpp.cpu.ledge_picked = false;
             let pos = fpp.cur_pos;
-            let at = if fpp.ground_or_air == GA_AIR {
+            let at = if fpp.ground_or_air == GroundOrAir::Air {
                 let to = mem(fp::fsubs(reg(pos.y), 1000.0));
                 let (floor, left) = self.cpu_floor_r5(pos.x, pos.y, pos.x, to, sp);
                 r5 = left;
@@ -642,7 +643,7 @@ impl Running<'_> {
         if switch {
             // `ftCo_800B4A78` leaves r5 alone.
             self.cpu_script_clear(f);
-            self.game.fighters[f.0].cpu.behavior = CpuBehavior::Di.id();
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::Di;
             return (true, r5);
         }
         let r5 = Leftover::Unknown("ftCo_800ADE48");
@@ -653,7 +654,7 @@ impl Running<'_> {
         macro_rules! switch_to {
             ($b:expr) => {{
                 self.cpu_script_clear(f);
-                self.game.fighters[f.0].cpu.behavior = CpuBehavior::id($b);
+                self.game.fighters[f.0].cpu.behavior = $b;
                 return (true, r5);
             }};
         }
@@ -742,21 +743,21 @@ impl Running<'_> {
         let c = &mut self.game.fighters[f.0].cpu;
         c.jump_kind = (jump & 3) as u8;
         if c.jump_kind != 0 {
-            c.behavior = CpuBehavior::JumpAtTarget.id();
+            c.behavior = CpuBehavior::JumpAtTarget;
             return (true, r5);
         }
         if self.game.fighters[f.0].cpu.behavior == CpuBehavior::PickUp {
             return (true, r5);
         }
         if self.cpu_item_pickup(f) {
-            self.game.fighters[f.0].cpu.behavior = CpuBehavior::PickUp.id();
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::PickUp;
             return (true, r5);
         }
         if self.game.fighters[f.0].cpu.behavior == CpuBehavior::ThrowItem {
             return (true, r5);
         }
         if self.cpu_throws_held_item(f) {
-            self.game.fighters[f.0].cpu.behavior = CpuBehavior::ThrowItem.id();
+            self.game.fighters[f.0].cpu.behavior = CpuBehavior::ThrowItem;
             return (true, r5);
         }
         let c = &self.game.fighters[f.0].cpu;
@@ -786,7 +787,7 @@ impl Running<'_> {
         }
         let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
         // `It_Kind_Capsule` to `_BombHei`, `_M_Ball`, `_EvYoshiEgg`.
-        if (ItKind::Capsule.id()..=ItKind::BobOmb.id()).contains(&kind)
+        if (ItKind::Capsule.id()..=ItKind::BobOmb.id()).contains(&kind.id())
             || kind == ItKind::PokeBall
             || kind == ItKind::EventYoshiEgg
         {
@@ -794,7 +795,14 @@ impl Running<'_> {
         }
         // `ftCo_800A5980`'s `ftCo_MS_LandingFallSpecial` up to `_Attack100Start`, and
         // `_Furafura`, `_Catch`, `_CatchPull` and `_CatchAttack`.
-        (43..47).contains(&kind) || matches!(kind, 211 | 212 | 213 | 217)
+        (43..47).contains(&kind.id())
+            || matches!(
+                kind,
+                ItKind::KoopaTroopa
+                    | ItKind::KoopaParatroopa
+                    | ItKind::LikeLike
+                    | ItKind::PolarBear
+            )
     }
 
     /// Sets the fighter's destination and how near it must get, unless a destination timer
@@ -826,7 +834,7 @@ impl Running<'_> {
         let c = &fpp.cpu;
         if c.destination_timer != 0
             || c.kind == CpuKind::Stay
-            || fpp.ground_or_air == GA_AIR
+            || fpp.ground_or_air == GroundOrAir::Air
             || self.cpu_destination_here(f)
         {
             return;
@@ -882,7 +890,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A21FC")]
     fn cpu_destination_here(&mut self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return false;
         }
         let line = fpp.coll_data.floor.index;
@@ -914,7 +922,11 @@ impl Running<'_> {
             let it = super::super::it::item_of(self.game, g);
             let ip = &self.game.items[it.0];
             // `it_8026C1B4`: a hitbox on.
-            let live = ip.hitboxes.iter().take(4).any(|h| h.hit.state != 0);
+            let live = ip
+                .hitboxes
+                .iter()
+                .take(4)
+                .any(|h| h.hit.state != HitCapsuleState::Disabled);
             // `ftCo_800A5944`: `It_Kind_BombHei`, `_G_Shell`, `_R_Shell`.
             if !live
                 || !matches!(
@@ -972,7 +984,7 @@ impl Running<'_> {
             reg(self.game.fighters[f.0].cpu.reach),
             reg(p.cpu.hurt_middle),
         ));
-        if p.ground_or_air == GA_AIR {
+        if p.ground_or_air == GroundOrAir::Air {
             let below = mem(fp::fsubs(reg(ppos.y), 1000.0));
             let above = mem(fp::fadds(10.0, reg(ppos.y)));
             let hit = self
@@ -1030,8 +1042,8 @@ impl Running<'_> {
         let me = &self.game.fighters[f.0];
         let p = &self.game.fighters[partner.0];
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
-        let same_island = me.ground_or_air != GA_AIR
-            && p.ground_or_air != GA_AIR
+        let same_island = me.ground_or_air != GroundOrAir::Air
+            && p.ground_or_air != GroundOrAir::Air
             && geo
                 .island_of_line(me.coll_data.floor.index)
                 .is_some_and(|i| geo.island_of_line(p.coll_data.floor.index) == Some(i));
@@ -1163,7 +1175,7 @@ impl Running<'_> {
         if fpp.cpu.off_stage {
             return false;
         }
-        if fpp.ground_or_air == GA_GROUND {
+        if fpp.ground_or_air == GroundOrAir::Ground {
             return self.excluded_floor(fpp.coll_data.floor.index);
         }
         // `ftCo_MS_Pass`.
@@ -1265,11 +1277,11 @@ impl Running<'_> {
             return false;
         }
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR || fpp.item_gobj.is_some() {
+        if fpp.ground_or_air == GroundOrAir::Air || fpp.item_gobj.is_some() {
             return false;
         }
         // `ftCo_800A2170_it`: both on the same island.
-        if self.game.items[item.0].ground_or_air == GA_AIR {
+        if self.game.items[item.0].ground_or_air == GroundOrAir::Air {
             return false;
         }
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -1289,7 +1301,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A3554")]
     pub(super) fn cpu_at_destination(&mut self, f: FighterId, margin: f32) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.ground_or_air == GA_AIR {
+        if fpp.ground_or_air == GroundOrAir::Air {
             return false;
         }
         // `ftCo_800A21FC`: the destination's island is the fighter's.

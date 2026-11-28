@@ -5,12 +5,12 @@
 //! his (`it_8027CE64`), and the hooks of those that come and go with a move ([`Held`]: the
 //! aerials' parachute, turtle and Sparky, Oil Panic's oil, and Kirby's copy's pan).
 
+use crate::mp::coll::GroundOrAir;
 use melee_data::archive::DataRef;
 
 use super::super::item::{animate, change, change_state, destroy, pick_up, spawn_air};
 use super::super::{Var, item, item_mut, lib26b1, set_flag};
 use crate::game::ft::FighterKind;
-use crate::game::ft::common::GA_GROUND;
 use crate::game::it::ItKind;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::Running;
@@ -156,7 +156,7 @@ pub(super) fn spawn_common(
 /// in hand and colored as he is (`Item_AttachGameWatchArticle`).
 pub(super) fn spawn_held(
     r: &mut Running,
-    kind: i32,
+    kind: ItKind,
     parent: GObjId,
     pos: Vec3,
     part: i32,
@@ -348,7 +348,7 @@ pub fn held_spawn(
     part: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    spawn_held(r, s.kind.id(), parent, pos, part, facing_dir)
+    spawn_held(r, s.kind, parent, pos, part, facing_dir)
 }
 
 /// Gone: its owner forgets it (`itGameWatchParachute_Logic74_Destroyed`,
@@ -420,7 +420,7 @@ pub fn held_picked_up(r: &mut Running, gobj: GObjId, s: &Held) {
     let state = if s.owner_air {
         let ga = r.game.ft_ground_air(owner);
         item_mut(r.game, gobj).ground_or_air = ga;
-        if ga == GA_GROUND { 0 } else { 1 }
+        if ga == GroundOrAir::Ground { 0 } else { 1 }
     } else {
         0
     };

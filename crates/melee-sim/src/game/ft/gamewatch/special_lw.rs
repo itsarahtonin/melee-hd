@@ -3,12 +3,13 @@
 //! Oil Panic throws the oil (`it::kinds::gamewatchpanic`), its damage from what it caught.
 //! The bucket's fill shows on his model variants.
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::it::kinds::gamewatch as items;
 use super::super::super::it::kinds::gamewatchpanic as panic_item;
 use super::super::super::state::Running;
-use super::super::common::GA_GROUND;
 use super::super::motion::flags::*;
 use super::{ItemSlot, addr, attr, ms, mv, panic, part, u};
 use crate::fpu::{mem, reg};
@@ -403,7 +404,7 @@ impl Running<'_> {
         if charge >= panic::FULL {
             self.start_color_anim(gobj, 5, 0);
         }
-        let msid = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        let msid = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             ms::SPECIAL_LW_CATCH
         } else {
             ms::SPECIAL_AIR_LW_CATCH
@@ -417,7 +418,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         for i in 0..4 {
             let fp = &self.game.fighters[f.0];
-            if fp.hitboxes[i].state == crate::lb::hitcapsule::ENABLED {
+            if fp.hitboxes[i].state == HitCapsuleState::Enabled {
                 let damage = fp.cmd_vars[1];
                 self.hitbox_damage(f, i, false, damage);
             }

@@ -2,6 +2,8 @@
 //! common shield is, but hiding him in an egg whose shell cracks as its health drains, with
 //! one hurtbox on the shield's joint while it's up.
 
+use crate::game::ft::types::HurtHeight;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use gekko_fp as fp;
 
 use super::super::super::ef;
@@ -13,13 +15,8 @@ use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-use crate::lb::hitcapsule::{HURT_ENABLED, HURT_INTANGIBLE};
 use crate::vec::Vec3;
 
-/// `HurtCapsule_Disabled`.
-const HURT_DISABLED: i32 = 1;
-/// `HurtHeight_Mid`.
-const HURT_HEIGHT_MID: i32 = 1;
 /// `FtPart_HipN`.
 const HIP_N: i32 = 4;
 /// The egg's breaking effect.
@@ -39,15 +36,15 @@ impl Running<'_> {
     #[doc(alias = "ftYs_Init_8012BDA0")]
     pub fn ys_shield_hurtbox(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.set_hurtbox_state(f, HURT_INTANGIBLE);
+        self.set_hurtbox_state(f, HurtCapsuleState::Intangible);
         let bone_idx = self.ys_shield_part(f);
         let bone = self.bone(f, bone_idx).joint;
         let fp = &mut self.game.fighters[f.0];
         let h = &mut fp.hurt_capsules[0];
         h.capsule.bone_idx = bone_idx;
-        h.height = HURT_HEIGHT_MID;
+        h.height = HurtHeight::Mid;
         h.is_grabbable = 1;
-        h.capsule.state = HURT_ENABLED;
+        h.capsule.state = HurtCapsuleState::Enabled;
         h.capsule.bone = bone;
         h.capsule.a_offset = Vec3::default();
         h.capsule.b_offset = Vec3::default();
@@ -61,7 +58,7 @@ impl Running<'_> {
     pub fn ys_shield_out(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.set_model_variant(f, 0, 0);
-        self.set_hurtbox_state(f, HURT_ENABLED);
+        self.set_hurtbox_state(f, HurtCapsuleState::Enabled);
         let fp = &self.game.fighters[f.0];
         let size = fp.co_attrs.egg.size;
         let part = self.bone_index(fp, HIP_N);
@@ -75,7 +72,7 @@ impl Running<'_> {
     /// and its sound.
     fn ys_shield_start(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.set_hurtbox_state(f, HURT_DISABLED);
+        self.set_hurtbox_state(f, HurtCapsuleState::Disabled);
         let min_hold = self.common().f32(0x268);
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_i32(mv::GUARD_XC, 0);

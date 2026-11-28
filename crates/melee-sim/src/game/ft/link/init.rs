@@ -71,7 +71,7 @@ impl Running<'_> {
         let table = self.load_common(0x14);
         let entry = self
             .data
-            .ptr(table.at(4 * kind as u32))
+            .ptr(table.at(4 * kind.raw() as u32))
             .expect("Fighter_804D6540[kind]");
         let desc = self.data.ptr(entry).expect("Fighter_804D6540[kind]->x0");
         // `ftLk_Init_OnLoad` and `ftCl_Init_OnLoad` (0x28 each) call it from the creator's.

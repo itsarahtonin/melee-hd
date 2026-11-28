@@ -231,7 +231,7 @@ pub fn spawn(
         pos?
     };
     let mut s = SpawnItem {
-        kind: ItKind::StageHurtbox.id(),
+        kind: ItKind::StageHurtbox,
         ..Default::default()
     };
     s.prev_pos = at;

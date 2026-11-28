@@ -9,6 +9,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
@@ -134,7 +135,7 @@ impl Running<'_> {
             0.0,
         );
         let facing = fp.facing_dir;
-        pikachutjoltground::spawn(self, gobj, pos, facing, kind);
+        pikachutjoltground::spawn(self, gobj, pos, facing, ItKind::from_raw(kind));
         self.fighter_play_sfx(f, sfx, 127, 64);
     }
 

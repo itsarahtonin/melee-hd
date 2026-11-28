@@ -7,13 +7,14 @@
 //! [`Needles`] says which, Sheik's [`SEAK`] or Kirby's (`ft::kirby::special_seak::KIRBY`), and
 //! each function here carries both originals' names.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{seakneedleheld, seakneedlethrown};
 use super::super::super::state::Running;
-use super::{GA_GROUND, PAD_B, PAD_LR, addr, attr, ms, mv, u};
+use super::{PAD_B, PAD_LR, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
@@ -137,7 +138,7 @@ impl Running<'_> {
             while self.seak_n_count(gobj, p) != 0 {
                 let fp = &self.game.fighters[f.0];
                 let mut pos = fp.cur_pos;
-                let y = if fp.ground_or_air == GA_GROUND {
+                let y = if fp.ground_or_air == GroundOrAir::Ground {
                     self.seak_n_attr_f32(gobj, p, attr::X4)
                 } else {
                     self.seak_n_attr_f32(gobj, p, attr::XC)
@@ -146,7 +147,13 @@ impl Running<'_> {
                 pos.y = mem(fp::fmadds(reg(fp.scale.y), reg(y), reg(pos.y)));
                 pos.z = 0.0;
                 let facing = fp.facing_dir;
-                let item = seakneedlethrown::spawn(self, gobj, pos, p.thrown_kind, facing);
+                let item = seakneedlethrown::spawn(
+                    self,
+                    gobj,
+                    pos,
+                    ItKind::from_raw(p.thrown_kind),
+                    facing,
+                );
                 if item.is_some() {
                     seakneedlethrown::launch(self, item, Some(gobj), 1);
                 }
@@ -230,7 +237,14 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) {
             let fp = self.game.fighter(gobj);
             let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-            let n = seakneedleheld::spawn(self, gobj, pos, p.needle_part, p.held_kind, facing);
+            let n = seakneedleheld::spawn(
+                self,
+                gobj,
+                pos,
+                p.needle_part,
+                ItKind::from_raw(p.held_kind),
+                facing,
+            );
             self.seak_n_set_held(gobj, p, n);
             let loop_msid = p.states + ms::SPECIAL_N_LOOP + if air { AIR } else { 0 };
             self.change_motion_state(gobj, loop_msid, 0, 0.0, 1.0, 0.0, None);
@@ -494,7 +508,7 @@ impl Running<'_> {
         if self.seak_n_count(gobj, p) <= 0 {
             return;
         }
-        let grounded = self.game.fighters[f.0].ground_or_air == GA_GROUND;
+        let grounded = self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground;
         let (ax, ay) = if grounded {
             (attr::X0, attr::X4)
         } else {
@@ -516,7 +530,8 @@ impl Running<'_> {
         pos.y = mem(fp::fmadds(scale, y, reg(pos.y)));
         pos.z = 0.0;
         let facing = self.game.fighters[f.0].facing_dir;
-        let item = seakneedlethrown::spawn(self, gobj, pos, p.thrown_kind, facing);
+        let item =
+            seakneedlethrown::spawn(self, gobj, pos, ItKind::from_raw(p.thrown_kind), facing);
         if item.is_some() {
             seakneedlethrown::launch(self, item, Some(gobj), 0);
         }

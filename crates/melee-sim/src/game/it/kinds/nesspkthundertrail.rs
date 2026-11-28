@@ -72,7 +72,7 @@ pub fn spawn(
         return None;
     }
     let mut spawn = SpawnItem {
-        kind: KINDS[idx as usize],
+        kind: ItKind::from_raw(KINDS[idx as usize]),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, true)`.

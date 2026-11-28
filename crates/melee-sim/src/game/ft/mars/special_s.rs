@@ -5,12 +5,13 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
-use super::{GA_GROUND, PAD_AB, U_AIR_S_USED, addr, attr, ms, mv};
+use super::{PAD_AB, U_AIR_S_USED, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 
@@ -34,7 +35,7 @@ impl Running<'_> {
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
         fp.set_mv_i32(mv::S_X0, 0);
-        let msid = if fp.ground_or_air == GA_GROUND {
+        let msid = if fp.ground_or_air == GroundOrAir::Ground {
             ms::SPECIAL_S1
         } else {
             ms::SPECIAL_AIR_S1
@@ -71,7 +72,7 @@ impl Running<'_> {
     /// A swing's end: waiting or falling.
     fn mars_special_s_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
-            if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+            if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
                 self.enter_wait(gobj);
             } else {
                 self.enter_fall(gobj);
@@ -125,7 +126,7 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialAirS1_Phys")]
     #[doc(alias = "ftMs_SpecialS2_Phys")]
     pub fn mars_special_s_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.ground_friction(gobj);
             return;
         }
@@ -146,7 +147,7 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialS3_Phys")]
     #[doc(alias = "ftMs_SpecialS4_Phys")]
     pub fn mars_special_s_late_phys(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             self.ground_friction_or_anim(gobj);
             return;
         }
@@ -166,7 +167,7 @@ impl Running<'_> {
         to_air: fn(&mut Self, GObjId),
         to_ground: fn(&mut Self, GObjId),
     ) {
-        if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
             if !self.ground_coll_slide(gobj) {
                 to_air(self, gobj);
             }
@@ -266,7 +267,11 @@ impl Running<'_> {
         } else {
             states[1]
         };
-        let msid = if fp.ground_or_air == GA_GROUND { g } else { a };
+        let msid = if fp.ground_or_air == GroundOrAir::Ground {
+            g
+        } else {
+            a
+        };
         self.change_motion_state(gobj, msid, SKIP_ATTACK_COUNT, 0.0, 1.0, 0.0, None);
     }
 

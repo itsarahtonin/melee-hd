@@ -51,7 +51,7 @@ pub fn drop_contents(r: &mut Running, gobj: GObjId, n: i32, same: bool) -> Dropp
             out.stopped |= k >= ItKind::RayGunShot;
             break;
         }
-        out.gobj = spawn_at(r, Some(gobj), k, pos);
+        out.gobj = spawn_at(r, Some(gobj), ItKind::from_raw(k), pos);
         if let Some(g) = out.gobj {
             pop_up(r.game, r.data, g, None);
             out.stopped = false;
@@ -93,7 +93,7 @@ fn random_pop(game: &mut Game, data: &melee_data::archive::Archives, gobj: GObjI
 /// Makes an item of `kind` at `pos` (from a container's ECB center if there's one), spinning,
 /// `it_8026F5C8`.
 #[doc(alias = "it_8026F5C8")]
-pub fn spawn_at(r: &mut Running, from: Option<GObjId>, kind: i32, pos: Vec3) -> Option<GObjId> {
+pub fn spawn_at(r: &mut Running, from: Option<GObjId>, kind: ItKind, pos: Vec3) -> Option<GObjId> {
     let prev_pos = Vec3::new(pos.x, pos.y, 0.0);
     let facing_dir = super::owner::facing_for(r.game, r.data, prev_pos);
     let (at, parent2) = match from {
@@ -134,7 +134,7 @@ pub fn drop_monster(
     }
     let table = r.game.it.spawn.monsters.clone();
     let kind = super::spawn::pick(r.game, &table);
-    let g = spawn_at(r, gobj, kind, pos)?;
+    let g = spawn_at(r, gobj, ItKind::from_raw(kind), pos)?;
     let vel = vel.unwrap_or_else(|| random_pop(r.game, r.data, g));
     item_mut(r.game, g).vel = vel;
     Some(g)
@@ -150,7 +150,7 @@ pub fn drop_random(r: &mut Running, pos: Vec3, vel: Option<Vec3>) -> Option<GObj
     if kind == -1 {
         return None;
     }
-    let g = spawn_at(r, None, kind, pos)?;
+    let g = spawn_at(r, None, ItKind::from_raw(kind), pos)?;
     let vel = vel.unwrap_or_else(|| random_pop(r.game, r.data, g));
     item_mut(r.game, g).vel = vel;
     r.game.it.spawned = r.game.it.spawned.wrapping_add(1);

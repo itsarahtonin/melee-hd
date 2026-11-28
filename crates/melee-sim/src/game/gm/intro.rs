@@ -5,6 +5,8 @@
 //! bonus stage's intro shows its title instead. Adventure's (`gm_1879.c`, `GS_INTRO_NORMAL`)
 //! flies a camera over the stage's map until Start.
 
+use crate::game::gr::GrKind;
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -409,7 +411,7 @@ impl Running<'_> {
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
         super::super::it::item::load_common_data(self.game, self.data, it_co, kept);
         super::super::it::item::init_globals(self.game, self.data);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::gr::setup::setup_at(self, grkind, 0x28);
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);
@@ -448,7 +450,7 @@ impl Running<'_> {
                 self.intro_easy_horde();
                 self.intro_easy_allies();
             }
-            None => {}
+            Some(IntroKind::Other(_)) | None => {}
         }
         self.lb_play_music(0x2D);
     }
@@ -674,7 +676,7 @@ impl Running<'_> {
         for i in 0..usize::from(d.enemies) {
             let s = &mut self.game.intros.easy.data;
             if s.enemy_kinds[i] == CharacterKind::GKoopa {
-                s.enemy_kinds[i] = CharacterKind::Koopa as u8;
+                s.enemy_kinds[i] = CharacterKind::Koopa.raw() as u8;
             }
             let c = s.enemy_kinds[i];
             if c != NONE {
@@ -687,7 +689,8 @@ impl Running<'_> {
     /// facing 0, size 1, metal or not, its fighters in pose `pose` and their process.
     fn intro_easy_player(&mut self, slot: i32, ckind: u8, costume: u8, metal: u8, pose: i32) {
         self.game.reinit_player(slot);
-        self.game.set_player_ckind(slot, i32::from(ckind));
+        self.game
+            .set_player_ckind(slot, CharacterKind::from_raw(i32::from(ckind)));
         self.game.set_player_costume(slot, i32::from(costume));
         self.game.set_player_port(slot, 0);
         self.game.set_player_pkind(slot, PlayerKind::Demo);
@@ -1095,7 +1098,7 @@ impl Running<'_> {
         let stkind = i32::from(e.stkind);
         let grkind = crate::lb::audio::ground_kind(stkind) as i32;
         let us = self.files_us();
-        let archive = super::super::gr::registry::stage(grkind)
+        let archive = super::super::gr::registry::stage(GrKind::from_raw(grkind))
             .file(us)
             .map(|name| {
                 self.game
@@ -1112,7 +1115,7 @@ impl Running<'_> {
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);
         super::super::ef::load_sync(self, 0x1F);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::gr::setup::setup_at(self, grkind, 0x10);
         self.game.init_all_players();
         self.bg_flash_create(10);
@@ -1148,7 +1151,7 @@ impl Running<'_> {
         };
         let song = NORMAL_SONGS[si];
         let ckind = self.game.player(0).ckind;
-        let mask = crate::lb::audio::character_banks(ckind) | NORMAL_BANKS[si];
+        let mask = crate::lb::audio::character_banks(ckind.id()) | NORMAL_BANKS[si];
         self.game.audio.lb.unwant_banks(song as u32);
         self.game.audio.lb.want_banks(song as u32, mask);
         self.game.audio.lb_start_bank_loads(self.data);
@@ -1489,7 +1492,9 @@ impl Running<'_> {
             f.names.push(self.intro_file_name(NORMAL_ARCHIVE));
             let stkind = i32::from(self.game.one_player.adventure_intro.stkind);
             let grkind = crate::lb::audio::ground_kind(stkind) as i32;
-            if let Some(name) = super::super::gr::registry::stage(grkind).file(self.files_us()) {
+            if let Some(name) =
+                super::super::gr::registry::stage(GrKind::from_raw(grkind)).file(self.files_us())
+            {
                 f.names.push(name.trim_start_matches('/').to_owned());
             }
             f.songs.push(0x2E);
@@ -1517,11 +1522,11 @@ impl Running<'_> {
         let mut slot = 0;
         let mut add = |f: &mut super::super::vi::SceneFiles, ckind: u8, costume: u8| {
             let p = &mut f.players.players[slot];
-            p.ckind = ckind as i8;
+            p.ckind = Narrow::from_raw(ckind as i8);
             p.color = costume;
             p.slot_type = PlayerKind::Demo.into();
             slot += 1;
-            let m = super::super::pl::player::mapping(i32::from(ckind));
+            let m = super::super::pl::player::mapping(CharacterKind::from_raw(i32::from(ckind)));
             for kind in [m.internal_id, m.extra_internal_id] {
                 if kind < 0 || (kind == m.extra_internal_id && m.has_transformation != 0) {
                     continue;
@@ -1544,7 +1549,7 @@ impl Running<'_> {
         }
         for i in 0..usize::from(d.enemies) {
             let c = if d.enemy_kinds[i] == CharacterKind::GKoopa {
-                CharacterKind::Koopa as u8
+                CharacterKind::Koopa.raw() as u8
             } else {
                 d.enemy_kinds[i]
             };

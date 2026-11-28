@@ -3,6 +3,10 @@
 //! state's animation is loaded from ARAM and started, its command script begins, and its
 //! callbacks take over.
 
+use crate::game::ft::types::HurtHeight;
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HurtCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -11,7 +15,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::super::structs::Fighter;
 use super::anim::anim_bit;
-use super::common::GA_GROUND;
 use super::{MotionState, motion_table};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
@@ -92,7 +95,7 @@ impl Running<'_> {
             && self.game.player_pkind(i32::from(fp.player_idx)) != PlayerKind::Demo
             && self.anim_aram(fp, own) == 0
         {
-            let popo = self.game.ft.data.data_list[FighterKind::Popo as usize]
+            let popo = self.game.ft.data.data_list[FighterKind::Popo.raw() as usize]
                 .expect("Popo's data isn't loaded");
             return self
                 .data
@@ -105,10 +108,10 @@ impl Running<'_> {
 
     /// The kind whose animation table `entry` is in: the fighter's, or Popo's for an entry
     /// Nana took from his ([`Running::anim_entry`]).
-    pub(super) fn anim_entry_kind(&self, kind: i32, entry: DataRef) -> i32 {
-        let popo = self.game.ft.data.data_list[FighterKind::Popo as usize].map(|d| d.archive);
+    pub(super) fn anim_entry_kind(&self, kind: FighterKind, entry: DataRef) -> FighterKind {
+        let popo = self.game.ft.data.data_list[FighterKind::Popo.raw() as usize].map(|d| d.archive);
         if kind == FighterKind::Nana && popo == Some(entry.archive) {
-            FighterKind::Popo.id()
+            FighterKind::Popo
         } else {
             kind
         }
@@ -123,10 +126,10 @@ impl Running<'_> {
         }
         // A demo's animation: where `ftData_80085B98` placed it in main memory.
         if let Some(i) = demo_index(fp, entry) {
-            return self.game.ft.data.demo_anim_addrs[fp.kind as usize][i];
+            return self.game.ft.data.demo_anim_addrs[fp.kind.raw() as usize][i];
         }
         let kind = self.anim_entry_kind(fp.kind, entry);
-        let file = self.game.ft.anim_files[kind as usize]
+        let file = self.game.ft.anim_files[kind.raw() as usize]
             .as_ref()
             .expect("the character's animation file isn't in ARAM");
         file.aram.wrapping_add(self.data.u32(entry.at(4)))
@@ -197,9 +200,9 @@ impl Running<'_> {
 
     /// The figatree of a kind's animation table entry, as copying its archive from ARAM
     /// (`lbArq_80014BD0`) and relocating it (`HSD_ArchiveParse`) finds it.
-    pub(super) fn anim_tree(&self, kind: i32, entry: DataRef) -> DataRef {
-        let demo = self.game.ft.data.demo_files[kind as usize].filter(|_| {
-            self.game.ft.data.data_list[kind as usize].is_some_and(|d| {
+    pub(super) fn anim_tree(&self, kind: FighterKind, entry: DataRef) -> DataRef {
+        let demo = self.game.ft.data.demo_files[kind.raw() as usize].filter(|_| {
+            self.game.ft.data.data_list[kind.raw() as usize].is_some_and(|d| {
                 self.data.ptr(d.at(0x14)).is_some_and(|l| {
                     l.archive == entry.archive
                         && entry.offset >= l.offset
@@ -216,7 +219,7 @@ impl Running<'_> {
                 .files
                 .demo_anim(archive, off)
                 .unwrap_or_else(|| {
-                    panic!("no demo animation at {off:#x} of character {kind}'s results file")
+                    panic!("no demo animation at {off:#x} of character {kind:?}'s results file")
                 });
             let mut buf = [0u8; 128];
             let name = self.c_string(
@@ -233,7 +236,7 @@ impl Running<'_> {
                 offset,
             };
         }
-        let file = self.game.ft.anim_files[kind as usize]
+        let file = self.game.ft.anim_files[kind.raw() as usize]
             .as_ref()
             .expect("the character's animation file isn't in ARAM");
         let off = self.data.u32(entry.at(4));
@@ -241,7 +244,7 @@ impl Running<'_> {
             .anims
             .iter()
             .find(|&&(o, _)| o == off)
-            .unwrap_or_else(|| panic!("no animation at {off:#x} of character {kind}'s file"));
+            .unwrap_or_else(|| panic!("no animation at {off:#x} of character {kind:?}'s file"));
         let mut buf = [0u8; 128];
         let name = self.c_string(
             self.data.ptr(entry).expect("an animation without a name"),
@@ -311,14 +314,14 @@ impl Running<'_> {
 
     /// Sets every hurtbox's state, `ftColl_8007B0C0`.
     #[doc(alias = "ftColl_8007B0C0")]
-    pub(super) fn set_hurtbox_state(&mut self, f: FighterId, state: i32) {
+    pub(super) fn set_hurtbox_state(&mut self, f: FighterId, state: HurtCapsuleState) {
         let fp = &mut self.game.fighters[f.0];
         for i in 0..fp.hurt_capsules_len as usize {
             let h = &mut fp.hurt_capsules[i].capsule;
             h.state = state;
             h.skip_update_pos = false;
         }
-        fp.hurtboxes_set = state != 0;
+        fp.hurtboxes_set = state != HurtCapsuleState::Enabled;
     }
 
     /// Puts the hurtboxes back as the character's data describes them, `ftColl_8007B4E0`.
@@ -353,9 +356,9 @@ impl Running<'_> {
             );
             let h = &mut self.game.fighters[f.0].hurt_capsules[i as usize];
             h.capsule.bone_idx = bone_idx;
-            h.height = height;
+            h.height = HurtHeight::from_raw(height);
             h.is_grabbable = grabbable;
-            h.capsule.state = 0;
+            h.capsule.state = HurtCapsuleState::Enabled;
             h.capsule.bone = joint;
             h.capsule.a_offset = a;
             h.capsule.b_offset = b;
@@ -633,7 +636,7 @@ impl Running<'_> {
                 self.set_hit_status(gobj, 0);
             }
             if self.game.fighters[f.0].hurtboxes_set {
-                self.set_hurtbox_state(f, 0);
+                self.set_hurtbox_state(f, HurtCapsuleState::Enabled);
             }
         }
         if self.game.fighters[f.0].hurtboxes_custom {
@@ -739,7 +742,7 @@ impl Running<'_> {
             // `mpClearFloorSkip`.
             fp.coll_data.floor_skip = -1;
             // `ftCo_800DEEA8`.
-            fp.smash_attrs.state = 0;
+            fp.smash_attrs.state = SmashState::None;
             fp.smash_attrs.smash_since_hitbox = -1.0;
             fp.wind_immune = false;
         }
@@ -772,7 +775,7 @@ impl Running<'_> {
             jobj::remove_all(&mut self.game.objs, Some(acc));
             self.game.fighters[f.0].accessory = None;
         }
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground {
             let fp = &mut self.game.fighters[f.0];
             if fp.kind == FighterKind::Peach {
                 fp.u[..4].copy_from_slice(&1u32.to_be_bytes());
@@ -833,7 +836,7 @@ impl Running<'_> {
         self.game.part_set_rot_y(f, 0, y);
         self.game.part_set_rot_z(f, 0, 0.0);
         let ms = Self::motion_state(&self.game.fighters[f.0], msid);
-        if self.game.fighters[f.0].ground_or_air == GA_GROUND
+        if self.game.fighters[f.0].ground_or_air == GroundOrAir::Ground
             && flags & SKIP_HIT_STUN_START == 0
             && ms.move_bits & 0x0040_0000 != 0
             && self.game.fighters[f.0].dmg.source_attack == -1
@@ -957,7 +960,7 @@ impl Running<'_> {
                     jobj::clear_flags(jobjs, Some(j), USE_QUATERNION);
                 }
                 let fp = &mut self.game.fighters[f.0];
-                let grounded = fp.ground_or_air == GA_GROUND;
+                let grounded = fp.ground_or_air == GroundOrAir::Ground;
                 if anim_bit(fp, 0) {
                     if start == 0.0 {
                         fp.prev_trans_n_offset = Default::default();

@@ -6,6 +6,8 @@
 //! Every bubble's colour is translucent (alpha 0x80), so every bubble draws in the
 //! translucent pass (2) only.
 
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::lb::hitcapsule::HurtCapsuleState;
 use melee_data::archive::Archives;
 
 use crate::game::structs::{HitCapsule, HitResult, HurtCapsule};
@@ -49,8 +51,6 @@ const COIN: ([u8; 4], [u8; 4]) = ([0xFF, 0x00, 0x00, 0x80], [0x80, 0x00, 0x00, 0
 /// `HitElement_Catch` and `HitElement_Inert`.
 const ELEMENT_CATCH: u32 = 8;
 const ELEMENT_INERT: u32 = 11;
-/// `HurtCapsule_Intangible`.
-const HURT_INTANGIBLE: i32 = 2;
 
 /// A debug drawing the presentation makes in GX directly, HAL's state caches invalidated
 /// around it.
@@ -136,7 +136,7 @@ fn joint_mtx(objs: &mut Objects, data: &Archives, j: Option<JObjId>) -> Mtx34 {
 /// coloured by its element, its size scaled by `scale_y` unless it keeps its own (`x43_b1`).
 #[doc(alias = "lbColl_80009F54")]
 pub fn hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> bool {
-    if hit.state == 0 || hit.phantom {
+    if hit.state == HitCapsuleState::Disabled || hit.phantom {
         return false;
     }
     let color = match hit.element {
@@ -150,7 +150,7 @@ pub fn hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> boo
 /// A thrown fighter's hit's bubble, `lbColl_8000A044`.
 #[doc(alias = "lbColl_8000A044")]
 pub fn thrown_hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> bool {
-    if hit.state == 0 || hit.phantom {
+    if hit.state == HitCapsuleState::Disabled || hit.phantom {
         return false;
     }
     hit_capsule(objs, hit, pass, scale_y, THROWN)
@@ -235,8 +235,8 @@ pub fn hurt(
     z: f32,
 ) -> bool {
     let i = match state {
-        None => hurt.state as usize,
-        Some(_) if hurt.state == HURT_INTANGIBLE => 2,
+        None => hurt.state.raw() as usize,
+        Some(_) if hurt.state == HurtCapsuleState::Intangible => 2,
         Some(s) => s as usize,
     };
     let (color, amb) = HURT[i];

@@ -333,10 +333,10 @@ impl Running<'_> {
             .game
             .gm
             .unlocks
-            .ckind_unlocked(CharacterKind::Mewtwo as u8)
+            .ckind_unlocked(CharacterKind::Mewtwo.raw() as u8)
             && t >= 0x11940
         {
-            return CharacterKind::Mewtwo as u8;
+            return CharacterKind::Mewtwo.raw() as u8;
         }
         CharacterKind::NONE
     }
@@ -358,9 +358,9 @@ impl Running<'_> {
                 .game
                 .gm
                 .unlocks
-                .ckind_unlocked(CharacterKind::Mars as u8)
+                .ckind_unlocked(CharacterKind::Mars.raw() as u8)
         {
-            return CharacterKind::Mars as u8;
+            return CharacterKind::Mars.raw() as u8;
         }
         CharacterKind::NONE
     }
@@ -467,7 +467,7 @@ impl Running<'_> {
                 let mut challenger = false;
                 let idx = smallest_loser(&me);
                 let p = &me.player_standings[idx];
-                let (ck, color, tag) = (p.ckind as u8, p.flags[0] >> 2, p.nametag);
+                let (ck, color, tag) = (p.ckind.raw() as u8, p.flags[0] >> 2, p.nametag);
                 let played = self
                     .game
                     .game_data

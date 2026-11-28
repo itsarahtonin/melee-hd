@@ -50,7 +50,7 @@ pub fn spawn(
     parent: GObjId,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {

@@ -829,7 +829,7 @@ fn tilt_floor(call: &mut Call, kind: u32) -> bool {
     };
     let line = peek_u32(call, ip + 0x378 + 0x14C) as i32;
     let lines = peek_u32(call, leaf_check::sym("groundCollLine"));
-    if !(0..1536).contains(&line) || peek_u32(call, ip + 0x10) != ItKind::ReDead as u32 {
+    if !(0..1536).contains(&line) || peek_u32(call, ip + 0x10) != ItKind::ReDead.raw() as u32 {
         return false;
     }
     let Some(at) = in_mem1(lines + 8 * line as u32 + 4) else {

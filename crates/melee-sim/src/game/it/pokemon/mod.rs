@@ -128,7 +128,7 @@ fn draw_weighted(r: &mut Running, ball: GObjId) -> i32 {
             if sum >= roll {
                 let p = &mut r.game.it.pokemon;
                 p.previous_kind = last;
-                p.last_kind = kind;
+                p.last_kind = ItKind::from_raw(kind);
                 return kind - ItKind::FIRST_POKEMON.id();
             }
         }
@@ -174,7 +174,7 @@ fn draw_from_list(r: &mut Running, ball: GObjId, list: &[i32]) -> i32 {
     }
     let p = &mut r.game.it.pokemon;
     p.previous_kind = p.last_kind;
-    p.last_kind = result;
+    p.last_kind = ItKind::from_raw(result);
     result - ItKind::FIRST_POKEMON.id()
 }
 
@@ -260,7 +260,7 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
         pos: center,
         damage: 0,
         facing_dir: facing,
-        kind: kind.wrapping_add(ItKind::FIRST_POKEMON.id()),
+        kind: ItKind::from_raw(kind.wrapping_add(ItKind::FIRST_POKEMON.id())),
         owner,
         maker: Some(ball),
         ignore_id: 0,
@@ -276,7 +276,7 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return false;
     };
-    set_release_vars(r, ball, gobj, spawn.kind);
+    set_release_vars(r, ball, gobj, spawn.kind.id());
     count_for_owner(r, gobj);
     super::item::debug_owner_bubbles(r.game, gobj, owner);
     super::kinds::wstar::set_attack_flags(r, gobj, 0x0044_0060);
@@ -290,7 +290,7 @@ pub fn count_for_owner(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     let (kind, owner) = (ip.kind, ip.owner);
     assert!(
-        (ItKind::FIRST_POKEMON.id()..ItKind::POKEMON_END.id()).contains(&kind),
+        (ItKind::FIRST_POKEMON.id()..ItKind::POKEMON_END.id()).contains(&kind.id()),
         "It_PKind_Start <= itGetKind(igobj) && itGetKind(igobj) < It_PKind_Terminate"
     );
     if !super::item::is_fighter(r.game, owner) {
@@ -298,7 +298,7 @@ pub fn count_for_owner(r: &mut Running, gobj: GObjId) {
     }
     let slot = r.game.fighter(owner.expect("an owner")).player_idx as usize;
     let n = &mut r.game.players[slot].stale_moves.pokemon_released
-        [(kind - ItKind::FIRST_POKEMON.id()) as usize];
+        [(kind.id() - ItKind::FIRST_POKEMON.id()) as usize];
     *n = n.wrapping_add(1);
 }
 

@@ -639,7 +639,7 @@ fn hold_kind() {
         let spawn: SpawnItem = a.get(0);
         Ret::Words(
             a.int(0) + 0xC,
-            vec![item::hold_kind_of(spawn.kind).id() as u32],
+            vec![item::hold_kind_of(spawn.kind.id()).id() as u32],
         )
     });
 }
@@ -680,7 +680,10 @@ fn count() {
 fn at_limit() {
     leaf_check::shard_test!();
     check("Item_8026784C", &|r, a| {
-        Ret::Bool(item::at_limit(r.game, a.int(0) as i32))
+        Ret::Bool(item::at_limit(
+            r.game,
+            item::HoldKind::from_raw(a.int(0) as i32),
+        ))
     });
 }
 
@@ -965,7 +968,11 @@ fn refresh_hurtboxes() {
 fn set_hurtbox_state() {
     leaf_check::shard_test!();
     check("it_80271508", &|r, a| {
-        coll::set_hurtbox_state(r.game, a.gobj(0), a.int(1) as i32);
+        coll::set_hurtbox_state(
+            r.game,
+            a.gobj(0),
+            melee_sim::lb::hitcapsule::HurtCapsuleState::from_raw(a.int(1) as i32),
+        );
         Ret::None
     });
 }
@@ -1362,7 +1369,7 @@ fn laser_spawn() {
             a.gobj(0),
             a.vec(1),
             a.int(2) as i32,
-            a.int(3) as i32,
+            ItKind::from_raw(a.int(3) as i32),
             a.float(0),
             a.float(1),
         );
@@ -2021,7 +2028,7 @@ fn blaster_spawn() {
             a.opt_gobj(0),
             a.vec(1),
             a.int(2) as i32,
-            a.int(3) as i32,
+            ItKind::from_raw(a.int(3) as i32),
         );
         Ret::GObj(g)
     });
@@ -2289,7 +2296,7 @@ fn drop_at() {
             true
         };
         check_on("fn_8026C88C", "it_8026D258", &prep, &|r, a| {
-            Ret::Bool(spawn::drop_at(r, a.vec(0), 54))
+            Ret::Bool(spawn::drop_at(r, a.vec(0), ItKind::FoxLaser))
         });
     }
 }
@@ -2838,7 +2845,14 @@ fn drops() {
         "itCapsule_UnkMotion0_Anim",
         "it_8026F5C8",
         &prep,
-        &|r, a| Ret::GObj(drop::spawn_at(r, Some(a.gobj(0)), 0, a.vec(2))),
+        &|r, a| {
+            Ret::GObj(drop::spawn_at(
+                r,
+                Some(a.gobj(0)),
+                ItKind::Capsule,
+                a.vec(2),
+            ))
+        },
     );
     for chk in [0u32, 1] {
         let prep = move |c: &mut Call| {

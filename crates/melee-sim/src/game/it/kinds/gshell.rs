@@ -2,6 +2,7 @@
 //! ground hitting what it meets, bouncing off walls, until it slows to a stop or its time runs
 //! out. The red shell's code ([`super::shell`]) with its own slide, pop-ups and hits.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::ground_or_fall;
@@ -194,7 +195,7 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
     }
     coll::take_attacker(r.game, gobj);
     hitbox::start_blink(r.game, gobj);
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         slide_air(r, gobj);
     } else {
         slide(r, gobj);
@@ -238,7 +239,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
             ip.vel.x = mem(fp::fmuls(reg(kick_speed), -reg(ip.stomp_dir)));
             coll::take_stomper(r.game, gobj);
             vars(r.game, gobj).blinking.set(true);
-            if item(r.game, gobj).ground_or_air == 1 {
+            if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
                 slide_air(r, gobj);
             } else {
                 slide(r, gobj);

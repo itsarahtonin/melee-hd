@@ -5,12 +5,14 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::ft::types::SmashState;
+use crate::lb::hitcapsule::HitCapsuleState;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::nessyoyo;
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::super::motion::flags::SKIP_ITEM_VIS;
 use super::super::sound::Track;
 use super::{PART_R2ND_NA, addr, attr, ms, mv, u};
@@ -50,7 +52,7 @@ impl Running<'_> {
     #[doc(alias = "ftNs_AttackHi4_YoyoUpdateHitPos")]
     pub fn ness_yoyo_update_hit_pos(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.hitboxes[0].state != hitcapsule::DISABLED {
+        if fp.hitboxes[0].state != HitCapsuleState::Disabled {
             let p = u_vec(fp, u::YOYO_HITBOX_POS);
             if p.x != 0.0 || p.y != 0.0 {
                 super::super::seak::special_s::hit_at(&mut fp.hitboxes[0], p);
@@ -82,7 +84,7 @@ impl Running<'_> {
             return;
         }
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].hitboxes[0].state != hitcapsule::ENABLED {
+        if self.game.fighters[f.0].hitboxes[0].state != HitCapsuleState::Enabled {
             return;
         }
         let duration = reg(self.ness_attr_f32(f, attr::YOYO_CHARGE_DURATION));
@@ -241,7 +243,7 @@ impl Running<'_> {
         let rows = self.data.u32(self.load_common(0x2C).at(4)) as u8;
         let fp = &mut self.game.fighters[f.0];
         let s = &mut fp.smash_attrs;
-        s.state = 4;
+        s.state = SmashState::from_raw(4);
         s.frame_speed_mul = fp.frame_speed_mul;
         let s = &mut fp.smash_attrs;
         s.frames = 0.0;
@@ -511,7 +513,7 @@ impl Running<'_> {
     /// air the yo-yo goes.
     fn ness_attack_hi4_coll(&mut self, gobj: GObjId) {
         self.ground_coll(gobj);
-        if self.game.fighter(gobj).ground_or_air == GA_AIR
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air
             && let Some(yoyo) = self.game.fighter(gobj).u.gobj_at(u::YOYO)
         {
             nessyoyo::remove(self, yoyo);

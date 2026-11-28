@@ -6,6 +6,7 @@
 //! shell slides, popping up off what it hits; the red shell chases the nearest fighter,
 //! turning at ledges and walls, until it has hit its count) stays its own, over its [`Shell`].
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{air, fall_to_floor, fall_unbreakable, ground_or_fall, ground_skid};
@@ -157,7 +158,7 @@ pub fn idle(_: &mut Running, _: GObjId) {}
 
 /// Rolls the model with the speed on the ground (`Item_UpdateRollingShellRotation`).
 pub fn roll(r: &mut Running, gobj: GObjId, s: &Shell) {
-    if item(r.game, gobj).ground_or_air != 0 {
+    if item(r.game, gobj).ground_or_air != GroundOrAir::Ground {
         return;
     }
     let rate = attr(r, gobj, s.roll);

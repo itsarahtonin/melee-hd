@@ -195,7 +195,7 @@ impl Running<'_> {
         for i in 0..i32::from(self.horde().count) {
             slot = i + 1;
             let g = &mut *self.game;
-            g.set_player_ckind(slot, i32::from(kind));
+            g.set_player_ckind(slot, CharacterKind::from_raw(i32::from(kind)));
             g.set_player_port(slot, 0);
             g.set_player_pkind(slot, PlayerKind::Demo);
             g.set_player_facing(slot, 0.0);

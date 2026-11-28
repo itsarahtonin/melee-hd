@@ -551,7 +551,7 @@ impl Game {
                 continue;
             }
             let costume = self.player_costume(i) as i32;
-            if costume >= i32::from(costume_count(self.player_ckind(i) as u8)) {
+            if costume >= i32::from(costume_count(self.player_ckind(i).raw() as u8)) {
                 self.set_player_costume(i, 0);
             }
         }
@@ -747,13 +747,13 @@ impl Running<'_> {
             }
         };
         for p in &start.players {
-            if p.ckind != NO_CHARACTER {
-                want(audio, character_slot(p.ckind as u8 as usize));
+            if p.ckind.raw() != NO_CHARACTER {
+                want(audio, character_slot(p.ckind.raw() as u8 as usize));
             }
         }
         want(
             audio,
-            ground_slot(ground_kind(i32::from(start.rules.stkind))),
+            ground_slot(ground_kind(i32::from(start.rules.stkind.raw()))),
         );
         audio.lb_start_bank_loads(data);
         self.lb_audio_call(1);

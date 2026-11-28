@@ -123,8 +123,9 @@ enum Role {
 
 fn target(game: &Game) -> &'static Target {
     let k = game.stage_info.grkind;
-    let i = super::GrKind::from_id(k).and_then(super::GrKind::target_index);
-    &TARGETS[i.unwrap_or_else(|| panic!("a target stage's function on stage kind {k}"))]
+    &TARGETS[k
+        .target_index()
+        .unwrap_or_else(|| panic!("a target stage's function on stage kind {k:?}"))]
 }
 
 /// The target stages' objects' processes and callbacks in the callback table: one entry for
@@ -300,9 +301,7 @@ pub fn spawn_targets(r: &mut Running) -> i32 {
         let Some(j) = r.game.stage_info.points[i] else {
             continue;
         };
-        if super::super::it::zako::spawn(r, ItKind::Target.id(), None, Some(j), None, false)
-            .is_some()
-        {
+        if super::super::it::zako::spawn(r, ItKind::Target, None, Some(j), None, false).is_some() {
             count = count.wrapping_add(1);
         }
     }

@@ -8,6 +8,7 @@ use super::super::super::it::kinds::kirbyhammer;
 use super::super::super::state::Running;
 use super::{addr, attr, ms, u};
 use crate::hsd::gobj::GObjId;
+use crate::mp::coll::GroundOrAir;
 
 /// `FtPart_HipN` and `FtPart_R3rdNa`: his code indexes `fp->parts` by these directly.
 const PART_HIP_N: i32 = 4;
@@ -38,7 +39,7 @@ impl Running<'_> {
             let j = self.bone_joint(gobj, PART_R3RD_NA);
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
             let fp = &self.game.fighters[f.0];
-            let (dir, ga) = (fp.facing_dir, fp.ground_or_air as u32);
+            let (dir, ga) = (fp.facing_dir, fp.ground_or_air.raw() as u32);
             let h = kirbyhammer::spawn(self, gobj, pos, PART_R3RD_NA, ga, dir);
             let fp = &mut self.game.fighters[f.0];
             fp.u.set_gobj_at(u::HAT_ITEM, h);
@@ -52,7 +53,11 @@ impl Running<'_> {
                 }
                 self.kb_set_cleanup_cbs(gobj);
                 let fp = &self.game.fighters[f.0];
-                let id = if fp.ground_or_air == 1 { 0x497 } else { 0x496 };
+                let id = if fp.ground_or_air == GroundOrAir::Air {
+                    0x497
+                } else {
+                    0x496
+                };
                 let facing = fp.facing_dir;
                 let hip = self.bone_joint(gobj, PART_HIP_N);
                 ef::spawn(self, id, Some(gobj), &[Arg::JObj(hip), Arg::Float(facing)]);

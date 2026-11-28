@@ -16,6 +16,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, destroy, pick_up, play_sfx1, spawn_air};
@@ -284,7 +285,7 @@ pub fn spawn(
     owner: GObjId,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind,
@@ -316,7 +317,7 @@ pub fn spawn(
     v.owner.set(Some(owner));
     v.sfx_timer.set(0.0);
     v.flight_left.set(flight_frames);
-    v.owner_kind.set(owner_kind);
+    v.owner_kind.set(owner_kind.id());
     for i in 0..16 {
         v.trail_pos[i].set(Vec3::new(0.0, 0.0, 0.0));
         v.trail_rot[i].set(Vec3::new(0.0, 0.0, 0.0));

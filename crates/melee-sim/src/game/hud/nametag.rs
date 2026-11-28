@@ -114,7 +114,7 @@ impl Game {
             slot as u8,
             self.player_team(slot) as u8,
             u8::from(self.vs_is_teams()),
-            self.player_pkind(slot) as u8,
+            self.player_pkind(slot).raw() as u8,
         )
     }
 

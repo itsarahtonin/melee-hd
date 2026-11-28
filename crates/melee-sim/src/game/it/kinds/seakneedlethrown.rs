@@ -3,6 +3,8 @@
 //! tumbles (state 4); needles let go of loose drop tumbling (state 1). One that hits something,
 //! clanks or meets a shield bounces off one time in three; a reflected one flies back.
 
+use crate::game::it::ItKind;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, play_sfx, spawn_air};
@@ -176,7 +178,7 @@ pub fn spawn(
     r: &mut Running,
     parent: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
@@ -254,7 +256,7 @@ pub fn fly(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let child = child_of(r, gobj);
     launch_common(r, gobj, owner, 0);
     let speed = reg(attr_f32(r, gobj, SPEED));
-    let factor = if r.game.fighter(owner).ground_or_air != 0 {
+    let factor = if r.game.fighter(owner).ground_or_air != GroundOrAir::Ground {
         2.356_194_496_154_785
     } else {
         1.570_796_370_506_286_6

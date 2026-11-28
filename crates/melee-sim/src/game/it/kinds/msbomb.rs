@@ -12,6 +12,7 @@ use crate::game::handles::CodeRef;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -232,7 +233,7 @@ pub fn stick(r: &mut Running, gobj: GObjId) {
 /// floor and settled there, not to be picked up, set off by a touch.
 fn arm(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
-    if item(r.game, gobj).ground_or_air == 0 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Ground {
         lib2725::stop_spin(r.game, r.data, gobj);
         maplib::tilt_to_slope(r.game, r.data, gobj, 0);
         settle(r, gobj);

@@ -164,7 +164,7 @@ fn tier(r: &Running, gobj: GObjId, t: i32) -> DataRef {
 /// The coin's spawn description (`it_802E614C`): from `pos` at `vel`, parents `p1` and `p2`.
 fn spawn_desc(p1: Option<GObjId>, p2: Option<GObjId>, pos: Vec3, vel: Vec3) -> SpawnItem {
     let mut s = SpawnItem {
-        kind: ItKind::VsCoin.id(),
+        kind: ItKind::VsCoin,
         ..Default::default()
     };
     s.prev_pos = pos;

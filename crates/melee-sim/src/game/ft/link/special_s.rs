@@ -2,12 +2,13 @@
 //! picks, harder for a smash, and caught when it comes back. Link can't throw a second while
 //! one is out (the empty throw instead).
 
+use crate::game::it::ItKind;
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::linkboomerang;
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::{addr, attr, ms, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -153,7 +154,7 @@ impl Running<'_> {
             };
             let kind = self.link_attr_i32(f, attr::X2C);
             let facing = self.game.fighters[f.0].facing_dir;
-            let b = linkboomerang::spawn(self, facing, gobj, pos, part, kind);
+            let b = linkboomerang::spawn(self, facing, gobj, pos, part, ItKind::from_raw(kind));
             let fp = &mut self.game.fighters[f.0];
             fp.special_item = b;
             fp.u.set_gobj_at(u::BOOMERANG, b);
@@ -206,7 +207,7 @@ impl Running<'_> {
     /// The catch, `ftLk_SpecialS2_Enter`, which the boomerang starts.
     #[doc(alias = "ftLk_SpecialS2_Enter")]
     pub fn link_special_s2_enter(&mut self, gobj: GObjId) {
-        let msid = if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        let msid = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             ms::SPECIAL_AIR_S2
         } else {
             ms::SPECIAL_S2

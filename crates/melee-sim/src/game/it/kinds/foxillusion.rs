@@ -4,10 +4,12 @@
 
 use super::super::item::{article, change_state, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
+use crate::mp::coll::GroundOrAir;
 use crate::vec::Vec3;
 
 pub const MOTION0_ANIM: u32 = 0x8029_D094;
@@ -74,7 +76,7 @@ pub fn spawn(
     r: &mut Running,
     parent: GObjId,
     pos: Vec3,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
@@ -119,7 +121,7 @@ fn setup(r: &mut Running, gobj: GObjId) {
         .owner
         .expect("an afterimage without an owner");
     // `ftLib_GetGroundAir`.
-    let air = super::super::owner::fighter(r.game, owner).ground_or_air == 1;
+    let air = super::super::owner::fighter(r.game, owner).ground_or_air == GroundOrAir::Air;
     let flags = super::super::item::change::ANIM_UPDATE;
     change_state(r, gobj, if air { 1 } else { 0 }, flags);
     lib2725::scale_by_owner(r, gobj);

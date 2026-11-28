@@ -10,6 +10,7 @@
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::camera::CmSubjectState;
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
@@ -219,7 +220,7 @@ pub fn start_street(r: &mut Running, gobj: GObjId) {
             .geometry_mut()
             .set_ledge_callback(joint, user, Some(CodeRef(AWNING_LANDED)));
     }
-    let b = r.game.camera.alloc_box(camera::ACTIVE);
+    let b = r.game.camera.alloc_box(CmSubjectState::Active);
     r.game.grounds[g.0].u.onett().subject = Some(b);
     let cam = r.game.camera.subject_mut(b);
     cam.target_ext.h.x = -40.0;
@@ -229,7 +230,7 @@ pub fn start_street(r: &mut Running, gobj: GObjId) {
     cam.target_ext.v.z = 1.0;
     cam.pos = Vec3::new(0.0, 0.0, 0.0);
     cam.bone_pos = cam.pos;
-    cam.state = camera::INACTIVE;
+    cam.state = CmSubjectState::Inactive;
 }
 
 /// The street's setup (map 5), `grOnett_801E3A34`: its collision and animation, no camera
@@ -286,9 +287,9 @@ pub fn proc_street(r: &mut Running, gobj: GObjId) {
     smoke(r, gobj);
     if let Some(b) = r.game.grounds[g.0].u.onett().subject {
         let state = if super::ground::cars_state(r.game) != 0 {
-            camera::ACTIVE
+            CmSubjectState::Active
         } else {
-            camera::INACTIVE
+            CmSubjectState::Inactive
         };
         r.game.camera.subject_mut(b).state = state;
     }

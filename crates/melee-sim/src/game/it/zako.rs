@@ -2,6 +2,7 @@
 //! variables (`itZako_ItemVars`, the first words of each enemy's member), its knockback and
 //! its KO.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -42,7 +43,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_8027B5B0")]
 pub fn spawn(
     r: &mut Running,
-    kind: i32,
+    kind: ItKind,
     pos: Option<Vec3>,
     jobj: Option<JObjId>,
     vel: Option<Vec3>,
@@ -193,7 +194,7 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
             })
         }};
     }
-    match ItKind::of(kind) {
+    match kind {
         ItKind::ShyGuy => of!(vars.heiho()),
         ItKind::Tingle => of!(vars.tincle()),
         ItKind::KlapTrap => of!(vars.klap()),
@@ -260,13 +261,13 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 
 /// The knockback's launch angle (the inline `it_8027B798_CalcAngle`): the hit's own, or for
 /// the Sakurai angle (361) `ftCommonData`'s in the air and on the ground a slope from 0.
-fn launch_angle(r: &Running, ground_or_air: i32, angle: i32, kb: f64) -> f64 {
+fn launch_angle(r: &Running, ground_or_air: GroundOrAir, angle: i32, kb: f64) -> f64 {
     let deg = |v: f64| fp::fmuls(0.017_453_292_384_743_69, v);
     if angle != 0x169 {
         return deg(fp::frsp(f64::from(angle)));
     }
     let c = r.common();
-    if ground_or_air == GA_AIR {
+    if ground_or_air == GroundOrAir::Air {
         return reg(c.f32(0x144));
     }
     let (max, lo, hi) = (reg(c.f32(0x148)), reg(c.f32(0x14C)), reg(c.f32(0x150)));
@@ -280,10 +281,6 @@ fn launch_angle(r: &Running, ground_or_air: i32, angle: i32, kb: f64) -> f64 {
     ));
     if t > deg(max) { deg(max) } else { t }
 }
-
-/// `GA_Ground` and `GA_Air`.
-pub const GA_GROUND: i32 = 0;
-pub const GA_AIR: i32 = 1;
 
 /// An enemy's knockback velocity, `it_8027B798`: the knockback scaled by `ftCommonData`'s
 /// `x100` along its angle, away from the hit; on the ground, along the floor if it points
@@ -300,7 +297,7 @@ pub fn knockback_vel(r: &mut Running, gobj: GObjId, out: &mut Vec3) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = ip.damage_dir;
     let x = mem(fp::fmuls(fp::fneg(dx), reg(ip.facing_dir)));
-    if ip.ground_or_air == GA_AIR {
+    if ip.ground_or_air == GroundOrAir::Air {
         *out = Vec3::new(x, mem(dy), 0.0);
         return false;
     }
@@ -851,7 +848,7 @@ pub fn ko(r: &mut Running, gobj: GObjId) {
 pub fn ko_bonus(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     let (player, kind) = (ip.source_player, ip.kind);
-    r.zako_ko_bonus(player, kind);
+    r.zako_ko_bonus(player, kind.id());
 }
 
 impl Running<'_> {
@@ -1284,7 +1281,7 @@ pub fn looped(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) -> bool {
 #[doc(alias = "itOldkuri_UnkMotion9_Anim")]
 pub fn knocked_anim(r: &mut Running, gobj: GObjId, msid: i32, landed: Event) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
-        if item(r.game, gobj).ground_or_air == GA_AIR {
+        if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
             change_state(r, gobj, msid, change::ANIM_UPDATE);
         } else {
             landed(r, gobj);
@@ -1298,7 +1295,7 @@ pub fn knocked_anim(r: &mut Running, gobj: GObjId, msid: i32, landed: Event) -> 
 #[doc(alias = "itWhitebea_UnkMotion4_Coll")]
 #[doc(alias = "itOldkuri_UnkMotion9_Coll")]
 pub fn knocked_coll(r: &mut Running, gobj: GObjId, landed: Event, fell: Event) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         super::ground::fall_to_floor(r, gobj, landed);
     } else {
         super::ground::ground_or_fall(r, gobj, fell);
@@ -1356,7 +1353,7 @@ pub fn flight_physics(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itNokonoko_UnkMotion5_Phys")]
 #[doc(alias = "itNokonoko_UnkMotion7_Phys")]
 pub fn knocked_physics(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         flight_physics(r, gobj);
     }
 }

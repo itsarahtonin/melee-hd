@@ -220,7 +220,7 @@ impl Running<'_> {
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, hand, None);
         let facing = self.game.fighter(gobj).facing_dir;
         if kind == FighterKind::Mario {
-            mariofireball::spawn(self, gobj, pos, f.fire_kind, facing);
+            mariofireball::spawn(self, gobj, pos, ItKind::from_raw(f.fire_kind), facing);
             let hand = self.part_joint(gobj, f.hand);
             let facing = self.game.fighter(gobj).facing_dir;
             spawn(

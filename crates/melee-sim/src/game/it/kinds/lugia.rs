@@ -206,7 +206,7 @@ pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
     count_up(r, gobj, COUNT3, s3);
     if take_one(r, gobj, COUNT1) {
         let speed = attr_f32(r, gobj, 0x1C);
-        shoot(r, gobj, ItKind::LugiaAeroblast.id(), speed);
+        shoot(r, gobj, ItKind::LugiaAeroblast, speed);
         let sfx = match r.game.objs.rng.below(3) {
             0 => 0x274D,
             1 => 0x274E,
@@ -217,11 +217,11 @@ pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
     }
     if take_one(r, gobj, COUNT2) {
         let speed = attr_f32(r, gobj, 0x24);
-        shoot(r, gobj, ItKind::LugiaAeroblast2.id(), speed);
+        shoot(r, gobj, ItKind::LugiaAeroblast2, speed);
     }
     if take_one(r, gobj, COUNT3) {
         let speed = attr_f32(r, gobj, 0x2C);
-        shoot(r, gobj, ItKind::LugiaAeroblast3.id(), speed);
+        shoot(r, gobj, ItKind::LugiaAeroblast3, speed);
     }
 }
 
@@ -239,7 +239,7 @@ fn take_one(r: &mut Running, gobj: GObjId, at: usize) -> bool {
 /// Fires an Aeroblast of `kind`, `it_802D1E8C`: from its mouth, at the next point round where
 /// it came out, at `speed`.
 #[doc(alias = "it_802D1E8C")]
-pub fn shoot(r: &mut Running, gobj: GObjId, kind: i32, speed: f32) -> Option<GObjId> {
+pub fn shoot(r: &mut Running, gobj: GObjId, kind: ItKind, speed: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind,
         ..Default::default()
@@ -371,7 +371,7 @@ fn blast_spawned(r: &mut Running, gobj: GObjId, effect: i32) {
 /// factor (its attributes' second to fourth words).
 #[doc(alias = "it_802D24A0")]
 pub fn blast_phys(r: &mut Running, gobj: GObjId) {
-    let factor = match ItKind::of(item(r.game, gobj).kind) {
+    let factor = match item(r.game, gobj).kind {
         ItKind::LugiaAeroblast => attr_f32(r, gobj, 4),
         ItKind::LugiaAeroblast2 => attr_f32(r, gobj, 8),
         ItKind::LugiaAeroblast3 => attr_f32(r, gobj, 0xC),

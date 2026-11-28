@@ -274,8 +274,6 @@ pub(crate) const PAD_AB: u32 = (1 << 8) | (1 << 9);
 pub(crate) const PART_HIP_N: i32 = 4;
 pub(crate) const PART_R_SHOULDER_N: i32 = 35;
 
-pub(crate) use super::common::{GA_AIR, GA_GROUND};
-
 impl Running<'_> {
     /// A float of the fighter's `MarsAttributes`, `off` bytes in.
     pub(crate) fn mars_attr_f32(&self, f: FighterId, off: usize) -> f32 {

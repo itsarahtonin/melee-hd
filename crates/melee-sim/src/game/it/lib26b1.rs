@@ -63,7 +63,7 @@ pub fn is_empty_shooter(game: &Game, gobj: GObjId) -> bool {
 /// The item's kind, `itGetKind`.
 #[doc(alias = "itGetKind")]
 pub fn kind(game: &Game, gobj: GObjId) -> i32 {
-    item(game, gobj).kind
+    item(game, gobj).kind.id()
 }
 
 /// The item's position, `it_8026B294`.
@@ -77,7 +77,7 @@ pub fn position(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {
 pub fn heal_amount(game: &mut Game, gobj: GObjId) -> i32 {
     let kind = item(game, gobj).kind;
     let v = &mut item_mut(game, gobj).vars;
-    match ItKind::of(kind) {
+    match kind {
         ItKind::HeartContainer => v.heart().heal.get(),
         ItKind::MaximTomato => v.tomato().heal_amount.get(),
         ItKind::Food => v.foods().heal_amount.get() as i32,
@@ -160,7 +160,7 @@ pub fn spawn_number(game: &Game, gobj: GObjId) -> i32 {
 #[doc(alias = "it_8026B960")]
 pub fn fuse_left(game: &mut Game, gobj: GObjId) -> f32 {
     let ip = super::item_mut(game, gobj);
-    match ItKind::of(ip.kind) {
+    match ip.kind {
         ItKind::BobOmb if ip.msid != 0xB => ip.vars.bombhei().fuse_left.get(),
         ItKind::LinkBomb if ip.msid != 5 => ip.life_timer,
         _ => -1.0,
@@ -219,7 +219,7 @@ pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
     );
     crate::lb::anim::set_framerate(&mut r.game.objs, model, speed);
     jobj::req_anim_all(&mut r.game.objs, model, 0.0);
-    let script = super::anim::state_script(r.game, data, kind, first_anim, desc);
+    let script = super::anim::state_script(r.game, data, kind.id(), first_anim, desc);
     super::item::start_script(item_mut(r.game, gobj), script);
     jobj::anim_all(
         &mut r.game.objs,
@@ -236,7 +236,7 @@ pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
 #[doc(alias = "it_8026B924")]
 pub fn uses_left(game: &Game, gobj: GObjId) -> i32 {
     let ip = item(game, gobj);
-    match ItKind::of(ip.kind) {
+    match ip.kind {
         ItKind::SuperScope | ItKind::StarRod | ItKind::RayGun | ItKind::FireFlower => ip.ammo,
         _ => -1,
     }
@@ -524,7 +524,7 @@ pub fn drop_food(
     if kind != ItKind::HeartContainer {
         crate::game::code::unported_call("it_8026BE84's food of kind 9 (it_802841B4)");
     }
-    let mut spawn = super::item::drop_spawn(ItKind::HeartContainer.id(), pos, true);
+    let mut spawn = super::item::drop_spawn(ItKind::HeartContainer, pos, true);
     let gobj = super::item::spawn_air(r, &mut spawn)?;
     let v = item_mut(r.game, gobj).vars.heart();
     v.picked_up.set(super::TurnipFlag { picked_up: true });

@@ -59,7 +59,7 @@ pub fn show_needles(r: &mut Running, gobj: GObjId) {
     if item(r.game, gobj).owner != Some(owner) {
         return;
     }
-    let count = match ItKind::of(item(r.game, gobj).kind) {
+    let count = match item(r.game, gobj).kind {
         ItKind::SheikNeedleHeld => r.seak_held_count(Some(owner), &SEAK),
         ItKind::KirbySheikNeedleHeld => r.seak_held_count(Some(owner), &SK_KIRBY),
         k => panic!("it_802B18B0 with kind {k:?}: the original reads a count it never set"),
@@ -86,7 +86,7 @@ pub fn spawn(
     parent: GObjId,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
@@ -134,7 +134,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).owner != Some(owner) {
         return false;
     }
-    let let_go = match ItKind::of(item(r.game, gobj).kind) {
+    let let_go = match item(r.game, gobj).kind {
         ItKind::SheikNeedleHeld => r.seak_lets_go(Some(owner), &SEAK),
         ItKind::KirbySheikNeedleHeld => r.seak_lets_go(Some(owner), &SK_KIRBY),
         _ => false,

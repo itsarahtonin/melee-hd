@@ -3,6 +3,7 @@
 //! to its falling size, then drops back down through the stage from the top of the blast zone,
 //! gone past the bottom, puffing dust as it goes.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{fall, ground_or_fall};
@@ -172,7 +173,7 @@ pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itKabigon_UnkMotion0_Phys")]
 pub fn phys0(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if ip.cmd_var1 == 0 && ip.ground_or_air == 1 {
+    if ip.cmd_var1 == 0 && ip.ground_or_air == GroundOrAir::Air {
         super::gravity(r, gobj);
     }
 }
@@ -183,7 +184,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
 pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item(r.game, gobj);
     if ip.cmd_var1 == 0 {
-        if ip.ground_or_air == 1 {
+        if ip.ground_or_air == GroundOrAir::Air {
             fall(r, gobj, landed_nothing);
         } else {
             ground_or_fall(r, gobj, landed_nothing);

@@ -8,12 +8,12 @@
 //! of its own; a [`Toad`] says which, Peach's [`PEACH`] or Kirby's
 //! (`ft::kirby::special_peach::KIRBY`), and each function here carries both originals' names.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::it::kinds::{peachtoad, peachtoadspore};
 use super::super::super::state::Running;
 use super::super::co::guard::set_shield_hit;
-use super::super::common::GA_GROUND;
 use super::super::motion::flags::*;
 use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
@@ -172,7 +172,14 @@ impl Running<'_> {
         let hand = self.bone_joint(gobj, p.bone);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, hand, None);
         let facing = self.game.fighters[f.0].facing_dir;
-        let toad = peachtoad::spawn(self, gobj, pos, p.bone, p.toad_kind, facing);
+        let toad = peachtoad::spawn(
+            self,
+            gobj,
+            pos,
+            p.bone,
+            ItKind::from_raw(p.toad_kind),
+            facing,
+        );
         let fp = &mut self.game.fighters[f.0];
         fp.u.set_gobj_at(p.u + u::TOAD, toad);
         if p.held_item_spec {
@@ -197,7 +204,7 @@ impl Running<'_> {
         pos.y = mem(fp::fadds(reg(pos.y), 2.5));
         pos.z = 0.0;
         let facing = self.game.fighter(gobj).facing_dir;
-        peachtoadspore::spawn(self, gobj, pos, p.spore_kind, facing);
+        peachtoadspore::spawn(self, gobj, pos, ItKind::from_raw(p.spore_kind), facing);
         self.game.fighter_mut(gobj).accessory4_cb = None;
     }
 
@@ -578,7 +585,7 @@ impl Running<'_> {
         let facing = fp::fctiwz(reg(fp.specialn_facing_dir));
         fp.set_mv_i32(mv::N_FACING_DIR, facing);
         let msid = p.states
-            + if fp.ground_or_air == GA_GROUND {
+            + if fp.ground_or_air == GroundOrAir::Ground {
                 ms::SPECIAL_N_HIT
             } else {
                 ms::SPECIAL_AIR_N_HIT

@@ -2,6 +2,7 @@
 //! strong as the fire had grown, for 60 frames, with a rumble and, for the bigger ones, a quake.
 //! PK Flash's blast's code ([`super::steeredshot`]) with its own effect, damage and rumbles.
 
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::item::article;
@@ -13,7 +14,6 @@ use crate::game::camera::request_quake;
 use crate::game::ef::{self, Arg};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
-use crate::lb::hitcapsule;
 use crate::vec::Vec3;
 
 pub const DESTROYED: u32 = 0x802C_4670;
@@ -143,7 +143,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
         reg(attr_f32(r, gobj, attr::DAMAGE_GROWTH)),
     );
     let s = steeredshot::blast_scale(r, gobj, &DINS_FIRE_BLAST);
-    if item(r.game, gobj).hitboxes[0].hit.state != hitcapsule::DISABLED {
+    if item(r.game, gobj).hitboxes[0].hit.state != HitCapsuleState::Disabled {
         let size = reg(steeredshot::blast_vars(r, gobj, &DINS_FIRE_BLAST)
             .charge
             .get());

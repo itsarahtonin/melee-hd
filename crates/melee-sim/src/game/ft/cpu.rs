@@ -59,12 +59,12 @@ impl Running<'_> {
     /// where it stands (the floor below it unless that floor is one some stages exclude), its
     /// recorded inputs and buffers cleared, and its reach.
     #[doc(alias = "ftCo_800A101C")]
-    pub fn init_cpu(&mut self, f: FighterId, kind: i32, level: i32, spawn_arg: i32) {
+    pub fn init_cpu(&mut self, f: FighterId, kind: CpuKind, level: i32, spawn_arg: i32) {
         let fp = &mut self.game.fighters[f.0];
         let c = &mut fp.cpu;
         if fp.kind == FighterKind::Nana {
             c.acts_alone = true;
-            c.kind = CpuKind::Nana.id();
+            c.kind = CpuKind::Nana;
             c.walk_far = 15.0;
         } else {
             c.kind = kind;
@@ -73,13 +73,13 @@ impl Running<'_> {
         c.level = level;
         c.spawn_arg = spawn_arg;
         use CpuBehavior as B;
-        let (behavior, default, alt) = match CpuKind::from_id(c.kind) {
-            Some(CpuKind::Walk | CpuKind::EnemyAgain) => (B::Pace, B::Pace, B::Idle),
-            Some(CpuKind::Jump) => (B::Walk, B::Walk, B::Hop),
-            Some(CpuKind::NoAct) => (B::Idle, B::Idle, B::Idle),
+        let (behavior, default, alt) = match c.kind {
+            CpuKind::Walk | CpuKind::EnemyAgain => (B::Pace, B::Pace, B::Idle),
+            CpuKind::Jump => (B::Walk, B::Walk, B::Hop),
+            CpuKind::NoAct => (B::Idle, B::Idle, B::Idle),
             _ => (B::Walk, B::Walk, B::Stand),
         };
-        (c.behavior, c.default_behavior, c.alt_behavior) = (behavior.id(), default.id(), alt.id());
+        (c.behavior, c.default_behavior, c.alt_behavior) = (behavior, default, alt);
         c.unread_24 = 0x12C;
         c.unread_28 = 0;
         c.item_worth_min = 5;

@@ -8,6 +8,7 @@ use super::super::handles::CodeRef;
 use super::super::pl::player::PlayerKind;
 use super::super::state::{Game, Running};
 use crate::game::ft::CharacterKind;
+use crate::game::ft::CpuKind;
 
 /// The lists' length (`x20`, `xA2` and `x124`, 0x82 bytes each).
 pub const LIST_LEN: usize = 0x82;
@@ -470,11 +471,11 @@ impl Game {
     /// A joiner's costume already worn by a player of the same character, the inline
     /// `hasDuplicateCostume`.
     fn costume_worn(&self, slot: i32, costume: i32) -> bool {
-        let chr = self.player_ckind(slot) as i8;
+        let chr = self.player_ckind(slot).raw() as i8;
         (0..6).any(|s| {
             self.player_pkind(s) != PlayerKind::None
                 && !self.player_flags_bit1(s)
-                && chr == self.player_ckind(s) as i8
+                && chr == self.player_ckind(s).raw() as i8
                 && costume == self.player_costume(s) as i32
         })
     }
@@ -507,7 +508,7 @@ impl Running<'_> {
         g.gm.opponents
             .draw_characters(&g.gm.unlocks, &mut g.objs.rng);
         let p1_costume = g.player_costume(0) as i8;
-        let p1_ckind = g.player_ckind(0) as i8;
+        let p1_ckind = g.player_ckind(0).raw() as i8;
         g.gm.opponents
             .shuffle_all_costumes(&mut g.objs.rng, p1_ckind, p1_costume);
         g.mark_opponent_slots();
@@ -685,8 +686,10 @@ impl Running<'_> {
         self.game.set_player_pkind(slot, PlayerKind::Cpu);
         let i = idx as usize;
         let o = self.game.gm.opponents;
-        self.game
-            .set_player_ckind(slot, i32::from(at(&o.characters, i)));
+        self.game.set_player_ckind(
+            slot,
+            CharacterKind::from_raw(i32::from(at(&o.characters, i))),
+        );
         self.game.set_player_stocks(slot, 1);
         let costume = i32::from(at(&o.costumes, i));
         self.game.set_player_costume(slot, costume);
@@ -703,14 +706,14 @@ impl Running<'_> {
         self.set_player_cpu_level(slot, i32::from(o.cpu_level));
         // The inline `roll_cpu_type`: with more than one left, a quarter of them kind 0x18.
         let cpu_type = if o.left != 1 && self.game.objs.rng.below(4) == 3 {
-            0x18
+            CpuKind::Wander
         } else {
-            0x17
+            CpuKind::Enemy
         };
         self.set_player_cpu_type(slot, cpu_type);
         if o.flags & METAL != 0 {
             self.game.set_player_is_metal(slot, 1);
-            self.set_player_cpu_type(slot, 0x1B);
+            self.set_player_cpu_type(slot, CpuKind::Unafraid);
         }
         self.game
             .set_player_flags_ae_bit0(slot, u8::from(o.flags & FLAG_AE0 != 0));

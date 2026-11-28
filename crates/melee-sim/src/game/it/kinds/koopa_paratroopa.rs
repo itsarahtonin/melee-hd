@@ -13,10 +13,11 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{change_state, play_sfx};
-use super::super::zako::{self, GA_AIR, QUAKE_SMALL, attr_f32, attr_i32};
+use super::super::zako::{self, QUAKE_SMALL, attr_f32, attr_i32};
 use super::super::{ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
 use crate::game::camera;
@@ -193,7 +194,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 /// The pause's collision, `itPatapata_UnkMotion1_Coll`: the air's or the ground's.
 #[doc(alias = "itPatapata_UnkMotion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         let _ = ground::air(r, gobj);
     } else {
         let _ = ground::ground(r, gobj);
@@ -656,7 +657,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,
-        ItKind::KoopaParatroopa.id(),
+        ItKind::KoopaParatroopa,
         Some(pos),
         None,
         Some(Vec3::new(0.0, 0.0, 0.0)),

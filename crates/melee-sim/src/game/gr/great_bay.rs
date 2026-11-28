@@ -7,6 +7,8 @@
 //! platform tips and sinks where fighters land on it. Tingle floats over the stage; stood on, his
 //! balloon sinks, and hit, it pops and he falls. A fighter dropping into the sea splashes.
 
+use crate::game::it::ItKind;
+use crate::game::it::item::HoldKind;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -874,8 +876,8 @@ pub fn turtle_item(r: &mut Running, gobj: GObjId) -> bool {
         return true;
     }
     let mut spawn = crate::game::structs::SpawnItem {
-        kind: selected,
-        hold_kind: -1,
+        kind: ItKind::from_raw(selected),
+        hold_kind: HoldKind::from_raw(-1),
         origin: 1,
         pos,
         prev_pos: pos,

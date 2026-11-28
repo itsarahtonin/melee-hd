@@ -3,11 +3,11 @@
 //! ([`Running::cpu_decide_start`]) and differ in the fear flags they set, the items they go
 //! for and whom they head for.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::handles::FighterId;
 use super::super::state::Running;
-use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{CPU_FRAME, CPU_FRAME_SP, DECIDE_FRAME, Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
 use crate::math;
@@ -162,7 +162,7 @@ impl Running<'_> {
         } else {
             let fpp = &self.game.fighters[f.0];
             match fpp.cpu.target {
-                Some(t) if fpp.ground_or_air == GA_GROUND => {
+                Some(t) if fpp.ground_or_air == GroundOrAir::Ground => {
                     let limit = reg(self.cpu_distance_threshold(fpp.kind));
                     self.cpu_distance(f, t) < limit
                 }
@@ -267,7 +267,7 @@ impl Running<'_> {
             if self.game.fighters[f.0].cpu.item_target.is_some() {
                 self.cpu_toward_item(f);
             } else if let Some(t) = self.game.fighters[f.0].cpu.target
-                && self.game.fighters[f.0].ground_or_air != GA_AIR
+                && self.game.fighters[f.0].ground_or_air != GroundOrAir::Air
             {
                 let (me, them) = (
                     self.game.fighters[f.0].cur_pos,

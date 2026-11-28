@@ -419,7 +419,7 @@ impl Running<'_> {
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
         super::super::super::it::item::load_common_data(self.game, self.data, it_co, kept);
         super::super::super::it::item::init_globals(self.game, self.data);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::super::super::gr::setup::setup(self, grkind);
         super::super::super::ef::eflib::init(self);
         super::super::super::ef::load_sync(self, 0);
@@ -434,7 +434,8 @@ impl Running<'_> {
         );
         self.game.reinit_player(0);
         let costume = self.game.endings.gover.color();
-        self.game.set_player_ckind(0, i32::from(ckind));
+        self.game
+            .set_player_ckind(0, CharacterKind::from_raw(i32::from(ckind)));
         self.game.set_player_costume(0, i32::from(costume));
         self.game.set_player_port(0, 0);
         self.game.set_player_pkind(0, PlayerKind::Demo);

@@ -169,7 +169,7 @@ pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, dir: f32) {
 #[doc(alias = "it_80292D48")]
 pub fn spawn_at(r: &mut Running, pos: crate::vec::Vec3) -> Option<GObjId> {
     let mut spawn = crate::game::structs::SpawnItem {
-        kind: ItKind::FireFlower.id(),
+        kind: ItKind::FireFlower,
         ..Default::default()
     };
     spawn.prev_pos = pos;

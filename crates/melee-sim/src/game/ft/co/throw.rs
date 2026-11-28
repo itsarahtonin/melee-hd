@@ -3,11 +3,11 @@
 //! throw's hit, and the victim's mash out of a slow throw. Kirby's, Samus's, Yoshi's and
 //! Bowser's own parts, and an airborne throw's collision, stop at their seams.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use super::super::parts::{HIP_N, TRANS_N2};
 
 use super::ids::ms;
@@ -82,12 +82,12 @@ impl Running<'_> {
         self.anim_update(gobj);
         self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.enter_thrown(victim, victim_msid, mem(speed));
-        match FighterKind::from_id(kind) {
-            Some(FighterKind::Kirby) if msid == ms::THROW_HI => {
+        match kind {
+            FighterKind::Kirby if msid == ms::THROW_HI => {
                 self.game.fighter_mut(gobj).blast_immune_state = true;
                 self.game.fighter_mut(victim).blast_immune_state = true;
             }
-            Some(FighterKind::Samus) => self.samus_throw_beam(gobj, msid, mem(speed)),
+            FighterKind::Samus => self.samus_throw_beam(gobj, msid, mem(speed)),
             _ => {}
         }
         let frames = self.common().i32(0x348);
@@ -191,7 +191,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800DD684")]
     pub fn co_throw_coll(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             if fp.mv_i32(THROW_FROZEN) != 0 {
                 if self.air_coll_touch(gobj) {
                     self.throw_land_frozen(gobj);
@@ -309,7 +309,7 @@ impl Running<'_> {
             Some(gobj),
             victim,
             1,
-            akind,
+            akind.id(),
             attack_flags,
             super::super::super::pl::trick::AttackRecord::Fighter(gobj),
             instance,

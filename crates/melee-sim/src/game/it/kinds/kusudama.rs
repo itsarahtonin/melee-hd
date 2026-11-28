@@ -282,7 +282,7 @@ fn open_chimed(r: &mut Running, gobj: GObjId) {
 /// came out (the file's inline `it_80289BE8_spawn`).
 fn throw_out(r: &mut Running, gobj: GObjId, kind: i32, speed: f32) -> Option<i32> {
     let (pos, vel) = scatter(r, gobj, speed);
-    let g = drop::spawn_at(r, Some(gobj), kind, pos)?;
+    let g = drop::spawn_at(r, Some(gobj), ItKind::from_raw(kind), pos)?;
     drop::pop_up(r.game, r.data, g, Some(vel));
     lib2725::count_spawned(r.game);
     Some(kind)
@@ -402,7 +402,7 @@ fn stand(r: &mut Running, gobj: GObjId) {
 /// A party ball standing at `pos`, `it_802896CC`.
 #[doc(alias = "it_802896CC")]
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
-    let mut spawn = super::super::item::drop_spawn(ItKind::PartyBall.id(), pos, false);
+    let mut spawn = super::super::item::drop_spawn(ItKind::PartyBall, pos, false);
     let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
     stopped(r, gobj);
     Some(gobj)

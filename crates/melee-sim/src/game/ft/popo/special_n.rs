@@ -186,7 +186,7 @@ impl Running<'_> {
                 pos.x = mem(fp::fmadds(reg(dx), reg(fp.facing_dir), reg(pos.x)));
                 pos.y = mem(fp::fadds(reg(pos.y), fp::fadds(reg(dy), reg(lift))));
                 let facing = fp.facing_dir;
-                let ice = climbersice::spawn(self, gobj, pos, p.ice_kind, facing);
+                let ice = climbersice::spawn(self, gobj, pos, ItKind::from_raw(p.ice_kind), facing);
                 self.game
                     .fighter_mut(gobj)
                     .u

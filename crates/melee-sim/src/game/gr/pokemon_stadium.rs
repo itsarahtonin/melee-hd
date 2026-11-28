@@ -21,6 +21,7 @@
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::camera::CmSubjectState;
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
@@ -310,12 +311,12 @@ pub fn on_start(r: &mut Running) {
 #[doc(alias = "fn_801D11E4")]
 pub fn start_display(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let b = r.game.camera.alloc_box(camera::ACTIVE);
+    let b = r.game.camera.alloc_box(CmSubjectState::Active);
     r.game.grounds[g.0].u.stadium_display().subject = Some(b);
     let s = reg(scale(r.game));
     let m = |v: f64| mem(fp::fmuls(v, s));
     let o = r.game.camera.subject_mut(b);
-    o.state = camera::INACTIVE;
+    o.state = CmSubjectState::Inactive;
     o.pos.x = 0.0;
     o.pos.y = m(30.0);
     o.pos.z = 0.0;
@@ -698,13 +699,13 @@ fn set_mode(r: &mut Running, gobj: GObjId, mode: i32, timer: i32) {
     let inactive = |r: &mut Running| {
         let v = r.game.grounds[g.0].u.stadium_display();
         if let Some(b) = v.subject {
-            r.game.camera.subject_mut(b).state = camera::INACTIVE;
+            r.game.camera.subject_mut(b).state = CmSubjectState::Inactive;
         }
     };
     let active = |r: &mut Running| {
         let v = r.game.grounds[g.0].u.stadium_display();
         if let Some(b) = v.subject {
-            r.game.camera.subject_mut(b).state = camera::ACTIVE;
+            r.game.camera.subject_mut(b).state = CmSubjectState::Active;
         }
     };
     let quiet = |r: &mut Running, shown: i16| {
@@ -1656,7 +1657,7 @@ pub fn text_results(r: &mut Running, _gobj: GObjId) {
         }
         let team = r.game.player_team(slot) as u8;
         let teams = u8::from(r.game.vs_is_teams());
-        let pkind = r.game.player_pkind(slot) as u8;
+        let pkind = r.game.player_pkind(slot).raw() as u8;
         let c = super::super::gm::vs::hud_color(super::super::gm::vs::player_color(
             slot as u8, team, teams, pkind,
         ));
@@ -1754,7 +1755,7 @@ pub fn cycle(r: &mut Running, gobj: GObjId) {
         if let Some(d) = map_gobj(r.game, MAP_DISPLAY) {
             let dg = ground_of(r.game, d);
             if let Some(b) = r.game.grounds[dg.0].u.stadium_display().subject {
-                r.game.camera.subject_mut(b).state = camera::ACTIVE;
+                r.game.camera.subject_mut(b).state = CmSubjectState::Active;
             }
         }
         return;

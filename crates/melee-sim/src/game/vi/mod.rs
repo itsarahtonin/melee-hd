@@ -18,6 +18,10 @@ pub mod v1201v1;
 pub mod v1201v2;
 pub mod v1202;
 
+use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
+use crate::game::gr::GrKind;
+use crate::game::mirror::Narrow;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::gr::StKind;
@@ -479,27 +483,29 @@ impl Running<'_> {
         frames: u32,
         before_setup: impl FnOnce(&mut Self),
     ) {
-        let stkind = i32::from(stkind.id());
+        let stkind = stkind.id();
         self.game.camera.init(6);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
         super::gr::setup::prepare(self.game);
         let grkind = crate::lb::audio::ground_kind(stkind) as i32;
         let us = self.files_us();
-        let archive = super::gr::registry::stage(grkind).file(us).map(|name| {
-            self.game
-                .ft
-                .data
-                .files
-                .archive(name.trim_start_matches('/'))
-        });
+        let archive = super::gr::registry::stage(GrKind::from_raw(grkind))
+            .file(us)
+            .map(|name| {
+                self.game
+                    .ft
+                    .data
+                    .files
+                    .archive(name.trim_start_matches('/'))
+            });
         super::gr::setup::select(self, stkind, archive);
         let kept = self.take_cached_named("ItCo.usd");
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
         super::it::item::load_common_data(self.game, self.data, it_co, kept);
         super::it::item::init_globals(self.game, self.data);
         before_setup(self);
-        let grkind = self.game.stage_info.ground_kind_id();
+        let grkind = self.game.stage_info.ground_kind();
         super::gr::setup::setup_at(self, grkind, stage_frames(frames));
         super::gr::stage::demo_init(self, stkind, demo);
     }
@@ -524,7 +530,8 @@ impl Running<'_> {
             archive.file,
             idx,
         );
-        self.game.set_player_ckind(slot, ckind);
+        self.game
+            .set_player_ckind(slot, CharacterKind::from_raw(ckind));
         self.game.set_player_costume(slot, costume);
         self.game.set_player_port(slot, 0);
         self.game.set_player_pkind(slot, PlayerKind::Demo);
@@ -805,7 +812,7 @@ pub struct SceneFiles {
 impl SceneFiles {
     pub(crate) fn player(&mut self, slot: usize, ckind: i32, costume: u8) {
         let p = &mut self.players.players[slot];
-        p.ckind = ckind as i8;
+        p.ckind = Narrow::from_raw(ckind as i8);
         p.color = costume;
         p.slot_type = PlayerKind::Demo.into();
     }
@@ -813,7 +820,7 @@ impl SceneFiles {
     /// A player's demo animations from `file` (`Player_80036E20`'s `idx`) for `pose`: its
     /// character's kinds' (both Ice Climbers).
     pub(crate) fn anims(&mut self, file: &str, ckind: i32, idx: i32, pose: i32) {
-        let m = super::pl::player::mapping(ckind);
+        let m = super::pl::player::mapping(CharacterKind::from_raw(ckind));
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 || (kind == m.extra_internal_id && m.has_transformation != 0) {
                 continue;
@@ -861,7 +868,7 @@ impl Running<'_> {
         let us = self.files_us();
         let stage = |f: &mut SceneFiles, stkind: i32| {
             let grkind = crate::lb::audio::ground_kind(stkind) as i32;
-            if let Some(name) = super::gr::registry::stage(grkind).file(us) {
+            if let Some(name) = super::gr::registry::stage(GrKind::from_raw(grkind)).file(us) {
                 f.names.push(name.trim_start_matches('/').to_owned());
             }
         };
@@ -1068,7 +1075,7 @@ pub fn load_scene_files(
             .get(archive)
             .public(&sym)
             .unwrap_or_else(|| panic!("{sym} isn't in {name}"));
-        let t = super::ft::data::kind_tables(*kind);
+        let t = super::ft::data::kind_tables(FighterKind::from_raw(*kind));
         let dat = loaded.archive(t.dat_file.expect("a fighter kind without a data file"));
         let ft_data = super::ft::data::public(
             data,

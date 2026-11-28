@@ -13,9 +13,11 @@
 //! ([`StKind::ground`]); several stage kinds share a ground kind.
 //!
 //! A new stage's port writes its module (its hooks and its objects' `#[callbacks]` dispatch) and
-//! its data, and fills its entry here; nothing else lists stages. The state keeps the game's
-//! numbers (`stage_info.grkind`, `gr.stkind`), so it and the oracle are unchanged; code reads
-//! them through the enums ([`GrKind::from_id`], `stage_info.grkind == GrKind::Castle`).
+//! its data, and fills its entry here; nothing else lists stages. The state holds the kinds as
+//! the enums (`stage_info.grkind` a [`GrKind`], the rules' stage kind a [`StKind`] in its
+//! halfword), each keeping any number the game stores and hashing as its integer, so the
+//! oracle is unchanged; `gr.stkind` stays the game's number. Code compares and matches the
+//! fields directly (`stage_info.ground_kind() == GrKind::Castle`).
 
 use super::super::code::{Entries, kind};
 use super::super::roster::Audit;
@@ -34,11 +36,10 @@ use crate::hsd::jobj::JObjId;
 use crate::vec::Vec3;
 use melee_data::archive::DataRef;
 
-/// A ground kind (`GrKind`): which stage's code and archive run, the index of the
-/// executable's `stage_datas` and of this registry ([`STAGES`]). The game's own numbers.
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, melee_derive::StateEq)]
-pub enum GrKind {
+crate::game::ft::registry::kind_enum! {
+    /// A ground kind (`GrKind`): which stage's code and archive run, the index of the
+    /// executable's `stage_datas` and of this registry ([`STAGES`]). The game's own numbers.
+    GrKind:
     /// `Gr_Kind_Unk00`: the dummy stage.
     Dummy = 0,
     /// `Gr_Kind_Test`: the test stage.
@@ -184,110 +185,18 @@ pub enum GrKind {
 }
 
 impl GrKind {
-    /// How many there are (`stage_datas`' length).
-    pub const COUNT: usize = 71;
-
-    /// Every ground kind, by number.
-    pub const ALL: [GrKind; Self::COUNT] = [
-        GrKind::Dummy,
-        GrKind::Test,
-        GrKind::Castle,
-        GrKind::RCruise,
-        GrKind::Kongo,
-        GrKind::Garden,
-        GrKind::GreatBay,
-        GrKind::Shrine,
-        GrKind::Zebes,
-        GrKind::Kraid,
-        GrKind::Story,
-        GrKind::Yorster,
-        GrKind::Izumi,
-        GrKind::Greens,
-        GrKind::Corneria,
-        GrKind::Venom,
-        GrKind::PStadium,
-        GrKind::Pura,
-        GrKind::MuteCity,
-        GrKind::BigBlue,
-        GrKind::Onett,
-        GrKind::Fourside,
-        GrKind::Icemt,
-        GrKind::Unk23,
-        GrKind::Inishie1,
-        GrKind::Inishie2,
-        GrKind::Unk26,
-        GrKind::Flatzone,
-        GrKind::OldPupupu,
-        GrKind::OldYoshi,
-        GrKind::OldKongo,
-        GrKind::KinokoRoute,
-        GrKind::ShrineRoute,
-        GrKind::ZebesRoute,
-        GrKind::BigBlueRoute,
-        GrKind::Unk35,
-        GrKind::Battle,
-        GrKind::Last,
-        GrKind::FigureGet,
-        GrKind::Pushon,
-        GrKind::TMario,
-        GrKind::TCaptain,
-        GrKind::TClink,
-        GrKind::TDonkey,
-        GrKind::TDrmario,
-        GrKind::TFalco,
-        GrKind::TFox,
-        GrKind::TIceclimber,
-        GrKind::TKirby,
-        GrKind::TKoopa,
-        GrKind::TLink,
-        GrKind::TLuigi,
-        GrKind::TMars,
-        GrKind::TMewtwo,
-        GrKind::TNess,
-        GrKind::TPeach,
-        GrKind::TPichu,
-        GrKind::TPikachu,
-        GrKind::TPurin,
-        GrKind::TSamus,
-        GrKind::TSeak,
-        GrKind::TYoshi,
-        GrKind::TZelda,
-        GrKind::TGamewatch,
-        GrKind::TEmblem,
-        GrKind::TGanon,
-        GrKind::Heal,
-        GrKind::Homerun,
-        GrKind::Figure1,
-        GrKind::Figure2,
-        GrKind::Figure3,
-    ];
-
     /// The first of Target Test's 26 stages, one per character, in the characters' order.
     pub const FIRST_TARGET: GrKind = GrKind::TMario;
 
-    /// The ground kind numbered `id`, if the game has one.
-    pub const fn from_id(id: i32) -> Option<GrKind> {
-        if id >= 0 && (id as usize) < Self::COUNT {
-            Some(Self::ALL[id as usize])
-        } else {
-            None
-        }
-    }
-
-    /// Its number, as the state and the game's tables hold it.
-    pub const fn id(self) -> i32 {
-        self as i32
-    }
-
     /// Its registry entry; stops if the stage isn't ported.
     pub fn stage(self) -> &'static Stage {
-        stage(self.id())
+        stage(self)
     }
 
     /// Which of Target Test's stages it is (0 for Mario's), if it's one.
     pub const fn target_index(self) -> Option<usize> {
-        let i = self as usize;
-        let first = Self::FIRST_TARGET as usize;
+        let i = self.index();
+        let first = Self::FIRST_TARGET.index();
         if i >= first && i < first + target_test::TARGETS.len() {
             Some(i - first)
         } else {
@@ -301,33 +210,20 @@ impl GrKind {
     }
 }
 
-impl PartialEq<GrKind> for i32 {
-    fn eq(&self, k: &GrKind) -> bool {
-        *self == k.id()
-    }
-}
-
-impl PartialEq<i32> for GrKind {
-    fn eq(&self, id: &i32) -> bool {
-        self.id() == *id
-    }
-}
-
 impl super::super::structs::StageInfo {
-    /// The stage's ground kind (`grkind`), which the game only ever sets to one of its own.
+    /// The stage's ground kind (`grkind`).
+    #[inline]
     pub fn ground_kind(&self) -> GrKind {
-        GrKind::from_id(self.grkind)
-            .unwrap_or_else(|| panic!("stage_info.grkind {} is no ground kind", self.grkind))
+        self.grkind
     }
 }
 
-/// A stage kind (`StKind`): which stage a mode starts, as `StartMeleeRules`, the replays and
-/// the stage select number it; the game's `stage_id_map` takes it to its [`GrKind`]. The
-/// game's own numbers. Only the decompilation's names and the kinds the code names are
-/// here: the others (single-player and event variants) stay numbers.
-#[repr(u16)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum StKind {
+crate::game::ft::registry::kind_enum! {
+    /// A stage kind (`StKind`): which stage a mode starts, as `StartMeleeRules`, the replays and
+    /// the stage select number it; the game's `stage_id_map` takes it to its [`GrKind`]. The
+    /// game's own numbers. Only the decompilation's names and the kinds the code names are
+    /// here: the others (single-player and event variants) stay numbers.
+    StKind:
     /// `St_Kind_Dummy`.
     Dummy = 0,
     /// `St_Kind_Test`.
@@ -442,27 +338,16 @@ pub enum StKind {
 }
 
 impl StKind {
-    /// Its number, as `StartMeleeRules` and the replays hold it.
-    pub const fn id(self) -> u16 {
-        self as u16
-    }
-
     /// The ground kind the game runs for it (`stage_id_map`, `Stage_8022519C`).
     pub fn ground(self) -> GrKind {
-        GrKind::from_id(crate::lb::audio::ground_kind(i32::from(self.id())) as i32)
+        GrKind::from_id(crate::lb::audio::ground_kind(self.id()) as i32)
             .expect("stage_id_map gives a ground kind")
-    }
-}
-
-impl PartialEq<StKind> for i32 {
-    fn eq(&self, k: &StKind) -> bool {
-        *self == i32::from(k.id())
     }
 }
 
 impl PartialEq<StKind> for u16 {
     fn eq(&self, k: &StKind) -> bool {
-        *self == k.id()
+        i32::from(*self) == k.id()
     }
 }
 
@@ -532,7 +417,7 @@ impl Stage {
     pub fn vs_kind(&self) -> u16 {
         self.vs
             .unwrap_or_else(|| panic!("{} isn't a roster stage", self.name))
-            .id()
+            .id() as u16
     }
 
     /// Its archive's name as the game names it (`lbFileGetFullName`): the five stages whose
@@ -556,10 +441,13 @@ impl Stage {
 }
 
 /// The ported stage numbered `grkind` (`stage_datas[grkind]`); stops if it isn't ported.
-pub fn stage(grkind: i32) -> &'static Stage {
-    match GrKind::from_id(grkind).and_then(|k| STAGES[k as usize].as_ref()) {
+pub fn stage(grkind: GrKind) -> &'static Stage {
+    match STAGES.get(grkind.index()).and_then(Option::as_ref) {
         Some(s) => s,
-        None => unimplemented!("stage kind {grkind} isn't ported"),
+        None => {
+            let grkind = grkind.id();
+            unimplemented!("stage kind {grkind} isn't ported")
+        }
     }
 }
 
@@ -570,8 +458,8 @@ pub fn ported() -> impl Iterator<Item = &'static Stage> {
 
 /// Which member of `GroundVars` an object of the stage `grkind` uses (bytes for a stage that
 /// isn't ported, as a capture of one reads it).
-pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
-    match GrKind::from_id(grkind).and_then(|k| STAGES[k as usize].as_ref()) {
+pub fn vars_kind(grkind: GrKind, map_id: i32) -> VarsKind {
+    match STAGES.get(grkind.index()).and_then(Option::as_ref) {
         Some(s) => (s.vars)(map_id),
         None => VarsKind::Bytes,
     }
@@ -580,8 +468,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
 /// The stage whose data names the address `f` in `field`: the loaded stage (`grkind`)
 /// when its data does, else the first that does (the state holds the original's address,
 /// which only the loaded stage's setup writes).
-pub fn by_address(grkind: i32, f: u32, field: fn(&StageData) -> u32) -> Option<&'static Stage> {
-    match GrKind::from_id(grkind).and_then(|k| STAGES[k as usize].as_ref()) {
+pub fn by_address(grkind: GrKind, f: u32, field: fn(&StageData) -> u32) -> Option<&'static Stage> {
+    match STAGES.get(grkind.index()).and_then(Option::as_ref) {
         Some(s) if field(s.data) == f => Some(s),
         _ => ported().find(|s| field(s.data) == f),
     }
@@ -1973,7 +1861,7 @@ mod tests {
         assert_eq!(GrKind::from_id(GrKind::COUNT as i32), None);
         for (i, s) in STAGES.iter().enumerate() {
             if let Some(s) = s {
-                assert_eq!(s.kind as usize, i, "{}", s.name);
+                assert_eq!(s.kind.raw() as usize, i, "{}", s.name);
                 assert!(
                     s.data.grkind == s.kind
                         || (s.kind == GrKind::Unk35 && s.data.grkind == GrKind::Test),
@@ -2011,7 +1899,7 @@ mod tests {
             assert_eq!(s.touch_line.is_none(), dummy, "{}", s.name);
             if !dummy {
                 let d = s.data;
-                let by = |f, field| by_address(s.kind.id(), f, field).map(|t| t.data.grkind);
+                let by = |f, field| by_address(s.kind, f, field).map(|t| t.data.grkind);
                 assert_eq!(
                     by(d.on_check_shadow_render, |d| d.on_check_shadow_render),
                     Some(d.grkind)

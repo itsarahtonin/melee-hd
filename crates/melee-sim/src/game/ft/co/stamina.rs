@@ -3,9 +3,9 @@
 //! and the game mode hears it lost (`gm_80167470`).
 
 use super::super::super::state::Running;
-use super::super::common::GA_AIR;
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
+use crate::mp::coll::GroundOrAir;
 
 impl Running<'_> {
     /// After damage, a stamina fighter (`x2225_b7`) with no HP left and not healing is out,
@@ -92,7 +92,7 @@ impl Running<'_> {
             }
             self.damage_hooks(victim);
         }
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
+        if self.game.fighter(gobj).ground_or_air == GroundOrAir::Air {
             self.enter_damage_fall(gobj);
         } else {
             self.enter_down_spot(gobj);

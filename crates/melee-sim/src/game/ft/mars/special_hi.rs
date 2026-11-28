@@ -4,10 +4,11 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::coll::PLATFORM_FILTER;
-use super::{GA_AIR, addr, attr, ms};
+use super::{addr, attr, ms};
 use crate::fpu::{mem, reg};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -141,7 +142,7 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialHi_Phys")]
     pub fn mars_special_hi_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.ground_or_air == GA_AIR {
+        if fp.ground_or_air == GroundOrAir::Air {
             if fp.cmd_vars[2] == 0 {
                 self.mars_special_hi_rise(gobj, None);
             } else {
@@ -188,7 +189,7 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialAirHi_Coll")]
     pub fn mars_special_hi_coll(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.ground_or_air != GA_AIR {
+        if fp.ground_or_air != GroundOrAir::Air {
             self.ground_coll(gobj);
             return;
         }

@@ -10,6 +10,7 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
@@ -17,7 +18,7 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::fox::facing_dir_int;
 use super::super::motion::flags::*;
-use super::{GA_GROUND, addr, ms};
+use super::{addr, ms};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -180,7 +181,7 @@ impl Running<'_> {
     pub fn zelda_special_hi_start_gfx(&mut self, gobj: GObjId) {
         if !self.game.fighter(gobj).effect_once {
             let _ = self.teleport_part_pos(gobj, PART_HIP_N);
-            let gfx = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
+            let gfx = if self.game.fighter(gobj).ground_or_air == GroundOrAir::Ground {
                 GFX_START_GROUND
             } else {
                 GFX_START_AIR

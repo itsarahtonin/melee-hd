@@ -177,11 +177,11 @@ pub fn spawn(
             rand = 0.0;
         }
         heal = 0.0;
-        spawn.kind = ItKind::WhispyApple.id();
+        spawn.kind = ItKind::WhispyApple;
     } else if rand < heal {
-        spawn.kind = ItKind::WhispyHealApple.id();
+        spawn.kind = ItKind::WhispyHealApple;
     } else {
-        spawn.kind = ItKind::WhispyApple.id();
+        spawn.kind = ItKind::WhispyApple;
     }
     let gobj = super::super::item::spawn_air(r, &mut spawn)?;
     lib2725::count_spawned(r.game);

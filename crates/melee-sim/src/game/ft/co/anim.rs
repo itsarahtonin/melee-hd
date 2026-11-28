@@ -1,6 +1,7 @@
 //! The common action states' animation callbacks: each frame after the animation steps, a
 //! state checks whether it has played out and what follows.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::code::run_fighter_cb;
@@ -10,9 +11,6 @@ use super::super::parts::TRANS_N;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
-
-/// `GA_Air`.
-const GA_AIR: i32 = 1;
 
 /// `ftCo_SM_Fall`, `ftCo_SM_FallF`, `ftCo_SM_FallB`: the fall animations by drift.
 const SM_FALL: [i32; 3] = [20, 21, 22];
@@ -221,7 +219,7 @@ impl Running<'_> {
         self.damage_tick(gobj);
         let fp = self.game.fighter(gobj);
         if !self.anim_frames_remaining(gobj) && !fp.in_hitstun {
-            if fp.ground_or_air == GA_AIR {
+            if fp.ground_or_air == GroundOrAir::Air {
                 if fp.stamina_dead {
                     self.enter_damage_fall(gobj);
                 } else if !self.damage_tech(gobj) {

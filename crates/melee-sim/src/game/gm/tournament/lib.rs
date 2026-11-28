@@ -3,6 +3,8 @@
 //! match, the names' texts, the random characters and stages, the scenes' cameras, lights,
 //! texts and models, and the match's start data.
 
+use crate::game::ft::CpuKind;
+use crate::game::mirror::Narrow;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -1202,8 +1204,10 @@ impl Running<'_> {
             let (slot_type, color) = (m.slot_type, s.color);
             m.color = color;
             m.level = s.level;
-            self.game.set_player_ckind(p as i32, ckind);
-            self.game.set_player_pkind(p as i32, i32::from(slot_type));
+            self.game
+                .set_player_ckind(p as i32, CharacterKind::from_raw(ckind));
+            self.game
+                .set_player_pkind(p as i32, PlayerKind::from_raw(i32::from(slot_type)));
             self.game.set_player_costume(p as i32, i32::from(color));
         }
         self.game.tou.tm.players_per_match = count;
@@ -1434,7 +1438,7 @@ impl Running<'_> {
         };
         let r = &mut d.rules;
         r.is_teams = 0;
-        r.stkind = self.game.tou.tm.stage as u16;
+        r.stkind = Narrow::from_raw(self.game.tou.tm.stage as u16);
         for (i, &kind) in super::super::vs_mode::ITEM_SWITCH_KINDS.iter().enumerate() {
             if kind != super::super::vs_mode::NO_ITEM_KIND {
                 if prefs_mask & (1 << i) != 0 {
@@ -1488,23 +1492,23 @@ impl Running<'_> {
                 if m.random != 0 {
                     let icon = self.tou_random_icon();
                     let ckind = ckind_of(icon) as u8;
-                    d.players[i].ckind = ckind as i8;
+                    d.players[i].ckind = Narrow::from_raw(ckind as i8);
                     let n = super::super::super::playback::costume_count(ckind);
                     d.players[i].color = self.game.objs.rng.below(i32::from(n)) as u8;
                 } else {
                     let p = &mut d.players[i];
-                    p.ckind = ckind_of(i32::from(m.icon)) as i8;
+                    p.ckind = Narrow::from_raw(ckind_of(i32::from(m.icon)) as i8);
                     p.color = m.color;
                 }
                 let tag = d.players[i].nametag;
                 let rumble = self.rumble_enabled_for(i, tag);
                 let p = &mut d.players[i];
-                p.slot_type = m.slot_type;
+                p.slot_type = Narrow::from_raw(m.slot_type);
                 p.stocks = rules.stock_count as i8;
                 p.sub_color = 0;
                 p.team = 0xFF;
                 p.rumble_enabled = rumble && m.slot_type != PlayerKind::Cpu;
-                p.cpu_kind = 4;
+                p.cpu_kind = CpuKind::Normal.into();
                 p.cpu_level = m.level;
                 p.damage1 = 0;
                 if self.game.game_data.rules.handicap != 0 {
@@ -1522,11 +1526,11 @@ impl Running<'_> {
                 d.players[i].slot_type = PlayerKind::None.into();
             }
         }
-        let stkind = i32::from(d.rules.stkind);
+        let stkind = i32::from(d.rules.stkind.raw());
         let players: Vec<(u8, i32, u8)> = (0..4)
             .map(|i| {
                 let p = &d.players[i];
-                (p.slot_type, i32::from(p.ckind), p.color)
+                (p.slot_type.raw(), i32::from(p.ckind.raw()), p.color)
             })
             .collect();
         *self.game.tou.start = d;

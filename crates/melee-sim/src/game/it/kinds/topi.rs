@@ -12,10 +12,11 @@
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::item::{change, change_state};
-use super::super::zako::{self, GA_AIR, Knock, attr, attr_f32, set_coll_facing, stop, walk_speed};
+use super::super::zako::{self, Knock, attr, attr_f32, set_coll_facing, stop, walk_speed};
 use super::super::{ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
 use crate::game::gm;
@@ -379,7 +380,7 @@ pub fn knocked_back(r: &mut Running, gobj: GObjId) {
 /// Freezie.
 #[doc(alias = "itOldottosea_UnkMotion5_Coll")]
 pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         ground::fall_until_touch_no_ceiling(r, gobj, landed_knocked);
     } else {
         ground::ground_or_fall(r, gobj, fall);

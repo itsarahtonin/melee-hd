@@ -152,7 +152,7 @@ pub fn spawn(
     set_up: impl FnOnce(&mut Running, GObjId),
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: s.kind.id(),
+        kind: s.kind,
         ..Default::default()
     };
     spawn.prev_pos = pos;

@@ -1,12 +1,13 @@
 //! PK Fire (`ftnessspecials.c`): a bolt shot ahead and down (up in the air) that bursts into a
 //! pillar of fire on what it hits (`it::kinds::nesspkfire`, `nesspkfirepillar`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::nesspkfire;
 use super::super::super::state::Running;
-use super::{GA_AIR, PART_R2ND_NA, addr, attr, ms};
+use super::{PART_R2ND_NA, addr, attr, ms};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -30,7 +31,7 @@ impl Running<'_> {
         pos.x = mem(fp::fmadds(sx, facing, reg(pos.x)));
         pos.y = mem(fp::fadds(reg(pos.y), sy));
         pos.z = 0.0;
-        let (launch, vel) = if self.game.fighters[f.0].ground_or_air == GA_AIR {
+        let (launch, vel) = if self.game.fighters[f.0].ground_or_air == GroundOrAir::Air {
             (
                 self.ness_attr_f32(f, attr::PKFIRE_AERIAL_LAUNCH_TRAJECTORY),
                 self.ness_attr_f32(f, attr::PKFIRE_AERIAL_VELOCITY),

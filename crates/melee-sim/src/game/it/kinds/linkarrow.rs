@@ -123,7 +123,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// whose owner's queries are his.
 fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
     matches!(
-        ItKind::of(item(r.game, gobj).kind),
+        item(r.game, gobj).kind,
         ItKind::KirbyLinkArrow | ItKind::KirbyYoungLinkFireArrow
     )
 }
@@ -220,7 +220,7 @@ pub fn spawn(
     owner: GObjId,
     mut pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
 ) -> Option<GObjId> {
     pos.z = 0.0;
     let mut spawn = SpawnItem {
@@ -589,7 +589,7 @@ fn stick(r: &mut Running, gobj: GObjId) {
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, z);
     remove_trails(r, gobj);
     if matches!(
-        ItKind::of(item(r.game, gobj).kind),
+        item(r.game, gobj).kind,
         ItKind::YoungLinkFireArrow | ItKind::KirbyYoungLinkFireArrow
     ) {
         play_sfx(r, gobj, SFX_STICK_CLINK, 0x7F, 0x40);

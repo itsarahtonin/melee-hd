@@ -2,6 +2,7 @@
 //! the shake offset's view matrix, and the joint trees drawn, all from the fighters' render
 //! callbacks in the display pass.
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::camera;
@@ -365,7 +366,7 @@ impl Running<'_> {
         if flags & 0x20 != 0 {
             let p = &fp.item_pickup;
             let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-            if fp.ground_or_air == 0 {
+            if fp.ground_or_air == GroundOrAir::Ground {
                 drew |= coll_draw::range(objs, p.gr_light_offset, pos, LIGHT_RANGE, pass, facing);
                 drew |= coll_draw::range(objs, p.gr_heavy_offset, pos, HEAVY_RANGE, pass, facing);
             } else {
@@ -403,13 +404,13 @@ impl Running<'_> {
         }
         let cpu = &fp.cpu;
         use crate::game::ft::CpuBehavior as B;
-        let c = match B::from_id(cpu.behavior) {
-            Some(B::Attack | B::Ranged) => [0xFF, 0, 0, 0x60],
-            Some(B::Shield) => [0, 0, 0xFF, 0x60],
-            Some(B::Recover) => [0xFF, 0xFF, 0xFF, 0xFF],
-            Some(B::Stand) => [0xFF, 0, 0xFF, 0x60],
-            Some(B::Walk) => [0, 0xFF, 0, 0x60],
-            Some(B::Di) => [0, 0, 0, 0x60],
+        let c = match cpu.behavior {
+            B::Attack | B::Ranged => [0xFF, 0, 0, 0x60],
+            B::Shield => [0, 0, 0xFF, 0x60],
+            B::Recover => [0xFF, 0xFF, 0xFF, 0xFF],
+            B::Stand => [0xFF, 0, 0xFF, 0x60],
+            B::Walk => [0, 0xFF, 0, 0x60],
+            B::Di => [0, 0, 0, 0x60],
             _ => [0xFF, 0xFF, 0, 0x60],
         };
         let target = Vec3::new(cpu.destination.x, cpu.destination.y, 0.0);

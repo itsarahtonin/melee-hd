@@ -264,13 +264,13 @@ impl Running<'_> {
     }
 
     /// `ftPartsTable[kind]`.
-    pub fn parts_table(&self, kind: i32) -> PartsTable<'_> {
+    pub fn parts_table(&self, kind: FighterKind) -> PartsTable<'_> {
         let table = self.load_common(0x10);
         PartsTable {
             data: self.data,
             at: self
                 .data
-                .ptr(table.at(4 * kind as u32))
+                .ptr(table.at(4 * kind.raw() as u32))
                 .expect("a character without a parts table"),
         }
     }

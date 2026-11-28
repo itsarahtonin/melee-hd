@@ -8,7 +8,10 @@ use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::vs_mode::{GamePrefs, GameRules};
 use crate::game::camera;
+use crate::game::ft::CpuKind;
 use crate::game::gm::GameMode;
+use crate::game::gr::GrKind;
+use crate::game::mirror::Narrow;
 use crate::game::pl::player::PlayerKind;
 use crate::game::structs::StartMeleeData;
 use crate::hsd::gobj::GObjId;
@@ -88,15 +91,15 @@ impl Running<'_> {
         r.end_kind = 0;
         r.on_match_start = Some(CodeRef(ON_MATCH_START));
         r.game_speed = 1.0;
-        r.stkind = u16::from(d.stkind as u8);
+        r.stkind = Narrow::from_raw(u16::from(d.stkind as u8));
         super::vs_mode::all_player_defaults(&mut start.players);
         for i in 0..4 {
             let p = &mut start.players[i];
-            p.ckind = d.ckinds[i] as i8;
+            p.ckind = Narrow::from_raw(d.ckinds[i] as i8);
             p.color = d.colors[i];
             p.slot_type = PlayerKind::Cpu.into();
             p.cpu_level = 9;
-            p.cpu_kind = 4;
+            p.cpu_kind = CpuKind::Normal.into();
             p.enters = false;
             if start.rules.match_kind == 1 {
                 p.stocks = 99;
@@ -278,8 +281,8 @@ impl Running<'_> {
         let archive = |r: &Self, name: &str| r.game.ft.data.files.archive(name);
         // Named for the saved language (`lbFileGetFullName` of a name with no extension).
         let us = self.files_us();
-        let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind));
-        let stage = crate::game::gr::registry::stage(grkind as i32)
+        let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind.raw()));
+        let stage = crate::game::gr::registry::stage(GrKind::from_raw(grkind as i32))
             .file(us)
             .map(|name| archive(self, name.trim_start_matches('/')));
         let files = super::vs::MatchArchives {

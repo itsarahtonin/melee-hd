@@ -2,6 +2,7 @@
 //! digit joints and a percent sign (texture-animated to their digits, coloured by damage,
 //! shaken by hits, blown apart when the player is KO'd) with a character mark beside it.
 
+use crate::game::ft::CharacterKind;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -540,10 +541,10 @@ impl Running<'_> {
         );
         anim::add_anim_index(&mut g.objs, data, Some(root), 0, an, mat, shape);
         // Master Hand, Giga Bowser and Crazy Hand show the male wireframe's icon.
-        if chara == 0x1A || (chara.wrapping_sub(0x1D) as u32) <= 1 {
-            chara = 0x1B;
+        if chara == CharacterKind::MasterHand || (chara.id().wrapping_sub(0x1D) as u32) <= 1 {
+            chara = CharacterKind::Boy;
         }
-        let frame = fp::fadds(0.5, stock_icon_frame(chara, 0, 0));
+        let frame = fp::fadds(0.5, stock_icon_frame(chara.id(), 0, 0));
         let objs = &mut g.objs;
         tobj::req_anim_all(objs, t, mem(frame));
         let a = t.and_then(|t| objs.tobjs[t].aobj);
@@ -559,7 +560,7 @@ impl Running<'_> {
             g.player_port(s) as u8,
             g.player_team(s) as u8,
             u8::from(g.vs_is_teams()),
-            g.player_pkind(s) as u8,
+            g.player_pkind(s).raw() as u8,
         ));
         set_diffuse(&mut g.objs, child, [c[0], c[1], c[2]]);
         g.hud.status.players[i].next
@@ -680,7 +681,7 @@ impl Running<'_> {
             && (k == PlayerKind::Human || k == PlayerKind::Cpu)
             && self.game.player_stocks(slot) == 0
         {
-            self.vs_announce_entry(slot, k as u8);
+            self.vs_announce_entry(slot, k.raw() as u8);
         }
         let s = &self.game.vs.start;
         if s.match_kind != 1 && s.damage_display_kos {

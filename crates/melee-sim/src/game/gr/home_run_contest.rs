@@ -7,6 +7,7 @@
 //! saved language's unit (`stage_info.x6E0`) and marks when it lands (`stage_info.flags`'
 //! 0x80). The bat drops at point 0x7F.
 
+use crate::game::camera::CmSubjectState;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -378,7 +379,7 @@ pub fn proc_field(r: &mut Running, gobj: GObjId) {
     let inactive = |game: &mut Game, f: GObjId| {
         if let Some(b) = game.fighter(f).camera_box {
             let s = game.camera.subject_mut(b);
-            s.state = super::super::camera::INACTIVE;
+            s.state = CmSubjectState::Inactive;
             s.force_inactive = true;
         }
     };

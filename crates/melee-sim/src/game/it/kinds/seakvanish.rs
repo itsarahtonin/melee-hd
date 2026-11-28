@@ -36,7 +36,7 @@ pub fn run_event(_r: &mut Running, _gobj: GObjId, _addr: u32) -> bool {
 #[doc(alias = "it_802B1C60")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::SheikVanish.id(),
+        kind: ItKind::SheikVanish,
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, off the plane.

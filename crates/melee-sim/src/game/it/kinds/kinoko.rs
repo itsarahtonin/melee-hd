@@ -3,6 +3,7 @@
 //! walls and following the floor's slope; a fighter it touches grows or shrinks
 //! (`ftColl_80077C60`).
 
+use crate::mp::coll::GroundOrAir;
 use gekko_fp as fp;
 
 use super::super::ground::{fall_to_floor, fall_unstick, ground_or_then_air};
@@ -111,7 +112,7 @@ pub fn still(_: &mut Running, _: GObjId) -> bool {
 pub fn walk(r: &mut Running, gobj: GObjId) {
     let speed = attr(r, gobj, 0);
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air == 1 {
+    if ip.ground_or_air == GroundOrAir::Air {
         return;
     }
     let s = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
@@ -139,7 +140,7 @@ fn keep_normal(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itDkinoko_UnkMotion0_Coll")]
 pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_then_air(r, gobj, walked_off);
-    if item(r.game, gobj).ground_or_air == 1 {
+    if item(r.game, gobj).ground_or_air == GroundOrAir::Air {
         return false;
     }
     if item(r.game, gobj).coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
@@ -216,7 +217,7 @@ pub fn d_coll1(r: &mut Running, gobj: GObjId) -> bool {
 /// On the ground and touching a floor, its normal kept.
 fn keep_floor_normal(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if ip.ground_or_air != 1 && ip.coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
+    if ip.ground_or_air != GroundOrAir::Air && ip.coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         keep_normal(r, gobj);
     }
 }

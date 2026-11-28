@@ -6,6 +6,9 @@ mod types;
 
 pub use types::{EventData, TargetTestChoice};
 
+use crate::game::ft::CpuKind;
+use crate::game::gr::StKind;
+use crate::game::mirror::Narrow;
 use melee_data::archive::DataRef;
 
 use super::super::state::Running;
@@ -267,7 +270,7 @@ impl Running<'_> {
             }
         }
         if stage {
-            gc.stkind = ev.stage;
+            gc.stkind = ev.stage.id();
         }
         self.preload_refresh();
         let mut mask = 0;
@@ -276,7 +279,7 @@ impl Running<'_> {
                 mask |= crate::lb::audio::character_banks(i32::from(ev.chars[i]));
             }
         }
-        mask |= crate::lb::audio::stage_banks(ev.stage);
+        mask |= crate::lb::audio::stage_banks(ev.stage.id());
         let lb = &mut self.game.audio.lb;
         lb.unwant_banks(0x1C);
         lb.want_banks(0xC, mask);
@@ -329,8 +332,8 @@ impl Running<'_> {
         let u8_ = |o| d.u8(src.at(o));
         let flags = u8_(8);
         let mut p = super::vs_mode::player_defaults();
-        p.ckind = u8_(0) as i8;
-        p.slot_type = u8_(1);
+        p.ckind = Narrow::from_raw(u8_(0) as i8);
+        p.slot_type = Narrow::from_raw(u8_(1));
         p.stocks = u8_(2) as i8;
         p.color = u8_(3);
         p.slot = 0;
@@ -350,7 +353,7 @@ impl Running<'_> {
         p.shows_hearts = false;
         p.no_offscreen_damage = false;
         p.dies_up = false;
-        p.cpu_kind = u8_(9);
+        p.cpu_kind = Narrow::from_raw(u8_(9));
         p.cpu_level = u8_(0xA);
         p.damage = 0;
         p.damage1 = d.u16(src.at(0xC));
@@ -378,7 +381,7 @@ impl Running<'_> {
             if c == 0x21 {
                 break;
             }
-            if !start.players[..n].iter().any(|p| p.ckind == c as i8) {
+            if !start.players[..n].iter().any(|p| p.ckind.raw() == c as i8) {
                 chars[count] = c;
                 count += 1;
             }
@@ -397,7 +400,7 @@ impl Running<'_> {
         self.event_load_table();
         let port = self.one_player_port();
         let e = &mut self.game.game_data.vs.event;
-        e.char_kind = 0;
+        e.char_kind = CharacterKind::Captain.into();
         e.char_color = 0;
         e.port = port;
         e.team = 0;
@@ -462,7 +465,7 @@ impl Running<'_> {
         }
         let ev = &mut self.game.game_data.vs.event;
         ev.load_kind = load_kind;
-        ev.stage = stkind;
+        ev.stage = StKind::from_raw(stkind);
         ev.chars = chars;
         ev.colors = colors;
         ev.crowd_kirby_copies = crowd_copies;
@@ -533,7 +536,7 @@ impl Running<'_> {
         let ck = d.u8(b) as i8;
         let ev = self.game.game_data.vs.event.clone();
         let own = d.u8(b.at(5)) == 1;
-        if own && ev.char_kind as i8 == ck && ev.char_color == d.u8(b.at(6)) {
+        if own && ev.char_kind.raw() as i8 == ck && ev.char_color == d.u8(b.at(6)) {
             self.game.game_data.vs.event.colors[1] = next_color(d.u8(b.at(6)));
         }
         let copies = if ck == CharacterKind::Kirby {
@@ -548,7 +551,7 @@ impl Running<'_> {
             i32::from(own),
             0,
             copies,
-            ev.char_kind,
+            ev.char_kind.raw(),
             ev.char_color,
             i32::from(d.u8(b.at(1))),
             i32::from(d.u8(b.at(2))),
@@ -606,9 +609,9 @@ impl Running<'_> {
             p.enters = false;
             let c = ev.kept_char as i8;
             if c != 0x21 {
-                p.ckind = c;
+                p.ckind = Narrow::from_raw(c);
                 let ev = &mut self.game.game_data.vs.event;
-                ev.char_kind = c as u8;
+                ev.char_kind = Narrow::from_raw(c as u8);
                 ev.chars[0] = c;
             }
         }
@@ -626,7 +629,7 @@ impl Running<'_> {
         }
         let (c, col) = (p1.ckind, p1.color);
         let ev = &mut self.game.game_data.vs.event;
-        ev.chars[1] = c;
+        ev.chars[1] = c.raw();
         ev.colors[1] = col;
     }
 
@@ -694,7 +697,7 @@ impl Running<'_> {
         r.item_freq = d.u8(ei.at(3)) as i8;
         r.sd_penalty = d.u8(ei.at(4)) as i8;
         r.end_wait = 0x6E;
-        r.stkind = d.u16(ei.at(6));
+        r.stkind = Narrow::from_raw(d.u16(ei.at(6)));
         r.time_limit = d.u32(ei.at(8));
         r.start_frame = 0;
         r.score = 0;
@@ -720,8 +723,8 @@ impl Running<'_> {
             ev.series = true;
             let round = ev.round;
             let stage = self.event_round_stage(e, round as usize);
-            start.rules.stkind = stage;
-            self.game.game_data.vs.event.stage = i32::from(stage);
+            start.rules.stkind = Narrow::from_raw(stage);
+            self.game.game_data.vs.event.stage = StKind::from_raw(i32::from(stage));
             if round > 0 {
                 start.rules.long_countdown = true;
                 start.rules.alt_go = true;
@@ -730,7 +733,7 @@ impl Running<'_> {
             self.game.left_list_start(&mut start.rules);
         }
         for p in &mut start.players {
-            p.slot_type = 3;
+            p.slot_type = PlayerKind::None.into();
         }
         let count = usize::from(e.players(self));
         let mut i = 0;
@@ -807,16 +810,16 @@ impl Running<'_> {
         super::setup_players::set_slot(&mut start.players[0], i32::from(ev.port));
         let p = &mut start.players[0];
         let team = p.team;
-        if p.ckind == CharacterKind::NONE as i8 {
-            p.ckind = ev.chosen_char;
+        if p.ckind.raw() == CharacterKind::NONE as i8 {
+            p.ckind = Narrow::from_raw(ev.chosen_char);
             p.color = ev.chosen_color;
             p.nametag = ev.nametag;
         }
         let (c, col, tag) = (p.ckind, p.color, p.nametag);
         let ev = &mut self.game.game_data.vs.event;
         ev.team = team;
-        ev.char_kind = c as u8;
-        ev.chars[0] = c;
+        ev.char_kind = Narrow::from_raw(c.raw() as u8);
+        ev.chars[0] = c.raw();
         ev.char_color = col;
         ev.colors[0] = col;
         let port = usize::from(ev.port);
@@ -849,7 +852,7 @@ impl Running<'_> {
             };
             if kept == -1 {
                 let c = self.event_random_opponent(start, i) as i8;
-                start.players[i].ckind = c;
+                start.players[i].ckind = Narrow::from_raw(c);
                 let ev = &mut self.game.game_data.vs.event;
                 match i {
                     1 => ev.random_char_1 = c,
@@ -857,7 +860,7 @@ impl Running<'_> {
                     _ => ev.random_char_3 = c,
                 }
             } else {
-                start.players[i].ckind = kept;
+                start.players[i].ckind = Narrow::from_raw(kept);
             }
         }
         let p = &mut start.players[i];
@@ -872,7 +875,7 @@ impl Running<'_> {
         if i < 4 {
             let (c, col) = (p.ckind, p.color);
             let ev = &mut self.game.game_data.vs.event;
-            ev.chars[i] = c;
+            ev.chars[i] = c.raw();
             ev.colors[i] = col;
         }
     }
@@ -915,7 +918,7 @@ impl Running<'_> {
                 );
                 self.dvd_mut().keep_class();
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;
-                gc.entries[0].char_id = i32::from(c as i8);
+                gc.entries[0].char_id = i32::from(c.raw() as i8);
                 gc.entries[0].color = col;
                 self.preload_refresh();
                 self.wait_preload_stale_released(4);
@@ -1013,7 +1016,7 @@ impl Running<'_> {
         let ev = self.game.game_data.vs.event.clone();
         if kind != CharacterKind::NONE {
             self.init_challenger(
-                ev.char_kind,
+                ev.char_kind.raw(),
                 ev.char_color,
                 ev.port,
                 ev.nametag,
@@ -1076,7 +1079,7 @@ impl Running<'_> {
                 let kind =
                     super::super::pl::player::ckind_ftkind(i32::from(self.data.u8(p) as i8), 0);
                 self.load_fighter_costume(kind, ev.colors[2]);
-                if ev.char_kind as i8 == 4 {
+                if ev.char_kind.raw() as i8 == 4 {
                     self.player_kirby_copy(kind, i32::from(ev.char_color));
                 }
             }
@@ -1091,7 +1094,7 @@ impl Running<'_> {
             let p = r.event_round(e, k);
             let (c, col) = (r.data.u8(p), r.data.u8(p.at(3)));
             let ev = &r.game.game_data.vs.event;
-            let col = if ev.char_kind as i8 == c as i8 && ev.char_color == col {
+            let col = if ev.char_kind.raw() as i8 == c as i8 && ev.char_color == col {
                 next_color(col)
             } else {
                 col
@@ -1185,13 +1188,16 @@ impl Running<'_> {
             self.check_preloaded(file);
             self.disc_load(file, MAIN_MEMORY);
         }
-        let t = kind_tables(kind);
+        let t = kind_tables(FighterKind::from_raw(kind));
         super::super::ef::load_sync(self, i32::from(t.effect_file));
-        if let Some(file) = self.game.load_costume(self.data, kind, i32::from(costume)) {
+        if let Some(file) =
+            self.game
+                .load_costume(self.data, FighterKind::from_raw(kind), i32::from(costume))
+        {
             self.check_preloaded(&file);
             self.disc_load(&file, MAIN_MEMORY);
         }
-        self.put_anim_file(kind);
+        self.put_anim_file(FighterKind::from_raw(kind));
         // `ftData_800857E0`: Kirby's copies' setup (`ftData_UnkMotionStates5`, Kirby's only).
         if kind == FighterKind::Kirby {
             self.player_kirby_copies();
@@ -1647,7 +1653,7 @@ impl Running<'_> {
     fn event_strike(&mut self, src: DataRef) {
         let (c, col) = (self.data.u8(src) as i8, self.data.u8(src.at(3)));
         let ev = &self.game.game_data.vs.event;
-        let col = if ev.char_kind as i8 == c && ev.char_color == col {
+        let col = if ev.char_kind.raw() as i8 == c && ev.char_color == col {
             next_color(col)
         } else {
             col
@@ -1804,10 +1810,10 @@ impl Running<'_> {
         let p1 = e.player(self, 1).expect("the event's second player");
         let kinds = [
             self.game.player_ckind(0),
-            i32::from(self.data.u8(p1) as i8),
-            i32::from(self.data.u8(joiner) as i8),
+            CharacterKind::from_raw(i32::from(self.data.u8(p1) as i8)),
+            CharacterKind::from_raw(i32::from(self.data.u8(joiner) as i8)),
         ];
-        self.event_voices(&kinds);
+        self.event_voices(&kinds.map(CharacterKind::id));
         let joined = self.game.game_data.vs.event.proc_counter != 0;
         if joined && self.game.player_stocks(2) <= 0 {
             self.event_success(gobj);
@@ -1990,7 +1996,7 @@ pub const JOIN_CALLBACK_ADDRS: [u32; JOIN_CALLBACKS.len()] = {
 pub fn run_join_callback(r: &mut Running, f: u32, slot: i32, left: i32) {
     let e = r.event_entry(r.event()).expect("the event's entry");
     let b = e.evbonus(r).expect("the event's crowd");
-    let kind = i32::from(r.data.u8(b.at(0x16)));
+    let kind = CpuKind::from_raw(i32::from(r.data.u8(b.at(0x16))));
     r.set_player_cpu_type(slot, kind);
     if f == 0x801B_EA88 && left == 0 {
         r.game.set_player_model_scale(slot, 2.0);

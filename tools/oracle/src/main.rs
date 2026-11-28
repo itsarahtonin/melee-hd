@@ -595,7 +595,12 @@ fn mirror_check(trace_path: &str) -> ExitCode {
             if fighters == 0 || t.number % 300 == 0 {
                 println!(
                     "tick {} port {} kind {} action {} pos {:?} percent {}",
-                    t.number, f.player_idx, f.kind, f.motion_id, f.cur_pos, f.dmg.percent
+                    t.number,
+                    f.player_idx,
+                    f.kind.id(),
+                    f.motion_id,
+                    f.cur_pos,
+                    f.dmg.percent
                 );
             }
             fighters += 1;

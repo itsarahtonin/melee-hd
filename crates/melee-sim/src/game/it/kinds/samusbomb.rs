@@ -138,7 +138,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_802B4AC8")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::SamusBomb.id(),
+        kind: ItKind::SamusBomb,
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

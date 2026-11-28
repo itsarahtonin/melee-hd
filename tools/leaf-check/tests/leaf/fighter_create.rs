@@ -44,6 +44,7 @@ use melee_capture::{
 use melee_data::archive::{Archive, ArchiveId, Archives};
 use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::ft::AnimFile;
+use melee_sim::game::ft::FighterKind;
 use melee_sim::game::ft::create::addr;
 use melee_sim::game::ft::data::kind_tables;
 use melee_sim::game::pl::player::PlayerKind;
@@ -246,7 +247,7 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
             if kind < 0 {
                 continue;
             }
-            let t = kind_tables(i32::from(kind));
+            let t = kind_tables(FighterKind::from_raw(i32::from(kind)));
             let mut files: Vec<std::borrow::Cow<str>> = vec![t.dat_file.unwrap().into()];
             let c = game.player_costume(s) as usize;
             let c = if c >= usize::from(t.costume_count) {

@@ -189,7 +189,7 @@ pub fn spawn(r: &mut Running, owner: GObjId, offset: Vec3, ty: i32) -> Option<GO
     let j = super::super::super::gr::ground::jobj_of(r.game, owner);
     let at = world_position(&mut r.game.objs, r.data, j, Some(offset));
     let mut spawn = SpawnItem {
-        kind: ItKind::GreatFoxLaser.id(),
+        kind: ItKind::GreatFoxLaser,
         prev_pos: at,
         pos: at,
         facing_dir: -1.0,

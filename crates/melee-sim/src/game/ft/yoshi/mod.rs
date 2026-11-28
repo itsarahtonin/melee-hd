@@ -326,7 +326,7 @@ impl Running<'_> {
     /// A word of Yoshi's loaded attributes (`gFtDataList[Ft_Kind_Yoshi]->ext_attr`), which
     /// the egg's victim reads whoever laid it.
     pub(crate) fn ys_ext_attr_word(&self, off: usize) -> u32 {
-        let d = self.game.ft.data.data_list[FighterKind::Yoshi as usize]
+        let d = self.game.ft.data.data_list[FighterKind::Yoshi.raw() as usize]
             .expect("Yoshi's ftData isn't loaded");
         let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
         self.data.u32(ext.at(off as u32))

@@ -2,6 +2,8 @@
 //! finger's joint, attached to it, as long as it reaches before the stage cuts it, sparking
 //! where it's cut every few frames, until Master Hand ends it.
 
+use crate::game::it::ItKind;
+use crate::lb::hitcapsule::HitCapsuleState;
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
@@ -64,7 +66,7 @@ pub fn spawn(
     prev_pos: Vec3,
     pos: Vec3,
     part: i32,
-    kind: i32,
+    kind: ItKind,
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
@@ -158,8 +160,8 @@ pub fn hitbox_off(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     for k in 0..4 {
         let hit = &mut ip.hitboxes[k].hit;
-        if hit.state != crate::lb::hitcapsule::DISABLED {
-            hit.state = crate::lb::hitcapsule::STOPPED;
+        if hit.state != HitCapsuleState::Disabled {
+            hit.state = HitCapsuleState::Stopped;
             super::super::set_flag(&mut ip.debug_flags, 2, true);
         }
     }
@@ -169,7 +171,7 @@ pub fn hitbox_off(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80275820")]
 pub fn hitbox_at(r: &mut Running, gobj: GObjId, a: Vec3, b: Vec3, idx: usize) {
     let hit = &mut item_mut(r.game, gobj).hitboxes[idx].hit;
-    if hit.state != crate::lb::hitcapsule::DISABLED {
+    if hit.state != HitCapsuleState::Disabled {
         hit.prev_pos = b;
         hit.pos = a;
     }

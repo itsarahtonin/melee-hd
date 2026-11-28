@@ -169,8 +169,6 @@ pub const IT_CHAIN: i32 = 97;
 pub(crate) const PAD_B: u32 = 1 << 9;
 pub(crate) const PAD_LR: u32 = 1 << 31;
 
-pub(crate) use super::common::{GA_AIR, GA_GROUND};
-
 impl Running<'_> {
     /// A float of the fighter's `ftSeakAttributes`, `off` bytes in.
     pub(crate) fn seak_attr_f32(&self, f: FighterId, off: usize) -> f32 {

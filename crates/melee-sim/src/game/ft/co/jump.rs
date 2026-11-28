@@ -442,7 +442,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let kind = fp.kind;
         if kind != FighterKind::Mewtwo
-            && (kind >= FighterKind::Mewtwo.id() || kind != FighterKind::Ness)
+            && (kind >= FighterKind::Mewtwo || kind != FighterKind::Ness)
             && fp.bunny_hood.is_some()
         {
             self.play_sfx(gobj, 0x11B, 0x7F, 0x40);

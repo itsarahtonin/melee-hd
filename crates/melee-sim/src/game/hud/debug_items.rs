@@ -5,6 +5,7 @@
 
 use super::debug_menu::{CB_BACK, CB_SELECT, CB_START};
 use crate::game::gm::GameMode;
+use crate::game::mirror::Narrow;
 use crate::game::state::Running;
 
 /// `fn_802FFE6C`, the submenus' own callback.
@@ -578,7 +579,7 @@ impl Running<'_> {
             self.change_game_mode_after_scene(GameMode::ClassicEnding);
         } else {
             let s = &mut self.game.game_data.vs.classic;
-            s.c_kind = ckind as _;
+            s.c_kind = Narrow::from_raw(ckind as i8);
             s.color = color as u8;
             if mode <= 2 {
                 self.change_game_mode_after_scene(GameMode::DebugEnding);
