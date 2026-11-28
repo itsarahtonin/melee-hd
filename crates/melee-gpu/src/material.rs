@@ -477,6 +477,7 @@ impl Renderer {
             ];
             // The shader's pixel coordinates are in scaled pixels (as `push_uniforms` sets them).
             u.mode = [r.passes[k].mode, 0, 0, self.scale | (self.width << 4)];
+            u.filtering[0] = self.anisotropy().word();
             // New in the flush: `made` holds what any of its uniforms are made of.
             let at = self.uniforms.len();
             self.uniforms.extend_from_slice(bytemuck::bytes_of(&u));

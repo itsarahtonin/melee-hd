@@ -29,6 +29,9 @@
 //!     native frames drawn at 1x, saved as OUT_DIR/frame_N.png; with --aspect, as the player
 //!     shows them at that aspect ratio (wider than 73:60, the cameras widened); with the
 //!     cosmetic flags, with Slippi's cosmetic codes as the player's settings turn them on
+//! melee-render-check filters DISC REPLAY.slp OUT_DIR [--scale N] [--aspect W:H] FRAME...
+//!     native frames with each of the player's Texture filtering, Supersampling and
+//!     Sharpening on, beside the frame with them off: OUT_DIR/frame_N_NAME.png, for looking at
 //! melee-render-check dashboard RESULTS_DIR OUT_DIR
 //!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR:
 //!     OUT_DIR/index.html, and the frames compared at full size in OUT_DIR/img/
@@ -42,6 +45,7 @@
 //! ```
 
 mod fast;
+mod filters;
 mod native;
 mod results;
 mod snap;
@@ -257,6 +261,28 @@ fn run(args: &[String]) -> ExitCode {
             }
             ExitCode::SUCCESS
         }
+        Some("filters") if args.len() >= 5 => {
+            let dir = std::path::PathBuf::from(&args[3]);
+            let mut rest = &args[4..];
+            let (mut scale, mut aspect) = (1, melee_render::frame::GAME_ASPECT);
+            loop {
+                match rest {
+                    [flag, n, more @ ..] if flag == "--scale" => {
+                        scale = n.parse().expect("--scale N");
+                        rest = more;
+                    }
+                    [flag, ratio, more @ ..] if flag == "--aspect" => {
+                        let (w, h) = ratio.split_once(':').expect("--aspect W:H");
+                        aspect = w.parse::<f32>().expect("W") / h.parse::<f32>().expect("H");
+                        rest = more;
+                    }
+                    _ => break,
+                }
+            }
+            let at: Vec<u32> = rest.iter().map(|a| a.parse().expect("FRAME")).collect();
+            filters::run(&args[1], &args[2], &dir, scale, aspect, &at);
+            ExitCode::SUCCESS
+        }
         Some("dashboard") if args.len() >= 3 => {
             let (dir, out) = (
                 std::path::Path::new(&args[1]),
@@ -297,6 +323,7 @@ fn run(args: &[String]) -> ExitCode {
                  align DISC REPLAY LOG FROM TO | compare DISC REPLAY LOG REF_DIR FRAME [OUT] | \
                  scaled DISC REPLAY FRAME [OUT] | reflection DISC REPLAY FRAME [W:H] | \
                  snap DISC REPLAY OUT [--aspect W:H] FRAME... | \
+                 filters DISC REPLAY OUT [--scale N] [--aspect W:H] FRAME... | \
                  notes DISC REPLAY [TO] | dashboard RESULTS OUT_DIR"
             );
             ExitCode::from(2)

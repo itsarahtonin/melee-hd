@@ -38,6 +38,40 @@ pub const SETTINGS_VERSION: u32 = 2;
 /// The widest timing margin, in milliseconds.
 pub const MAX_MARGIN_MS: f32 = 8.0;
 
+/// Sharpening's strength until the player picks one, in percent.
+pub const DEFAULT_SHARPNESS: u32 = 50;
+
+/// Texture filtering's, Supersampling's and Sharpening's lines (task 17's, proposed for Sarah's
+/// sign-off).
+pub const ANISOTROPY_HELP: &str = "Sharper textures on surfaces seen at an angle.";
+pub const SUPERSAMPLING_HELP: &str =
+    "Draws at a higher resolution and scales down: smoother edges, at a large cost.";
+pub const SHARPENING_HELP: &str = "Restores detail softened by antialiasing or scaling.";
+
+/// A factor's key in the settings file: `off` for 1, else the number.
+fn factor_key(n: u32) -> String {
+    if n <= 1 {
+        "off".to_owned()
+    } else {
+        n.to_string()
+    }
+}
+
+/// [`factor_key`]'s factor, if it's one of `choices`.
+fn parse_factor(v: &str, choices: &[u32]) -> Option<u32> {
+    let n = if v == "off" { 1 } else { v.parse().ok()? };
+    choices.contains(&n).then_some(n)
+}
+
+/// A factor's name in the panel: "Off", else "Nx".
+fn factor_name(n: u32) -> String {
+    if n <= 1 {
+        "Off".to_owned()
+    } else {
+        format!("{n}x")
+    }
+}
+
 /// A just-in-time margin in milliseconds, 0 to [`MAX_MARGIN_MS`].
 pub fn parse_margin(v: &str) -> Option<f32> {
     v.parse()
@@ -57,6 +91,9 @@ pub struct Given {
     pub jit_margin: bool,
     pub scale: bool,
     pub msaa: bool,
+    pub anisotropy: bool,
+    pub supersampling: bool,
+    pub sharpening: bool,
     pub renderer: bool,
     pub record: bool,
     pub replays: bool,
@@ -84,6 +121,16 @@ pub struct Settings {
     pub scale: u32,
     /// Four samples a pixel.
     pub msaa: bool,
+    /// Texture filtering: anisotropic filtering of textures seen at an angle, in both renderers
+    /// (task 17 of docs/milestone-7.md; off by default, design call 15: it changes the picture
+    /// from the console's).
+    pub anisotropy: melee_gpu::Anisotropy,
+    /// Supersampling's factor per side (1, off; 2 or 4): the EFB drawn that many times the
+    /// internal resolution and filtered down at the present (off by default, design call 15).
+    pub supersampling: u32,
+    /// Sharpening at the present, and its strength in percent (off by default, design call 15).
+    pub sharpening: bool,
+    pub sharpness: u32,
     /// Draws with the fast renderer (docs/fast-renderer.md) rather than the exact one.
     pub fast_renderer: bool,
     /// High refresh: on is Extrapolate (the panel's toggle); the command line can give
@@ -145,11 +192,11 @@ pub struct LowSpec {
 
 /// What low-spec mode sets (design call 3 of `docs/milestone-7.md`, Sarah 2026-11-27): what
 /// costs the most to draw on a weak machine, in the Display section's order. Resolution 1x,
-/// Antialiasing off, the fast renderer and High refresh off (no prediction, a frame a tick);
-/// the latency settings, the audio and the game are untouched. Tasks 17's and 18's options
-/// (texture filtering, supersampling, sharpening, the screen filter) join the list, off, as
-/// they land: an entry here is all that's needed, the help line included.
-pub const LOW_SPEC: [LowSpec; 4] = [
+/// Antialiasing off, Texture filtering, Supersampling and Sharpening off (task 17's; Sharpening's
+/// strength stays), the fast renderer and High refresh off (no prediction, a frame a tick); the
+/// latency settings, the audio and the game are untouched. Task 18's screen filter joins the
+/// list, off, as it lands: an entry here is all that's needed, the help line included.
+pub const LOW_SPEC: [LowSpec; 7] = [
     LowSpec {
         key: "scale",
         low: "1",
@@ -184,6 +231,45 @@ pub const LOW_SPEC: [LowSpec; 4] = [
             }
             "off" | "1" => {
                 s.msaa = false;
+                true
+            }
+            _ => false,
+        },
+    },
+    LowSpec {
+        key: "texture-filtering",
+        low: "off",
+        what: "texture filtering",
+        get: |s| factor_key(s.anisotropy.samples()),
+        set: |s, v| match parse_factor(v, &[1, 2, 4, 8, 16]) {
+            Some(n) => {
+                s.anisotropy = melee_gpu::Anisotropy::new(n);
+                true
+            }
+            None => false,
+        },
+    },
+    LowSpec {
+        key: "supersampling",
+        low: "off",
+        what: "supersampling",
+        get: |s| factor_key(s.supersampling),
+        set: |s, v| match parse_factor(v, &melee_gpu::post::Filters::SUPERSAMPLING) {
+            Some(n) => {
+                s.supersampling = n;
+                true
+            }
+            None => false,
+        },
+    },
+    LowSpec {
+        key: "sharpening",
+        low: "off",
+        what: "sharpening",
+        get: |s| if s.sharpening { "on" } else { "off" }.to_owned(),
+        set: |s, v| match v {
+            "on" | "off" => {
+                s.sharpening = v == "on";
                 true
             }
             _ => false,
@@ -392,6 +478,10 @@ impl Default for Settings {
             fullscreen: false,
             scale: 0,
             msaa: false,
+            anisotropy: melee_gpu::Anisotropy::OFF,
+            supersampling: 1,
+            sharpening: false,
+            sharpness: DEFAULT_SHARPNESS,
             // The fast renderer by default since 2026-11-20 (Sarah).
             fast_renderer: true,
             // Both on by default since 2026-11-14 (Sarah).
@@ -464,6 +554,12 @@ impl Settings {
             on(self.compress_replays),
             ruleset_key(self.ruleset),
             if self.fast_renderer { "fast" } else { "exact" }
+        ) + &format!(
+            "texture-filtering = {}\nsupersampling = {}\nsharpening = {}\nsharpening-strength = {}\n",
+            factor_key(self.anisotropy.samples()),
+            factor_key(self.supersampling),
+            on(self.sharpening),
+            self.sharpness,
         ) + &format!("update-check = {}\n", on(self.update_check))
             + &format!(
                 "no-screen-shake = {}\npal-stock-icons = {}\n",
@@ -515,6 +611,14 @@ impl Settings {
             {
                 (l.set)(self, &was);
             }
+        }
+    }
+
+    /// The present's filters these settings ask for.
+    pub fn filters(&self) -> melee_gpu::post::Filters {
+        melee_gpu::post::Filters {
+            supersampling: self.supersampling,
+            sharpening: self.sharpening.then_some(self.sharpness),
         }
     }
 
@@ -579,6 +683,26 @@ impl Settings {
                     "off" | "1" => self.msaa = false,
                     _ => {}
                 },
+                "texture-filtering" if !given.anisotropy => {
+                    if let Some(n) = parse_factor(v, &[1, 2, 4, 8, 16]) {
+                        self.anisotropy = melee_gpu::Anisotropy::new(n);
+                    }
+                }
+                "supersampling" if !given.supersampling => {
+                    if let Some(n) = parse_factor(v, &melee_gpu::post::Filters::SUPERSAMPLING) {
+                        self.supersampling = n;
+                    }
+                }
+                "sharpening" if !given.sharpening => {
+                    if let Some(b) = on(v) {
+                        self.sharpening = b;
+                    }
+                }
+                "sharpening-strength" if !given.sharpening => {
+                    if let Some(n) = v.parse().ok().filter(|n| *n <= 100) {
+                        self.sharpness = n;
+                    }
+                }
                 "renderer" if !given.renderer => match v {
                     "fast" => self.fast_renderer = true,
                     "exact" => self.fast_renderer = false,
@@ -1108,6 +1232,42 @@ impl Panel {
                 ui.label("");
                 ui.checkbox(&mut s.msaa, "Antialiasing (MSAA 4x)");
                 ui.end_row();
+                ui.label("Texture filtering");
+                let a = &mut s.anisotropy;
+                egui::ComboBox::from_id_salt("texture-filtering")
+                    .selected_text(factor_name(a.samples()))
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        for c in melee_gpu::Anisotropy::CHOICES {
+                            ui.selectable_value(a, c, factor_name(c.samples()));
+                        }
+                    });
+                ui.end_row();
+                help(ui, ANISOTROPY_HELP);
+                ui.label("Supersampling");
+                let ss = &mut s.supersampling;
+                egui::ComboBox::from_id_salt("supersampling")
+                    .selected_text(factor_name(*ss))
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        for n in melee_gpu::post::Filters::SUPERSAMPLING {
+                            ui.selectable_value(ss, n, factor_name(n));
+                        }
+                    });
+                ui.end_row();
+                help(ui, SUPERSAMPLING_HELP);
+                ui.label("");
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut s.sharpening, "Sharpening");
+                    ui.add_enabled(
+                        s.sharpening,
+                        egui::Slider::new(&mut s.sharpness, 0..=100)
+                            .suffix("%")
+                            .text("Strength"),
+                    );
+                });
+                ui.end_row();
+                help(ui, SHARPENING_HELP);
                 ui.label("Renderer");
                 let fast = &mut s.fast_renderer;
                 egui::ComboBox::from_id_salt("renderer")
@@ -1519,6 +1679,10 @@ mod tests {
             fullscreen: true,
             scale: 3,
             msaa: true,
+            anisotropy: melee_gpu::Anisotropy::new(8),
+            supersampling: 4,
+            sharpening: true,
+            sharpness: 70,
             fast_renderer: false,
             high_refresh: Mode::Off,
             present: Present::Immediate,
@@ -1569,6 +1733,10 @@ mod tests {
             fullscreen: rng.yes(),
             scale: rng.below(9) as u32,
             msaa: rng.yes(),
+            anisotropy: rng.pick(&melee_gpu::Anisotropy::CHOICES),
+            supersampling: rng.pick(&melee_gpu::post::Filters::SUPERSAMPLING),
+            sharpening: rng.yes(),
+            sharpness: rng.below(101) as u32,
             fast_renderer: rng.yes(),
             high_refresh: rng.pick(&[Mode::Off, Mode::Interpolate, Mode::Extrapolate]),
             present: rng.pick(&Present::CHOICES.map(|(p, _)| p)),
@@ -1606,6 +1774,9 @@ mod tests {
             let low = Settings {
                 scale: 1,
                 msaa: false,
+                anisotropy: melee_gpu::Anisotropy::OFF,
+                supersampling: 1,
+                sharpening: false,
                 fast_renderer: true,
                 high_refresh: Mode::Off,
                 low_spec: s.low_spec.clone(),
@@ -1737,7 +1908,7 @@ mod tests {
     fn low_spec_help_lists_what_it_turns_off() {
         assert_eq!(
             low_spec_help(),
-            "Turns off what costs the most to draw: resolutions above the console's, antialiasing, the exact renderer and high refresh. Turning it off puts your settings back."
+            "Turns off what costs the most to draw: resolutions above the console's, antialiasing, texture filtering, supersampling, sharpening, the exact renderer and high refresh. Turning it off puts your settings back."
         );
     }
 
@@ -1847,6 +2018,55 @@ mod tests {
         s.restore(&picked().save(), &given);
         assert_eq!((s.scale, s.aspect), (2, Aspect::STRETCHED));
         assert!(s.msaa && !s.record_sessions);
+    }
+
+    /// Texture filtering, Supersampling and Sharpening are off by default (design call 15: they
+    /// change the picture from the console's), so the present is the plain blit; each comes back
+    /// from the file, and a value that isn't a choice leaves it as it was.
+    #[test]
+    fn the_filters_are_off_by_default_and_come_back() {
+        let s = Settings::default();
+        assert!(s.anisotropy.is_off() && s.supersampling == 1 && !s.sharpening);
+        assert!(s.filters().is_off());
+        for a in melee_gpu::Anisotropy::CHOICES {
+            for ss in melee_gpu::post::Filters::SUPERSAMPLING {
+                for sharp in [None, Some(0), Some(35), Some(100)] {
+                    let was = Settings {
+                        anisotropy: a,
+                        supersampling: ss,
+                        sharpening: sharp.is_some(),
+                        sharpness: sharp.unwrap_or(DEFAULT_SHARPNESS),
+                        ..Settings::default()
+                    };
+                    let mut s = Settings::default();
+                    s.restore(&was.save(), &Given::default());
+                    assert_eq!(s, was, "{}", was.save());
+                    assert_eq!(
+                        s.filters(),
+                        melee_gpu::post::Filters {
+                            supersampling: ss,
+                            sharpening: sharp,
+                        }
+                    );
+                }
+            }
+        }
+        let mut s = Settings::default();
+        s.restore(
+            "texture-filtering = 3\nsupersampling = 8\nsharpening = maybe\nsharpening-strength = 101\n",
+            &Given::default(),
+        );
+        assert_eq!(s, Settings::default());
+        let given = Given {
+            anisotropy: true,
+            supersampling: true,
+            sharpening: true,
+            ..Given::default()
+        };
+        let mut s = Settings::default();
+        s.restore(&picked().save(), &given);
+        assert_eq!(s.filters(), melee_gpu::post::Filters::OFF);
+        assert!(s.anisotropy.is_off());
     }
 
     /// The fast renderer is the default (Sarah, 2026-11-20); a file that names the exact one

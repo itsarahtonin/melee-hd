@@ -555,6 +555,46 @@ pub fn draw_views(
     out
 }
 
+/// [`draw_views`] with renderers the caller made (their EFBs sized and their options set, the
+/// frames left on the GPU and read back), seen at `widescreen`'s aspect when it's given, with
+/// Slippi's cosmetic codes off.
+pub fn draw_with(
+    disc_path: &str,
+    replay_path: &str,
+    at: &[u32],
+    renderers: Vec<melee_gpu::Renderer>,
+    widescreen: Option<f32>,
+) -> Vec<(u32, Vec<Frame>)> {
+    let mut drawers: Vec<Drawer> = renderers
+        .into_iter()
+        .map(|r| Drawer::new(r, widescreen, (false, false)))
+        .collect();
+    let last = at.iter().copied().max().unwrap_or(0);
+    let mut out = Vec::new();
+    let cosmetic = Cosmetic {
+        draw_offscreen_fighters: widescreen.is_some(),
+    };
+    drive(disc_path, replay_path, last, cosmetic, |t| {
+        let draw = at.iter().any(|&a| drawn_for(t.n, a, WARM_UP));
+        let images: Vec<Option<Frame>> = drawers
+            .iter_mut()
+            .map(|d| d.frame(t, draw, None).0.into_iter().last())
+            .collect();
+        if at.contains(&t.n) {
+            let images = images
+                .into_iter()
+                .enumerate()
+                .map(|(i, f)| {
+                    f.unwrap_or_else(|| panic!("frame {} by renderer {i}: nothing copied", t.n))
+                })
+                .collect();
+            out.push((t.n, images));
+        }
+        t.n < last
+    });
+    out
+}
+
 /// How far two frames' draws are apart, for lining frames up: the share of `b`'s draws that
 /// don't line up (by signature, as `compare` lines events up) with a draw of `a` whose
 /// vertices sit where theirs do, and how many lined up at all.

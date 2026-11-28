@@ -17,6 +17,9 @@ struct State {
     levels: array<vec4<u32>, 2>,
     // x: draw mode (0 draw, 1 clear, 2 depth only); y: clear color (RGBA8); z: clear depth.
     mode: vec4<u32>,
+    // x: anisotropic filtering's most samples along a footprint (the player's Texture filtering;
+    // 0, as on the console, for none).
+    filtering: vec4<u32>,
 }
 
 @group(0) @binding(0) var<uniform> st: State;
@@ -265,8 +268,13 @@ struct Lod {
 
 /// A texture map's level of detail from its coordinate's change across the 2x2 block.
 fn lod_of(map: u32, dx: vec2<f32>, dy: vec2<f32>) -> Lod {
+    return lod_at(map, footprint(map, dx, dy));
+}
+
+/// The size of a texture map's footprint GX takes the level of detail from: the larger of the
+/// coordinate's changes in s and in t, each the larger across x and y (or their sum, diagonal).
+fn footprint(map: u32, dx: vec2<f32>, dy: vec2<f32>) -> f32 {
     let mode0 = bp(tex_reg(0x80u, map));
-    let mode1 = bp(tex_reg(0x84u, map));
     var sd: f32;
     var td: f32;
     if bits(mode0, 8u, 1u) != 0u {
@@ -277,7 +285,14 @@ fn lod_of(map: u32, dx: vec2<f32>, dy: vec2<f32>) -> Lod {
         sd = max(abs(dx.x), abs(dy.x));
         td = max(abs(dx.y), abs(dy.y));
     }
-    var lod = fixed_log2(max(sd, td));
+    return max(sd, td);
+}
+
+/// A texture map's level of detail for a footprint of `size` texels.
+fn lod_at(map: u32, size: f32) -> Lod {
+    let mode0 = bp(tex_reg(0x80u, map));
+    let mode1 = bp(tex_reg(0x84u, map));
+    var lod = fixed_log2(size);
     let bias = (i32(bits(mode0, 9u, 8u)) << 24u) >> 24u;
     lod += bias >> 1u;
     var o: Lod;
@@ -291,6 +306,43 @@ fn lod_of(map: u32, dx: vec2<f32>, dy: vec2<f32>) -> Lod {
     }
     o.lod = lod;
     return o;
+}
+
+/// Whether the player's anisotropic filtering takes a texture map: one GX filters linearly as
+/// it shrinks (its min filter's linear bit).
+fn anisotropic(map: u32) -> bool {
+    return bits(bp(tex_reg(0x80u, map)), 7u, 1u) != 0u;
+}
+
+/// The player's anisotropic filtering (`Anisotropy` in lib.rs) of texture map `map` at `c` (in
+/// 1/128 texels): where the footprint is longer than it's wide and shrinks the texture, up to
+/// `most` of GX's own samples spread evenly along its long side, each at the level of detail of
+/// GX's footprint over their count, averaged. Otherwise GX's one sample.
+fn sample_anisotropic(map: u32, c: vec2<i32>, dx: vec2<f32>, dy: vec2<f32>, most: u32) -> vec4<i32> {
+    let lx = length(dx);
+    let ly = length(dy);
+    let long = max(lx, ly);
+    let short = min(lx, ly);
+    let size = footprint(map, dx, dy);
+    var n = 1u;
+    if size > 1.0 && long > short {
+        n = most;
+        if long < short * f32(most) {
+            n = u32(ceil(long / short));
+        }
+    }
+    let lod = lod_at(map, size / f32(n));
+    if n == 1u {
+        return sample(map, c.x, c.y, lod.lod, lod.linear);
+    }
+    let axis = select(dy, dx, lx >= ly) * 128.0;
+    var sum = vec4<i32>(0);
+    for (var i = 0u; i < n; i++) {
+        let f = (f32(i) + 0.5) / f32(n) - 0.5;
+        let at = c + vec2<i32>(round(axis * f));
+        sum += sample(map, at.x, at.y, lod.lod, lod.linear);
+    }
+    return (sum + vec4<i32>(i32(n >> 1u))) / vec4<i32>(i32(n));
 }
 
 fn swap(c: vec4<i32>, table: u32) -> vec4<i32> {
@@ -595,8 +647,12 @@ fn fs_main(in: Varyings) -> Out {
         if enabled {
             var texel = vec4<i32>(0);
             if ntex > 0u {
-                let lod = lod_of(map, dx[coord_raw], dy[coord_raw]);
-                texel = sample(map, tex_coord.x, tex_coord.y, lod.lod, lod.linear);
+                if st.filtering.x > 1u && anisotropic(map) {
+                    texel = sample_anisotropic(map, tex_coord, dx[coord_raw], dy[coord_raw], st.filtering.x);
+                } else {
+                    let lod = lod_of(map, dx[coord_raw], dy[coord_raw]);
+                    texel = sample(map, tex_coord.x, tex_coord.y, lod.lod, lod.linear);
+                }
             }
             raw_tex = texel;
             tex = swap(texel, bits(aenv, 2u, 2u));
