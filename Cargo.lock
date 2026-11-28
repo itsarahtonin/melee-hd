@@ -1747,8 +1747,10 @@ dependencies = [
 name = "melee-slippi"
 version = "0.1.1"
 dependencies = [
+ "melee-local-data",
  "melee-sim",
  "thiserror 2.0.21",
+ "zstd",
 ]
 
 [[package]]

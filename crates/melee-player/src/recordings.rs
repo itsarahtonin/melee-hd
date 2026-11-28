@@ -1,11 +1,14 @@
-//! The settings panel's Recordings tab (Sarah, 2026-11-14): the Slippi replays (`.slp`) in a
-//! folder and its subfolders, newest first, each with its date, players, stage and length as
-//! read cheaply from its game start and metadata, and the chosen one played from start to
-//! finish, as `--replay` plays one. Melee is set aside meanwhile, paused as the panel leaves
-//! it, and comes back where it was when the replay ends (`App::play_replay` in `main.rs`).
+//! The settings panel's Recordings tab (Sarah, 2026-11-14): the Slippi replays (`.slp`, and
+//! `.slpz` since milestone 7's task 14) in a folder and its subfolders, newest first, each
+//! with its date, players, stage and length as read cheaply from its game start and metadata,
+//! and the chosen one played from start to finish, as `--replay` plays one. Melee is set
+//! aside meanwhile, paused as the panel leaves it, and comes back where it was when the replay
+//! ends (`App::play_replay` in `main.rs`).
 //!
 //! A file is read only when its row shows, on a thread of its own: the first few KB for its
-//! game start and its end for its metadata, never the frames between.
+//! game start and its end for its metadata, never the frames between. A `.slpz` keeps both
+//! uncompressed after its header (`melee_slippi::slpz`), so it's read the same way, never
+//! decompressed.
 //!
 //! A replay melee-hd refuses to play for its game start alone (one recorded on a modified Melee:
 //! `vs_match::retail_kinds`, the refusal's own rule) is marked on its row, and its Play does
@@ -29,6 +32,8 @@ const MOST: usize = 20_000;
 const HEAD: usize = 4096;
 /// The most of a file's end read for its metadata.
 const TAIL: u64 = 64 << 10;
+/// The most of a `.slpz`'s payload sizes and game start read: theirs are a few hundred bytes.
+const SLPZ_START: usize = 16 << 10;
 /// The raw event stream's first event, the payload sizes, and the game start's command.
 const PAYLOAD_SIZES: u8 = 0x35;
 const GAME_START: u8 = 0x36;
@@ -148,24 +153,49 @@ fn last_frame(meta: &[u8]) -> Option<i64> {
 
 /// Reads a replay's summary from its file: its first bytes and its end.
 pub fn read(path: &Path) -> Result<Summary, String> {
-    let mut f = std::fs::File::open(path).map_err(|e| e.to_string())?;
-    let mut head = Vec::with_capacity(HEAD);
-    (&mut f)
-        .take(HEAD as u64)
-        .read_to_end(&mut head)
-        .map_err(|e| e.to_string())?;
+    read_from(std::fs::File::open(path).map_err(|e| e.to_string())?)
+}
+
+/// `n` bytes of `f` from `at`, fewer where it ends.
+fn read_at(f: &mut (impl Read + Seek), at: u64, n: u64) -> std::io::Result<Vec<u8>> {
+    f.seek(SeekFrom::Start(at))?;
+    let mut out = Vec::new();
+    f.take(n).read_to_end(&mut out)?;
+    Ok(out)
+}
+
+/// [`read`] from a file's bytes, a `.slp`'s or a `.slpz`'s.
+fn read_from(mut f: impl Read + Seek) -> Result<Summary, String> {
+    let e = |e: std::io::Error| e.to_string();
+    let head = read_at(&mut f, 0, HEAD as u64).map_err(e)?;
+    if let Some(s) = melee_slippi::slpz::sections(&head) {
+        // The payload sizes and the game start, a bare event stream's first events, then the
+        // metadata, as a `.slp` holds them.
+        let start = s.metadata.start - s.payload_sizes.start;
+        if start > SLPZ_START {
+            return Err("not a Slippi replay".to_owned());
+        }
+        let raw = read_at(&mut f, s.payload_sizes.start as u64, start as u64).map_err(e)?;
+        let meta = (s.metadata.len() as u64).min(TAIL);
+        let tail = read_at(&mut f, s.metadata.start as u64, meta).map_err(e)?;
+        return summarize(&raw, &tail);
+    }
     let mut tail = Vec::new();
     if let Some((at, Some(len))) = raw_of(&head) {
         let end = at as u64 + len;
-        let size = f.metadata().map_err(|e| e.to_string())?.len();
+        let size = f.seek(SeekFrom::End(0)).map_err(e)?;
         if size > end {
-            f.seek(SeekFrom::Start(end)).map_err(|e| e.to_string())?;
-            f.take(TAIL)
-                .read_to_end(&mut tail)
-                .map_err(|e| e.to_string())?;
+            tail = read_at(&mut f, end, TAIL).map_err(e)?;
         }
     }
     summarize(&head, &tail)
+}
+
+/// Whether a file's name is a replay's: `.slp` or `.slpz`, in any case.
+fn is_replay(path: &Path) -> bool {
+    path.extension().is_some_and(|x| {
+        x.eq_ignore_ascii_case("slp") || x.eq_ignore_ascii_case(melee_slippi::slpz::EXTENSION)
+    })
 }
 
 /// The date and time a replay's name gives, as Slippi names replays by the local time their
@@ -195,7 +225,7 @@ struct Entry {
     summary: State,
 }
 
-/// The `.slp` files in `dir` and its subfolders (to [`DEPTH`]), newest first.
+/// The replays in `dir` and its subfolders (to [`DEPTH`]), newest first.
 fn list(dir: &Path) -> std::io::Result<Vec<Entry>> {
     let mut out = Vec::new();
     walk(dir, dir, 0, &mut out)?;
@@ -218,10 +248,7 @@ fn walk(root: &Path, dir: &Path, depth: usize, out: &mut Vec<Entry>) -> std::io:
             }
             continue;
         }
-        let is_slp = path
-            .extension()
-            .is_some_and(|x| x.eq_ignore_ascii_case("slp"));
-        if !is_slp {
+        if !is_replay(&path) {
             continue;
         }
         let name = e.file_name().to_string_lossy().into_owned();
@@ -389,7 +416,7 @@ impl Recordings {
         if let Some(e) = &self.error {
             ui.weak(e);
         } else if self.entries.is_empty() {
-            ui.weak("No replays (.slp files) in this folder.");
+            ui.weak("No replays (.slp or .slpz files) in this folder.");
         } else {
             action = action.or(self.rows(ui, busy));
         }
@@ -657,6 +684,43 @@ mod tests {
         tab.chosen = Some(PathBuf::from("retail.slp"));
         assert_eq!(tab.chosen(), Some(Path::new("retail.slp")));
         assert_eq!(tab.refusal(), None);
+    }
+
+    /// A `.slpz`'s row says what its `.slp`'s does, read from its uncompressed sections: each
+    /// benchmark replay's, each under `SLIPPI_REPLAYS`, and with a metadata's `lastFrame`. The
+    /// listing takes `.slpz` files in any case, and only replays.
+    #[test]
+    fn a_slpz_reads_as_its_slp() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/bench");
+        let mut files: Vec<PathBuf> = list(&dir).unwrap().into_iter().map(|e| e.path).collect();
+        if let Some(d) = std::env::var_os("SLIPPI_REPLAYS") {
+            files.extend(list(Path::new(&d)).unwrap().into_iter().map(|e| e.path));
+        }
+        let mut n = 0;
+        for p in &files {
+            let slp = std::fs::read(p).unwrap();
+            let Ok(slpz) = melee_slippi::slpz::compress(&slp) else {
+                continue;
+            };
+            let ours = read_from(std::io::Cursor::new(&slpz));
+            assert_eq!(ours, read(p), "{}", p.display());
+            n += 1;
+        }
+        assert!(n >= 6, "{n}");
+        // A length from the metadata, as Slippi Dolphin writes it.
+        let slp = std::fs::read(dir.join("fox-fox-fd.slp")).unwrap();
+        let raw = melee_slippi::replay::raw_events(&slp).unwrap();
+        let mut timed = slp[..15 + raw.len()].to_vec();
+        timed.extend_from_slice(b"U\x08metadata{U\x09lastFrameI\x23\x46}}");
+        let slpz = melee_slippi::slpz::compress(&timed).unwrap();
+        let s = read_from(std::io::Cursor::new(&slpz)).unwrap();
+        assert_eq!(s.length.as_deref(), Some("2:32"));
+        assert_eq!(Ok(s), read_from(std::io::Cursor::new(&timed)));
+        // Cut short in its game start.
+        let s = melee_slippi::slpz::sections(&slpz).unwrap();
+        assert!(read_from(std::io::Cursor::new(&slpz[..s.game_start.start + 8])).is_err());
+        assert!(is_replay(Path::new("a/Game_1.SLPZ")) && is_replay(Path::new("b.slp")));
+        assert!(!is_replay(Path::new("c.slpzz")) && !is_replay(Path::new("d.txt")));
     }
 
     #[test]

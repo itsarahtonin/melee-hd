@@ -29,6 +29,10 @@ Floating-point behavior, the DSP's AX mixing and the GPU's formats and rendering
 - [slippi-ssbm-asm](https://github.com/project-slippi/slippi-ssbm-asm) (GPL-3.0): the Slippi ruleset's codes, UCF 0.84 and the determinism fixes (`crates/melee-sim/src/game/ucf.rs`, `game/slippi.rs`), and the playback codes (`game/playback.rs`), are ported from these codes' machine code. `tools/bench` embeds its Boot to Playback Scene, Init Player Data, Init Stage Data and ExtendPlayerBlock codes (`src/matches.rs`, `src/gecko_words.rs`).
 - [project-slippi/dolphin](https://github.com/project-slippi/dolphin) (GPL-2.0-or-later): the replay format follows its `SlippiGame`, and the playback denylist is generated from its injection lists at `41a7a3a1` (`crates/melee-slippi`); the playback codes are the set it ships.
 
+## slpz
+
+[slpz](https://github.com/AlexanderHarrison/slpz) (MIT OR Apache-2.0, Copyright (c) 2018 Alex Harrison) defines the `.slpz` format Slippi's community tools write. `crates/melee-slippi/src/slpz.rs` is ported from its library at 1.3.0 (used under MIT; its header carries the notice), so melee-hd's `.slpz` files equal the slpz tool's byte for byte. It links zstd through the `zstd` crate, as the rest of melee-hd does, rather than depending on `slpz`, whose `thin` zstd feature Cargo would unify into every build's zstd.
+
 ## Aurora
 
 [Aurora](https://github.com/encounter/aurora) (MIT) is a design reference for the renderer's pipeline cache (`crates/melee-player/src/pipelines.rs`). No code is taken from it.

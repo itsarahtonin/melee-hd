@@ -136,14 +136,19 @@ fn play(session: &mut Session, limit: u32, pads: impl Fn(u32) -> [PadStatus; 4])
 /// Saves `s`'s match's recording as the player saves its replays (`recording::Recording`), and
 /// plays it back as the player plays a replay, recording it again: the two recordings, and the
 /// settings it played back with. `out` names a variable that keeps a copy of the first, for
-/// Slippi's tools to read.
-fn record_and_play_back(disc: &Disc, s: &Settings, out: &str) -> (Replay, Replay, Settings) {
+/// Slippi's tools to read. `compress`: saved as a `.slpz`, as Compress replays saves it.
+fn record_and_play_back(
+    disc: &Disc,
+    s: &Settings,
+    out: &str,
+    compress: bool,
+) -> (Replay, Replay, Settings) {
     // Without a pause: playback doesn't pause, so the frame starts' scene frame counts, which
     // count paused frames, would differ after one. The recording goes to a folder of its own.
     let dir =
         std::env::temp_dir().join(format!("melee-hd-record-test-{out}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    let to = crate::recording::Recording::new(dir.to_str());
+    let to = crate::recording::Recording::new(dir.to_str(), compress);
     let mut session = start(disc, s, None);
     let made = play(&mut session, 6000, |t| pads(t, false));
     to.save(session.game().recorder.as_ref().expect("the recorder"))
@@ -155,20 +160,26 @@ fn record_and_play_back(disc: &Disc, s: &Settings, out: &str) -> (Replay, Replay
         .collect();
     assert_eq!(saved.len(), 1, "{saved:?}");
     let name = saved[0].file_name().unwrap().to_string_lossy().into_owned();
-    assert!(
-        name.starts_with("Game_") && name.ends_with(".slp"),
-        "{name}"
-    );
-    let first = std::fs::read(&saved[0]).expect("the saved replay");
+    let ext = if compress { ".slpz" } else { ".slp" };
+    assert!(name.starts_with("Game_") && name.ends_with(ext), "{name}");
+    let file = std::fs::read(&saved[0]).expect("the saved replay");
+    assert_eq!(melee_slippi::slpz::is_slpz(&file), compress, "{name}");
+    // Played back from the file as saved, compressed or not; compared uncompressed.
+    let original = Replay::parse(&file).expect("the recording parses");
+    let first = melee_slippi::slpz::slp(&file)
+        .expect("it reads")
+        .into_owned();
+    if compress {
+        assert_eq!(melee_slippi::slpz::compress(&first), Ok(file.clone()));
+    }
     std::fs::remove_dir_all(&dir).expect("the folder goes");
     if let Some(out) = std::env::var_os(out) {
-        std::fs::write(out, &first).expect("the copy written");
+        std::fs::write(out, &file).expect("the copy written");
     }
     assert_eq!(
         melee_slippi::replay::raw_events(&first).unwrap(),
         melee_slippi::replay::raw_events(&made).unwrap()
     );
-    let original = Replay::parse(&first).expect("the recording parses");
     assert_eq!(original.version, record::VERSION);
     assert!(original.game_ended);
     // Played back as the player plays a replay: at a drive's pace, and without the allocator
@@ -251,7 +262,7 @@ fn a_recording_plays_back() {
             unlocks,
             ..settings()
         };
-        let (original, ours, again) = record_and_play_back(&disc, &s, "RECORD_TEST_OUT");
+        let (original, ours, again) = record_and_play_back(&disc, &s, "RECORD_TEST_OUT", false);
         assert_eq!(original.unlocks, Some(unlocks));
         assert_eq!(again.unlocks, unlocks);
         assert_eq!(ours.unlocks, Some(unlocks));
@@ -273,7 +284,8 @@ fn a_slippi_recording_plays_back() {
             rules: Rules::slippi_online(),
             ..settings()
         };
-        let (original, ours, again) = record_and_play_back(&disc, &s, "RECORD_TEST_SLIPPI_OUT");
+        let (original, ours, again) =
+            record_and_play_back(&disc, &s, "RECORD_TEST_SLIPPI_OUT", false);
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         assert_eq!(original.gecko_codes, record::ruleset_codes());
         assert_eq!(ours.gecko_codes, original.gecko_codes);
@@ -281,6 +293,27 @@ fn a_slippi_recording_plays_back() {
         assert_eq!(original.unlocks, None);
         assert_eq!(again.unlocks, Unlocks::slippi());
         assert_eq!(original.ucf_toggles, [1; 8]);
+    });
+}
+
+/// With Compress replays on, the Slippi ruleset's recording is saved as a `.slpz` (the slpz
+/// tool's bytes for the `.slp` it holds), and plays back from it as from its `.slp`, recording
+/// the same again (milestone 7's task 14).
+#[test]
+fn a_compressed_recording_plays_back() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let s = Settings {
+            record: Some(Setup::slippi()),
+            rules: Rules::slippi_online(),
+            ..settings()
+        };
+        let (original, ours, again) = record_and_play_back(&disc, &s, "RECORD_TEST_SLPZ_OUT", true);
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        assert_eq!(original.gecko_codes, record::ruleset_codes());
+        assert_eq!(ours.gecko_codes, original.gecko_codes);
+        assert_eq!(again.rules, Rules::slippi_online());
     });
 }
 
@@ -1523,7 +1556,8 @@ fn a_ruleset_match_ignores_the_disc_pace() {
 /// settings, which the Recordings tab's Play takes too), plays to its last frame. At a drive's
 /// pace its first transformation's file lands six ticks late, the seed parts at tick 4114 and
 /// the match ends at tick 8,924 of 13,699 (docs/player.md, "the player reads the disc at a
-/// drive's pace"). A developer's match keeps a drive's pace, which its music needs.
+/// drive's pace"). Its `.slpz` plays the same (milestone 7's task 14). A developer's match keeps
+/// a drive's pace, which its music needs.
 #[test]
 fn a_stadium_replay_plays_to_its_end_at_the_default_settings() {
     crate::on_game_stack(|| {
@@ -1545,28 +1579,41 @@ fn a_stadium_replay_plays_to_its_end_at_the_default_settings() {
             args.bench = Some(0);
             Session::open(&args).expect("the match")
         };
-        let mut s = opened(&["--replay", path]);
-        let pace = s.game().audio.disc;
-        let none = [PadStatus::default(); 4];
-        let mut ticks = 0u32;
-        loop {
-            let f = s.tick(none);
-            ticks += 1;
-            let ended = f.ended;
-            s.recycle(f);
-            if ended || ticks > 20_000 {
-                break;
+        let slpz = std::env::temp_dir().join(format!(
+            "melee-hd-record-test-{}-fox-marth-ps.slpz",
+            std::process::id()
+        ));
+        let bytes = std::fs::read(path).expect("the benchmark replay");
+        std::fs::write(
+            &slpz,
+            melee_slippi::slpz::compress(&bytes).expect("it compresses"),
+        )
+        .expect("the .slpz written");
+        for path in [path, slpz.to_str().expect("a UTF-8 path")] {
+            let mut s = opened(&["--replay", path]);
+            let pace = s.game().audio.disc;
+            let none = [PadStatus::default(); 4];
+            let mut ticks = 0u32;
+            loop {
+                let f = s.tick(none);
+                ticks += 1;
+                let ended = f.ended;
+                s.recycle(f);
+                if ended || ticks > 20_000 {
+                    break;
+                }
             }
+            // The replay's frames run from -123 to the game's end, its last; the scene goes on
+            // 115 ticks more (the end's announcement and fade) before the match ends.
+            const AFTER_THE_GAMES_END: i32 = 115;
+            let last = *replay.frames.keys().last().expect("frames");
+            assert_eq!(
+                ticks,
+                u32::try_from(last + 123 + AFTER_THE_GAMES_END).unwrap(),
+                "{path} at {pace:?} ended at tick {ticks}, its last frame is {last}"
+            );
         }
-        // The replay's frames run from -123 to the game's end, its last; the scene goes on 115
-        // ticks more (the end's announcement and fade) before the match ends.
-        const AFTER_THE_GAMES_END: i32 = 115;
-        let last = *replay.frames.keys().last().expect("frames");
-        assert_eq!(
-            ticks,
-            u32::try_from(last + 123 + AFTER_THE_GAMES_END).unwrap(),
-            "the replay at {pace:?} ended at tick {ticks}, its last frame is {last}"
-        );
+        let _ = std::fs::remove_file(&slpz);
         let s = opened(&["--p1", "fox", "--p2", "marth", "--stage", "fd"]);
         assert_eq!(
             s.game().audio.disc,

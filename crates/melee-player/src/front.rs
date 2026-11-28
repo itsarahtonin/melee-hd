@@ -60,6 +60,7 @@ pub struct Given {
     pub renderer: bool,
     pub record: bool,
     pub replays: bool,
+    pub compress_replays: bool,
     pub record_sessions: bool,
     pub debug_level: bool,
     pub audio_exclusive: bool,
@@ -91,6 +92,9 @@ pub struct Settings {
     /// Saves each VS match as a Slippi replay, to `replays` (empty: the settings folder's).
     pub record: bool,
     pub replays: String,
+    /// Saves them compressed, as `.slpz` (design call 12 of docs/milestone-7.md: off by
+    /// default; reading is always on).
+    pub compress_replays: bool,
     /// Records each session from power-on (`session_rec`).
     pub record_sessions: bool,
     /// The developer setting: the debug level Melee's next power-on raises `DbLevel` to
@@ -156,6 +160,12 @@ fn replays_box(chosen: Ruleset, running: Ruleset) -> (bool, &'static str, Option
         (chosen != running).then_some(REPLAYS_NEXT_START),
     )
 }
+
+/// The replays' compression's box and its line (milestone 7's task 14, proposed 2026-11-27).
+pub const COMPRESS_LABEL: &str = "Compress replays (.slpz)";
+pub const COMPRESS_HELP: &str =
+    "Saves each replay about ten times smaller. Slippi's own tools may need it uncompressed first.";
+
 /// The "Save replays" help line while Melee runs under the Slippi ruleset (approved 2026-11-18;
 /// Slo-Mo Melee dropped from it as it became a live match, proposed the same day, awaiting
 /// Sarah's word): the matches design call 6 of `docs/slippi-ruleset.md` leaves unrecorded,
@@ -256,6 +266,7 @@ impl Default for Settings {
             jit_margin: (crate::jit::DEFAULT_MARGIN.as_secs_f64() * 1000.0) as f32,
             record: true,
             replays: String::new(),
+            compress_replays: false,
             record_sessions: true,
             debug_level: 0,
             volume: 100,
@@ -307,8 +318,9 @@ impl Settings {
             self.audio_device,
             on(self.audio_exclusive),
         ) + &format!(
-            "recordings = {}\nruleset = {}\nrenderer = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            "recordings = {}\ncompress-replays = {}\nruleset = {}\nrenderer = {}\nsettings-version = {SETTINGS_VERSION}\n",
             self.recordings,
+            on(self.compress_replays),
             ruleset_key(self.ruleset),
             if self.fast_renderer { "fast" } else { "exact" }
         )
@@ -399,6 +411,11 @@ impl Settings {
                     }
                 }
                 "replays" if !given.replays => self.replays = v.to_owned(),
+                "compress-replays" if !given.compress_replays => {
+                    if let Some(b) = on(v) {
+                        self.compress_replays = b;
+                    }
+                }
                 "record-sessions" if !given.record_sessions => {
                     if let Some(b) = on(v) {
                         self.record_sessions = b;
@@ -971,6 +988,13 @@ impl Panel {
                 );
                 ui.end_row();
                 ui.label("");
+                ui.add_enabled(
+                    saves && s.record,
+                    egui::Checkbox::new(&mut s.compress_replays, COMPRESS_LABEL),
+                );
+                ui.end_row();
+                help(ui, COMPRESS_HELP);
+                ui.label("");
                 ui.checkbox(&mut s.record_sessions, "Record sessions");
                 ui.end_row();
                 help(
@@ -1137,6 +1161,7 @@ mod tests {
             jit_margin: 2.5,
             record: false,
             replays: "D:/Slippi/melee-hd".to_owned(),
+            compress_replays: true,
             record_sessions: false,
             debug_level: 4,
             volume: 35,

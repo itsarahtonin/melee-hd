@@ -1,7 +1,9 @@
 //! The player's matches saved as Slippi replays: melee-sim's recorder (`game::record`) runs
 //! in every match of the player's own (not a replay's), and when the match is left its
 //! recording goes to the replays folder as `Game_YYYYMMDDTHHMMSS.slp`, named by the local time
-//! the match started, as Slippi Dolphin names its replays.
+//! the match started, as Slippi Dolphin names its replays, or as `.slpz` with Compress replays
+//! on (design call 12 of docs/milestone-7.md: off by default, as Slippi's own tools read only
+//! `.slp`).
 
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -11,14 +13,18 @@ use melee_sim::game::record::Recorder;
 /// Where a match's recording goes, and when it started.
 pub struct Recording {
     dir: PathBuf,
+    /// Saved compressed, as `.slpz` (`melee_slippi::slpz`).
+    compress: bool,
     started: SystemTime,
     local: [u32; 6],
 }
 
 impl Recording {
-    /// A recording of a match starting now, for `dir`, or the settings folder's replays folder.
-    pub fn new(dir: Option<&str>) -> Recording {
+    /// A recording of a match starting now, for `dir`, or the settings folder's replays folder,
+    /// compressed or not.
+    pub fn new(dir: Option<&str>, compress: bool) -> Recording {
         Recording {
+            compress,
             dir: dir
                 .filter(|d| !d.is_empty())
                 .map_or_else(default_dir, PathBuf::from),
@@ -32,18 +38,31 @@ impl Recording {
         if r.last_frame().is_none() {
             return Ok(None);
         }
-        let file = melee_slippi::write::recording(r, self.started);
+        let mut file = melee_slippi::write::recording(r, self.started);
+        let mut ext = "slp";
+        if self.compress {
+            match melee_slippi::slpz::compress(&file) {
+                Ok(z) => (file, ext) = (z, melee_slippi::slpz::EXTENSION),
+                // Never expected of the recorder's own file: kept uncompressed rather than lost.
+                Err(e) => eprintln!("the replay is saved uncompressed: {e}"),
+            }
+        }
         std::fs::create_dir_all(&self.dir).map_err(|e| format!("{}: {e}", self.dir.display()))?;
         let name = melee_slippi::write::file_name(self.local);
-        let mut path = self.dir.join(&name);
-        // Two matches started in the same second keep both.
+        let stem = name.trim_end_matches(".slp");
+        // Two matches started in the same second keep both, compressed or not.
+        let taken = |s: &str| {
+            ["slp", melee_slippi::slpz::EXTENSION]
+                .iter()
+                .any(|x| self.dir.join(format!("{s}.{x}")).exists())
+        };
+        let mut base = stem.to_owned();
         let mut n = 1;
-        while path.exists() {
-            path = self
-                .dir
-                .join(format!("{}-{n}.slp", name.trim_end_matches(".slp")));
+        while taken(&base) {
+            base = format!("{stem}-{n}");
             n += 1;
         }
+        let path = self.dir.join(format!("{base}.{ext}"));
         std::fs::write(&path, file).map_err(|e| format!("{}: {e}", path.display()))?;
         Ok(Some(path))
     }
