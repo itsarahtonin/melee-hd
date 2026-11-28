@@ -19,6 +19,12 @@
 #
 # Run by hand (Actions, Release, Run workflow) it only builds, without a profile, and keeps the
 # archive as the run's artifact (melee-hd-linux-x86_64-not-pgo), without touching any release.
+#
+# The macOS job builds melee-hd.app for Apple Silicon and Intel in one bundle, signed ad hoc and
+# not notarized (milestone 7's design call 5), and keeps it as the run's artifact for testers
+# (melee-hd-macos-not-pgo), on a tag and by hand alike. It's never attached to a release: a
+# release's builds are profile-guided, and a macOS profile needs a Mac with the disc (design
+# call 6). Its job can only read the repository.
 name: Release
 
 on:
@@ -111,3 +117,46 @@ jobs:
           gh release upload "$TAG" "$RUNNER_TEMP/melee-hd-linux-x86_64.tar.gz" --clobber
           gh release delete-asset "$TAG" "$PROFILE.profdata" --yes
           gh release delete-asset "$TAG" "$PROFILE.txt" --yes
+
+  macos:
+    runs-on: macos-latest
+    # Two fat-LTO builds, one per architecture.
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          rustup toolchain install
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      # The dist tool builds both architectures (the dist profile, the paths remapped, macOS 11
+      # as the floor), joins them with lipo and signs the bundle ad hoc.
+      - name: Build
+        run: cargo run --locked --release -p dist -- --universal --out "$RUNNER_TEMP/build"
+
+      # A zip made by ditto keeps the program executable and the signature whole, which the
+      # artifact's own zip doesn't; the license goes beside the app.
+      - name: Package
+        run: |
+          set -eu
+          app="$RUNNER_TEMP/build/melee-hd.app"
+          lipo -archs "$app/Contents/MacOS/melee-hd"
+          for arch in arm64 x86_64; do
+            lipo "$app/Contents/MacOS/melee-hd" -verify_arch "$arch"
+          done
+          plutil -lint "$app/Contents/Info.plist"
+          codesign --verify --strict --verbose=2 "$app"
+          dir="$RUNNER_TEMP/pkg/melee-hd"
+          mkdir -p "$dir"
+          ditto "$app" "$dir/melee-hd.app"
+          cp LICENSE "$dir/LICENSE"
+          ditto -c -k --keepParent "$dir" "$RUNNER_TEMP/melee-hd-macos-not-pgo.zip"
+          unzip -l "$RUNNER_TEMP/melee-hd-macos-not-pgo.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: melee-hd-macos-not-pgo
+          path: ${{ runner.temp }}/melee-hd-macos-not-pgo.zip
