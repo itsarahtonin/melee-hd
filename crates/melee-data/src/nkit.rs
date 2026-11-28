@@ -20,8 +20,8 @@
 //! junk between them regenerated from the disc ID with nod's GameCube junk generator
 //! (`nod::util::lfg`), the zeros and preserved bytes NKit recorded, the header's NKit fields
 //! cleared and the file system table pointing at the retail offsets again. NKit records the
-//! retail disc's CRC32 in its header, and [`restore`] checks the restored disc against it twice:
-//! as nod converts it to an RVZ, and the RVZ written, read back. The player converts an image
+//! retail disc's CRC32 in its header, and [`restore`] checks the RVZ nod converts the restored
+//! disc to against it, read back whole once written. The player converts an image
 //! once, with the player's yes, to an RVZ in its cache folder, which is then the disc it plays.
 //!
 //! The header, at 0x200 in the disc header (big-endian, 0x20 bytes, cleared on the retail disc):
@@ -631,14 +631,21 @@ pub fn verify_file(path: &Path, recorded: u32) -> Result<(), NKitError> {
 }
 
 impl Restored {
-    /// Writes the restored disc as an RVZ at `out`, checked: its CRC32 as nod converts it, then
-    /// the RVZ's as written and read back, against the one NKit recorded. Written to `out` with
-    /// `.part` added and renamed to `out` once checked, so `out` is only ever a checked disc;
-    /// on a failure the part is deleted. `progress` hears the bytes converted so far and of all.
-    pub fn write_rvz(
+    /// Writes the restored disc as an RVZ at `out`, checked: the RVZ as written, read back whole,
+    /// against the CRC32 NKit recorded, which checks the restoring and the writing at once.
+    /// Written to `out` with `.part` added and renamed to `out` once checked, so `out` is only
+    /// ever a checked disc; on a failure the part is deleted. `progress` hears the bytes converted
+    /// so far and of all.
+    pub fn write_rvz(self, out: &Path, progress: impl FnMut(u64, u64)) -> Result<(), NKitError> {
+        self.write_rvz_then(out, progress, |_| {})
+    }
+
+    /// [`Restored::write_rvz`], `between` given the part written before it's checked.
+    fn write_rvz_then(
         self,
         out: &Path,
         mut progress: impl FnMut(u64, u64),
+        between: impl FnOnce(&Path),
     ) -> Result<(), NKitError> {
         let recorded = self.header().crc32;
         let disc = self.into_disc()?;
@@ -663,7 +670,6 @@ impl Restored {
                 },
                 &ProcessOptions {
                     processor_threads: threads.div_ceil(2),
-                    digest_crc32: true,
                     ..Default::default()
                 },
             )?;
@@ -673,7 +679,7 @@ impl Restored {
             }
             file.sync_all()?;
             drop(file);
-            check(done.crc32.unwrap_or(!recorded), recorded)?;
+            between(&part);
             verify_file(&part, recorded)?;
             std::fs::rename(&part, out)?;
             Ok(())
@@ -892,6 +898,76 @@ mod tests {
             restored(short).unwrap().verify(),
             Err(NKitError::Mismatch { .. })
         ));
+    }
+
+    /// One file running to the disc's end, nothing after it: the image restores; cut inside
+    /// that file's data, it's refused as cut short.
+    #[test]
+    fn a_last_file_cut_short_is_refused() {
+        let size = 0x8000usize;
+        let fst_at = 0x2440u32;
+        let t = fst(&[(0x7000, 0x1000)]);
+        let head_len = fst_at as usize + t.len();
+        let data: Vec<u8> = (0..0x1000).map(|i| (i * 13) as u8).collect();
+        let mut retail = vec![0u8; size];
+        retail[..BOOT].copy_from_slice(&boot(0, 0, fst_at, t.len() as u32));
+        retail[0x200..0x220].fill(0);
+        retail[fst_at as usize..head_len].copy_from_slice(&t);
+        let j = head_len + 0x1C;
+        retail[j..0x7000].copy_from_slice(&junk(j as u64, 0x7000 - j));
+        retail[0x7000..].copy_from_slice(&data);
+        let mut nkit = boot(
+            size as u32,
+            crc32fast::hash(&retail),
+            fst_at,
+            t.len() as u32,
+        );
+        nkit.resize(fst_at as usize, 0);
+        nkit.extend_from_slice(&fst(&[(head_len as u32 + 4, 0x1000)]));
+        nkit.extend_from_slice(&be(0x7000 - head_len as u32));
+        nkit.extend_from_slice(&data);
+        let mut r = restored(nkit.clone()).unwrap();
+        let got = read_all(&mut r);
+        let first = got.iter().zip(&retail).position(|(a, b)| a != b);
+        assert_eq!(first, None, "the restored disc differs first at {first:x?}");
+        r.verify().unwrap();
+        nkit.truncate(nkit.len() - 0x100);
+        assert!(matches!(restored(nkit), Err(NKitError::Truncated)));
+    }
+
+    /// The RVZ written is checked read back: one changed after it was written is refused, and
+    /// neither it nor its part is left.
+    #[test]
+    fn an_rvz_written_wrong_is_refused() {
+        let (retail, nkit) = pair();
+        let dir = std::env::temp_dir().join(format!("melee-data-rvz-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let out = dir.join("disc.rvz");
+        restored(nkit.clone())
+            .unwrap()
+            .write_rvz(&out, |_, _| {})
+            .unwrap();
+        let mut got = Vec::new();
+        DiscReader::new(&out, &DiscOptions::default())
+            .unwrap()
+            .read_to_end(&mut got)
+            .unwrap();
+        std::fs::remove_file(&out).unwrap();
+        let tampered = restored(nkit).unwrap().write_rvz_then(
+            &out,
+            |_, _| {},
+            |part| {
+                let mut b = std::fs::read(part).unwrap();
+                let at = b.len() - 0x10;
+                b[at] ^= 0xFF;
+                std::fs::write(part, b).unwrap();
+            },
+        );
+        let left: Vec<_> = std::fs::read_dir(&dir).unwrap().collect();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(got == retail, "the RVZ isn't the disc");
+        assert!(tampered.is_err());
+        assert!(left.is_empty(), "left behind: {left:?}");
     }
 
     #[test]

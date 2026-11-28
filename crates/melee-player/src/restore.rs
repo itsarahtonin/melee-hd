@@ -34,8 +34,13 @@ fn rvz_in(cache: &Path, crc32: u32) -> PathBuf {
 
 /// The RVZ the NKit image at `path` was restored to, if it is one and has been.
 fn restored(path: &Path) -> Option<PathBuf> {
+    restored_in(&crate::pipelines::dir()?, path)
+}
+
+/// [`restored`] with the cache folder `cache`.
+fn restored_in(cache: &Path, path: &Path) -> Option<PathBuf> {
     let header = Header::of(path).ok().flatten()?;
-    Some(rvz_in(&crate::pipelines::dir()?, header.crc32)).filter(|p| p.is_file())
+    Some(rvz_in(cache, header.crc32)).filter(|p| p.is_file())
 }
 
 /// The file to open as the disc at `path`: the RVZ an NKit image was restored to, else `path`.
@@ -89,6 +94,45 @@ mod tests {
             rvz_in(Path::new("C"), 0x0123_ABCD),
             Path::new("C").join("discs").join("GALE01-2-0123ABCD.rvz")
         );
+    }
+
+    /// An NKit image finds the RVZ restored for its disc's CRC32 once there is one; a disc
+    /// image that isn't NKit, or one of another disc, finds none.
+    #[test]
+    fn an_nkit_image_finds_its_rvz() {
+        let dir = std::env::temp_dir().join(format!("melee-hd-restore-{}", std::process::id()));
+        let cache = dir.join("cache");
+        std::fs::create_dir_all(cache.join("discs")).unwrap();
+        // A disc header of the GameCube's, with an NKit header for the CRC32 0x0123ABCD.
+        let mut image = vec![0u8; 0x8000];
+        image[..6].copy_from_slice(b"GALE01");
+        image[7] = 2;
+        image[0x1C..0x20].copy_from_slice(&0xC233_9F3Du32.to_be_bytes());
+        let plain = dir.join("plain.iso");
+        std::fs::write(&plain, &image).unwrap();
+        image[0x200..0x208].copy_from_slice(b"NKIT v01");
+        image[0x208..0x20C].copy_from_slice(&0x0123_ABCDu32.to_be_bytes());
+        let nkit = dir.join("image.nkit.iso");
+        std::fs::write(&nkit, &image).unwrap();
+        let other = dir.join("other.nkit.iso");
+        image[0x208] = 0x99;
+        std::fs::write(&other, &image).unwrap();
+
+        let found = (
+            restored_in(&cache, &nkit),
+            restored_in(&cache, &plain),
+            restored_in(&cache, &other),
+        );
+        let rvz = cache.join("discs").join("GALE01-2-0123ABCD.rvz");
+        std::fs::write(&rvz, b"").unwrap();
+        let then = (
+            restored_in(&cache, &nkit),
+            restored_in(&cache, &plain),
+            restored_in(&cache, &other),
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(found, (None, None, None));
+        assert_eq!(then, (Some(rvz), None, None));
     }
 
     #[test]
