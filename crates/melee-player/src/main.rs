@@ -2501,6 +2501,7 @@ impl App {
         // The sound's device and volume, taken at once (the device opened again if need be).
         sound::set_output(s.output());
         sound::set_volume(s.volume);
+        sound::set_music(s.music);
         if let Some(snd) = self.session.as_ref().and_then(|s| s.sound.as_ref()) {
             snd.configure();
         }
@@ -3745,6 +3746,7 @@ fn run(args: Args) -> ExitCode {
     if let Some(f) = &front {
         sound::set_output(f.panel.settings.output());
         sound::set_volume(f.panel.settings.volume);
+        sound::set_music(f.panel.settings.music);
     }
     let session = if args.front {
         None

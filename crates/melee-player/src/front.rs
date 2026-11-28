@@ -99,6 +99,8 @@ pub struct Settings {
     /// The sound's volume in percent, the output device by name (empty: the system's default,
     /// followed as it changes) and whether it's taken exclusively (Windows).
     pub volume: u32,
+    /// The music's volume within it, in percent (the mix scales the stream's voices).
+    pub music: u32,
     pub audio_device: String,
     pub audio_exclusive: bool,
     /// The folder the Recordings tab lists (empty: the replays folder).
@@ -181,7 +183,9 @@ pub const RULESET_HELP: &str =
 pub const SAVE_SLIPPI: &str = "The Slippi ruleset runs with no memory card: this save is Vanilla's, and stays as it is until Melee runs under Vanilla again.";
 /// The developer setting under the Slippi ruleset (proposed 2026-11-17, awaiting Sarah's word).
 pub const DEBUG_SLIPPI: &str = "Vanilla only: under the Slippi ruleset Melee runs as sold, since Slippi Dolphin can't play back a raised debug level.";
-/// The Audio section's help lines (proposed 2026-11-14, awaiting Sarah's word).
+/// The Music line's help (proposed 2026-11-27, awaiting Sarah's word).
+pub const MUSIC_HELP: &str = "The music's volume within Volume. Melee's own sound balance (Options) sets the announcer against the effects.";
+/// The Audio section's other help lines (proposed 2026-11-14, awaiting Sarah's word).
 pub const AUDIO_DEVICE_HELP: &str =
     "The default follows the system's. An unplugged device falls back to it until it's back.";
 pub const EXCLUSIVE_HELP: &str =
@@ -255,6 +259,7 @@ impl Default for Settings {
             record_sessions: true,
             debug_level: 0,
             volume: 100,
+            music: 100,
             audio_device: String::new(),
             audio_exclusive: false,
             recordings: String::new(),
@@ -282,7 +287,7 @@ impl Settings {
         };
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
-            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\nvolume = {}\naudio-device = {}\naudio-exclusive = {}\n",
+            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\nvolume = {}\nmusic = {}\naudio-device = {}\naudio-exclusive = {}\n",
             self.fullscreen,
             if self.msaa { "4" } else { "off" },
             self.high_refresh.setting(),
@@ -298,6 +303,7 @@ impl Settings {
                 _ => "off",
             },
             self.volume,
+            self.music,
             self.audio_device,
             on(self.audio_exclusive),
         ) + &format!(
@@ -407,6 +413,11 @@ impl Settings {
                 "volume" => {
                     if let Some(n) = v.parse().ok().filter(|n| *n <= 100) {
                         self.volume = n;
+                    }
+                }
+                "music" => {
+                    if let Some(n) = v.parse().ok().filter(|n| *n <= 100) {
+                        self.music = n;
                     }
                 }
                 "audio-device" => self.audio_device = v.to_owned(),
@@ -711,7 +722,8 @@ impl Panel {
         action
     }
 
-    /// The sound: its volume, its output device and whether it takes the device for itself.
+    /// The sound: its volume and the music's, its output device and whether it takes the
+    /// device for itself.
     fn show_audio(&mut self, ui: &mut egui::Ui) {
         let s = &mut self.settings;
         section(ui, "Audio");
@@ -722,6 +734,10 @@ impl Panel {
                 ui.label("Volume");
                 ui.add(egui::Slider::new(&mut s.volume, 0..=100).suffix("%"));
                 ui.end_row();
+                ui.label("Music");
+                ui.add(egui::Slider::new(&mut s.music, 0..=100).suffix("%"));
+                ui.end_row();
+                help(ui, MUSIC_HELP);
                 ui.label("Output device");
                 let device = &mut s.audio_device;
                 let name = |d: &str| match d {
@@ -1124,6 +1140,7 @@ mod tests {
             record_sessions: false,
             debug_level: 4,
             volume: 35,
+            music: 60,
             audio_device: "Speakers (USB Audio)".to_owned(),
             audio_exclusive: true,
             recordings: "D:/Slippi".to_owned(),
@@ -1254,7 +1271,7 @@ mod tests {
     fn an_unreadable_file_changes_nothing() {
         let mut s = Settings::default();
         s.restore(
-            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\naudio-exclusive = sometimes\n\u{0}garbage\n",
+            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\nmusic = 101\naudio-exclusive = sometimes\n\u{0}garbage\n",
             &Given::default(),
         );
         assert_eq!(s, Settings::default());
@@ -1364,11 +1381,11 @@ mod tests {
     fn the_audio_settings_are_kept() {
         let mut s = Settings::default();
         assert_eq!(
-            (s.volume, s.output()),
-            (100, melee_audio::OutputOptions::default())
+            (s.volume, s.music, s.output()),
+            (100, 100, melee_audio::OutputOptions::default())
         );
         s.restore(&picked().save(), &Given::default());
-        assert_eq!((s.volume, s.audio_exclusive), (35, true));
+        assert_eq!((s.volume, s.music, s.audio_exclusive), (35, 60, true));
         assert_eq!(s.output().device.as_deref(), Some("Speakers (USB Audio)"));
         let mut s = Settings::default();
         let given = Given {

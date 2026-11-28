@@ -37,6 +37,57 @@ const YN2: usize = 82;
 const SRC_LAST: usize = 86;
 /// The words after `AXPBADPCMLOOP`, where the microcode counts a stream's loops.
 const PAD: usize = 93;
+/// `AXPBVE`: the volume envelope, its current volume and its delta a sample.
+const VE: usize = 50;
+
+/// The music stream's ARAM, which the boot's audio setup gives it alone (`game::boot`, from
+/// `HSD_Synth_804D7780` and `804D7784`): its ring of three boxes and the silence its last box
+/// loops to, in bytes.
+const STREAM_BOXES: u32 = 0x3_0000;
+const STREAM_SILENCE: u32 = 0x500;
+
+/// The music's voices in a frame and the gain they play at (`Mixer::set_music`): the voices
+/// whose block reads the stream's ARAM, as sample (nibble) addresses.
+#[derive(Clone, Copy, Debug)]
+struct Music {
+    boxes: (u32, u32),
+    silence: (u32, u32),
+    gain: f32,
+}
+
+impl Music {
+    /// The music's place from the stream's state, read only; none at full volume (the mix
+    /// then touches nothing) or before the boot gave the stream its ARAM.
+    fn of(stream: &melee_sim::audio::synth::Stream, gain: f32) -> Option<Music> {
+        if gain >= 1.0 || stream.base == 0 {
+            return None;
+        }
+        let base = stream.base.wrapping_mul(2);
+        Some(Music {
+            boxes: (base, base.wrapping_add(2 * STREAM_BOXES)),
+            silence: (
+                stream.silence,
+                stream.silence.wrapping_add(2 * STREAM_SILENCE),
+            ),
+            gain,
+        })
+    }
+
+    /// Whether the block plays the music: its samples in the stream's boxes or its silence.
+    fn plays(&self, pb: &melee_sim::audio::ax::Pb) -> bool {
+        let at = pb.addr.current_address;
+        let within = |(from, to): (u32, u32)| (from..to).contains(&at);
+        within(self.boxes) || within(self.silence)
+    }
+
+    /// Scales the block's volume envelope, which the microcode applies to the samples before
+    /// they reach any bus, so the voice's main and aux sends both scale.
+    fn scale(&self, w: &mut [u16; PB_WORDS]) {
+        for k in [VE, VE + 1] {
+            w[k] = (f32::from(w[k] as i16) * self.gain).round() as i16 as u16;
+        }
+    }
+}
 
 /// Main memory as the DSP sees it: the parameter blocks and the stand-in's buffers; other
 /// addresses read zero.
@@ -165,6 +216,8 @@ pub struct Stats {
     pub missing: Vec<i32>,
     /// Frames where each aux effect had something to process.
     pub aux_active: [u64; 2],
+    /// Voice frames scaled as the music's (`Mixer::set_music` under 1).
+    pub music: u64,
 }
 
 impl Stats {
@@ -192,6 +245,11 @@ pub struct Mixer {
     effects: [Option<Effect>; 2],
     /// The sound banks' groups the boot left in ARAM, placed at the first mix.
     boot_groups: Vec<SfxGroup>,
+    /// The music's gain (`set_music`): 1, the default, mixes it as the console does.
+    music: f32,
+    /// The voices whose envelope the last frame scaled as music, which the drift check
+    /// leaves out of the comparison.
+    scaled: u64,
     pub stats: Stats,
 }
 
@@ -217,8 +275,18 @@ impl Mixer {
             aux_write: 0,
             effects: [None, None],
             boot_groups: Vec::new(),
+            music: 1.0,
+            scaled: 0,
             stats: Stats::default(),
         }
+    }
+
+    /// Plays the music stream's voices at `gain` (0 to 1) from the next mix: their volume
+    /// envelope scaled in the copy of their blocks the microcode gets, so their main and aux
+    /// sends both follow and the rest of the mix doesn't. At 1 nothing is touched, and the mix
+    /// is the console's.
+    pub fn set_music(&mut self, gain: f32) {
+        self.music = gain.clamp(0.0, 1.0);
     }
 
     /// Turns the simulation's mix log on and starts from its audio state: the sound banks it
@@ -294,12 +362,13 @@ impl Mixer {
         for g in std::mem::take(&mut self.boot_groups) {
             self.place_group(audio, data, &g);
         }
+        let music = Music::of(&audio.synth.stream, self.music);
         let mut writes = log.aram.iter().peekable();
         for (i, f) in log.frames.iter().enumerate() {
             while let Some(w) = writes.next_if(|w| w.frame as usize <= i) {
                 self.aram_write(audio, data, w);
             }
-            self.frame(f, out);
+            self.frame(f, music.as_ref(), out);
         }
         for w in writes {
             self.aram_write(audio, data, w);
@@ -347,8 +416,9 @@ impl Mixer {
 
     /// One frame: the studio's depop (`__AXSyncPBs`, `__AXPrintStudio`), the blocks, the
     /// command list (`__AXNextFrame`'s), the DSP's run, then the CPU's aux processing
-    /// (`__AXProcessAux`).
-    fn frame(&mut self, f: &MixFrame, out: &mut Vec<[i16; 2]>) {
+    /// (`__AXProcessAux`). With `music`, its voices' envelopes are scaled in the blocks the
+    /// microcode gets.
+    fn frame(&mut self, f: &MixFrame, music: Option<&Music>, out: &mut Vec<[i16; 2]>) {
         self.stats.frames += 1;
         // `__AXDepopVoice`, with the DSP's blocks as the last mix left them.
         if self.have_prev {
@@ -378,13 +448,14 @@ impl Mixer {
             // Room past the last block, which the microcode reads beyond.
             self.mem.pbs = vec![0; VOICES * PB_BYTES as usize + 0x40];
         }
+        let scaled = std::mem::take(&mut self.scaled);
         for (i, pb) in f.pbs.iter().enumerate() {
             let mut w = pb.words();
             if self.have_prev {
                 let s = f.sync[i];
                 let all = s & sync::COPYALL != 0;
                 let prev = &self.prev[i];
-                if s == 0 && pb.state == 1 && drifted(&w, prev) {
+                if s == 0 && pb.state == 1 && drifted(&w, prev, scaled >> i & 1 != 0) {
                     self.stats.drift += 1;
                 }
                 if !all && s & sync::COPYADPCM == 0 {
@@ -398,6 +469,11 @@ impl Mixer {
                     w[DPOP..DPOP + 9].copy_from_slice(&prev[DPOP..DPOP + 9]);
                 }
                 w[PAD..].copy_from_slice(&prev[PAD..]);
+            }
+            if let Some(m) = music.filter(|m| m.plays(pb)) {
+                m.scale(&mut w);
+                self.scaled |= 1 << i;
+                self.stats.music += u64::from(pb.state == 1);
             }
             self.mem.put_words(pb.curr, &w);
         }
@@ -477,13 +553,14 @@ fn depop_fade(sum: &mut i32) -> (i32, i16) {
 }
 
 /// Whether the simulation's block and the mix's differ in a word both compute: everything
-/// but the words only the mix knows.
-fn drifted(sim: &[u16; PB_WORDS], mix: &[u16; PB_WORDS]) -> bool {
+/// but the words only the mix knows, and the envelope when the mix scaled it as music.
+fn drifted(sim: &[u16; PB_WORDS], mix: &[u16; PB_WORDS], scaled: bool) -> bool {
     (0..PB_WORDS).any(|k| {
         let mix_only = (DPOP..DPOP + 9).contains(&k)
             || (PRED_SCALE..=YN2).contains(&k)
             || (SRC_LAST..SRC_LAST + 4).contains(&k)
-            || k >= PAD;
+            || k >= PAD
+            || (scaled && (VE..=VE + 1).contains(&k));
         !mix_only && sim[k] != mix[k]
     })
 }
@@ -528,4 +605,187 @@ fn command_list(l: &List, aux_write: usize, pbs: u32) -> Vec<u16> {
     pair(&mut c, OUTPUT);
     c.push(0xF);
     c
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use melee_sim::audio::ax::{Addr, Adpcm, Mix, Pb, Ve};
+    use melee_sim::audio::synth::Stream;
+
+    /// The blocks' address in memory, and the ARAM the test's voices read, in bytes.
+    const BLOCKS: u32 = 0x0040_0000;
+    const BOXES: u32 = 0x0004_0000;
+    const SILENCE: u32 = 0x0000_2000;
+    const EFFECT: u32 = 0x0010_0000;
+
+    fn stream() -> Stream {
+        Stream {
+            base: BOXES,
+            silence: 2 * SILENCE,
+            ..Stream::default()
+        }
+    }
+
+    /// ADPCM frames at `at` whose every sample is `nibble << 11` (scale 11, no prediction).
+    fn fill(m: &mut Mixer, at: u32, nibble: u8) {
+        for f in 0..0x200 {
+            let a = (at + 8 * f) as usize;
+            m.aram[a] = 0x0B;
+            m.aram[a + 1..a + 8].fill(nibble << 4 | nibble);
+        }
+    }
+
+    /// Voice `i`'s block, playing from `at` (bytes) at the envelope `ve` and `delta`, into the
+    /// main buses and aux A.
+    fn voice(i: usize, at: u32, ve: u16, delta: i16) -> Pb {
+        Pb {
+            src_select: 2,
+            mixer_ctrl: 1,
+            state: 1,
+            mix: Mix {
+                l: 0x5000,
+                r: 0x3000,
+                aux_a_l: 0x2000,
+                aux_a_r: 0x2000,
+                ..Mix::default()
+            },
+            ve: Ve {
+                current_volume: ve,
+                current_delta: delta,
+            },
+            addr: Addr {
+                loop_flag: 0,
+                format: 0,
+                loop_address: 2 * at + 2,
+                end_address: 2 * at + 0x1FFF,
+                current_address: 2 * at + 2,
+            },
+            adpcm: Adpcm {
+                pred_scale: 0x0B,
+                ..Adpcm::default()
+            },
+            ..idle(i)
+        }
+    }
+
+    /// Voice `i`'s block, not playing, in the chain of blocks.
+    fn idle(i: usize) -> Pb {
+        let at = |i: usize| BLOCKS + i as u32 * PB_BYTES;
+        Pb {
+            curr: at(i),
+            next: if i + 1 < VOICES { at(i + 1) } else { 0 },
+            ..Pb::default()
+        }
+    }
+
+    /// A frame where these voices play (the first two of the stream, the third an effect's).
+    fn frame(music: bool, effect: bool) -> MixFrame {
+        let mut pbs: [Pb; VOICES] = std::array::from_fn(idle);
+        if music {
+            pbs[3] = voice(3, BOXES + 0x1_0000, 0x6000, 0);
+            pbs[4] = voice(4, BOXES + 0x1_8000, 0x7000, -8);
+        }
+        if effect {
+            pbs[9] = voice(9, EFFECT, 0x7FFF, 0);
+        }
+        let list = List {
+            mode: 0,
+            aux_a: true,
+            aux_b: false,
+        };
+        MixFrame {
+            pbs,
+            sync: [0; VOICES],
+            depop: 0,
+            dropped: 0,
+            list,
+            now: list,
+        }
+    }
+
+    /// `frames` frames of `f`'s voices (each frame's blocks as given, as a simulation that
+    /// keys them on anew would) at the music's `gain`.
+    fn mix(f: &MixFrame, gain: f32, frames: usize) -> Vec<[i16; 2]> {
+        let mut m = Mixer::new();
+        fill(&mut m, BOXES + 0x1_0000, 7);
+        fill(&mut m, BOXES + 0x1_8000, 5);
+        fill(&mut m, EFFECT, 3);
+        m.set_music(gain);
+        let music = Music::of(&stream(), m.music);
+        let mut out = Vec::new();
+        for _ in 0..frames {
+            m.frame(f, music.as_ref(), &mut out);
+        }
+        out
+    }
+
+    #[test]
+    fn full_music_volume_is_the_console_mix() {
+        let f = frame(true, true);
+        let exact = {
+            let mut m = Mixer::new();
+            fill(&mut m, BOXES + 0x1_0000, 7);
+            fill(&mut m, BOXES + 0x1_8000, 5);
+            fill(&mut m, EFFECT, 3);
+            let mut out = Vec::new();
+            for _ in 0..6 {
+                m.frame(&f, None, &mut out);
+            }
+            out
+        };
+        assert!(exact.iter().any(|s| s[0] != 0 && s[1] != 0));
+        assert_eq!(mix(&f, 1.0, 6), exact);
+        // Just under full volume scales the music.
+        assert_ne!(mix(&f, 0.999, 6), exact);
+    }
+
+    #[test]
+    fn silent_music_mixes_the_rest_as_it_is() {
+        let music = mix(&frame(true, false), 0.0, 6);
+        assert!(music.iter().all(|s| *s == [0, 0]));
+        let effect = mix(&frame(false, true), 1.0, 6);
+        assert!(effect.iter().any(|s| *s != [0, 0]));
+        assert_eq!(mix(&frame(false, true), 0.0, 6), effect);
+        assert_eq!(mix(&frame(true, true), 0.0, 6), effect);
+    }
+
+    #[test]
+    fn half_music_volume_is_a_quarter() {
+        let full = mix(&frame(true, false), 1.0, 6);
+        let quarter = mix(&frame(true, false), 0.25, 6);
+        for (a, b) in full.iter().zip(&quarter) {
+            for c in 0..2 {
+                let want = f32::from(a[c]) * 0.25;
+                assert!(
+                    (f32::from(b[c]) - want).abs() <= 4.0,
+                    "{b:?} against a quarter of {a:?}"
+                );
+            }
+        }
+        assert!(full.iter().any(|s| s[0].abs() > 1000));
+    }
+
+    #[test]
+    fn music_is_what_plays_from_the_streams_aram() {
+        let m = Music::of(&stream(), 0.5).unwrap();
+        // Sample (nibble) addresses.
+        let at = |nibble: u32| {
+            let mut pb = voice(0, 0, 0, 0);
+            pb.addr.current_address = nibble;
+            m.plays(&pb)
+        };
+        let (boxes, silence) = (2 * BOXES, 2 * SILENCE);
+        assert!(!at(boxes - 1));
+        assert!(at(boxes));
+        assert!(at(boxes + 2 * STREAM_BOXES - 1));
+        assert!(!at(boxes + 2 * STREAM_BOXES));
+        assert!(!at(silence - 1));
+        assert!(at(silence));
+        assert!(at(silence + 2 * STREAM_SILENCE - 1));
+        assert!(!at(silence + 2 * STREAM_SILENCE));
+        assert!(!at(2 * EFFECT + 2));
+        assert!(Music::of(&stream(), 1.0).is_none());
+        assert!(Music::of(&Stream::default(), 0.5).is_none());
+    }
 }
