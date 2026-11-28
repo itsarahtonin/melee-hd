@@ -262,7 +262,15 @@ impl Inputs {
             }
             self.ages.gamepad =
                 newest.map(|t| SystemTime::now().duration_since(t).unwrap_or_default());
-            let ids: Vec<_> = g.gamepads().map(|(id, _)| id).collect();
+            // The adapter, where gilrs sees it (macOS's HID driver), is the adapter's to read.
+            let ids: Vec<_> = g
+                .gamepads()
+                .filter(|(_, gp)| {
+                    let (v, p) = (gp.vendor_id(), gp.product_id());
+                    !v.zip(p).is_some_and(|(v, p)| adapter::is_adapter(v, p))
+                })
+                .map(|(id, _)| id)
+                .collect();
             for id in ids {
                 let Some(port) = free.next() else { break };
                 let mut pad = PadStatus::default();

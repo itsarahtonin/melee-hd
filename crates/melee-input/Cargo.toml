@@ -12,3 +12,8 @@ publish.workspace = true
 melee-sim.workspace = true
 gilrs = "0.11"
 nusb = "0.2"
+
+# The adapter through macOS's HID driver (adapter/hid.rs): the crates gilrs reads HID with there.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFDictionary", "CFNumber", "CFRunLoop", "CFSet", "CFString", "CFDate"] }
+objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "hid"] }

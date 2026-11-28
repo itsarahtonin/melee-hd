@@ -3,7 +3,10 @@
 //! SDL, which rescales the axes. On Windows it needs the WinUSB driver (Zadig installs it),
 //! which HIDUSBF can overclock to 1000 Hz; on Linux, a udev rule giving the user its device
 //! (`crates/melee-player/linux/51-melee-hd-gcadapter.rules`), and the kernel's HID driver is
-//! detached from it as it's opened. A thread keeps the latest report and sends rumble;
+//! detached from it as it's opened. On macOS the system's HID driver holds it and nothing short
+//! of root can detach that, so it's read through the HID driver ([`hid`]), the same reports,
+//! unless a driver such as GCAdapterDriver has taken it for raw reading. A thread keeps the
+//! latest report and sends rumble;
 //! [`Adapter::ports`] turns the report into what `PADRead` would return, with the origin
 //! calibration the console's SI and PAD library do. Ported from ssbm-rs's player.
 
@@ -16,11 +19,16 @@ use melee_sim::input::pad::{ERR_NONE, PadStatus};
 use nusb::MaybeFuture;
 use nusb::transfer::{Buffer, In, Interrupt, Out};
 
+#[cfg(target_os = "macos")]
+mod hid;
+
 const VENDOR: u16 = 0x057e;
 const PRODUCT: u16 = 0x0337;
 /// A report: this byte, then nine per port.
 const REPORT: u8 = 0x21;
 const REPORT_LEN: usize = 37;
+/// Room for any report the adapter sends.
+const MAX_REPORT: usize = 64;
 /// Starts the reports.
 const START: u8 = 0x13;
 /// Sets the four motors.
@@ -31,6 +39,8 @@ const NEEDS: &str = if cfg!(windows) {
     "on Windows it needs the WinUSB driver (Zadig)"
 } else if cfg!(target_os = "linux") {
     "on Linux it needs a udev rule that lets you open it (README.md's Controllers)"
+} else if cfg!(target_os = "macos") {
+    "on macOS it's read through the system's HID driver, or directly where a driver such as      GCAdapterDriver has taken it"
 } else {
     "it may need a driver or permission to open it"
 };
@@ -119,44 +129,30 @@ impl Adapter {
         }
     }
 
-    /// Reads reports until the adapter goes away or the player closes.
+    /// Reads reports until the adapter goes away or the player closes: raw over USB, or on
+    /// macOS, where the system's HID driver holds the adapter and only a driver of its own
+    /// (GCAdapterDriver) frees it for that, through the HID driver.
     fn read(&self, info: &nusb::DeviceInfo) -> Result<Infallible, String> {
-        let device = info.open().wait().map_err(|e| e.to_string())?;
-        // On Linux the kernel's HID driver takes the adapter's interface as it's plugged in, so
-        // it's let go of first, as Dolphin does; elsewhere this is a plain claim.
-        let intf = device
-            .detach_and_claim_interface(0)
-            .wait()
-            .map_err(|e| e.to_string())?;
-        let mut out = intf
-            .endpoint::<Interrupt, Out>(0x02)
-            .map_err(|e| e.to_string())?;
-        let mut send = |bytes: &[u8]| {
-            let mut b = Buffer::new(bytes.len());
-            b.extend_from_slice(bytes);
-            out.transfer_blocking(b, Duration::from_millis(100))
-                .status
-                .map_err(|e| e.to_string())
+        let mut link: Box<dyn Link> = match Usb::open(info) {
+            Ok(usb) => Box::new(usb),
+            #[cfg(target_os = "macos")]
+            Err(usb) => Box::new(
+                hid::Hid::open().map_err(|e| format!("{usb}; through macOS's HID driver: {e}"))?,
+            ),
+            #[cfg(not(target_os = "macos"))]
+            Err(e) => return Err(e),
         };
-        send(&[START])?;
-        let mut input = intf
-            .endpoint::<Interrupt, In>(0x81)
-            .map_err(|e| e.to_string())?;
-        let len = input.max_packet_size();
-        for _ in 0..4 {
-            input.submit(Buffer::new(len));
-        }
         let mut first = true;
+        let mut data = [0; MAX_REPORT];
         loop {
             if self.stop.load(Ordering::Relaxed) {
-                let _ = send(&[RUMBLE, 0, 0, 0, 0]);
+                let _ = link.send(&[RUMBLE, 0, 0, 0, 0]);
                 return Err("closed".into());
             }
-            let Some(c) = input.wait_next_complete(Duration::from_millis(100)) else {
+            let Some(len) = link.next(&mut data)? else {
                 continue;
             };
-            c.status.map_err(|e| e.to_string())?;
-            let data = &c.buffer[..c.actual_len];
+            let data = &data[..len];
             let rumble = {
                 let mut s = self.shared.lock().unwrap();
                 if data.len() == REPORT_LEN && data[0] == REPORT {
@@ -177,9 +173,8 @@ impl Adapter {
                     want
                 })
             };
-            input.submit(c.buffer);
             if let Some(m) = rumble {
-                send(&[RUMBLE, m[0] as u8, m[1] as u8, m[2] as u8, m[3] as u8])?;
+                link.send(&[RUMBLE, m[0] as u8, m[1] as u8, m[2] as u8, m[3] as u8])?;
             }
         }
     }
@@ -255,6 +250,93 @@ impl Adapter {
             }
             std::thread::sleep(Duration::from_millis(2));
         }
+    }
+}
+
+/// Whether a USB or HID device is the adapter, by its vendor and product, so that the gamepad
+/// layer can leave alone what this module reads (macOS's HID driver shows it to gilrs).
+pub fn is_adapter(vendor: u16, product: u16) -> bool {
+    (vendor, product) == (VENDOR, PRODUCT)
+}
+
+/// A way to the adapter: raw over USB ([`Usb`]), or macOS's HID driver ([`hid::Hid`]).
+trait Link {
+    /// Sends a command: its first byte says which (`START`, `RUMBLE`), as the adapter's
+    /// numbered reports do.
+    fn send(&mut self, bytes: &[u8]) -> Result<(), String>;
+
+    /// The next report into `out`, its length; none when none came within about 100 ms. An
+    /// error when the adapter has gone.
+    fn next(&mut self, out: &mut [u8; MAX_REPORT]) -> Result<Option<usize>, String>;
+}
+
+/// The adapter's interface claimed over USB with nusb, four reads kept in flight.
+struct Usb {
+    out: nusb::Endpoint<Interrupt, Out>,
+    input: nusb::Endpoint<Interrupt, In>,
+}
+
+impl Usb {
+    /// Claims the adapter's interface and starts its reports.
+    fn open(info: &nusb::DeviceInfo) -> Result<Usb, String> {
+        let device = info.open().wait().map_err(|e| e.to_string())?;
+        // On Linux the kernel's HID driver takes the adapter's interface as it's plugged in, so
+        // it's let go of first, as Dolphin does; elsewhere this is a plain claim.
+        let intf = device
+            .detach_and_claim_interface(0)
+            .wait()
+            .map_err(|e| e.to_string())?;
+        let out = intf
+            .endpoint::<Interrupt, Out>(0x02)
+            .map_err(|e| e.to_string())?;
+        let input = intf
+            .endpoint::<Interrupt, In>(0x81)
+            .map_err(|e| e.to_string())?;
+        let mut usb = Usb { out, input };
+        usb.send(&[START])?;
+        let len = usb.input.max_packet_size();
+        for _ in 0..4 {
+            usb.input.submit(Buffer::new(len));
+        }
+        Ok(usb)
+    }
+}
+
+impl Link for Usb {
+    fn send(&mut self, bytes: &[u8]) -> Result<(), String> {
+        let mut b = Buffer::new(bytes.len());
+        b.extend_from_slice(bytes);
+        self.out
+            .transfer_blocking(b, Duration::from_millis(100))
+            .status
+            .map_err(|e| e.to_string())
+    }
+
+    fn next(&mut self, out: &mut [u8; MAX_REPORT]) -> Result<Option<usize>, String> {
+        let Some(c) = self.input.wait_next_complete(Duration::from_millis(100)) else {
+            return Ok(None);
+        };
+        c.status.map_err(|e| e.to_string())?;
+        let len = c.actual_len.min(MAX_REPORT);
+        out[..len].copy_from_slice(&c.buffer[..len]);
+        self.input.submit(c.buffer);
+        Ok(Some(len))
+    }
+}
+
+/// A report from macOS's HID driver as the adapter sent it over USB: the HID driver passes a
+/// numbered report with its number first, but should it pass one without, the number goes back
+/// in front.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn as_sent(id: u32, report: &[u8], out: &mut [u8; MAX_REPORT]) -> usize {
+    if report.len() == REPORT_LEN - 1 && id == u32::from(REPORT) {
+        out[0] = REPORT;
+        out[1..REPORT_LEN].copy_from_slice(report);
+        REPORT_LEN
+    } else {
+        let len = report.len().min(MAX_REPORT);
+        out[..len].copy_from_slice(&report[..len]);
+        len
     }
 }
 
@@ -351,5 +433,24 @@ mod tests {
         assert_eq!(buttons(0x01, 0x00), 0x0100);
         assert_eq!(buttons(0x0c, 0x01), X | Y | START_BUTTON);
         assert_eq!(buttons(0x80, 0x0e), 0x0008 | 0x0010 | 0x0020 | 0x0040);
+    }
+
+    #[test]
+    fn a_report_reads_as_sent() {
+        let mut usb = [0; REPORT_LEN];
+        usb[0] = REPORT;
+        usb[1] = 0x10;
+        usb[36] = 0x7f;
+        let mut out = [0; MAX_REPORT];
+        // With its number, as IOKit passes a numbered report.
+        assert_eq!(as_sent(u32::from(REPORT), &usb, &mut out), REPORT_LEN);
+        assert_eq!(out[..REPORT_LEN], usb);
+        // Without it, should IOKit pass it so.
+        out = [0; MAX_REPORT];
+        assert_eq!(as_sent(u32::from(REPORT), &usb[1..], &mut out), REPORT_LEN);
+        assert_eq!(out[..REPORT_LEN], usb);
+        // Any other report as it came.
+        assert_eq!(as_sent(0x22, &usb[1..], &mut out), REPORT_LEN - 1);
+        assert_eq!(out[..REPORT_LEN - 1], usb[1..]);
     }
 }
