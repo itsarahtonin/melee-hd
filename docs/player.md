@@ -1140,6 +1140,8 @@ What it says: the precise wait puts ticks on time (late 0.35 ms at the median wi
 
 ## Open issues
 
+[Milestone 7](milestone-7.md) plans the player's polish, the presentation feedback under Just-in-time ticks below among it (its task 5).
+
 - **Pokémon Stadium's screen** at frame 9000 is identical to ssbm-rs's in both images, and every draw but two compares the same: the two draws of the screen's feed sample an RGB565 copy melee-gpu keeps on the GPU, which `compare` hashes from memory the copy never writes, while the log's side hashes memory ssbm-rs's renderer wrote (`Expect::SameImages`, the sweep's `fox_marth_ps_9000`). The copy's content is the frame's draws, which compare the same, and the images show it.
 - **Corner copies above the render scale** (deferred, Sarah 2026-10-24: "will probably want to support higher res but we can table it for now"). Fountain of Dreams' reflection and Pokémon Stadium's text screen render into the EFB's corner at the render's scale (see **Scaled copies**); they could render above it by enlarging the corner in the EFB rather than with a separate offscreen render: the renderer would map that camera's viewport, scissor, erase and copy rectangle with an extra factor, up to the whole EFB (8 times per side beyond the render scale at 80 by 60). It's free then: in a Fountain of Dreams frame (`ref-sheik-fox-fod/f600`) the reflection's 80 by 60 copy, which clears the corner, comes first, before the shadows' offscreen renders and their copies (events 418, then 462 and 529), and the magnifier's camera, whose render priority (0, the reflection camera's 2) puts it first, has copied its bubbles by then.
 - **Shape animations** aren't drawn; no checked frame uses one.
