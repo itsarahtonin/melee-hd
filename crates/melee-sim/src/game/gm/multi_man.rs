@@ -310,7 +310,7 @@ impl Running<'_> {
         gc.entries[1].color = 0;
         gc.entries[2].char_id = i32::from(CharacterKind::Girl.raw() as u8);
         gc.entries[2].color = 0;
-        gc.stkind = i32::from(STKIND.id());
+        gc.stkind = STKIND.id();
         self.preload_refresh();
     }
 

@@ -734,11 +734,7 @@ const RAIN_OVER_PLAYERS: [super::GrKind; 27] = [
 /// none).
 #[doc(alias = "Ground_801C0A70")]
 pub fn bomb_rain_point(game: &mut Game, data: &Archives, pos: Vec3) -> (bool, Vec3) {
-    if game.objs.rng.below(2) != 0
-        && RAIN_OVER_PLAYERS
-            .iter()
-            .any(|&k| k == game.stage_info.grkind)
-    {
+    if game.objs.rng.below(2) != 0 && RAIN_OVER_PLAYERS.contains(&game.stage_info.grkind) {
         let slot = game.objs.rng.below(4);
         if game.player_entity(slot).is_some() {
             let mut p = game.player_pos(slot);

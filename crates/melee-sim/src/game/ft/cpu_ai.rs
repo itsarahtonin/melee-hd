@@ -97,8 +97,7 @@ super::registry::kind_enum! {
     /// back to, `default_behavior` and `alt_behavior`): what its decision (`ftCo_800ADE48`,
     /// `cpu_choose_behavior`) settled on, which picks the commands it writes each frame
     /// (`ftCo_800B2790`'s switch). The game's own numbers, named here by what each does.
-    /// The state keeps the number (a script's command can write any byte, `SET_X18`); code
-    /// compares it with these and matches on [`CpuBehavior::from_id`].
+    /// A script's command can write any byte (`SET_X18`), which `Other` keeps.
     CpuBehavior:
     /// Nothing: the script cleared and done.
     Idle = 0,

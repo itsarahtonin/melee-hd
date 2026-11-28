@@ -18,9 +18,9 @@ use crate::vec::Vec3;
 crate::game::ft::registry::kind_enum! {
     /// Who plays a slot (`Gm_PKind`): the player blocks' `pkind`, the start rules' and the
     /// character select's `slot_type`, the results' standings. The game's own numbers. The
-    /// state keeps the number (a `u8` or an `i32` by struct); code compares it with these
-    /// (`p.slot_type == PlayerKind::Human`), writes them with `into()` and matches on
-    /// [`PlayerKind::from_id`].
+    /// player blocks hold the kind, the other structs a [`Narrow`](crate::game::mirror::Narrow)
+    /// of it in their byte; code compares them with these (`p.slot_type == PlayerKind::Human`),
+    /// writes them with `into()` and matches on the kind (`p.slot_type.get()`).
     PlayerKind:
     /// `Gm_PKind_Human`: a person at the controller.
     #[doc(alias("Gm_PKind_Human", "PKIND_HUMAN"))]
@@ -39,13 +39,8 @@ crate::game::ft::registry::kind_enum! {
     Boss = 4,
 }
 
-impl From<PlayerKind> for i32 {
-    fn from(k: PlayerKind) -> i32 {
-        k.id()
-    }
-}
-
 impl From<PlayerKind> for u8 {
+    /// Its number in a byte, as the character select's state holds it.
     fn from(k: PlayerKind) -> u8 {
         k.raw() as u8
     }
@@ -915,7 +910,7 @@ impl Game {
             p.set_pose(i, Vec3::new(0.0, 0.0, 0.0));
         }
         p.costume_id = 0;
-        p.pkind = PlayerKind::None.into();
+        p.pkind = PlayerKind::None;
         p.transformed = [0, 1];
         p.effect_color = 0;
         p.sub_color = 0;

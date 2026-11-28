@@ -108,7 +108,7 @@ pub const SCENE_DEFAULT: SceneCache = SceneCache {
         pad_a: 0,
         pad_b: 0,
         pad_c: 0,
-        stkind: StKind::Unk328.id() as i32,
+        stkind: StKind::Unk328.id(),
         entries: [CacheFighter {
             char_id: CharacterKind::NONE as i32,
             color: 0,

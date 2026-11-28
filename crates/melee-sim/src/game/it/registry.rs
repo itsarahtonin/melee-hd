@@ -11,10 +11,11 @@
 //! runs has no dispatch functions.
 //!
 //! A new item's port writes its module (its callbacks' `#[callbacks]` dispatch, `run_event` and
-//! `run_pred`) and fills its entry here; nothing else lists items. The state keeps the game's
-//! numbers (`Item::kind`), so it and the oracle are unchanged; code reads them through the enum
-//! (`item.kind == ItKind::Capsule`, `match item.item_kind() { ItKind::HeartContainer => .. }`,
-//! `ItKind::Capsule.id()`).
+//! `run_pred`) and fills its entry here; nothing else lists items. The state holds the kind as
+//! the enum (`Item::kind`, a spawn's), keeping any number the game stores and hashing as its
+//! integer, so the oracle is unchanged; code compares and matches it directly
+//! (`item.kind == ItKind::Capsule`, `match item.kind { ItKind::HeartContainer => .. }`) and
+//! gives the game's tables its number (`ItKind::Capsule.id()`).
 
 use super::super::code::{Entries, kind};
 use super::kinds::{

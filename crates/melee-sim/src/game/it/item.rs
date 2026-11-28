@@ -123,8 +123,7 @@ crate::game::ft::registry::kind_enum! {
     /// (`Item_804A0C64`, [`ItemCounts`](super::super::structs::ItemCounts)) and its limit, and
     /// which the items' blink, damage scale, homing targets and hand offsets test. The game's
     /// own numbers; the decomp names them only by number (`ITEM_HOLD_0` to `_12`), so these
-    /// are the counts' names. The state keeps the number; code compares it with these and
-    /// matches on [`HoldKind::from_id`].
+    /// are the counts' names.
     HoldKind:
     /// `ITEM_HOLD_0`: the common items but food.
     #[doc(alias("ITEM_HOLD_0"))]

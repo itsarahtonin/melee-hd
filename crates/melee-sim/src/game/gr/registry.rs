@@ -13,9 +13,11 @@
 //! ([`StKind::ground`]); several stage kinds share a ground kind.
 //!
 //! A new stage's port writes its module (its hooks and its objects' `#[callbacks]` dispatch) and
-//! its data, and fills its entry here; nothing else lists stages. The state keeps the game's
-//! numbers (`stage_info.grkind`, `gr.stkind`), so it and the oracle are unchanged; code reads
-//! them through the enums ([`GrKind::from_id`], `stage_info.grkind == GrKind::Castle`).
+//! its data, and fills its entry here; nothing else lists stages. The state holds the kinds as
+//! the enums (`stage_info.grkind` a [`GrKind`], the rules' stage kind a [`StKind`] in its
+//! halfword), each keeping any number the game stores and hashing as its integer, so the
+//! oracle is unchanged; `gr.stkind` stays the game's number. Code compares and matches the
+//! fields directly (`stage_info.ground_kind() == GrKind::Castle`).
 
 use super::super::code::{Entries, kind};
 use super::super::roster::Audit;

@@ -213,8 +213,6 @@ pub(crate) mod attr {
 pub(crate) const PAD_B: u32 = 1 << 9;
 pub(crate) const PAD_DPAD_DOWN: u32 = 1 << 2;
 
-/// `GA_Ground`, `GA_Air`.
-
 impl Running<'_> {
     /// A float of the fighter's `ftFox_DatAttrs`, `off` bytes in.
     pub(crate) fn fox_attr_f32(&self, f: FighterId, off: usize) -> f32 {

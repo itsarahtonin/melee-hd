@@ -2193,7 +2193,7 @@ mod c_stick_rule_tests {
         g.game_mode = mode.id();
         g.rules = g.rules.clone().with_c_stick_1p(c_stick);
         for p in &mut g.players[3..] {
-            p.pkind = crate::game::pl::player::PlayerKind::None.into();
+            p.pkind = crate::game::pl::player::PlayerKind::None;
         }
         let c = g.camera.raw_parts_mut().cam;
         c.zoom_distance = 1.0;

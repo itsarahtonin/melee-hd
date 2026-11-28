@@ -16,10 +16,13 @@
 //! One type can't hold both: Fox is 1 in one and 2 in the other.
 //!
 //! A new character's port writes its module (its hooks and its `#[callbacks]` dispatch) and
-//! fills its entry here; nothing else lists characters. The state keeps the game's numbers
-//! (`Fighter::kind`, the players' character kinds), so it and the oracle are unchanged; code
-//! reads them through the enums (`fp.kind == FighterKind::Fox`, `match fp.fighter_kind() {
-//! FighterKind::Link | FighterKind::Clink => .. }`, `CharacterKind::Fox.id()`).
+//! fills its entry here; nothing else lists characters. The state holds the kinds as the enums
+//! (`Fighter::kind` a [`FighterKind`], the players' character kinds a [`CharacterKind`], in a
+//! narrower field a [`Narrow`](crate::game::mirror::Narrow) of it), each keeping any number the
+//! game stores (`Other`) and hashing as its integer, so the state's hash and the oracle are
+//! unchanged; code compares and matches them directly (`fp.kind == FighterKind::Fox`,
+//! `match fp.kind { FighterKind::Link | FighterKind::Clink => .. }`, `p.ckind.get()`) and reads
+//! a number from the game's tables with `from_raw` (`CharacterKind::Fox.id()` the other way).
 
 use super::super::code::{Entries, kind};
 use super::super::state::Running;

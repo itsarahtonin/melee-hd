@@ -313,7 +313,7 @@ impl Running<'_> {
             pose,
             transformation: false,
         };
-        self.game.player_mut(slot).pkind = PlayerKind::Demo.into();
+        self.game.player_mut(slot).pkind = PlayerKind::Demo;
         let g = self.demo_create_fighter(a);
         self.game.player_mut(slot).player_entity[0] = Some(g);
         if m.extra_internal_id != -1 && m.has_transformation == 0 {

@@ -388,8 +388,8 @@ impl Running<'_> {
             0 => self.game.vs_melee.sss.cursor_port = 0,
             2 => {
                 let at = i32::from(self.game.vs_melee.sss.vs.ordered_stage_index);
-                for i in 0..i32::from(StKind::OldYoshi.id()) {
-                    let idx = (at + i + 1) % i32::from(StKind::OldYoshi.id());
+                for i in 0..StKind::OldYoshi.id() {
+                    let idx = (at + i + 1) % StKind::OldYoshi.id();
                     let stkind = super::super::mn::stagesel::STAGES[idx as usize].stkind;
                     if self.stage_unlocked_inline(u16::from(stkind)) {
                         let sss = &mut self.game.vs_melee.sss;

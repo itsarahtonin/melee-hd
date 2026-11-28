@@ -427,7 +427,7 @@ mod tests {
         ] {
             let mut game = Game::default();
             game.players[1].ckind = CharacterKind::from_raw(ckind);
-            game.players[1].pkind = pkind.into();
+            game.players[1].pkind = pkind;
             let mut r = MatchEnd::default();
             Running {
                 game: &mut game,

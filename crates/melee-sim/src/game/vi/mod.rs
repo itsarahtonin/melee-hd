@@ -483,7 +483,7 @@ impl Running<'_> {
         frames: u32,
         before_setup: impl FnOnce(&mut Self),
     ) {
-        let stkind = i32::from(stkind.id());
+        let stkind = stkind.id();
         self.game.camera.init(6);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
